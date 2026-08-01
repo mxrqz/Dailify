@@ -360,7 +360,6 @@ export function PersonalTab() {
             // setSuccess(true)
         } else {
             // setFailed(true)
-            console.error(JSON.stringify(phoneVerifyAttempt, null, 2))
         }
 
         setIsVerifyingPhone(false)

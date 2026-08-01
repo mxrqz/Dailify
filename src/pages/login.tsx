@@ -37,12 +37,8 @@ export default function Login() {
                 redirectUrl: '/login/sso-callback',
                 redirectUrlComplete: from,
             })
-            .then(async (res) => {
-                console.log(res);
-            })
             .catch((err: ClerkAPIError) => {
-                console.log(err.message);
-                console.error(err, null, 2);
+                console.error(err.message);
             });
     };
 
@@ -68,7 +64,6 @@ export default function Login() {
             );
 
             if (!emailLinkFactor) {
-                console.log("Email link factor not found");
                 return;
             }
 
@@ -79,8 +74,6 @@ export default function Login() {
 
             if (signInAttempt.firstFactorVerification.status === "verified") {
                 window.location.href = from;
-            } else if (signInAttempt.firstFactorVerification.status === "expired") {
-                console.log("The email link has expired.");
             }
         } catch (err) {
             if (isClerkAPIResponseError(err)) {
