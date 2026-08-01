@@ -1,0 +1,7 @@
+{
+  "database": "dolt",
+  "backend": "dolt",
+  "dolt_mode": "embedded",
+  "dolt_database": "Dailify",
+  "project_id": "1d00b408-c94b-4215-aad9-f448a3c511b1"
+}
