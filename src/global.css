@@ -29,6 +29,42 @@
   --chart-3: oklch(37.9% 0.044 225.5);
   --chart-4: oklch(83.4% 0.119 88.1);
   --chart-5: oklch(78.3% 0.126 58.7);
+
+  /* app canvas behind cards (was bg-zinc-100) */
+  --canvas: oklch(96.7% 0.001 286.4);
+
+  /* semantic status */
+  --success: oklch(72.3% 0.19 149.6);
+  --success-foreground: oklch(98.5% 0 0);
+  --premium: oklch(55.8% 0.24 302.3);
+  --premium-foreground: oklch(98.5% 0 0);
+
+  /* brand gradient (task preview) — single source for the marketing gradient */
+  --brand-from: #5a24d6;
+  --brand-via: #b92f84;
+  --brand-to: #fa652a;
+
+  /* tag chip backgrounds (decorative, same in light & dark) */
+  --tag-1: #eae4e9;
+  --tag-2: #fff1e6;
+  --tag-3: #fde2e4;
+  --tag-4: #fad2e1;
+  --tag-5: #e2ece9;
+  --tag-6: #bee1e6;
+  --tag-7: #f0efeb;
+  --tag-8: #dfe7fd;
+  --tag-9: #cddafd;
+
+  /* palette dots */
+  --palette-1: #ffadad;
+  --palette-2: #ffd6a5;
+  --palette-3: #fdffb6;
+  --palette-4: #caffbf;
+  --palette-5: #9bf6ff;
+  --palette-6: #a0c4ff;
+  --palette-7: #bdb2ff;
+  --palette-8: #ffc6ff;
+  --palette-9: #fffffc;
 }
 
 .dark {
@@ -56,6 +92,13 @@
   --chart-3: oklch(72.3% 0.15 60.6);
   --chart-4: oklch(61.9% 0.204 312.7);
   --chart-5: oklch(61.2% 0.209 6.4);
+
+  /* canvas + status overrides for dark mode (brand/tag/palette inherit from :root) */
+  --canvas: oklch(21% 0.006 285.9);
+  --success: oklch(69.6% 0.17 149.6);
+  --success-foreground: oklch(14.7% 0.004 49.3);
+  --premium: oklch(62% 0.23 303);
+  --premium-foreground: oklch(98.5% 0 0);
 }
 
 @theme inline {
@@ -87,17 +130,50 @@
   --radius-md: calc(var(--radius) - 2px);
   --radius-lg: var(--radius);
   --radius-xl: calc(var(--radius) + 4px);
-  --color-sidebar: var(--sidebar);
-  --color-sidebar-foreground: var(--sidebar-foreground);
-  --color-sidebar-primary: var(--sidebar-primary);
-  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
-  --color-sidebar-accent: var(--sidebar-accent);
-  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
-  --color-sidebar-border: var(--sidebar-border);
-  --color-sidebar-ring: var(--sidebar-ring);
+  --color-canvas: var(--canvas);
+
+  --color-success: var(--success);
+  --color-success-foreground: var(--success-foreground);
+  --color-premium: var(--premium);
+  --color-premium-foreground: var(--premium-foreground);
+
+  --color-brand-from: var(--brand-from);
+  --color-brand-via: var(--brand-via);
+  --color-brand-to: var(--brand-to);
+
+  --color-tag-1: var(--tag-1);
+  --color-tag-2: var(--tag-2);
+  --color-tag-3: var(--tag-3);
+  --color-tag-4: var(--tag-4);
+  --color-tag-5: var(--tag-5);
+  --color-tag-6: var(--tag-6);
+  --color-tag-7: var(--tag-7);
+  --color-tag-8: var(--tag-8);
+  --color-tag-9: var(--tag-9);
+
+  --color-palette-1: var(--palette-1);
+  --color-palette-2: var(--palette-2);
+  --color-palette-3: var(--palette-3);
+  --color-palette-4: var(--palette-4);
+  --color-palette-5: var(--palette-5);
+  --color-palette-6: var(--palette-6);
+  --color-palette-7: var(--palette-7);
+  --color-palette-8: var(--palette-8);
+  --color-palette-9: var(--palette-9);
 }
 
 @theme {
+  /* Fonts — change --font-sans here to swap the app font globally (e.g. a Google font). */
+  --font-sans:
+    ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
+    "Noto Color Emoji";
+
+  /* Font sizes — Tailwind's text-xs..text-9xl scale plus a project 2xs (was text-[0.6rem]). */
+  --text-2xs: 0.625rem;
+  --text-2xs--line-height: 0.875rem;
+
+  /* Shadows use Tailwind's tokenized scale (shadow-sm..shadow-2xl); override those here if needed. */
+
   --animate-caret-blink: caret-blink 1.25s ease-out infinite;
 
   @keyframes caret-blink {
@@ -120,7 +196,7 @@
   }
 
   body {
-    @apply dark:bg-zinc-900 bg-zinc-100 text-foreground min-h-dvh;
+    @apply bg-canvas text-foreground min-h-dvh;
   }
 }
 

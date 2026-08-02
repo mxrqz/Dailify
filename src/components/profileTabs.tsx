@@ -341,7 +341,7 @@ export function SecurityTab() {
                               {session.id === currentSession?.id && (
                                 <Badge
                                   variant="outline"
-                                  className="border-green-500 text-[0.6rem] py-0.5 px-1"
+                                  className="border-green-500 text-2xs py-0.5 px-1"
                                 >
                                   Atual
                                 </Badge>

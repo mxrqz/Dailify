@@ -15,9 +15,9 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
 
   const { getToken } = useAuth();
 
-  const foregroundColor = getComputedStyle(document.documentElement)
-    .getPropertyValue("--foreground")
-    .trim();
+  const rootStyles = getComputedStyle(document.documentElement);
+  const foregroundColor = rootStyles.getPropertyValue("--foreground").trim();
+  const primaryColor = rootStyles.getPropertyValue("--primary").trim();
   const [isRecording, setIsRecording] = useState(false);
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -92,7 +92,7 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
 
     const wavesurfer = WaveSurfer.create({
       container: containerRef.current,
-      waveColor: foregroundColor || "#4f46e5",
+      waveColor: foregroundColor || primaryColor,
       normalize: true,
       height: 50,
       barWidth: 4,

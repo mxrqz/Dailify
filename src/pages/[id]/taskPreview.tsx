@@ -58,7 +58,7 @@ export default function TaskPreview() {
         <div>
           <div
             ref={createRef}
-            className="relative flex w-fit gap-10 justify-between py-3 px-5 bg-gradient-to-br from-[#5a24d6] via-[#b92f84] via-50% to-[#fa652a] text-white rounded-lg"
+            className="relative flex w-fit gap-10 justify-between py-3 px-5 bg-gradient-to-br from-brand-from via-brand-via via-50% to-brand-to text-white rounded-lg"
           >
             <img
               className="absolute top-0 left-0 w-full h-full object-cover opacity-10 mix-blend-color-dodge"
@@ -101,7 +101,7 @@ export default function TaskPreview() {
         <div>
           <div
             ref={alertRef}
-            className="relative flex w-fit gap-10 justify-between py-3 px-5 bg-gradient-to-br from-[#5a24d6] via-[#b92f84] via-50% to-[#fa652a] text-white rounded-lg"
+            className="relative flex w-fit gap-10 justify-between py-3 px-5 bg-gradient-to-br from-brand-from via-brand-via via-50% to-brand-to text-white rounded-lg"
           >
             <img
               className="absolute top-0 left-0 w-full h-full object-cover opacity-10 mix-blend-color-dodge"
