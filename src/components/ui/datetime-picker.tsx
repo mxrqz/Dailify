@@ -14,10 +14,7 @@ type DateFormat = "days" | "months" | "years";
 type TimeFormat = "hours" | "minutes" | "seconds" | "am/pm";
 
 type DateTimeArray<T extends DateFormat | TimeFormat> = T[];
-type DateTimeFormatDefaults = [
-  DateTimeArray<DateFormat>,
-  DateTimeArray<TimeFormat>,
-];
+type DateTimeFormatDefaults = [DateTimeArray<DateFormat>, DateTimeArray<TimeFormat>];
 
 const DEFAULTS = [
   ["months", "days", "years"],
@@ -101,14 +98,7 @@ const DatetimeGrid = forwardRef<
                   : null}
                 {format[1]?.length && !i ? (
                   // date-time separator - only if both date and time are present
-                  <span
-                    className={cn(
-                      timePickerSeparatorBase,
-                      "opacity-30 text-xl",
-                    )}
-                  >
-                    |
-                  </span>
+                  <span className={cn(timePickerSeparatorBase, "opacity-30 text-xl")}>|</span>
                 ) : null}
               </React.Fragment>
             ))
@@ -135,14 +125,7 @@ const DEFAULT_TS_OPTIONS = {
 };
 export const DatetimePicker = forwardRef<HTMLDivElement, DateTimeInput>(
   (
-    {
-      value,
-      format = DEFAULTS,
-      placeholders,
-      dtOptions = DEFAULT_TS_OPTIONS,
-      onChange,
-      className,
-    },
+    { value, format = DEFAULTS, placeholders, dtOptions = DEFAULT_TS_OPTIONS, onChange, className },
     ref,
   ) => {
     const handleDateChange = useCallback(

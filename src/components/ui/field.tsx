@@ -1,6 +1,6 @@
-"use client"
+"use client";
 
-import { cva, type VariantProps } from "class-variance-authority"
+import { cva, type VariantProps } from "class-variance-authority";
 import {
   FieldError as AriaFieldError,
   FieldErrorProps as AriaFieldErrorProps,
@@ -11,9 +11,9 @@ import {
   Text as AriaText,
   TextProps as AriaTextProps,
   composeRenderProps,
-} from "react-aria-components"
+} from "react-aria-components";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
 const labelVariants = cva([
   "text-sm font-medium leading-none",
@@ -21,11 +21,11 @@ const labelVariants = cva([
   "data-[disabled]:cursor-not-allowed data-[disabled]:opacity-70",
   /* Invalid */
   "group-data-[invalid]:text-destructive",
-])
+]);
 
 const Label = ({ className, ...props }: AriaLabelProps) => (
   <AriaLabel className={cn(labelVariants(), className)} {...props} />
-)
+);
 
 function FormDescription({ className, ...props }: AriaTextProps) {
   return (
@@ -34,16 +34,13 @@ function FormDescription({ className, ...props }: AriaTextProps) {
       {...props}
       slot="description"
     />
-  )
+  );
 }
 
 function FieldError({ className, ...props }: AriaFieldErrorProps) {
   return (
-    <AriaFieldError
-      className={cn("text-sm font-medium text-destructive", className)}
-      {...props}
-    />
-  )
+    <AriaFieldError className={cn("text-sm font-medium text-destructive", className)} {...props} />
+  );
 }
 
 const fieldGroupVariants = cva("", {
@@ -62,28 +59,19 @@ const fieldGroupVariants = cva("", {
   defaultVariants: {
     variant: "default",
   },
-})
+});
 
-interface GroupProps
-  extends AriaGroupProps,
-    VariantProps<typeof fieldGroupVariants> {}
+interface GroupProps extends AriaGroupProps, VariantProps<typeof fieldGroupVariants> {}
 
 function FieldGroup({ className, variant, ...props }: GroupProps) {
   return (
     <AriaGroup
       className={composeRenderProps(className, (className) =>
-        cn(fieldGroupVariants({ variant }), className)
+        cn(fieldGroupVariants({ variant }), className),
       )}
       {...props}
     />
-  )
+  );
 }
 
-export {
-  Label,
-  labelVariants,
-  FieldGroup,
-  fieldGroupVariants,
-  FieldError,
-  FormDescription,
-}
+export { Label, labelVariants, FieldGroup, fieldGroupVariants, FieldError, FormDescription };

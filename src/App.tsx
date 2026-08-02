@@ -15,18 +15,16 @@ import PremiumPage from "./pages/premium";
 import { Toaster } from "@/components/ui/sonner";
 
 export default function App() {
-
   return (
     <HelmetProvider>
       <DailifyProvider>
         <Router>
           <ThemeProvider>
             <Routes>
-              <Route path="/"
-                element={<LandingPage />}
-              />
+              <Route path="/" element={<LandingPage />} />
 
-              <Route path="/dashboard"
+              <Route
+                path="/dashboard"
                 element={
                   <ProtectedRoute>
                     <Helmet>
@@ -38,7 +36,8 @@ export default function App() {
                 }
               />
 
-              <Route path="/profile"
+              <Route
+                path="/profile"
                 element={
                   <ProtectedRoute>
                     <Helmet>
@@ -50,15 +49,18 @@ export default function App() {
                 }
               />
 
-              <Route path="/login" element={
-                <>
-                  <Helmet>
-                    <title>Dailify - Login</title>
-                  </Helmet>
+              <Route
+                path="/login"
+                element={
+                  <>
+                    <Helmet>
+                      <title>Dailify - Login</title>
+                    </Helmet>
 
-                  <Login />
-                </>
-              } />
+                    <Login />
+                  </>
+                }
+              />
 
               <Route path="/login/sso-callback" element={<SSOCallback />} />
 

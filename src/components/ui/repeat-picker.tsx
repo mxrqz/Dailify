@@ -5,60 +5,65 @@ import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
 import { weekDays } from "@/consts/conts";
 
 export default function RepeatPicker({ onSelectedRepeat, task }: RepeatPickerProps) {
-    const [repeat, setRepeat] = useState<string>(task ? (typeof task.repeat === "string" ? task.repeat : "Weekly") : "Off")
-    const [selectedDays, setSelectedDays] = useState<string[]>(() => {
-        if (task && typeof task.repeat === "object") {
-            const repeatValues = Object.values(task.repeat)[0];
-            return Array.isArray(repeatValues) ? repeatValues : [];
-        }
-        return [];
-    })
+  const [repeat, setRepeat] = useState<string>(
+    task ? (typeof task.repeat === "string" ? task.repeat : "Weekly") : "Off",
+  );
+  const [selectedDays, setSelectedDays] = useState<string[]>(() => {
+    if (task && typeof task.repeat === "object") {
+      const repeatValues = Object.values(task.repeat)[0];
+      return Array.isArray(repeatValues) ? repeatValues : [];
+    }
+    return [];
+  });
 
-    const isValidRepeat = (value: unknown): value is TaskProps["repeat"] => ["Off", "Daily", "Monthly", "Yearly"].includes(value as string);
+  const isValidRepeat = (value: unknown): value is TaskProps["repeat"] =>
+    ["Off", "Daily", "Monthly", "Yearly"].includes(value as string);
 
-    useEffect(() => {
-        if (!repeat) return
+  useEffect(() => {
+    if (!repeat) return;
 
-        if (repeat === "Weekly") {
-            const repeatDays = {
-                [repeat]: selectedDays
-            }
-            onSelectedRepeat(repeatDays)
-            return
-        }
+    if (repeat === "Weekly") {
+      const repeatDays = {
+        [repeat]: selectedDays,
+      };
+      onSelectedRepeat(repeatDays);
+      return;
+    }
 
-        const newRepeat = isValidRepeat(repeat) ? repeat : { Weekly: [] }
-        onSelectedRepeat(newRepeat)
-    }, [repeat, selectedDays])
+    const newRepeat = isValidRepeat(repeat) ? repeat : { Weekly: [] };
+    onSelectedRepeat(newRepeat);
+  }, [repeat, selectedDays]);
 
-    return (
-        <>
-            <Select defaultValue={repeat} onValueChange={setRepeat}>
-                <SelectTrigger className="w-full">
-                    <SelectValue id="repeat" />
-                </SelectTrigger>
+  return (
+    <>
+      <Select defaultValue={repeat} onValueChange={setRepeat}>
+        <SelectTrigger className="w-full">
+          <SelectValue id="repeat" />
+        </SelectTrigger>
 
-                <SelectContent>
-                    <SelectItem value="Off">Não repetir</SelectItem>
-                    <SelectItem value="Daily">Daily</SelectItem>
-                    <SelectItem value="Weekly">Weekly</SelectItem>
-                    <SelectItem value="Monthly">Monthly</SelectItem>
-                    <SelectItem value="Yearly">Yearly</SelectItem>
-                </SelectContent>
-            </Select>
+        <SelectContent>
+          <SelectItem value="Off">Não repetir</SelectItem>
+          <SelectItem value="Daily">Daily</SelectItem>
+          <SelectItem value="Weekly">Weekly</SelectItem>
+          <SelectItem value="Monthly">Monthly</SelectItem>
+          <SelectItem value="Yearly">Yearly</SelectItem>
+        </SelectContent>
+      </Select>
 
-            <ToggleGroup
-                type="multiple"
-                variant="outline"
-                className="w-full"
-                disabled={repeat !== "Weekly"}
-                onValueChange={setSelectedDays}
-                defaultValue={selectedDays}
-            >
-                {weekDays.map((day, index) => (
-                    <ToggleGroupItem key={index} value={day}>{day.slice(0, 1)}</ToggleGroupItem>
-                ))}
-            </ToggleGroup>
-        </>
-    )
+      <ToggleGroup
+        type="multiple"
+        variant="outline"
+        className="w-full"
+        disabled={repeat !== "Weekly"}
+        onValueChange={setSelectedDays}
+        defaultValue={selectedDays}
+      >
+        {weekDays.map((day, index) => (
+          <ToggleGroupItem key={index} value={day}>
+            {day.slice(0, 1)}
+          </ToggleGroupItem>
+        ))}
+      </ToggleGroup>
+    </>
+  );
 }

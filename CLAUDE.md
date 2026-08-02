@@ -53,18 +53,27 @@ bd close <id>         # Complete work
 
 ## Build & Test
 
-_Add your build and test commands here_
-
 ```bash
-# Example:
-# npm install
-# npm test
+bun install
+bun run dev           # vite dev server
+bun run build         # tsc + vite build
+bun run test          # vitest (run once)
+bun run lint          # eslint
+bun run format        # prettier --write src
+bun run check         # format:check + lint + typecheck + test (full gate)
 ```
 
 ## Architecture Overview
 
-_Add a brief overview of your project architecture_
+See `bd memories architecture`. In short: web app on Vercel (dailify.mxrqz.com) inside a
+vestigial Tauri shell. Auth = Clerk. Reads/deletes go client→Firestore via a Clerk→Firebase
+custom-token bridge (`protected-route.tsx`); creates/edits/voice/billing go through an external
+Node server on Render (separate repo) running Stripe. Plans: Free / Pro / Pro+AI.
 
 ## Conventions & Patterns
 
-_Add your project-specific conventions here_
+- **No `as` type assertions.** Use type guards or proper types. `as const` is fine. Enforced as
+  an ESLint *warning* while the ~50 existing ones are cleaned up gradually (bd issue `aqa`).
+- **Formatting: Prettier** (`.prettierrc`, `printWidth: 100`). Run `bun run format` before
+  committing; `bun run check` is the full gate (format + lint + typecheck + test).
+- Task tracking via **bd (beads)**, not markdown/TODO. Persistent knowledge via `bd remember`.

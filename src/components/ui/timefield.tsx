@@ -1,4 +1,4 @@
-import { VariantProps } from "class-variance-authority"
+import { VariantProps } from "class-variance-authority";
 import {
   DateField as AriaDateField,
   DateFieldProps as AriaDateFieldProps,
@@ -13,15 +13,15 @@ import {
   ValidationResult as AriaValidationResult,
   composeRenderProps,
   Text,
-} from "react-aria-components"
+} from "react-aria-components";
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/lib/utils";
 
-import { FieldError, fieldGroupVariants, Label } from "@/components/ui/field"
+import { FieldError, fieldGroupVariants, Label } from "@/components/ui/field";
 
-const DateField = AriaDateField
+const DateField = AriaDateField;
 
-const TimeField = AriaTimeField
+const TimeField = AriaTimeField;
 
 function DateSegment({ className, ...props }: AriaDateSegmentProps) {
   return (
@@ -37,40 +37,33 @@ function DateSegment({ className, ...props }: AriaDateSegmentProps) {
           "data-[focused]:bg-accent data-[focused]:text-accent-foreground",
           /* Invalid */
           "data-[invalid]:data-[focused]:bg-destructive data-[invalid]:data-[focused]:data-[placeholder]:text-destructive-foreground data-[invalid]:data-[focused]:text-destructive-foreground data-[invalid]:data-[placeholder]:text-destructive data-[invalid]:text-destructive",
-          className
-        )
+          className,
+        ),
       )}
       {...props}
     />
-  )
+  );
 }
 
-interface DateInputProps
-  extends AriaDateInputProps,
-    VariantProps<typeof fieldGroupVariants> {}
+interface DateInputProps extends AriaDateInputProps, VariantProps<typeof fieldGroupVariants> {}
 
-function DateInput({
-  className,
-  variant,
-  ...props
-}: Omit<DateInputProps, "children">) {
+function DateInput({ className, variant, ...props }: Omit<DateInputProps, "children">) {
   return (
     <AriaDateInput
       className={composeRenderProps(className, (className) =>
-        cn(fieldGroupVariants({ variant }), "text-sm", className)
+        cn(fieldGroupVariants({ variant }), "text-sm", className),
       )}
       {...props}
     >
       {(segment) => <DateSegment segment={segment} />}
     </AriaDateInput>
-  )
+  );
 }
 
-interface JollyDateFieldProps<T extends AriaDateValue>
-  extends AriaDateFieldProps<T> {
-  label?: string
-  description?: string
-  errorMessage?: string | ((validation: AriaValidationResult) => string)
+interface JollyDateFieldProps<T extends AriaDateValue> extends AriaDateFieldProps<T> {
+  label?: string;
+  description?: string;
+  errorMessage?: string | ((validation: AriaValidationResult) => string);
 }
 
 function JollyDateField<T extends AriaDateValue>({
@@ -83,7 +76,7 @@ function JollyDateField<T extends AriaDateValue>({
   return (
     <DateField
       className={composeRenderProps(className, (className) =>
-        cn("group flex flex-col gap-2", className)
+        cn("group flex flex-col gap-2", className),
       )}
       {...props}
     >
@@ -96,14 +89,13 @@ function JollyDateField<T extends AriaDateValue>({
       )}
       <FieldError>{errorMessage}</FieldError>
     </DateField>
-  )
+  );
 }
 
-interface JollyTimeFieldProps<T extends AriaTimeValue>
-  extends AriaTimeFieldProps<T> {
-  label?: string
-  description?: string
-  errorMessage?: string | ((validation: AriaValidationResult) => string)
+interface JollyTimeFieldProps<T extends AriaTimeValue> extends AriaTimeFieldProps<T> {
+  label?: string;
+  description?: string;
+  errorMessage?: string | ((validation: AriaValidationResult) => string);
 }
 
 function JollyTimeField<T extends AriaTimeValue>({
@@ -116,7 +108,7 @@ function JollyTimeField<T extends AriaTimeValue>({
   return (
     <TimeField
       className={composeRenderProps(className, (className) =>
-        cn("group flex flex-col gap-2", className)
+        cn("group flex flex-col gap-2", className),
       )}
       {...props}
     >
@@ -125,15 +117,8 @@ function JollyTimeField<T extends AriaTimeValue>({
       {description && <Text slot="description">{description}</Text>}
       <FieldError>{errorMessage}</FieldError>
     </TimeField>
-  )
+  );
 }
 
-export {
-  DateField,
-  DateSegment,
-  DateInput,
-  TimeField,
-  JollyDateField,
-  JollyTimeField,
-}
-export type { DateInputProps, JollyDateFieldProps, JollyTimeFieldProps }
+export { DateField, DateSegment, DateInput, TimeField, JollyDateField, JollyTimeField };
+export type { DateInputProps, JollyDateFieldProps, JollyTimeFieldProps };
