@@ -117,8 +117,8 @@ describe("GET /billing/invoices", () => {
 
     const res = await app.request("/billing/invoices", {}, env);
     expect(res.status).toBe(200);
-    const body = await res.json<{ invoices: unknown[] }>();
-    expect(body.invoices).toEqual([
+    const body = await res.json<unknown[]>();
+    expect(body).toEqual([
       {
         recurring: "year",
         brandName: "mastercard",

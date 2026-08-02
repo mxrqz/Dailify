@@ -86,7 +86,7 @@ billing.get("/billing/invoices", requireAuth, async (c) => {
   if (!stripeCustomerId) return fail(c, 400, "No Stripe customer");
 
   const invoices = await listInvoices(c.env, stripeClient(c.env), stripeCustomerId);
-  return c.json({ invoices });
+  return c.json(invoices);
 });
 
 billing.post("/webhooks/stripe", async (c) => {
