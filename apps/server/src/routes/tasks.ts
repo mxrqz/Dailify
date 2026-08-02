@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { nanoid } from "nanoid";
 import type { Env } from "../index";
 import { requireAuth } from "../middleware/auth";
-import { getMonthTasks, getRecurringTasks, insertTask } from "../db/tasks";
+import { getMonthTasks, getRecurringTasks, insertTask, updateTask } from "../db/tasks";
 import { enforceCreate } from "../db/limits";
 import { expandRecurringTask, normalizeRepeat, type Task, type TaskInput } from "@dailify/shared";
 import { fail } from "../lib/errors";
@@ -48,6 +48,16 @@ tasks.post("/", async (c) => {
   if (err) return fail(c, 429, err);
   await insertTask(c.env.DB, userId, task);
   return c.json({ task });
+});
+
+tasks.patch("/:id", async (c) => {
+  const userId = c.get("userId");
+  const id = c.req.param("id");
+  const patch = await c.req.json<Partial<TaskInput>>();
+  if (patch.repeat !== undefined) patch.repeat = normalizeRepeat(patch.repeat);
+  const updated = await updateTask(c.env.DB, userId, id, patch);
+  if (!updated) return fail(c, 404, "Task not found");
+  return c.json({ task: updated });
 });
 
 export default tasks;
