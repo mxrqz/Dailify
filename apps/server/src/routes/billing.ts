@@ -1,9 +1,19 @@
 import { Hono } from "hono";
+import type Stripe from "stripe";
 import { PLAN_PERMISSIONS } from "@dailify/shared";
 import type { Env } from "../index";
 import { requireAuth } from "../middleware/auth";
-import { clerk, getUserRole, readStripeCustomerId, userEmail } from "../lib/clerk";
-import { getPaymentDetails, isProductName, listInvoices, priceMap, stripeClient } from "../lib/stripe";
+import { clerk, getUserRole, readStripeCustomerId, updateUserRole, userEmail } from "../lib/clerk";
+import {
+  customerId,
+  getPaymentDetails,
+  handleInvoicePaid,
+  isProductName,
+  listInvoices,
+  priceMap,
+  roleForPrice,
+  stripeClient,
+} from "../lib/stripe";
 import { fail } from "../lib/errors";
 
 const billing = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
@@ -77,6 +87,43 @@ billing.get("/billing/invoices", requireAuth, async (c) => {
 
   const invoices = await listInvoices(c.env, stripeClient(c.env), stripeCustomerId);
   return c.json({ invoices });
+});
+
+billing.post("/webhooks/stripe", async (c) => {
+  const sig = c.req.header("stripe-signature");
+  const raw = await c.req.text();
+  if (!sig) return fail(c, 400, "Missing signature");
+
+  const stripe = stripeClient(c.env);
+  let event: Stripe.Event;
+  try {
+    event = await stripe.webhooks.constructEventAsync(raw, sig, c.env.STRIPE_WEBHOOK_SECRET);
+  } catch {
+    return fail(c, 400, "Invalid signature");
+  }
+
+  if (event.type === "invoice.paid") {
+    await handleInvoicePaid(c.env, stripe, event.data.object);
+  } else if (event.type === "customer.subscription.deleted") {
+    const sub = event.data.object;
+    const clerkUserId = sub.metadata.clerkUserId;
+    if (typeof clerkUserId === "string") {
+      await updateUserRole(c.env, { clerkUserId, role: "free", stripeCustomerId: customerId(sub.customer) });
+    }
+  } else if (event.type === "customer.subscription.updated") {
+    const sub = event.data.object;
+    const clerkUserId = sub.metadata.clerkUserId;
+    const priceId = sub.items.data[0]?.price.id;
+    if (typeof clerkUserId === "string" && priceId) {
+      await updateUserRole(c.env, {
+        clerkUserId,
+        role: roleForPrice(c.env, priceId),
+        stripeCustomerId: customerId(sub.customer),
+      });
+    }
+  }
+
+  return c.body(null, 200);
 });
 
 export default billing;

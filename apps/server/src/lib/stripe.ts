@@ -1,6 +1,7 @@
 import Stripe from "stripe";
 import type { Invoice, PaymentDetails, Role } from "@dailify/shared";
 import type { Env } from "../index";
+import { updateUserBillingDetails, updateUserRole } from "./clerk";
 
 export const stripeClient = (env: Env): Stripe =>
   new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() });
@@ -80,6 +81,47 @@ function isKnownInvoiceStatus(status: string): status is KnownInvoiceStatus {
 
 function knownInvoiceStatus(status: Stripe.Invoice.Status | null): KnownInvoiceStatus | null {
   return status !== null && isKnownInvoiceStatus(status) ? status : null;
+}
+
+/** Handles the `invoice.paid` webhook event: resolves the paying user and syncs their Clerk metadata. */
+export async function handleInvoicePaid(
+  env: Env,
+  stripe: Stripe,
+  invoice: Stripe.Invoice,
+): Promise<void> {
+  const clerkUserId = invoice.parent?.subscription_details?.metadata?.clerkUserId;
+  const subId = subscriptionId(invoice.parent?.subscription_details?.subscription);
+  if (typeof clerkUserId !== "string" || !subId) return;
+
+  const subscription = await stripe.subscriptions.retrieve(subId, {
+    expand: ["default_payment_method"],
+  });
+  const paymentMethod = paymentMethodOf(subscription.default_payment_method);
+  const card = paymentMethod?.card;
+  const info = priceInfo(env, priceIdOf(invoice.lines.data[0]) ?? "");
+
+  await updateUserRole(env, {
+    clerkUserId,
+    role: info?.role ?? "free",
+    stripeCustomerId: customerId(invoice.customer),
+  });
+  await updateUserBillingDetails(env, clerkUserId, {
+    nextPaymentDate: new Date(subscription.items.data[0].current_period_end * 1000).toISOString(),
+    cardBrand: card?.brand,
+    cardLast4: card?.last4 ?? undefined,
+    expMonth: card?.exp_month,
+    expYear: card?.exp_year,
+    walletType: card?.wallet?.type,
+    nextAmount: invoice.amount_due,
+    recurring: info?.recurring ?? "month",
+    currency: invoice.currency,
+    paymentMethodType: paymentMethod?.type,
+  });
+}
+
+/** Resolves the role for a `customer.subscription.updated` event's current price. */
+export function roleForPrice(env: Env, priceId: string): Role {
+  return priceInfo(env, priceId)?.role ?? "free";
 }
 
 export async function getPaymentDetails(

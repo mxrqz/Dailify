@@ -23,6 +23,7 @@ export default defineConfig({
             // Stripe is mocked in billing tests (vi.mock("stripe")) — these are just deterministic
             // price-id fixtures, no real Stripe network call happens.
             STRIPE_SECRET_KEY: "sk_test_stripe",
+            STRIPE_WEBHOOK_SECRET: "whsec_test",
             STRIPE_PRICE_PRO: "price_pro_month",
             STRIPE_PRICE_PRO_YEAR: "price_pro_year",
             STRIPE_PRICE_PROAI: "price_proai_month",
