@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
+import { clerkMiddleware, requireAuth } from "./middleware/auth";
 
 export interface Env {
   DB: D1Database;
@@ -15,10 +16,14 @@ export interface Env {
   STRIPE_PRICE_PROAI_YEAR: string;
 }
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 app.use("*", (c, next) =>
   cors({ origin: c.env.ALLOWED_ORIGIN, allowMethods: ["GET", "POST", "PATCH", "DELETE"] })(c, next),
 );
 app.get("/health", (c) => c.json({ ok: true }));
+
+app.use("*", clerkMiddleware());
+// Placeholder — replaced with real handler in Task 3.1. Exists so the 401 path is exercised.
+app.get("/tasks", requireAuth, (c) => c.json({ tasks: [] }));
 
 export default app;

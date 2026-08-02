@@ -8,8 +8,16 @@ export default defineConfig({
       const migrations = await readD1Migrations(path.join(__dirname, "migrations"));
       return {
         wrangler: { configPath: "./wrangler.toml" },
-        // Test-only binding so tests can apply migrations themselves (see beforeAll in tests).
-        miniflare: { bindings: { TEST_MIGRATIONS: migrations } },
+        miniflare: {
+          bindings: {
+            // Test-only binding so tests can apply migrations themselves (see beforeAll in tests).
+            TEST_MIGRATIONS: migrations,
+            // Dummy, syntactically-valid Clerk keys so clerkMiddleware() initializes in tests.
+            // No token is ever sent in this phase's tests, so no real Clerk network call happens.
+            CLERK_SECRET_KEY: "sk_test_00000000000000000000000000000000000000000000",
+            CLERK_PUBLISHABLE_KEY: "pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk",
+          },
+        },
       };
     }),
   ],
