@@ -13,7 +13,7 @@ vi.mock("../src/lib/clerk", async (importOriginal) => {
 import { env } from "cloudflare:test";
 import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
-import { insertTask } from "../src/db/tasks";
+import { insertTask, getTask } from "../src/db/tasks";
 import type { Task } from "@dailify/shared";
 
 beforeAll(async () => {
@@ -72,5 +72,26 @@ describe("PATCH /tasks/:id", () => {
     expect(res.status).toBe(200);
     const body = await res.json<{ task: Task }>();
     expect(body.task.title).toBe("Renamed at cap");
+  });
+
+  it("ignores a client-supplied completed — response and DB both keep the persisted history", async () => {
+    await insertTask(env.DB, "u3", {
+      id: "edit-completed",
+      title: "Has history",
+      description: "",
+      date: new Date(2026, 6, 5, 9).getTime(),
+      duration: "10m",
+      priority: 0,
+      repeat: "Off",
+      completed: [111],
+    });
+    const res = await patch("edit-completed", { title: "x", completed: [999] });
+    expect(res.status).toBe(200);
+    const body = await res.json<{ task: Task }>();
+    expect(body.task.title).toBe("x");
+    expect(body.task.completed).toEqual([111]);
+
+    const saved = await getTask(env.DB, "u3", "edit-completed");
+    expect(saved?.completed).toEqual([111]);
   });
 });

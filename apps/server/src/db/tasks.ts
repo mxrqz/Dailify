@@ -139,7 +139,7 @@ export async function updateTask(
 ): Promise<Task | null> {
   const cur = await getTask(db, userId, id);
   if (!cur) return null;
-  const next: Task = { ...cur, ...patch, id };
+  const next: Task = { ...cur, ...patch, id, completed: cur.completed };
   const { kind, days } = repeatToCols(next.repeat);
   await db
     .prepare(
