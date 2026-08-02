@@ -63,6 +63,13 @@ bun run format        # prettier --write src
 bun run check         # format:check + lint + typecheck + test (full gate)
 ```
 
+## Monorepo
+
+This is a bun-workspaces monorepo (`apps/*`, `packages/*`). The web app lives at `apps/web`
+(package `@dailify/web`); root `package.json` scripts (`dev`/`build`/`test`/`check`) delegate to
+it via `bun --filter`, so the `Build & Test` commands above still work unchanged from the repo
+root. Web deploy root (e.g. Cloudflare Pages) is now `apps/web`, build output `apps/web/dist`.
+
 ## Architecture Overview
 
 See `bd memories architecture`. In short: web app on Vercel (dailify.mxrqz.com) inside a
