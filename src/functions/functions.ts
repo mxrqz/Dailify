@@ -1,7 +1,8 @@
 import { TaskProps } from "@/types/types";
-import { format, isSameDay } from "date-fns";
+import { format, isSameDay, endOfMonth } from "date-fns";
 import { enUS, ptBR } from "date-fns/locale";
 import { Timestamp } from "firebase/firestore";
+import { weekDays } from "@/consts/conts";
 
 function toJsDate(value: Date | Timestamp): Date {
   return value instanceof Timestamp ? value.toDate() : value;
@@ -59,6 +60,64 @@ export function getCompletionDate(task: TaskProps, selectedDay: Date) {
 
 export function getTasksForDay(tasks: TaskProps[], day: Date): TaskProps[] {
   return tasks.filter((task) => isSameDay(toJsDate(task.date), day));
+}
+
+/**
+ * Expands one recurring task into the concrete instances that fall in `month`.
+ * Instances are built in the *viewed* month (not the original one) and carry JS Dates.
+ * The original day in its creation month is left to the stored task doc, so it is not
+ * duplicated here (creation month is skipped for Monthly/Yearly and the original day is
+ * skipped for Daily/Weekly).
+ */
+export function expandRecurringTask(task: TaskProps, month: Date): TaskProps[] {
+  const original = toJsDate(task.date);
+  const year = month.getFullYear();
+  const mon = month.getMonth();
+  const daysInMonth = endOfMonth(month).getDate();
+
+  // Nothing recurs before the task existed.
+  if (endOfMonth(month) < original) return [];
+
+  const inCreationMonth = original.getFullYear() === year && original.getMonth() === mon;
+  const at = (day: number): Date =>
+    new Date(year, mon, day, original.getHours(), original.getMinutes(), original.getSeconds());
+  const instance = (date: Date): TaskProps => ({ ...task, date });
+
+  const repeat = task.repeat;
+
+  if (typeof repeat === "string") {
+    switch (repeat) {
+      case "Daily": {
+        const out: TaskProps[] = [];
+        for (let d = inCreationMonth ? original.getDate() + 1 : 1; d <= daysInMonth; d++) {
+          out.push(instance(at(d)));
+        }
+        return out;
+      }
+      case "Monthly": {
+        if (inCreationMonth) return [];
+        return [instance(at(Math.min(original.getDate(), daysInMonth)))];
+      }
+      case "Yearly": {
+        if (original.getMonth() !== mon || original.getFullYear() === year) return [];
+        return [instance(at(Math.min(original.getDate(), daysInMonth)))];
+      }
+      default:
+        return []; // "Off"
+    }
+  }
+
+  // Weekly — repeat.Weekly is a list of weekday names ("Monday", …), matched via weekDays index.
+  const repeatDays = repeat?.Weekly;
+  if (!Array.isArray(repeatDays) || repeatDays.length === 0) return [];
+
+  const out: TaskProps[] = [];
+  for (let d = 1; d <= daysInMonth; d++) {
+    if (inCreationMonth && d === original.getDate()) continue; // stored doc covers this day
+    const date = at(d);
+    if (repeatDays.includes(weekDays[date.getDay()])) out.push(instance(date));
+  }
+  return out;
 }
 
 export function getNextTask(currentMonthTasks: TaskProps[]) {

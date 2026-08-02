@@ -7,19 +7,12 @@ import {
   getDocs,
   getFirestore,
   query,
-  Timestamp,
   where,
 } from "firebase/firestore";
-import {
-  startOfMonth,
-  endOfMonth,
-  eachDayOfInterval,
-  format,
-  isSameMonth,
-  isSameYear,
-} from "date-fns";
+import { startOfMonth, endOfMonth } from "date-fns";
 import { getAuth } from "firebase/auth";
 import { serverURL } from "@/consts/conts";
+import { expandRecurringTask } from "./functions";
 
 const firebaseConfig = {
   apiKey: "AIzaSyBjb63TKK_8X-FLpTMNrogEyTn_LZbyLX0",
@@ -225,11 +218,6 @@ export async function getMonthTaskByIds(
 ): Promise<TaskProps[] | null> {
   if (taskId.length === 0) return null;
 
-  const start = startOfMonth(month);
-  const end = endOfMonth(month);
-
-  const tasks: TaskProps[] = [];
-
   // Firestore 'in' allows up to 30 values — chunk the ids instead of reading the whole collection
   const docs: TaskProps[] = [];
   for (let i = 0; i < taskId.length; i += 30) {
@@ -239,107 +227,5 @@ export async function getMonthTaskByIds(
     snap.forEach((d) => docs.push(d.data() as TaskProps));
   }
 
-  docs.forEach((data) => {
-    if (typeof data.repeat === "string") {
-      const originalDate = (data.date as Timestamp).toDate();
-
-      switch (data.repeat) {
-        case "Off":
-          break;
-
-        case "Daily": {
-          const newData = Array.from({ length: end.getDate() }).map((_, index) => {
-            const newDate = Timestamp.fromDate(
-              new Date((data.date as Timestamp).toDate().setDate(index + 1)),
-            );
-
-            return {
-              ...data,
-              date: newDate,
-            };
-          });
-
-          newData.forEach((task) => tasks.push(task));
-          break;
-        }
-
-        case "Monthly": {
-          if (isSameMonth(originalDate, month)) return;
-
-          const updatedMonthlyDate = new Date(originalDate);
-          updatedMonthlyDate.setMonth(month.getMonth());
-
-          const task: TaskProps = {
-            ...data,
-            date: Timestamp.fromDate(updatedMonthlyDate),
-          };
-
-          tasks.push(task);
-          break;
-        }
-
-        case "Yearly": {
-          if (isSameYear(originalDate, month)) return;
-          const year = month.getFullYear();
-
-          const updatedYearDate = new Date(originalDate);
-          updatedYearDate.setFullYear(year);
-
-          const yearlyTask: TaskProps = {
-            ...data,
-            date: Timestamp.fromDate(updatedYearDate),
-          };
-
-          tasks.push(yearlyTask);
-          break;
-        }
-      }
-    } else if (typeof data.repeat === "object" && Object.keys(data.repeat)[0] === "Weekly") {
-      // pegar todos os dias do mes selecionado
-      const days = eachDayOfInterval({ start, end });
-
-      // verficar qual o dia da semana
-      days.forEach((day) => {
-        // adicionar a tarefa com o dia da semana igual ao dia
-        const newDate = Timestamp.fromDate(
-          new Date((data.date as Timestamp).toDate().setDate(day.getDate())),
-        );
-
-        const weekDay = format(day, "EEEE");
-        const repeatDays: string[] = Object.values(data.repeat)[0];
-        if (repeatDays.includes(weekDay)) {
-          const newData = {
-            ...data,
-            date: newDate,
-          };
-          tasks.push(newData);
-        }
-      });
-    }
-
-    // if (typeof data.repeat === "string" && data.repeat === "Daily") {
-    //     const newData = Array.from({ length: end.getDate() }).map((_, index) => {
-    //         const newDate = Timestamp.fromDate(new Date((data.date as Timestamp).toDate().setDate(index + 1)))
-
-    //         const newData = {
-    //             ...data,
-    //             date: newDate
-    //         }
-
-    //         return newData
-    //     })
-
-    //     newData.forEach(task => tasks.push(task))
-    // }
-
-    // else if (typeof data.repeat === "string" && data.repeat === "Monthly") {
-    //     const selecteDay = month.getDate()
-    //     const taskDate = data.date instanceof Timestamp && data.date.toDate().getDate()
-    //     if (selecteDay === taskDate) {
-    //         tasks.push(data)
-    //     }
-    // }
-  });
-
-  return tasks;
+  return docs.flatMap((data) => expandRecurringTask(data, month));
 }

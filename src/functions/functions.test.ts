@@ -4,6 +4,7 @@ import {
   isTaskModified,
   getCompletionDate,
   getTasksForDay,
+  expandRecurringTask,
   getTime,
   returnFractedDate,
   unixToDate,
@@ -115,5 +116,74 @@ describe("small date helpers", () => {
 
   test("unixToDate converts seconds to a Date", () => {
     expect(unixToDate(0).getTime()).toBe(0);
+  });
+});
+
+function dateOf(t: TaskProps): Date {
+  if (!(t.date instanceof Date)) throw new Error("expected a JS Date instance");
+  return t.date;
+}
+
+describe("expandRecurringTask", () => {
+  test("Daily: creation month starts the day after the original (base doc covers the original day)", () => {
+    const t = makeTask({ repeat: "Daily", date: new Date(2026, 7, 10, 9, 5) });
+    const out = expandRecurringTask(t, new Date(2026, 7, 1));
+    const days = out.map(dateOf).map((d) => d.getDate());
+    expect(out).toHaveLength(21);
+    expect(days[0]).toBe(11);
+    expect(days[days.length - 1]).toBe(31);
+    expect(days.every((d) => d > 10)).toBe(true);
+  });
+
+  test("Daily: a later month yields every day of that month", () => {
+    const t = makeTask({ repeat: "Daily", date: new Date(2026, 7, 10) });
+    const out = expandRecurringTask(t, new Date(2026, 8, 1)); // September, 30 days
+    expect(out).toHaveLength(30);
+    expect(dateOf(out[0]).getMonth()).toBe(8);
+  });
+
+  test("Daily: months before creation are empty", () => {
+    const t = makeTask({ repeat: "Daily", date: new Date(2026, 7, 10) });
+    expect(expandRecurringTask(t, new Date(2026, 6, 1))).toEqual([]);
+  });
+
+  test("Weekly: matches the requested weekdays in a non-creation month", () => {
+    const t = makeTask({ repeat: { Weekly: ["Monday"] }, date: new Date(2026, 6, 1) });
+    const out = expandRecurringTask(t, new Date(2026, 7, 1)); // August 2026
+    const expected: number[] = [];
+    for (let d = 1; d <= 31; d++) if (new Date(2026, 7, d).getDay() === 1) expected.push(d);
+    expect(out.map(dateOf).map((d) => d.getDate())).toEqual(expected);
+    expect(out.map(dateOf).every((d) => d.getDay() === 1)).toBe(true);
+  });
+
+  test("Monthly: skips the creation month and clamps an overflowing day", () => {
+    const t = makeTask({ repeat: "Monthly", date: new Date(2026, 7, 31) });
+    expect(expandRecurringTask(t, new Date(2026, 7, 1))).toEqual([]);
+    const sep = expandRecurringTask(t, new Date(2026, 8, 1)); // Sep has 30 days
+    expect(sep).toHaveLength(1);
+    expect(dateOf(sep[0]).getMonth()).toBe(8);
+    expect(dateOf(sep[0]).getDate()).toBe(30);
+  });
+
+  test("Yearly: only the same month in a later year", () => {
+    const t = makeTask({ repeat: "Yearly", date: new Date(2026, 7, 15) });
+    expect(expandRecurringTask(t, new Date(2026, 7, 1))).toEqual([]); // creation year
+    expect(expandRecurringTask(t, new Date(2027, 8, 1))).toEqual([]); // wrong month
+    const aug27 = expandRecurringTask(t, new Date(2027, 7, 1));
+    expect(aug27).toHaveLength(1);
+    expect(dateOf(aug27[0]).getFullYear()).toBe(2027);
+    expect(dateOf(aug27[0]).getDate()).toBe(15);
+  });
+
+  test("Off yields nothing", () => {
+    expect(expandRecurringTask(makeTask({ repeat: "Off" }), new Date(2026, 7, 1))).toEqual([]);
+  });
+
+  test("preserves task identity and returns JS Date instances", () => {
+    const t = makeTask({ id: "abc", title: "Gym", repeat: "Daily", date: new Date(2026, 7, 10) });
+    const out = expandRecurringTask(t, new Date(2026, 8, 1));
+    expect(out[0].id).toBe("abc");
+    expect(out[0].title).toBe("Gym");
+    expect(out[0].date).toBeInstanceOf(Date);
   });
 });
