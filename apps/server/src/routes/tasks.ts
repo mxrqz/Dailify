@@ -8,6 +8,7 @@ import {
   insertTask,
   updateTask,
   appendCompletion,
+  deleteTask,
 } from "../db/tasks";
 import { enforceCreate } from "../db/limits";
 import { expandRecurringTask, normalizeRepeat, type Task, type TaskInput } from "@dailify/shared";
@@ -71,6 +72,11 @@ tasks.post("/:id/complete", async (c) => {
   const updated = await appendCompletion(c.env.DB, userId, c.req.param("id"), Date.now());
   if (!updated) return fail(c, 404, "Task not found");
   return c.json({ task: updated });
+});
+
+tasks.delete("/:id", async (c) => {
+  await deleteTask(c.env.DB, c.get("userId"), c.req.param("id"));
+  return c.body(null, 204);
 });
 
 export default tasks;
