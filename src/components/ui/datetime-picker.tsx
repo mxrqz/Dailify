@@ -73,10 +73,10 @@ const DatetimeGrid = forwardRef<
         {...timescape.getRootProps()}
         ref={ref}
       >
-        {!!format?.length
+        {format?.length
           ? format.map((group, i) => (
               <React.Fragment key={i === 0 ? "dates" : "times"}>
-                {!!group?.length
+                {group?.length
                   ? group.map((unit, j) => (
                       <React.Fragment key={unit}>
                         <Input

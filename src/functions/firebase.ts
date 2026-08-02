@@ -166,7 +166,7 @@ async function getMonthTasks(userId: string, month: Date) {
         where("date", "<=", end)
     );
 
-    let tasks: TaskProps[] = []
+    const tasks: TaskProps[] = []
 
     const querySnapshot = await getDocs(q);
     querySnapshot.forEach((doc) => {
@@ -200,7 +200,7 @@ export async function getMonthTaskByIds(userId: string, taskId: string[], month:
     const start = startOfMonth(month)
     const end = endOfMonth(month);
 
-    let tasks: TaskProps[] = [];
+    const tasks: TaskProps[] = [];
 
     // Firestore 'in' allows up to 30 values — chunk the ids instead of reading the whole collection
     const docs: TaskProps[] = [];
@@ -220,22 +220,21 @@ export async function getMonthTaskByIds(userId: string, taskId: string[], month:
                 case "Off":
                     break;
 
-                case "Daily":
+                case "Daily": {
                     const newData = Array.from({ length: end.getDate() }).map((_, index) => {
                         const newDate = Timestamp.fromDate(new Date((data.date as Timestamp).toDate().setDate(index + 1)))
 
-                        const newData = {
+                        return {
                             ...data,
                             date: newDate
                         }
-
-                        return newData
                     })
 
                     newData.forEach(task => tasks.push(task))
                     break;
+                }
 
-                case "Monthly":
+                case "Monthly": {
                     if (isSameMonth(originalDate, month)) return;
 
                     const updatedMonthlyDate = new Date(originalDate);
@@ -248,8 +247,9 @@ export async function getMonthTaskByIds(userId: string, taskId: string[], month:
 
                     tasks.push(task);
                     break;
+                }
 
-                case "Yearly":
+                case "Yearly": {
                     if (isSameYear(originalDate, month)) return;
                     const year = month.getFullYear()
 
@@ -263,6 +263,7 @@ export async function getMonthTaskByIds(userId: string, taskId: string[], month:
 
                     tasks.push(yearlyTask);
                     break;
+                }
             }
         } else if (typeof data.repeat === "object" && Object.keys(data.repeat)[0] === 'Weekly') {
             // pegar todos os dias do mes selecionado

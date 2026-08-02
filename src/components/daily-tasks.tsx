@@ -148,7 +148,7 @@ export default function DailyTasks() {
                                                                     onClick={async (e) => {
                                                                         const token = await getToken();
                                                                         e.stopPropagation();
-                                                                        token && markTaskAsCompleted(token, task.id);
+                                                                        if (token) markTaskAsCompleted(token, task.id);
                                                                         updateTaskToCompleted(task.id);
                                                                     }}
                                                                 >
@@ -159,7 +159,7 @@ export default function DailyTasks() {
                                                                     className="bg-red-500 cursor-pointer"
                                                                     onClick={async (e) => {
                                                                         e.stopPropagation();
-                                                                        user && await deleteTask(user?.id, task.id);
+                                                                        if (user) await deleteTask(user.id, task.id);
                                                                         deleteTaskLocal(task.id)
                                                                     }}
                                                                 >

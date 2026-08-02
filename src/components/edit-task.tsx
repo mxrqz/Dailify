@@ -20,8 +20,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { isTaskModified } from "@/functions/functions";
 
-interface EditTaskProps {
-}
+type EditTaskProps = Record<string, never>
 
 const EditTaskContext = createContext<EditTaskProps | undefined>(undefined);
 

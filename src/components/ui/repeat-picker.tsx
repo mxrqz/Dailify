@@ -14,7 +14,7 @@ export default function RepeatPicker({ onSelectedRepeat, task }: RepeatPickerPro
         return [];
     })
 
-    const isValidRepeat = (value: any): value is TaskProps["repeat"] => ["Off", "Daily", "Monthly", "Yearly"].includes(value);
+    const isValidRepeat = (value: unknown): value is TaskProps["repeat"] => ["Off", "Daily", "Monthly", "Yearly"].includes(value as string);
 
     useEffect(() => {
         if (!repeat) return

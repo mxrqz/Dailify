@@ -8,7 +8,7 @@ import { TaskProps } from "@/types/types";
 import { createTaskVoice } from "@/functions/firebase";
 
 export default function Waveform({ onResponse }: { onResponse: (response: TaskProps[]) => void }) {
-    const isValidRepeat = (value: any): value is TaskProps["repeat"] => ["Off", "Daily", "Monthly", "Yearly"].includes(value);
+    const isValidRepeat = (value: unknown): value is TaskProps["repeat"] => ["Off", "Daily", "Monthly", "Yearly"].includes(value as string);
 
     const containerRef = useRef<HTMLDivElement>(null);
     const wavesurferRef = useRef<WaveSurfer | null>(null);
@@ -68,13 +68,13 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
             return
         }
 
-        const taskData: string[] = data.tasksData
+        const taskData: TaskProps[] = data.tasksData
 
-        const tasks = taskData.map((taskItem: any) => {
+        const tasks = taskData.map((taskItem) => {
             const task: TaskProps = {
                 ...taskItem,
-                date: new Date(taskItem.date),
-                alert: new Date(taskItem.alert),
+                date: new Date(taskItem.date as Date),
+                alert: new Date(taskItem.alert as Date),
                 repeat: isValidRepeat(taskItem.repeat) ? taskItem.repeat : { Weekly: [] },
             }
 

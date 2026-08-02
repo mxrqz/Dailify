@@ -23,7 +23,8 @@ export default function Login() {
     const { isSignedIn } = useUser()
 
     const location = useLocation()
-    const from = (location.state as any)?.from?.pathname + (location.state as any)?.from?.search || "/dashboard";
+    const state = location.state as { from?: { pathname?: string; search?: string } } | null;
+    const from = (state?.from?.pathname ?? "") + (state?.from?.search ?? "") || "/dashboard";
 
     const [verifying, setVerifying] = useState(false)
     const [email, setEmail] = useState<string>("")

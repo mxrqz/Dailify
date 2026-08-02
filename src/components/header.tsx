@@ -61,7 +61,7 @@ export default function Header({ className }: { className?: string }) {
                             </DropdownMenuTrigger>
 
                             <DropdownMenuContent align="end" >
-                                <DropdownMenuItem onClick={(e) => { e.preventDefault; navigate('/profile') }} className="cursor-pointer">
+                                <DropdownMenuItem onClick={(e) => { e.preventDefault(); navigate('/profile') }} className="cursor-pointer">
                                     <UserIcon />
                                     <span>Profile</span>
                                 </DropdownMenuItem>
