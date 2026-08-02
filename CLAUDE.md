@@ -76,4 +76,8 @@ Node server on Render (separate repo) running Stripe. Plans: Free / Pro / Pro+AI
   an ESLint *warning* while the ~50 existing ones are cleaned up gradually (bd issue `aqa`).
 - **Formatting: Prettier** (`.prettierrc`, `printWidth: 100`). Run `bun run format` before
   committing; `bun run check` is the full gate (format + lint + typecheck + test).
+- **Design tokens** live in `src/global.css`. Colors are defined ONCE via `light-dark(light, dark)`
+  in `oklch` (no per-mode duplication, no `display-p3`); dark mode is bridged from the `.dark`
+  class through `color-scheme`. No hex/arbitrary colors in components — add a token + a
+  `@theme inline` mapping. Prefer solid state colors over `/opacity` on interactive elements.
 - Task tracking via **bd (beads)**, not markdown/TODO. Persistent knowledge via `bd remember`.
