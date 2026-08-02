@@ -67,11 +67,7 @@ export async function insertTask(db: D1Database, userId: string, task: Task): Pr
   return task;
 }
 
-export async function getMonthTasks(
-  db: D1Database,
-  userId: string,
-  month: Date,
-): Promise<Task[]> {
+export async function getMonthTasks(db: D1Database, userId: string, month: Date): Promise<Task[]> {
   const { results } = await db
     .prepare(`SELECT * FROM tasks WHERE user_id=? AND date>=? AND date<=?`)
     .bind(userId, startOfMonthMs(month), endOfMonthMs(month))
