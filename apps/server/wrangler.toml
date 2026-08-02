@@ -1,0 +1,12 @@
+name = "dailify-server"
+main = "src/index.ts"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dailify"
+database_id = "PLACEHOLDER"   # filled by `wrangler d1 create dailify` at deploy (Task 8)
+
+[vars]
+ALLOWED_ORIGIN = "https://dailify.mxrqz.com"
