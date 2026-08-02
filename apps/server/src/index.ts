@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { clerkMiddleware, requireAuth } from "./middleware/auth";
+import { clerkMiddleware } from "./middleware/auth";
+import tasks from "./routes/tasks";
 
 export interface Env {
   DB: D1Database;
@@ -23,7 +24,6 @@ app.use("*", (c, next) =>
 app.get("/health", (c) => c.json({ ok: true }));
 
 app.use("*", clerkMiddleware());
-// Placeholder — replaced with real handler in Task 3.1. Exists so the 401 path is exercised.
-app.get("/tasks", requireAuth, (c) => c.json({ tasks: [] }));
+app.route("/tasks", tasks);
 
 export default app;
