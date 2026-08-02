@@ -6,11 +6,9 @@ import RecordPlugin from "wavesurfer.js/dist/plugins/record.esm.js";
 import { useAuth } from "@clerk/clerk-react";
 import { TaskProps } from "@/types/types";
 import { createTaskVoice } from "@/functions/firebase";
+import { normalizeRepeat } from "@/functions/functions";
 
 export default function Waveform({ onResponse }: { onResponse: (response: TaskProps[]) => void }) {
-  const isValidRepeat = (value: unknown): value is TaskProps["repeat"] =>
-    ["Off", "Daily", "Monthly", "Yearly"].includes(value as string);
-
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
   const recordRef = useRef<RecordPlugin | null>(null);
@@ -78,7 +76,7 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
         ...taskItem,
         date: new Date(taskItem.date as Date),
         alert: new Date(taskItem.alert as Date),
-        repeat: isValidRepeat(taskItem.repeat) ? taskItem.repeat : { Weekly: [] },
+        repeat: normalizeRepeat(taskItem.repeat),
       };
 
       return task;

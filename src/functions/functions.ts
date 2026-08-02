@@ -62,6 +62,18 @@ export function getTasksForDay(tasks: TaskProps[], day: Date): TaskProps[] {
   return tasks.filter((task) => isSameDay(toJsDate(task.date), day));
 }
 
+/** Coerces an unknown repeat value (e.g. from the voice API) into a valid TaskProps["repeat"]. */
+export function normalizeRepeat(value: unknown): TaskProps["repeat"] {
+  if (value === "Off" || value === "Daily" || value === "Monthly" || value === "Yearly") {
+    return value;
+  }
+  if (value && typeof value === "object" && "Weekly" in value) {
+    const weekly = value.Weekly;
+    if (Array.isArray(weekly)) return { Weekly: weekly };
+  }
+  return "Off";
+}
+
 /** Append `task` to the list, or replace the existing entry with the same id. */
 export function upsertTaskById(tasks: TaskProps[], task: TaskProps): TaskProps[] {
   const i = tasks.findIndex((t) => t.id === task.id);

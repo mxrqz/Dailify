@@ -1,0 +1,15 @@
+rules_version = '2';
+
+// Dailify data model: everything lives under users/{uid}/**.
+// The Node server writes with the Admin SDK (bypasses these rules); the client only
+// reads and deletes directly, so a user may only ever touch their own subtree.
+// NOTE: this assumes the Clerk->Firebase custom token sets auth.uid = the Clerk user id
+// (the same id used in the users/{uid} path). Verify that in the token minting server.
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /users/{uid}/{document=**} {
+      allow read, write: if request.auth != null && request.auth.uid == uid;
+    }
+    // Everything else is denied by default (rules v2: no match = deny).
+  }
+}

@@ -22,6 +22,7 @@ import { EditTask, EditTaskContent, EditTaskTrigger } from "./edit-task";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Button } from "./ui/button";
 import { deleteTask, markTaskAsCompleted } from "@/functions/firebase";
+import { toast } from "sonner";
 import { useAuth, useUser } from "@clerk/clerk-react";
 
 export default function DailyTasks() {
@@ -144,9 +145,16 @@ export default function DailyTasks() {
                                   variant={"outline"}
                                   className="bg-transparent cursor-pointer"
                                   onClick={async (e) => {
-                                    const token = await getToken();
                                     e.stopPropagation();
-                                    if (token) markTaskAsCompleted(token, task.id);
+                                    const token = await getToken();
+                                    if (!token) return;
+                                    const { error } = await markTaskAsCompleted(token, task.id);
+                                    if (error) {
+                                      toast.error("Couldn't complete the task", {
+                                        description: error,
+                                      });
+                                      return;
+                                    }
                                     updateTaskToCompleted(task.id);
                                   }}
                                 >
@@ -157,8 +165,13 @@ export default function DailyTasks() {
                                   className="bg-red-500 cursor-pointer"
                                   onClick={async (e) => {
                                     e.stopPropagation();
-                                    if (user) await deleteTask(user.id, task.id);
-                                    deleteTaskLocal(task.id);
+                                    if (!user) return;
+                                    try {
+                                      await deleteTask(user.id, task.id);
+                                      deleteTaskLocal(task.id);
+                                    } catch {
+                                      toast.error("Couldn't delete the task");
+                                    }
                                   }}
                                 >
                                   Delete

@@ -1,12 +1,14 @@
 import { TaskProps } from "@/types/types";
 import { initializeApp } from "firebase/app";
 import {
+  arrayRemove,
   collection,
   deleteDoc,
   doc,
   getDocs,
   getFirestore,
   query,
+  updateDoc,
   where,
 } from "firebase/firestore";
 import { startOfMonth, endOfMonth } from "date-fns";
@@ -143,8 +145,18 @@ export async function markTaskAsCompleted(token: string, taskId: string) {
 }
 
 export async function deleteTask(userId: string, taskId: string) {
-  const docToDelete = doc(db, "users", userId, "tasks", taskId);
-  await deleteDoc(docToDelete);
+  await deleteDoc(doc(db, "users", userId, "tasks", taskId));
+
+  // Drop the id from any repeatTasks membership doc so it doesn't linger as an orphan.
+  const repeatDocs = await getDocs(collection(db, "users", userId, "repeatTasks"));
+  await Promise.all(
+    repeatDocs.docs
+      .filter((d) => {
+        const ids = d.data().id;
+        return Array.isArray(ids) && ids.includes(taskId);
+      })
+      .map((d) => updateDoc(d.ref, { id: arrayRemove(taskId) })),
+  );
 }
 
 export async function getTasksForMonth(userId: string, month: Date) {

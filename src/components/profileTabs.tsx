@@ -120,6 +120,8 @@ export function SubscriptionTab({
   const { getToken } = useAuth();
   const { tasks } = useDailify();
   const plan = planMap[user?.publicMetadata.plan as string];
+  // Count distinct base tasks, not expanded recurring instances (a daily task = 1, not ~30).
+  const usedCount = tasks ? new Set(tasks.map((t) => t.id)).size : 0;
 
   const brandIcons: Record<string, JSX.Element> = {
     visa: <FaCcVisa className="text-foreground size-5" />,
@@ -188,7 +190,7 @@ export function SubscriptionTab({
               <span>Tarefas utilizadas</span>
 
               <span className="font-medium">
-                {tasks?.length} /{" "}
+                {usedCount} /{" "}
                 {permissions?.taskLimits.monthly === -1
                   ? "ilimitado"
                   : permissions?.taskLimits.monthly}
@@ -197,9 +199,9 @@ export function SubscriptionTab({
 
             <Progress
               value={
-                tasks &&
-                permissions?.taskLimits.monthly &&
-                (tasks?.length / permissions?.taskLimits.monthly) * 100
+                permissions?.taskLimits.monthly && permissions.taskLimits.monthly > 0
+                  ? (usedCount / permissions.taskLimits.monthly) * 100
+                  : 0
               }
               className="h-2"
             />
@@ -207,7 +209,7 @@ export function SubscriptionTab({
             <p className="text-xs text-muted-foreground">
               {permissions?.taskLimits.monthly === -1
                 ? "Tarefas ilimitadas"
-                : `${permissions?.taskLimits.monthly && tasks && permissions?.taskLimits?.monthly - tasks?.length} tarefas restantes neste ciclo`}
+                : `${(permissions?.taskLimits.monthly ?? 0) - usedCount} tarefas restantes neste ciclo`}
             </p>
           </div>
         </div>

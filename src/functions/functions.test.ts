@@ -6,6 +6,7 @@ import {
   getTasksForDay,
   expandRecurringTask,
   upsertTaskById,
+  normalizeRepeat,
   getTime,
   returnFractedDate,
   unixToDate,
@@ -187,6 +188,16 @@ describe("expandRecurringTask", () => {
     const out = upsertTaskById([a], makeTask({ id: "a", title: "new" }));
     expect(out).toHaveLength(1);
     expect(out[0].title).toBe("new");
+  });
+
+  test("normalizeRepeat keeps valid modes, preserves Weekly days, else Off", () => {
+    expect(normalizeRepeat("Daily")).toBe("Daily");
+    expect(normalizeRepeat({ Weekly: ["Monday", "Friday"] })).toEqual({
+      Weekly: ["Monday", "Friday"],
+    });
+    expect(normalizeRepeat("Weekly")).toBe("Off");
+    expect(normalizeRepeat(undefined)).toBe("Off");
+    expect(normalizeRepeat({ Weekly: "nope" })).toBe("Off");
   });
 
   test("preserves task identity and returns JS Date instances", () => {
