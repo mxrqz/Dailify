@@ -24,6 +24,7 @@ import { DateInput, TimeField } from "@/components/ui/timefield";
 import { TimeValue } from "react-aria-components";
 import { saveTask } from "@/functions/firebase";
 import { upsertTaskById } from "@/functions/functions";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
@@ -31,6 +32,7 @@ import { format } from "date-fns";
 export default function NewTask({ className }: { className: string }) {
   const { getToken } = useAuth();
   const { selectedDay, tasks, setTasks } = useDailify();
+  const { canCreateTask } = useEntitlements();
 
   const navigate = useNavigate();
 
@@ -55,6 +57,14 @@ export default function NewTask({ className }: { className: string }) {
 
   const addNewTask = async (e: FormEvent) => {
     e.preventDefault();
+
+    if (!canCreateTask) {
+      toast("Limite de tarefas atingido", {
+        description: "Você atingiu o limite do seu plano neste mês.",
+        action: { label: "Get Premium", onClick: () => navigate("/premium") },
+      });
+      return;
+    }
 
     if (
       !user ||

@@ -10,6 +10,7 @@ import { format } from "date-fns";
 import { useDailify } from "@/components/dailifyContext";
 import { Progress } from "@/components/ui/progress";
 import { planMap, serverURL } from "@/consts/conts";
+import { computeEntitlements } from "@/functions/functions";
 import { FaCcVisa, FaCcAmex } from "react-icons/fa";
 import { RiMastercardFill } from "react-icons/ri";
 import ApplePayLogo from "@/components/ui/applePayLogo";
@@ -120,8 +121,9 @@ export function SubscriptionTab({
   const { getToken } = useAuth();
   const { tasks } = useDailify();
   const plan = planMap[user?.publicMetadata.plan as string];
-  // Count distinct base tasks, not expanded recurring instances (a daily task = 1, not ~30).
-  const usedCount = tasks ? new Set(tasks.map((t) => t.id)).size : 0;
+  // Quota from the single entitlements source (counts distinct base tasks, not expanded instances).
+  const tasksUsed = tasks ? new Set(tasks.map((t) => t.id)).size : 0;
+  const entitlements = computeEntitlements(permissions, tasksUsed);
 
   const brandIcons: Record<string, JSX.Element> = {
     visa: <FaCcVisa className="text-foreground size-5" />,
@@ -190,26 +192,24 @@ export function SubscriptionTab({
               <span>Tarefas utilizadas</span>
 
               <span className="font-medium">
-                {usedCount} /{" "}
-                {permissions?.taskLimits.monthly === -1
-                  ? "ilimitado"
-                  : permissions?.taskLimits.monthly}
+                {entitlements.tasksUsed} /{" "}
+                {entitlements.unlimited ? "ilimitado" : entitlements.monthlyLimit}
               </span>
             </div>
 
             <Progress
               value={
-                permissions?.taskLimits.monthly && permissions.taskLimits.monthly > 0
-                  ? (usedCount / permissions.taskLimits.monthly) * 100
-                  : 0
+                entitlements.unlimited || entitlements.monthlyLimit <= 0
+                  ? 0
+                  : (entitlements.tasksUsed / entitlements.monthlyLimit) * 100
               }
               className="h-2"
             />
 
             <p className="text-xs text-muted-foreground">
-              {permissions?.taskLimits.monthly === -1
+              {entitlements.unlimited
                 ? "Tarefas ilimitadas"
-                : `${(permissions?.taskLimits.monthly ?? 0) - usedCount} tarefas restantes neste ciclo`}
+                : `${entitlements.remaining} tarefas restantes neste ciclo`}
             </p>
           </div>
         </div>

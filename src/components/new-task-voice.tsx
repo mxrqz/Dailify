@@ -15,12 +15,14 @@ import { useEffect, useState } from "react";
 import { TaskProps } from "@/types/types";
 import { TaskDetailView } from "./task-preview";
 import { useDailify } from "./dailifyContext";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import { toast } from "sonner";
 import { format } from "date-fns";
 
 export default function NewTaskVoice() {
   const [response, setResponse] = useState<TaskProps[]>();
   const { tasks, setTasks } = useDailify();
+  const { voice } = useEntitlements();
 
   useEffect(() => {
     if (!response) return;
@@ -34,6 +36,9 @@ export default function NewTaskVoice() {
       });
     });
   }, [response]);
+
+  // Voice creation is a Pro+AI capability — hide the mic entirely when not entitled.
+  if (!voice) return null;
 
   return (
     <Dialog onOpenChange={(e) => !e && setResponse(undefined)}>

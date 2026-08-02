@@ -3,6 +3,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { useEffect, useState } from "react";
 import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
 import { weekDays } from "@/consts/conts";
+import { useEntitlements } from "@/hooks/useEntitlements";
 
 export default function RepeatPicker({ onSelectedRepeat, task }: RepeatPickerProps) {
   const [repeat, setRepeat] = useState<string>(
@@ -15,6 +16,9 @@ export default function RepeatPicker({ onSelectedRepeat, task }: RepeatPickerPro
     }
     return [];
   });
+
+  const { recurrence } = useEntitlements();
+  const pro = recurrence ? "" : " (Pro)";
 
   const isValidRepeat = (value: unknown): value is TaskProps["repeat"] =>
     ["Off", "Daily", "Monthly", "Yearly"].includes(value as string);
@@ -43,10 +47,18 @@ export default function RepeatPicker({ onSelectedRepeat, task }: RepeatPickerPro
 
         <SelectContent>
           <SelectItem value="Off">Não repetir</SelectItem>
-          <SelectItem value="Daily">Daily</SelectItem>
-          <SelectItem value="Weekly">Weekly</SelectItem>
-          <SelectItem value="Monthly">Monthly</SelectItem>
-          <SelectItem value="Yearly">Yearly</SelectItem>
+          <SelectItem value="Daily" disabled={!recurrence}>
+            Daily{pro}
+          </SelectItem>
+          <SelectItem value="Weekly" disabled={!recurrence}>
+            Weekly{pro}
+          </SelectItem>
+          <SelectItem value="Monthly" disabled={!recurrence}>
+            Monthly{pro}
+          </SelectItem>
+          <SelectItem value="Yearly" disabled={!recurrence}>
+            Yearly{pro}
+          </SelectItem>
         </SelectContent>
       </Select>
 
