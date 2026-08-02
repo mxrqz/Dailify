@@ -135,7 +135,7 @@ export async function updateTask(
   db: D1Database,
   userId: string,
   id: string,
-  patch: Partial<Task>,
+  patch: Partial<Omit<Task, "id" | "completed">>,
 ): Promise<Task | null> {
   const cur = await getTask(db, userId, id);
   if (!cur) return null;
