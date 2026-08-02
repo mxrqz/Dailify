@@ -70,6 +70,23 @@ vestigial Tauri shell. Auth = Clerk. Reads/deletes go client→Firestore via a C
 custom-token bridge (`protected-route.tsx`); creates/edits/voice/billing go through an external
 Node server on Render (separate repo) running Stripe. Plans: Free / Pro / Pro+AI.
 
+**Stack:** React 18 + Vite + TypeScript · Tailwind v4 + shadcn/ui · Clerk (auth) · Firebase/Firestore ·
+react-router · sonner · framer-motion. Package manager: **bun**.
+
+## Code map
+
+Area-specific guidance lives in nested `CLAUDE.md` files (auto-loaded when you work in that folder):
+
+- **`src/functions/`** — data layer (Firestore reads/deletes + server API for writes) and pure,
+  tested helpers (dates, recurrence). Start here for anything data-shaped.
+- **`src/components/`** — React components, shared state (`dailifyContext`), dark mode; shadcn in `ui/`.
+- **`src/types/`** — the shared TS model (`TaskProps`, tiering `PermissionsProps`) and its invariants.
+- **`src/consts/`** — constants, plan ids, `serverURL`, color-token class names, priority scale.
+- **`src/pages/`** — routes, Clerk auth pages, Stripe checkout.
+
+There is **no backend and no tests folder in this repo**: the backend is a separate repo
+(`dailify-server`); tests are colocated `*.test.ts` (vitest) next to the code they cover.
+
 ## Conventions & Patterns
 
 - **No `as` type assertions.** Use type guards or proper types. `as const` is fine. Enforced as
