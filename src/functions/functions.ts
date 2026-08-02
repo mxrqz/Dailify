@@ -62,6 +62,15 @@ export function getTasksForDay(tasks: TaskProps[], day: Date): TaskProps[] {
   return tasks.filter((task) => isSameDay(toJsDate(task.date), day));
 }
 
+/** Append `task` to the list, or replace the existing entry with the same id. */
+export function upsertTaskById(tasks: TaskProps[], task: TaskProps): TaskProps[] {
+  const i = tasks.findIndex((t) => t.id === task.id);
+  if (i === -1) return [...tasks, task];
+  const next = [...tasks];
+  next[i] = task;
+  return next;
+}
+
 /**
  * Expands one recurring task into the concrete instances that fall in `month`.
  * Instances are built in the *viewed* month (not the original one) and carry JS Dates.

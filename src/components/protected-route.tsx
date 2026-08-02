@@ -22,7 +22,6 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     setTasks,
     setIsLoading,
     isLoading,
-    newTask,
     setCurrentMonth,
     currentMonth,
     setCurrentMonthTasks,
@@ -158,7 +157,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       setCurrentMonth(selectedDay);
       getTasks();
     }
-  }, [selectedDay, newTask, isLoaded, isFirebaseLogged]);
+  }, [selectedDay, isLoaded, isFirebaseLogged]);
 
   // ▶️ Rodar quando estiver tudo pronto
   useEffect(() => {

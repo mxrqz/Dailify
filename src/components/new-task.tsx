@@ -23,13 +23,14 @@ import { DatetimePicker } from "./ui/datetime-picker";
 import { DateInput, TimeField } from "@/components/ui/timefield";
 import { TimeValue } from "react-aria-components";
 import { saveTask } from "@/functions/firebase";
+import { upsertTaskById } from "@/functions/functions";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
 
 export default function NewTask({ className }: { className: string }) {
   const { getToken } = useAuth();
-  const { selectedDay, setNewTask } = useDailify();
+  const { selectedDay, tasks, setTasks } = useDailify();
 
   const navigate = useNavigate();
 
@@ -104,13 +105,13 @@ export default function NewTask({ className }: { className: string }) {
         description: error,
         action: {
           label: "Get Premium",
-          onClick: () => navigate("/prices"),
+          onClick: () => navigate("/premium"),
         },
       });
     } else {
-      setNewTask(taskData);
+      setTasks(upsertTaskById(tasks ?? [], taskData));
       toast.message("Event has been created", {
-        description: format(taskData.date as Date, "cccc PPPpp"),
+        description: format(selectedDate, "cccc PPPpp"),
       });
     }
 

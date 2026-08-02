@@ -4,8 +4,6 @@ import { createContext, useContext, useState, ReactNode } from "react";
 interface DailifyContextType {
   selectedDay: Date;
   setSelectedDay: (selectedDay: Date) => void;
-  newTask: TaskProps | undefined;
-  setNewTask: (newTask: TaskProps) => void;
   isCalendar: boolean;
   setIsCalendar: (isCalendar: boolean) => void;
   tasks: TaskProps[] | undefined;
@@ -30,7 +28,6 @@ const DailifyContext = createContext<DailifyContextType | undefined>(undefined);
 // Criando o provider
 export function DailifyProvider({ children }: { children: ReactNode }) {
   const [selectedDay, setSelectedDay] = useState<Date>(new Date());
-  const [newTask, setNewTask] = useState<TaskProps>();
   const [isCalendar, setIsCalendar] = useState<boolean>(false);
   const [tasks, setTasks] = useState<TaskProps[]>();
   const [isLoading, setIsLoading] = useState<null | string>(null);
@@ -45,8 +42,6 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
       value={{
         selectedDay,
         setSelectedDay,
-        newTask,
-        setNewTask,
         isCalendar,
         setIsCalendar,
         tasks,

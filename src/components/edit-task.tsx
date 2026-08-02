@@ -27,7 +27,7 @@ import { TimeValue } from "react-aria-components";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
-import { isTaskModified } from "@/functions/functions";
+import { isTaskModified, upsertTaskById } from "@/functions/functions";
 
 type EditTaskProps = Record<string, never>;
 
@@ -54,7 +54,7 @@ export function EditTaskTrigger({ children }: { children: ReactNode }) {
 }
 
 export function EditTaskContent({ task }: { task: TaskProps }) {
-  const { setNewTask } = useDailify();
+  const { tasks, setTasks } = useDailify();
   const { getToken } = useAuth();
   const navigate = useNavigate();
 
@@ -180,12 +180,12 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
         description: error,
         action: {
           label: "Get Premium",
-          onClick: () => navigate("/prices"),
+          onClick: () => navigate("/premium"),
         },
       });
     } else {
       toast.success("Task updated successfully!");
-      setNewTask(taskData);
+      setTasks(upsertTaskById(tasks ?? [], taskData));
     }
 
     setLoading(false);

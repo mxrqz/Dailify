@@ -5,6 +5,7 @@ import {
   getCompletionDate,
   getTasksForDay,
   expandRecurringTask,
+  upsertTaskById,
   getTime,
   returnFractedDate,
   unixToDate,
@@ -177,6 +178,15 @@ describe("expandRecurringTask", () => {
 
   test("Off yields nothing", () => {
     expect(expandRecurringTask(makeTask({ repeat: "Off" }), new Date(2026, 7, 1))).toEqual([]);
+  });
+
+  test("upsertTaskById appends a new id and replaces an existing one", () => {
+    const a = makeTask({ id: "a", title: "old" });
+    const b = makeTask({ id: "b" });
+    expect(upsertTaskById([a], b).map((t) => t.id)).toEqual(["a", "b"]);
+    const out = upsertTaskById([a], makeTask({ id: "a", title: "new" }));
+    expect(out).toHaveLength(1);
+    expect(out[0].title).toBe("new");
   });
 
   test("preserves task identity and returns JS Date instances", () => {

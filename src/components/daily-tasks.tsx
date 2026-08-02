@@ -16,7 +16,6 @@ import {
 } from "@/consts/conts";
 import { Timestamp } from "firebase/firestore";
 import { getCompletionDate, getTime, getTasksForDay } from "@/functions/functions";
-import { format } from "date-fns";
 import { useDailify } from "./dailifyContext";
 
 import { EditTask, EditTaskContent, EditTaskTrigger } from "./edit-task";
@@ -26,7 +25,7 @@ import { deleteTask, markTaskAsCompleted } from "@/functions/firebase";
 import { useAuth, useUser } from "@clerk/clerk-react";
 
 export default function DailyTasks() {
-  const { selectedDay, newTask, tasks, setTasks, isCalendar } = useDailify();
+  const { selectedDay, tasks, setTasks, isCalendar } = useDailify();
   const [dayTasks, setDayTasks] = useState<TaskProps[]>();
   const { user } = useUser();
   const { getToken } = useAuth();
@@ -56,27 +55,6 @@ export default function DailyTasks() {
     if (!newTasks) return;
     setTasks(newTasks);
   };
-
-  useEffect(() => {
-    if (!newTask) return;
-
-    const taskDate = format(newTask.date as Date, "PPP");
-    const currentSelectedDay = format(selectedDay, "PPP");
-
-    if (taskDate === currentSelectedDay) {
-      setDayTasks((prev) => {
-        if (!prev) return [newTask];
-        const existingTaskIndex = prev.findIndex((task) => task.id === newTask.id);
-        if (existingTaskIndex !== -1) {
-          const updatedTasks = [...prev];
-          updatedTasks[existingTaskIndex] = newTask;
-          return updatedTasks;
-        }
-
-        return [...prev, newTask];
-      });
-    }
-  }, [newTask]);
 
   useEffect(() => {
     if (!tasks) return;
