@@ -26,10 +26,12 @@ export const childVariants = {
     visible: { opacity: 1, transition: { duration: 0.1 } }
 }
 
+export const PLAN_ID = { free: "free", pro: "pro", proAi: "pro+ai" } as const;
+
 export const planMap: Record<string, "Free" | "Pro" | "Pro + AI"> = {
-    ["free"]: "Free",
-    ["pro"]: "Pro",
-    ["pro+ai"!]: "Pro + AI",
+    [PLAN_ID.free]: "Free",
+    [PLAN_ID.pro]: "Pro",
+    [PLAN_ID.proAi]: "Pro + AI",
 };
 
 export const serverURL = "https://dailify-server.onrender.com/"

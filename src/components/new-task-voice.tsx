@@ -13,18 +13,19 @@ import { format } from "date-fns";
 
 export default function NewTaskVoice() {
     const [response, setResponse] = useState<TaskProps[]>()
-    const { setNewTask } = useDailify()
+    const { tasks, setTasks } = useDailify()
 
     useEffect(() => {
-        if (response) {
-            response.forEach(task => {
-                setNewTask(task)
+        if (!response) return
 
-                toast.message('Event has been created', {
-                    description: format(new Date(task.date as any as string), 'cccc PPPpp'),
-                })
+        // append ALL voice tasks — a per-task setNewTask loop kept only the last one
+        setTasks([...(tasks ?? []), ...response])
+
+        response.forEach(task => {
+            toast.message('Event has been created', {
+                description: format(task.date as Date, 'cccc PPPpp'),
             })
-        }
+        })
     }, [response])
 
     return (

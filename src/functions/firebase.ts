@@ -197,17 +197,21 @@ async function getMonthlyRepeatTasks(userId: string, month: Date) {
 export async function getMonthTaskByIds(userId: string, taskId: string[], month: Date): Promise<TaskProps[] | null> {
     if (taskId.length === 0) return null;
 
-    const q = query(collection(db, "users", userId, "tasks")) // , where("id", "==", taskId));
-    const querySnapshot = await getDocs(q);
-
     const start = startOfMonth(month)
     const end = endOfMonth(month);
 
     let tasks: TaskProps[] = [];
 
-    querySnapshot.forEach(doc => {
-        const data = doc.data() as TaskProps
-        if (!taskId.includes(data.id)) return
+    // Firestore 'in' allows up to 30 values — chunk the ids instead of reading the whole collection
+    const docs: TaskProps[] = [];
+    for (let i = 0; i < taskId.length; i += 30) {
+        const chunk = taskId.slice(i, i + 30);
+        const q = query(collection(db, "users", userId, "tasks"), where("id", "in", chunk));
+        const snap = await getDocs(q);
+        snap.forEach(d => docs.push(d.data() as TaskProps));
+    }
+
+    docs.forEach(data => {
 
         if (typeof data.repeat === "string") {
             const originalDate = (data.date as Timestamp).toDate();

@@ -7,17 +7,11 @@ import { Calendar1Icon, ChevronLeft, ChevronRight, ClockIcon, Loader2Icon } from
 import { addMonths, eachDayOfInterval, endOfMonth, endOfWeek, format, isSameMonth, isSameYear, isToday, startOfMonth, startOfWeek, subMonths } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { useDailify } from "./dailifyContext";
-import { Timestamp } from "firebase/firestore";
 import { Sheet, SheetContent, SheetDescription, SheetHeader, SheetTitle, SheetTrigger } from "./ui/sheet";
-import { getCompletionDate, getTime } from "@/functions/functions";
-import { TaskProps } from "@/types/types";
+import { getCompletionDate, getTime, getTasksForDay } from "@/functions/functions";
 import { EditTask, EditTaskContent, EditTaskTrigger } from "./edit-task";
 import { Badge } from "./ui/badge";
 import NewTaskVoice from "./new-task-voice";
-
-function getTasks(tasks: TaskProps[], day: Date) {
-  return tasks.filter(task => (task.date as Timestamp).toDate().getDate() === day.getDate())
-}
 
 export function CalendarView() {
   const { selectedDay, setSelectedDay, isCalendar, setIsCalendar, tasks, isLoading } = useDailify()
@@ -105,7 +99,7 @@ export function CalendarView() {
             const isCurrentMonth = isSameMonth(day, selectedDay)
             const isCurrentDay = isToday(day)
 
-            const todayTasks = tasks && getTasks(tasks, day)
+            const todayTasks = tasks && getTasksForDay(tasks, day)
 
             // function isAfterTime(time: Timestamp | Date): boolean {
             //   const { hours, minutes } = getTime(time, "{hours, minutes}")
@@ -182,8 +176,6 @@ export function CalendarView() {
                                   className={`border rounded-md p-2 shadow flex flex-col gap-2 w-full cursor-pointer text-start 
                                     ${task.completed && getCompletionDate(task, day) && 'border-green-500'}`}
                                 >
-                                  {getCompletionDate(task, day)} teste
-
                                   <div className="flex flex-col w-full">
                                     <div className="flex w-full justify-between items-center">
                                       <span className="text-sm font-medium">{task.title}</span>

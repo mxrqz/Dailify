@@ -1,4 +1,4 @@
-import { useAuth, useUser } from "@clerk/clerk-react"
+import { useAuth, useUser, useSession } from "@clerk/clerk-react"
 import { FormDataValues, InvoicesProps, PaymentDetailsProps, PermissionsProps } from "@/types/types"
 import { Link, useSearchParams } from "react-router-dom"
 import { format } from "date-fns"
@@ -199,6 +199,7 @@ export function SubscriptionTab({ paymentDetails, permissions, invoices }: { pay
 
 export function SecurityTab() {
     const { user } = useUser()
+    const { session: currentSession } = useSession()
     const [sessions, setSessions] = useState<SessionWithActivitiesResource[]>()
 
     const getSessions = async () => {
@@ -257,7 +258,7 @@ export function SecurityTab() {
                                                     <p className="font-medium">{session.latestActivity.deviceType}</p>
 
                                                     <div className="flex items-center gap-2">
-                                                        {session.status && (
+                                                        {session.id === currentSession?.id && (
                                                             <Badge variant="outline" className="border-green-500 text-[0.6rem] py-0.5 px-1">
                                                                 Atual
                                                             </Badge>

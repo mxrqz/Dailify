@@ -8,7 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { toast } from "sonner"
 import { Link } from "react-router-dom"
 import Header from "@/components/header"
-import { serverURL } from "@/consts/conts"
+import { serverURL, PLAN_ID } from "@/consts/conts"
 import { useAuth, useUser } from "@clerk/clerk-react"
 
 export default function PremiumPage() {
@@ -313,11 +313,11 @@ export default function PremiumPage() {
                             Experimente gratuitamente por 7 dias. Cancele a qualquer momento.
                         </p>
                         <div className="flex flex-col sm:flex-row justify-center gap-4">
-                            <Button size="lg" onClick={() => handleSelectPlan("pro")}>
+                            <Button size="lg" onClick={() => handleSelectPlan(PLAN_ID.pro)}>
                                 Começar com Pro
                             </Button>
 
-                            <Button size="lg" variant="outline" onClick={() => handleSelectPlan("pro-ai")}>
+                            <Button size="lg" variant="outline" onClick={() => handleSelectPlan(PLAN_ID.proAi)}>
                                 Experimentar Pro + IA
                             </Button>
                         </div>

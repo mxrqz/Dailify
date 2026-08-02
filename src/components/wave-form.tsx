@@ -52,7 +52,10 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
         setLoading(true)
 
         const token = await getToken();
-        if (!token) return;
+        if (!token) {
+            setLoading(false)
+            return;
+        }
 
         const formData = new FormData();
         formData.append('audio', record);
@@ -60,7 +63,10 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
         const response = await createTaskVoice(token, formData)
         const data = await response.json()
 
-        if (!data) return
+        if (!data) {
+            setLoading(false)
+            return
+        }
 
         const taskData: string[] = data.tasksData
 

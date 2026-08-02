@@ -7,7 +7,7 @@ import { Badge } from "./ui/badge";
 import { motion } from 'framer-motion';
 import { priorityTextColor, priorityBgColor, priorityBorderColor, priorityText, tagsBgColors2, variants, childVariants } from "@/consts/conts";
 import { Timestamp } from "firebase/firestore";
-import { getCompletionDate, getTime } from "@/functions/functions";
+import { getCompletionDate, getTime, getTasksForDay } from "@/functions/functions";
 import { format } from "date-fns";
 import { useDailify } from "./dailifyContext";
 
@@ -72,7 +72,7 @@ export default function DailyTasks() {
 
     useEffect(() => {
         if (!tasks) return
-        const todayTasks = tasks?.filter(task => (task.date as Timestamp).toDate().getDate() === selectedDay.getDate())
+        const todayTasks = getTasksForDay(tasks, selectedDay)
         setDayTasks(todayTasks)
     }, [tasks, selectedDay, isCalendar])
 

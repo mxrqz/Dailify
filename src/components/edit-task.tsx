@@ -149,7 +149,7 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
             id: task.id,
             title,
             description: desc,
-            completed: [],
+            completed: task.completed,
             duration: selectedDuration,
             tags,
             priority,

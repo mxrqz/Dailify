@@ -1,7 +1,11 @@
 import { TaskProps } from "@/types/types"
-import { format } from "date-fns"
+import { format, isSameDay } from "date-fns"
 import { enUS, ptBR } from "date-fns/locale"
 import { Timestamp } from "firebase/firestore"
+
+function toJsDate(value: Date | Timestamp): Date {
+    return value instanceof Timestamp ? value.toDate() : value;
+}
 
 export const returnFractedDate = (date: Date) => {
     const day = date.getDate()
@@ -40,39 +44,38 @@ export const formatDateByLocale = (date: Date, locale: string) => {
 
 export function getCompletionDate(task: TaskProps, selectedDay: Date) {
     if (!Array.isArray(task.completed)) return
-    const taskCompletedDate = task.completed.map(taskDate => (taskDate as Timestamp).toDate())
+    const taskCompletedDate = (task.completed as (Date | Timestamp)[]).map(toJsDate)
     const haveBeenCompletedToday = taskCompletedDate.some(taskDate => format(taskDate, 'P') === format(selectedDay, "P")) ? true : false
 
     return haveBeenCompletedToday
 }
 
+export function getTasksForDay(tasks: TaskProps[], day: Date): TaskProps[] {
+    return tasks.filter(task => isSameDay(toJsDate(task.date), day));
+}
+
 export function getNextTask(currentMonthTasks: TaskProps[]) {
     const now = new Date();
-    const tasks = currentMonthTasks
-    const orderedTasks = tasks.sort((a, b) => (a.date as Timestamp).toDate().getTime() - (b.date as Timestamp).toDate().getTime())
-    const nextTask = orderedTasks.find(task => (task.date as Timestamp).toDate().getTime() > now.getTime())
+    const orderedTasks = [...currentMonthTasks].sort((a, b) => toJsDate(a.date).getTime() - toJsDate(b.date).getTime())
+    const nextTask = orderedTasks.find(task => toJsDate(task.date).getTime() > now.getTime())
 
     return nextTask
 }
 
 export function isTaskModified(task: TaskProps, updated: TaskProps): boolean {
-    const original = {
-        ...task,
-        alert: task.alert ? task.alert : task.date
-    }
+    const normalizeDate = (d: Date | Timestamp | undefined) => d == null ? undefined : toJsDate(d).getTime();
 
-    const normalizeDate = (d: any) => d instanceof Date ? d.getTime() : d.toDate().getTime();
-    
-    if (original.title !== updated.title) return true;
-    if (original.description !== updated.description) return true;
-    if (original.duration !== updated.duration) return true;
-    if (original.priority !== updated.priority) return true;
-    if (JSON.stringify(original.tags) !== JSON.stringify(updated.tags)) return true;
-    
-    if (normalizeDate(original.date) !== normalizeDate(updated.date)) return true;
-    if (normalizeDate(original.alert) !== normalizeDate(updated.alert)) return true;
+    if (task.title !== updated.title) return true;
+    if (task.description !== updated.description) return true;
+    if (task.duration !== updated.duration) return true;
+    if (task.priority !== updated.priority) return true;
+    if (JSON.stringify(task.tags) !== JSON.stringify(updated.tags)) return true;
 
-    const isRepeatChanged = JSON.stringify(original.repeat) !== JSON.stringify(updated.repeat);
+    if (normalizeDate(task.date) !== normalizeDate(updated.date)) return true;
+    // alert falls back to date on both sides so a task without an alert isn't flagged as changed
+    if (normalizeDate(task.alert ?? task.date) !== normalizeDate(updated.alert ?? updated.date)) return true;
+
+    const isRepeatChanged = JSON.stringify(task.repeat) !== JSON.stringify(updated.repeat);
     if (isRepeatChanged) return true;
 
     return false;
