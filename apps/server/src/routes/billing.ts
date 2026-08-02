@@ -3,7 +3,7 @@ import { PLAN_PERMISSIONS } from "@dailify/shared";
 import type { Env } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { clerk, getUserRole, readStripeCustomerId, userEmail } from "../lib/clerk";
-import { isProductName, priceMap, stripeClient } from "../lib/stripe";
+import { getPaymentDetails, isProductName, listInvoices, priceMap, stripeClient } from "../lib/stripe";
 import { fail } from "../lib/errors";
 
 const billing = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
@@ -59,6 +59,24 @@ billing.get("/billing/portal", requireAuth, async (c) => {
     return_url: `${c.env.ALLOWED_ORIGIN}/profile?tab=subscription`,
   });
   return c.json({ url: portal.url });
+});
+
+billing.get("/billing/payment-details", requireAuth, async (c) => {
+  const user = await clerk(c.env).users.getUser(c.get("userId"));
+  const stripeCustomerId = readStripeCustomerId(user);
+  if (!stripeCustomerId) return fail(c, 400, "No Stripe customer");
+
+  const details = await getPaymentDetails(c.env, stripeClient(c.env), stripeCustomerId);
+  return c.json(details);
+});
+
+billing.get("/billing/invoices", requireAuth, async (c) => {
+  const user = await clerk(c.env).users.getUser(c.get("userId"));
+  const stripeCustomerId = readStripeCustomerId(user);
+  if (!stripeCustomerId) return fail(c, 400, "No Stripe customer");
+
+  const invoices = await listInvoices(c.env, stripeClient(c.env), stripeCustomerId);
+  return c.json({ invoices });
 });
 
 export default billing;
