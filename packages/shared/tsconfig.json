@@ -5,6 +5,7 @@
     "moduleResolution": "bundler",
     "target": "ESNext",
     "lib": ["ESNext"],
+    "skipLibCheck": true,
     "noEmit": true,
     "verbatimModuleSyntax": true
   }
