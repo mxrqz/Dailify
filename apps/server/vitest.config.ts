@@ -3,6 +3,10 @@ import { cloudflareTest, readD1Migrations } from "@cloudflare/vitest-pool-worker
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  // Silences Vite's "Sourcemap ... points to missing source files" warning: the `stripe` package's
+  // published .js.map files reference original .ts sources it doesn't ship. Cosmetic only — our own
+  // sourcemaps are unaffected.
+  logLevel: "error",
   plugins: [
     cloudflareTest(async () => {
       const migrations = await readD1Migrations(path.join(__dirname, "migrations"));
