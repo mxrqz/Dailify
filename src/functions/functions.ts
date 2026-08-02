@@ -1,4 +1,4 @@
-import { TaskProps } from "@/types/types";
+import { TaskProps, PermissionsProps, Entitlements } from "@/types/types";
 import { format, isSameDay, endOfMonth } from "date-fns";
 import { enUS, ptBR } from "date-fns/locale";
 import { Timestamp } from "firebase/firestore";
@@ -60,6 +60,33 @@ export function getCompletionDate(task: TaskProps, selectedDay: Date) {
 
 export function getTasksForDay(tasks: TaskProps[], day: Date): TaskProps[] {
   return tasks.filter((task) => isSameDay(toJsDate(task.date), day));
+}
+
+/**
+ * Derives feature entitlements from the server-provided permissions (capability-based — never the
+ * plan name). `permissions === undefined` = not loaded yet: premium features default OFF (so they
+ * don't flash), but task creation is NOT blocked (don't lock out a paying user mid-load). The client
+ * gate is UX only — the server (d69.5) is the real enforcement.
+ */
+export function computeEntitlements(
+  permissions: PermissionsProps | undefined,
+  tasksUsed: number,
+): Entitlements {
+  const monthlyLimit = permissions?.taskLimits.monthly ?? -1;
+  const recurringLimit = permissions?.taskLimits.recurring ?? 0;
+  const unlimited = monthlyLimit < 0;
+  const remaining = unlimited ? Infinity : Math.max(0, monthlyLimit - tasksUsed);
+
+  return {
+    loading: permissions === undefined,
+    voice: permissions?.features.voiceCreation ?? false,
+    recurrence: recurringLimit !== 0, // 0 = not allowed; -1 (unlimited) or >0 = allowed
+    monthlyLimit,
+    unlimited,
+    tasksUsed,
+    remaining,
+    canCreateTask: unlimited || remaining > 0,
+  };
 }
 
 /** Coerces an unknown repeat value (e.g. from the voice API) into a valid TaskProps["repeat"]. */

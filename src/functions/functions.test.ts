@@ -7,11 +7,12 @@ import {
   expandRecurringTask,
   upsertTaskById,
   normalizeRepeat,
+  computeEntitlements,
   getTime,
   returnFractedDate,
   unixToDate,
 } from "./functions";
-import type { TaskProps } from "@/types/types";
+import type { TaskProps, PermissionsProps } from "@/types/types";
 
 function makeTask(over: Partial<TaskProps> = {}): TaskProps {
   return {
@@ -206,5 +207,70 @@ describe("expandRecurringTask", () => {
     expect(out[0].id).toBe("abc");
     expect(out[0].title).toBe("Gym");
     expect(out[0].date).toBeInstanceOf(Date);
+  });
+});
+
+function perms(
+  over: Partial<PermissionsProps["taskLimits"]> = {},
+  voiceCreation = false,
+): PermissionsProps {
+  return {
+    taskLimits: { daily: -1, monthly: -1, recurring: -1, ...over },
+    features: { voiceCreation },
+    whatsapp: {
+      weeklyLimit: 0,
+      canRead: false,
+      canCreate: false,
+      canUpdate: false,
+      canDelete: false,
+      voiceCreation: false,
+    },
+  };
+}
+
+describe("computeEntitlements", () => {
+  test("free: limited, no voice, no recurrence", () => {
+    const e = computeEntitlements(perms({ monthly: 30, recurring: 0 }, false), 10);
+    expect(e).toMatchObject({
+      loading: false,
+      voice: false,
+      recurrence: false,
+      unlimited: false,
+      monthlyLimit: 30,
+      remaining: 20,
+      canCreateTask: true,
+    });
+  });
+
+  test("free at the monthly limit can't create", () => {
+    const e = computeEntitlements(perms({ monthly: 30, recurring: 0 }), 30);
+    expect(e.remaining).toBe(0);
+    expect(e.canCreateTask).toBe(false);
+  });
+
+  test("pro: unlimited + recurrence, no voice", () => {
+    const e = computeEntitlements(perms({ monthly: -1, recurring: -1 }, false), 999);
+    expect(e).toMatchObject({
+      unlimited: true,
+      recurrence: true,
+      voice: false,
+      canCreateTask: true,
+    });
+    expect(e.remaining).toBe(Infinity);
+  });
+
+  test("pro+ai: voice enabled", () => {
+    expect(computeEntitlements(perms({ monthly: -1, recurring: -1 }, true), 0).voice).toBe(true);
+  });
+
+  test("undefined permissions (loading): premium off, creation not blocked", () => {
+    const e = computeEntitlements(undefined, 5);
+    expect(e).toMatchObject({
+      loading: true,
+      voice: false,
+      recurrence: false,
+      unlimited: true,
+      canCreateTask: true,
+    });
   });
 });

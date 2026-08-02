@@ -85,6 +85,18 @@ export type PermissionsProps = {
   };
 };
 
+// Capability flags derived from PermissionsProps — gate on these, never on the plan name.
+export type Entitlements = {
+  loading: boolean; // permissions not fetched yet
+  voice: boolean; // can create tasks by voice
+  recurrence: boolean; // can use recurring tasks
+  monthlyLimit: number; // -1 = unlimited
+  unlimited: boolean; // monthlyLimit < 0
+  tasksUsed: number; // distinct base tasks this month
+  remaining: number; // Infinity when unlimited
+  canCreateTask: boolean;
+};
+
 export type InvoicesProps = {
   amount_paid: number;
   currency: string;
