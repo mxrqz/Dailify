@@ -5,9 +5,8 @@ import { format } from "date-fns";
 import { useDailify } from "./dailifyContext";
 import NewTask from "./new-task";
 import { TaskProps } from "@/types/types";
-import { Timestamp } from "firebase/firestore";
 import Calendar2 from "./ui/calendar2";
-import { getNextTask } from "@/functions/functions";
+import { getNextTask, toJsDate } from "@/functions/functions";
 import NewTaskVoice from "./new-task-voice";
 
 export default function SelectDay() {
@@ -50,7 +49,7 @@ export default function SelectDay() {
             <div className="w-full border border-primary rounded-md p-2 flex flex-col">
               <span className="text-lg font-bold">{nextTask?.title}</span>
               <span className="text-muted-foreground">
-                {format((nextTask?.date as Timestamp).toDate(), "PPPP, p")}
+                {format(toJsDate(nextTask.date), "PPPP, p")}
               </span>
             </div>
           )}

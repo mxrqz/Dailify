@@ -25,3 +25,4 @@
 {"id":"int-039a3065","kind":"field_change","created_at":"2026-08-02T04:37:49.158859197Z","actor":"mxrqz","issue_id":"Dailify-d69.2","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"Closed"}}
 {"id":"int-eacc4f65","kind":"field_change","created_at":"2026-08-02T04:37:49.288704537Z","actor":"mxrqz","issue_id":"Dailify-d69.3","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"Closed"}}
 {"id":"int-ae6899b2","kind":"field_change","created_at":"2026-08-02T04:37:49.406805343Z","actor":"mxrqz","issue_id":"Dailify-d69.4","extra":{"field":"status","new_value":"closed","old_value":"in_progress","reason":"Closed"}}
+{"id":"int-78793c3a","kind":"field_change","created_at":"2026-08-02T14:47:56.548263949Z","actor":"mxrqz","issue_id":"Dailify-zss","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"select-day usa toJsDate; toJsDate exportado. Sintoma do pz9.9."}}

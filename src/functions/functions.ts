@@ -4,7 +4,8 @@ import { enUS, ptBR } from "date-fns/locale";
 import { Timestamp } from "firebase/firestore";
 import { weekDays } from "@/consts/conts";
 
-function toJsDate(value: Date | Timestamp): Date {
+/** Normalize a Date | Firestore Timestamp to a JS Date. Use this before ANY date op. */
+export function toJsDate(value: Date | Timestamp): Date {
   return value instanceof Timestamp ? value.toDate() : value;
 }
 
