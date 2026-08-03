@@ -171,4 +171,17 @@ describe("POST /tasks/voice", () => {
       .first<{ n: number }>();
     expect(row?.n).toBe(0);
   });
+
+  it("413s an oversized audio upload before calling OpenAI", async () => {
+    role = "pro+ai";
+    userId = "vu4";
+    const form = new FormData();
+    form.append(
+      "audio",
+      new File([new Uint8Array(5 * 1024 * 1024 + 1)], "big.ogg", { type: "audio/ogg" }),
+    );
+    const res = await app.request("/tasks/voice", { method: "POST", body: form }, env);
+    expect(res.status).toBe(413);
+    expect(openaiMock.audio.transcriptions.create).not.toHaveBeenCalled();
+  });
 });

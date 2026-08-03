@@ -89,11 +89,21 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
       barRadius: 12,
     });
 
+    // Prefer Opus (tiny for speech); fall back to mp4/AAC on Safari. Low bitrate mono keeps
+    // the upload ~5-10x smaller than the MediaRecorder default — accuracy for speech is unaffected.
+    const preferredMimeTypes = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4"];
+    const mimeType =
+      typeof MediaRecorder !== "undefined"
+        ? preferredMimeTypes.find((t) => MediaRecorder.isTypeSupported(t))
+        : undefined;
+
     const record = wavesurfer.registerPlugin(
       RecordPlugin.create({
         continuousWaveform: true,
         continuousWaveformDuration: 30,
         renderRecordedAudio: true,
+        audioBitsPerSecond: 24000,
+        ...(mimeType ? { mimeType } : {}),
       }),
     );
 

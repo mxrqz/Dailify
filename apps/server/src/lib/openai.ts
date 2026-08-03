@@ -4,8 +4,13 @@ import type { Env } from "../index";
 
 export const openaiClient = (env: Env) => new OpenAI({ apiKey: env.OPENAI_API_KEY });
 
+// gpt-4o-mini-transcribe: ~$0.003/min (half of whisper-1) with equal/better accuracy.
+// Billing is per audio DURATION, not file size — the client keeps clips short + Opus-compressed.
 export async function transcribe(env: Env, file: File): Promise<string> {
-  const r = await openaiClient(env).audio.transcriptions.create({ file, model: "whisper-1" });
+  const r = await openaiClient(env).audio.transcriptions.create({
+    file,
+    model: "gpt-4o-mini-transcribe",
+  });
   return r.text;
 }
 

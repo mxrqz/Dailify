@@ -40,6 +40,12 @@ voice.post("/voice", requireAuth, async (c) => {
   const audio = body["audio"];
   if (!(audio instanceof File)) return fail(c, 400, "No audio");
 
+  // Cap upload size — guards OpenAI cost/abuse (Opus voice at ~24kbps is well under this;
+  // OpenAI itself rejects >25MB). Reject non-audio content types too.
+  const MAX_AUDIO_BYTES = 5 * 1024 * 1024;
+  if (audio.size > MAX_AUDIO_BYTES) return fail(c, 413, "Audio too large (max 5MB)");
+  if (audio.type && !audio.type.startsWith("audio/")) return fail(c, 415, "Unsupported audio type");
+
   const user = await clerk(c.env).users.getUser(userId);
   const timezone = readTimezone(user);
   if (!timezone) return fail(c, 400, "No timezone set");
