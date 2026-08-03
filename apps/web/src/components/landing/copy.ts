@@ -11,7 +11,7 @@
 export const copy = {
   nav: {
     logoAlt: "Dailify",
-    features: "Features",
+    features: "Recursos",
     pricing: "Preços",
     signIn: "Entrar",
     getStarted: "Começar",
@@ -21,7 +21,7 @@ export const copy = {
     eyebrow: "// ORGANIZE SEU DIA",
     titleLead: "O seu dia,",
     titleAccent: "projetado",
-    titleTail: "não improvisado.",
+    titleTail: "— não improvisado.",
     subtitle:
       "Tarefas, horários e recorrência num só lugar — o Dailify monta seu dia pra você só executar.",
     ctaPrimary: "Começar — é grátis",
@@ -112,7 +112,7 @@ export const copy = {
       },
       pro: {
         name: "Pro",
-        description: "Tarefas ilimitadas e recorrência pra quem já vive no Dailify.",
+        description: "Mais tarefas por mês e recorrência ilimitada pra quem já vive no Dailify.",
         cta: "Assinar Pro",
       },
       proAi: {
@@ -136,7 +136,7 @@ export const copy = {
     columns: {
       product: {
         title: "Produto",
-        features: "Features",
+        features: "Recursos",
         pricing: "Preços",
       },
       legal: {
