@@ -13,6 +13,7 @@ const authed = (token: string, init: RequestInit = {}) => ({
 export async function getTasksForMonth(token: string, month: Date): Promise<Task[]> {
   const m = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
   const res = await fetch(`${apiURL}/tasks?month=${m}`, authed(token));
+  if (!res.ok) return [];
   const data = await res.json();
   return data.tasks ?? [];
 }
@@ -64,23 +65,32 @@ export async function getPermissions(token: string): Promise<Permissions> {
   return (await fetch(`${apiURL}/permissions`, authed(token))).json();
 }
 
-export async function getPaymentDetails(token: string): Promise<PaymentDetails> {
-  return (await fetch(`${apiURL}/billing/payment-details`, authed(token))).json();
+export async function getPaymentDetails(token: string): Promise<PaymentDetails | null> {
+  const res = await fetch(`${apiURL}/billing/payment-details`, authed(token));
+  if (!res.ok) return null;
+  return res.json();
 }
 
 export async function getInvoices(token: string): Promise<Invoice[]> {
-  return (await fetch(`${apiURL}/billing/invoices`, authed(token))).json();
+  const res = await fetch(`${apiURL}/billing/invoices`, authed(token));
+  if (!res.ok) return [];
+  return res.json();
 }
 
-export async function checkout(token: string, productName: string): Promise<{ url: string }> {
-  return (
-    await fetch(
-      `${apiURL}/billing/checkout`,
-      authed(token, { method: "POST", body: JSON.stringify({ productName }) }),
-    )
-  ).json();
+export async function checkout(
+  token: string,
+  productName: string,
+): Promise<{ url: string | null }> {
+  const res = await fetch(
+    `${apiURL}/billing/checkout`,
+    authed(token, { method: "POST", body: JSON.stringify({ productName }) }),
+  );
+  if (!res.ok) return { url: null };
+  return res.json();
 }
 
-export async function billingPortal(token: string): Promise<{ url: string }> {
-  return (await fetch(`${apiURL}/billing/portal`, authed(token))).json();
+export async function billingPortal(token: string): Promise<{ url: string | null }> {
+  const res = await fetch(`${apiURL}/billing/portal`, authed(token));
+  if (!res.ok) return { url: null };
+  return res.json();
 }

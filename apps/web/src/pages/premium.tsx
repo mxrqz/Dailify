@@ -44,7 +44,7 @@ export default function PremiumPage() {
     const productName = billingCycle === "yearly" ? `${plan}-year` : plan;
     const { url } = await checkout(token, productName);
 
-    window.location.href = url;
+    if (url) window.location.href = url;
   };
 
   const plans = [

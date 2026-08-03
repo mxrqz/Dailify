@@ -14,8 +14,8 @@ interface DailifyContextType {
   setCurrentMonth: (currentMonth: Date) => void;
   currentMonthTasks: TaskProps[] | undefined;
   setCurrentMonthTasks: (task: TaskProps[]) => void;
-  paymentDetails: PaymentDetailsProps | undefined;
-  setPaymentDetails: (paymentDetails: PaymentDetailsProps) => void;
+  paymentDetails: PaymentDetailsProps | null | undefined;
+  setPaymentDetails: (paymentDetails: PaymentDetailsProps | null) => void;
   invoices: InvoicesProps[] | undefined;
   setInvoices: (invoices: InvoicesProps[]) => void;
   permissions: PermissionsProps | undefined;
@@ -33,7 +33,7 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState<null | string>(null);
   const [currentMonth, setCurrentMonth] = useState<Date>();
   const [currentMonthTasks, setCurrentMonthTasks] = useState<TaskProps[]>();
-  const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsProps>();
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsProps | null>(null);
   const [permissions, setPermissions] = useState<PermissionsProps>();
   const [invoices, setInvoices] = useState<InvoicesProps[]>();
 

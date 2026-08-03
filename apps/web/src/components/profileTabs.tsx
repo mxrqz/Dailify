@@ -149,7 +149,7 @@ export function SubscriptionTab({
     if (!token) return;
 
     const { url } = await billingPortal(token);
-    window.location.href = url;
+    if (url) window.location.href = url;
   };
 
   return (
