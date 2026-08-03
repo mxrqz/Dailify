@@ -5,8 +5,7 @@ import WaveSurfer from "wavesurfer.js";
 import RecordPlugin from "wavesurfer.js/dist/plugins/record.esm.js";
 import { useAuth } from "@clerk/clerk-react";
 import { TaskProps } from "@/types/types";
-import { createTaskVoice } from "@/functions/firebase";
-import { normalizeRepeat } from "@/functions/functions";
+import { createTaskVoice } from "@/functions/api";
 
 export default function Waveform({ onResponse }: { onResponse: (response: TaskProps[]) => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -69,19 +68,7 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
       return;
     }
 
-    const taskData: TaskProps[] = data.tasksData;
-
-    const tasks = taskData.map((taskItem) => {
-      const task: TaskProps = {
-        ...taskItem,
-        date: new Date(taskItem.date as Date),
-        alert: new Date(taskItem.alert as Date),
-        repeat: normalizeRepeat(taskItem.repeat),
-      };
-
-      return task;
-    });
-
+    const tasks: TaskProps[] = data.tasks ?? [];
     onResponse(tasks);
 
     setLoading(false);

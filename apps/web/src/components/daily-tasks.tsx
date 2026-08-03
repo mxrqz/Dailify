@@ -14,38 +14,25 @@ import {
   variants,
   childVariants,
 } from "@/consts/conts";
-import { Timestamp } from "firebase/firestore";
 import { getCompletionDate, getTime, getTasksForDay } from "@/functions/functions";
 import { useDailify } from "./dailifyContext";
 
 import { EditTask, EditTaskContent, EditTaskTrigger } from "./edit-task";
 import { Popover, PopoverContent, PopoverTrigger } from "./ui/popover";
 import { Button } from "./ui/button";
-import { deleteTask, markTaskAsCompleted } from "@/functions/firebase";
+import { deleteTask, completeTask } from "@/functions/api";
 import { toast } from "sonner";
-import { useAuth, useUser } from "@clerk/clerk-react";
+import { useAuth } from "@clerk/clerk-react";
 
 export default function DailyTasks() {
   const { selectedDay, tasks, setTasks, isCalendar } = useDailify();
   const [dayTasks, setDayTasks] = useState<TaskProps[]>();
-  const { user } = useUser();
   const { getToken } = useAuth();
 
   const updateTaskToCompleted = (taskId: string) => {
-    const now = new Date();
-
-    const updatedTasks = tasks?.map((task) => {
-      if (task.id !== taskId) return task;
-      const completed = task.completed ?? [];
-      const isTimestamp = task.date instanceof Timestamp;
-
-      return {
-        ...task,
-        completed: isTimestamp
-          ? [...(completed as Timestamp[]), Timestamp.fromDate(now)]
-          : [...(completed as Date[]), now],
-      };
-    });
+    const updatedTasks = tasks?.map((task) =>
+      task.id !== taskId ? task : { ...task, completed: [...task.completed, Date.now()] },
+    );
 
     if (!updatedTasks) return;
     setTasks(updatedTasks);
@@ -148,7 +135,7 @@ export default function DailyTasks() {
                                     e.stopPropagation();
                                     const token = await getToken();
                                     if (!token) return;
-                                    const { error } = await markTaskAsCompleted(token, task.id);
+                                    const { error } = await completeTask(token, task.id);
                                     if (error) {
                                       toast.error("Couldn't complete the task", {
                                         description: error,
@@ -165,9 +152,10 @@ export default function DailyTasks() {
                                   className="bg-red-500 cursor-pointer"
                                   onClick={async (e) => {
                                     e.stopPropagation();
-                                    if (!user) return;
+                                    const token = await getToken();
+                                    if (!token) return;
                                     try {
-                                      await deleteTask(user.id, task.id);
+                                      await deleteTask(token, task.id);
                                       deleteTaskLocal(task.id);
                                     } catch {
                                       toast.error("Couldn't delete the task");

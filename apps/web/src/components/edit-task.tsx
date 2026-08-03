@@ -17,10 +17,9 @@ import PriorityPicker from "./ui/priority-picker";
 import { Textarea } from "./ui/textarea";
 import { Input } from "./ui/input";
 import { useAuth, useUser } from "@clerk/clerk-react";
-import { Timestamp } from "firebase/firestore";
 import { useDailify } from "./dailifyContext";
 import { Button } from "./ui/button";
-import { saveEditedTask } from "@/functions/firebase";
+import { updateTask } from "@/functions/api";
 import { DatetimePicker } from "./ui/datetime-picker";
 import { DateInput, TimeField } from "./ui/timefield";
 import { TimeValue } from "react-aria-components";
@@ -28,6 +27,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { isTaskModified, upsertTaskById } from "@/functions/functions";
+import type { Repeat } from "@dailify/shared";
 
 type EditTaskProps = Record<string, never>;
 
@@ -60,15 +60,11 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
 
   const titleRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>(
-    task.date instanceof Timestamp ? (task.date as Timestamp).toDate() : (task.date as Date),
-  );
+  const [selectedDate, setSelectedDate] = useState<Date>(new Date(task.date));
   const [selectedDuration, setSelectedDuration] = useState<string>(task.duration);
   const [priority, setPriority] = useState<number>(0);
   const [tags, setTags] = useState<string[]>();
-  const [repeat, setRepeat] = useState<
-    "Off" | "Daily" | "Monthly" | "Yearly" | { Weekly: string[] | undefined }
-  >();
+  const [repeat, setRepeat] = useState<Repeat>();
   const { user } = useUser();
   const [loading, setLoading] = useState<boolean>(false);
 
@@ -155,7 +151,7 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
     }
 
     const taskData = {
-      date: selectedDate,
+      date: selectedDate.getTime(),
       id: task.id,
       title,
       description: desc,
@@ -164,7 +160,7 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
       tags,
       priority,
       repeat,
-      alert: task.alert ? task.alert : selectedDate,
+      alert: task.alert ?? selectedDate.getTime(),
     };
 
     if (!isTaskModified(task, taskData)) {
@@ -173,9 +169,9 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
       return;
     }
 
-    const { error } = await saveEditedTask(taskData, token);
+    const { task: updated, error } = await updateTask(token, task.id, taskData);
 
-    if (error) {
+    if (error || !updated) {
       toast("An error occurred", {
         description: error,
         action: {
@@ -185,7 +181,7 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
       });
     } else {
       toast.success("Task updated successfully!");
-      setTasks(upsertTaskById(tasks ?? [], taskData));
+      setTasks(upsertTaskById(tasks ?? [], updated));
     }
 
     setLoading(false);

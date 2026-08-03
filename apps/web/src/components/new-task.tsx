@@ -15,19 +15,18 @@ import PriorityPicker from "./ui/priority-picker";
 import TagsPicker from "./ui/tags-picker";
 import RepeatPicker from "./ui/repeat-picker";
 import { Button } from "./ui/button";
-import { nanoid } from "nanoid";
-import { TaskProps } from "@/types/types";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { useDailify } from "./dailifyContext";
 import { DatetimePicker } from "./ui/datetime-picker";
 import { DateInput, TimeField } from "@/components/ui/timefield";
 import { TimeValue } from "react-aria-components";
-import { saveTask } from "@/functions/firebase";
+import { createTask } from "@/functions/api";
 import { upsertTaskById } from "@/functions/functions";
 import { useEntitlements } from "@/hooks/useEntitlements";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import type { Repeat, TaskInput } from "@dailify/shared";
 
 export default function NewTask({ className }: { className: string }) {
   const { getToken } = useAuth();
@@ -42,9 +41,7 @@ export default function NewTask({ className }: { className: string }) {
   const [selectedDuration, setSelectedDuration] = useState<string>("10m");
   const [priority, setPriority] = useState<number>(0);
   const [tags, setTags] = useState<string[]>();
-  const [repeat, setRepeat] = useState<
-    "Off" | "Daily" | "Monthly" | "Yearly" | { Weekly: string[] | undefined }
-  >();
+  const [repeat, setRepeat] = useState<Repeat>();
   const { user } = useUser();
 
   const [loading, setLoading] = useState<boolean>(false);
@@ -82,7 +79,6 @@ export default function NewTask({ className }: { className: string }) {
 
     const title = titleRef.current.value;
     const desc = descriptionRef.current.value;
-    const id = nanoid(6);
 
     if (!title) {
       toast.warning("Title is required");
@@ -95,22 +91,20 @@ export default function NewTask({ className }: { className: string }) {
       return;
     }
 
-    const taskData: TaskProps = {
-      date: selectedDate,
-      id: id,
+    const taskInput: TaskInput = {
+      date: selectedDate.getTime(),
       title,
       description: desc,
-      completed: [],
       duration: selectedDuration,
-      tags: tags,
+      tags,
       priority,
       repeat,
     };
 
     setLoading(true);
 
-    const { error } = await saveTask(taskData, token);
-    if (error) {
+    const { task, error } = await createTask(token, taskInput);
+    if (error || !task) {
       toast("An error occurred", {
         description: error,
         action: {
@@ -119,7 +113,7 @@ export default function NewTask({ className }: { className: string }) {
         },
       });
     } else {
-      setTasks(upsertTaskById(tasks ?? [], taskData));
+      setTasks(upsertTaskById(tasks ?? [], task));
       toast.message("Event has been created", {
         description: format(selectedDate, "cccc PPPpp"),
       });

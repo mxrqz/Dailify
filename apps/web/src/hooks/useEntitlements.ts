@@ -1,6 +1,5 @@
 import { useDailify } from "@/components/dailifyContext";
-import { computeEntitlements } from "@/functions/functions";
-import type { Entitlements } from "@/types/types";
+import { computeEntitlements, type Entitlements } from "@dailify/shared";
 
 /**
  * Single source of truth for feature gating. Reads the server-provided permissions from context and

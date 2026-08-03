@@ -32,7 +32,7 @@ export default function NewTaskVoice() {
 
     response.forEach((task) => {
       toast.message("Event has been created", {
-        description: format(task.date as Date, "cccc PPPpp"),
+        description: format(new Date(task.date), "cccc PPPpp"),
       });
     });
   }, [response]);

@@ -18,7 +18,7 @@ import { cn } from "@/lib/utils";
 import { EditTask, EditTaskContent, EditTaskTrigger } from "./edit-task";
 import { TaskProps } from "@/types/types";
 import { priorityBgColor, priorityText, priorityTextColor } from "@/consts/conts";
-import { deleteTask } from "@/functions/firebase";
+import { deleteTask } from "@/functions/api";
 import { useAuth } from "@clerk/clerk-react";
 
 interface TaskDetailViewProps {
@@ -27,16 +27,15 @@ interface TaskDetailViewProps {
 }
 
 export function TaskDetailView({ task, className }: TaskDetailViewProps) {
-  const { userId } = useAuth();
+  const { getToken } = useAuth();
   // const [isExpanded, setIsExpanded] = useState(false)
 
-  const date = task.date as Date;
-  const taskDate = new Date(date);
+  const taskDate = new Date(task.date);
   const formattedDate = format(taskDate, "PPP", { locale: ptBR });
   const formattedTime = format(taskDate, "HH:mm", { locale: ptBR });
   // const formattedFullDate = format(taskDate, "EEEE, d 'de' MMMM 'às' HH:mm", { locale: ptBR })
 
-  const alertDate = new Date(task.alert as Date);
+  const alertDate = new Date(task.alert ?? task.date);
   const alertTime = format(alertDate, "HH:mm", { locale: ptBR });
 
   const timeUntil = formatDistanceToNow(taskDate, { locale: ptBR, addSuffix: true });
@@ -180,7 +179,10 @@ export function TaskDetailView({ task, className }: TaskDetailViewProps) {
           variant="outline"
           size="sm"
           className="w-full ml-2 text-red-500 hover:bg-red-500/10 hover:text-red-500 shrink"
-          onClick={async () => userId && (await deleteTask(userId, task.id))}
+          onClick={async () => {
+            const token = await getToken();
+            if (token) await deleteTask(token, task.id);
+          }}
         >
           <Trash2 className="mr-2 h-4 w-4" />
           Excluir
