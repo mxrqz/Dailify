@@ -1,31 +1,34 @@
 # `src/types/` — shared type model
 
-`types.ts` holds the app-wide types. The invariants that aren't obvious from the types themselves:
+`types.ts` re-exports the canonical model from `@dailify/shared` (the model is owned there, not
+here) plus the web-only picker prop interfaces. The invariants that aren't obvious from the types:
 
-## `TaskProps`
+## `TaskProps` (= shared `Task`)
 
-- **`date: Date | Timestamp`**, `alert?: Date | Timestamp`, `completed: Date[] | Timestamp[]`.
-  The union is real: tasks fetched from Firestore carry `Timestamp`, optimistic/just-created tasks
-  carry JS `Date`, and both live in the same `tasks` array. **Always** normalize with `toJsDate()`
-  (`@/functions/functions`) before doing date math — never assume `.toDate()` exists.
-- **`repeat: "Off" | "Daily" | "Monthly" | "Yearly" | { Weekly: string[] | undefined }`**. The
-  `Weekly` array holds weekday **names** (`"Monday"`…) matched via the `weekDays` index (`consts`).
-  For untrusted input (e.g. the voice API) run it through `normalizeRepeat()`.
+- **`date: number`**, `alert?: number`, `completed: number[]` — all epoch **milliseconds**, never a
+  `Date`/`Timestamp` union. Wrap with `new Date(task.date)` when you need a JS `Date` for
+  formatting/comparison; there is no `toJsDate()` anymore.
+- **`repeat: Repeat`** (`"Off" | "Daily" | "Monthly" | "Yearly" | { Weekly: string[] }`, from
+  `@dailify/shared`). The `Weekly` array holds weekday **names** (`"Monday"`…) matched via the
+  `weekDays` index (`consts`). Untrusted `repeat` values (e.g. hand-built objects) should go through
+  `normalizeRepeat` — but note the server already normalizes recurring/voice-created tasks before
+  they reach the client, so the web app itself rarely needs to call it.
 
-## `PermissionsProps` — the tiering contract
+## `PermissionsProps` (= shared `Permissions`) — the tiering contract
 
-Shape: `taskLimits.{daily,monthly,recurring}`, `features.voiceCreation`, `whatsapp.*`.
-Gate features on **capabilities in this object**, never on the plan name string. `monthly === -1`
-means unlimited. This is the source of truth the tiering epic (`d69`) builds on, and it must match
-what the server returns.
+Shape: `taskLimits.{monthly,recurring}`, `features.voiceCreation`. Gate features on **capabilities
+in this object**, never on the plan name string. `monthly === -1` means unlimited. `PLAN_PERMISSIONS`
+(`@dailify/shared`) is the source of truth the tiering epic (`d69`) builds on — it must match what
+the server returns (it's the same import on both sides).
 
 ## Stripe shapes
 
-`InvoicesProps` / `PaymentDetailsProps` mirror what the server sends back from Stripe — change them
-in lockstep with the server (separate repo).
+`InvoicesProps` / `PaymentDetailsProps` (= shared `Invoice`/`PaymentDetails`) mirror what
+`apps/server`'s billing routes send back from Stripe. Their `created`/`start` fields stay Stripe's
+native **Unix seconds** (not epoch-ms like `Task`) — multiply by 1000 before formatting.
 
 ## When you change a type
 
-`TaskProps` especially ripples: update the Firestore read/expand (`functions/firebase.ts`), the pure
-helpers (`functions/functions.ts`), the components that render it, **and the server repo** that writes
-it. TypeScript won't catch the server drift.
+Change it in `packages/shared/src/types.ts`, not here — `types.ts` just re-exports it. Update the
+server (`apps/server`, same repo now) and the components that render it in the same change; both
+sides import the identical type so drift shows up as a compile error instead of a runtime bug.

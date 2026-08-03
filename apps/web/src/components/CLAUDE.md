@@ -8,9 +8,9 @@ primitives (see `ui/CLAUDE.md`). `@/` resolves to `src/`.
 Single source of truth via `useDailify()`: `tasks`, `currentMonthTasks`, `selectedDay`,
 `isCalendar`, `permissions`, `invoices`, `paymentDetails`, and their setters.
 
-- **`protected-route.tsx`** is where it all loads: mounts the Clerk→Firebase custom-token bridge,
-  then `getTasks()` (→ `getTasksForMonth`) for the selected month, plus permissions/invoices/payment.
-  It refetches when the month changes.
+- **`protected-route.tsx`** is where it all loads: gates on Clerk (`isLoaded`/`userId`), then
+  `getTasks()` (→ `getTasksForMonth`, `@/functions/api`) for the selected month, plus
+  permissions/invoices/payment (also `api.ts`). It refetches when the month changes.
 - **`daily-tasks.tsx`** derives `dayTasks` from `getTasksForDay(tasks, selectedDay)`. **`calendar-view.tsx`**
   reads `tasks` per day. Both read from the shared array — so any write must update it.
 

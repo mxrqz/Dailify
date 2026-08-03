@@ -2,46 +2,31 @@
 
 Two very different files live here — keep them separate:
 
-- **`functions.ts`** — PURE helpers (dates, recurrence, task list ops). No I/O. The only Firebase
-  import allowed is the `Timestamp` _type_. Everything with real logic goes here so it can be unit-tested.
-- **`firebase.ts`** — the impure I/O boundary: Firestore access + the HTTP client to the external
-  server. Not unit-tested (would need the Firestore emulator).
+- **`functions.ts`** — PURE helpers (dates, task list ops). No I/O. Everything with real logic goes
+  here so it can be unit-tested.
+- **`api.ts`** — the impure I/O boundary: the thin fetch client for `apps/server` (tasks CRUD, month
+  read, voice, permissions, billing). Not unit-tested (would need a live/mocked server).
 - **`functions.test.ts`** — vitest for the pure helpers. `bun run test`.
 
-## The read/write split (most important thing here)
+## The read/write split
 
-There is **no backend in this repo** — the real backend is a separate repo (`dailify-server` on
-Render, `serverURL` in `consts`). It writes with the Firebase Admin SDK, which **bypasses Firestore
-rules**.
+`apps/server` (Hono/Workers + D1 + Clerk, same repo) serves everything now — tasks CRUD, the month
+read (recurring already expanded server-side), billing, voice. Every call in `api.ts` takes a Clerk
+JWT (`getToken()`) and hits `apiURL` (`VITE_API_URL`, `consts`). There is **no** direct Firestore
+access anymore — `functions/firebase.ts` and the Clerk→Firebase custom-token bridge are gone
+(migration phase 6).
 
-- **Writes** — create / edit / complete / voice / checkout / billing → `fetch(serverURL + …)` with a
-  Clerk JWT (`saveTask`, `saveEditedTask`, `markTaskAsCompleted`, `createTaskVoice`). **Never** add a
-  client-side `setDoc`/`updateDoc` to create or edit tasks.
-- **Reads + delete** — go client → Firestore directly (`getDocs`, `deleteDoc`). These are the paths
-  `firestore.rules` must protect (per-user isolation: `request.auth.uid == uid`). `userId` in the path
-  is the Clerk id supplied by the client, so the rule is the only thing stopping cross-user access.
+## Dates: epoch-ms numbers, not `Date | Timestamp`
 
-## Dates: never trust the type blindly
+`TaskProps.date`/`alert`/`completed` (= shared `Task`) are plain **epoch-ms `number`s**. Do date math
+with `new Date(task.date)` directly — there is no `toJsDate()`/`Timestamp` union to normalize
+anymore. Writes that mark completion push `Date.now()` (a number), not a `Date`.
 
-`TaskProps.date`/`alert`/`completed` are `Date | Timestamp` (fetched = `Timestamp`, optimistic =
-`Date`). Always normalize with the local `toJsDate()` before any date op. Do **not** call `.toDate()`
-unguarded — it throws on a plain `Date`.
+## Recurrence — owned by `@dailify/shared`
 
-## Recurrence — `expandRecurringTask(task, month)`
-
-Builds instances **in the viewed month** (not the task's original month) and returns JS `Date`s.
-The stored doc already covers the creation-month original (via `getMonthTasks`), so expansion skips it:
-Daily/Weekly skip the original day; Monthly/Yearly skip the whole creation month; overflow days are
-clamped; nothing is emitted before the task existed. Weekly matches weekday **names** (`weekDays`
-index). If you touch this, keep the tests green — this was rewritten because the old version was
-invisible outside the creation month (`pz9.2`).
-
-## Firestore gotchas
-
-- `where("id", "in", chunk)` caps at **30** ids → `getMonthTaskByIds` chunks. Don't reintroduce a
-  full-collection read + client-side filter.
-- `getTasksForMonth` = `getMonthTasks` (date range) + `getMonthlyRepeatTasks` (expanded recurring),
-  deduped by `` `${id}-${date}` ``.
+`expandRecurringTask`/`normalizeRepeat` live in `@dailify/shared` now (used by `apps/server`'s
+`GET /tasks`, which returns recurring instances already expanded and deduped). The web app doesn't
+call them directly — `getTasksForMonth` (`api.ts`) just returns what the server sends.
 
 ## Conventions
 

@@ -4,11 +4,13 @@
 
 ## Endpoints & plans
 
-- **`serverURL`** = the external Node server (Render) — every write goes here. **`dailifyURL`** = prod site.
+- **`apiURL`** (`import.meta.env.VITE_API_URL`) = `apps/server` (Hono/Workers, same repo) — every
+  read and write goes there via `@/functions/api`. **`dailifyURL`** = prod site.
 - **`PLAN_ID`** is the single source for plan ids (`free` / `pro` / `pro+ai`); **`planMap`** maps them
   to labels. Always use `PLAN_ID.*` for checkout ids — a raw string typo silently breaks checkout
   (this bit us before: `"pro-ai"` vs `"pro+ai"`). `conts.test.ts` asserts every `PLAN_ID` is a
-  `planMap` key; keep it green.
+  `planMap` key; keep it green. (`@dailify/shared` also exports a `PLAN_ID` with the same values,
+  used server-side and for `PLAN_PERMISSIONS` lookups — the two aren't merged, keep them in sync.)
 
 ## Colors are token class names, not hex
 

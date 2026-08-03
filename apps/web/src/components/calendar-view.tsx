@@ -133,15 +133,6 @@ export function CalendarView() {
 
             const todayTasks = tasks && getTasksForDay(tasks, day);
 
-            // function isAfterTime(time: Timestamp | Date): boolean {
-            //   const { hours, minutes } = getTime(time, "{hours, minutes}")
-            //   const now = new Date();
-            //   const nowMinutes = now.getHours() * 60 + now.getMinutes();
-            //   const targetMinutes = hours * 60 + minutes;
-
-            //   return nowMinutes > targetMinutes;
-            // }
-
             if (!todayTasks) return;
 
             const groupedTasks = Object.values(

@@ -20,11 +20,18 @@ import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import Header from "@/components/header";
-import { serverURL, PLAN_ID } from "@/consts/conts";
-import { useAuth, useUser } from "@clerk/clerk-react";
+import { PLAN_ID } from "@/consts/conts";
+import { checkout } from "@/functions/api";
+import { PLAN_PERMISSIONS } from "@dailify/shared";
+import { useAuth } from "@clerk/clerk-react";
+
+const monthlyLimitLabel = (limit: number) => (limit < 0 ? "Ilimitado" : `${limit} / mês`);
+
+const freeMonthlyLimit = PLAN_PERMISSIONS.free.taskLimits.monthly;
+const proMonthlyLimit = PLAN_PERMISSIONS.pro.taskLimits.monthly;
+const proAiMonthlyLimit = PLAN_PERMISSIONS[PLAN_ID.proAi].taskLimits.monthly;
 
 export default function PremiumPage() {
-  const { user } = useUser();
   const { getToken } = useAuth();
   const [billingCycle, setBillingCycle] = useState<"monthly" | "yearly">("monthly");
 
@@ -32,26 +39,12 @@ export default function PremiumPage() {
     toast.info(`Plano ${plan} selecionado`);
 
     const token = await getToken();
+    if (!token) return;
 
     const productName = billingCycle === "yearly" ? `${plan}-year` : plan;
+    const { url } = await checkout(token, productName);
 
-    const data = {
-      productName,
-      customer_email: user?.primaryEmailAddress?.emailAddress,
-    };
-
-    const response = await fetch(`${serverURL}checkout`, {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-      body: JSON.stringify(data),
-    });
-
-    const { url } = await response.json();
-
-    window.location = url;
+    window.location.href = url;
   };
 
   const plans = [
@@ -63,7 +56,7 @@ export default function PremiumPage() {
       yearlyPrice: "R$ 99,90",
       yearlyDiscount: "Economize R$ 19,80",
       features: [
-        "Limite de 300 tarefas por mês",
+        `Limite de ${proMonthlyLimit} tarefas por mês`,
         "Tarefas recorrentes",
         "Acesso a anexos e imagens",
         "Categorias ilimitadas",
@@ -259,9 +252,11 @@ export default function PremiumPage() {
                 <tbody>
                   <tr className="border-b">
                     <td className="py-4 px-6">Limite de tarefas</td>
-                    <td className="py-4 px-6 text-center">50 / mês</td>
-                    <td className="py-4 px-6 text-center">300 / mês</td>
-                    <td className="py-4 px-6 text-center">300 / mês</td>
+                    <td className="py-4 px-6 text-center">{monthlyLimitLabel(freeMonthlyLimit)}</td>
+                    <td className="py-4 px-6 text-center">{monthlyLimitLabel(proMonthlyLimit)}</td>
+                    <td className="py-4 px-6 text-center">
+                      {monthlyLimitLabel(proAiMonthlyLimit)}
+                    </td>
                   </tr>
                   <tr className="border-b">
                     <td className="py-4 px-6">Tarefas recorrentes</td>

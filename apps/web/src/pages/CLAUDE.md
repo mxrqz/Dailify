@@ -18,11 +18,13 @@ to paths listed above (this caused the `/prices` vs `/premium` bug).
 
 ## Auth
 
-Clerk (`main.tsx`). Protected pages are wrapped in `ProtectedRoute` (`src/components/`), which runs the
-Clerk→Firebase bridge and loads tasks/permissions before rendering.
+Clerk (`main.tsx`). Protected pages are wrapped in `ProtectedRoute` (`src/components/`), which gates
+on Clerk (`isLoaded`/`userId`) and loads tasks/permissions from `apps/server` before rendering.
 
 ## Billing (premium.tsx)
 
-`handleSelectPlan(planId)` POSTs to `${serverURL}checkout` with `productName` (yearly appends
-`-year`); the server returns a Stripe URL and we redirect. Plan ids come from `PLAN_ID` (`consts`).
-The billing portal is fetched the same way from the server.
+`handleSelectPlan(planId)` calls `checkout(token, productName)` (`@/functions/api`) with
+`productName` (yearly appends `-year`); the server returns a Stripe URL and we redirect. Plan ids
+come from `PLAN_ID` (`consts`); copy that references limits reads from `@dailify/shared`'s
+`PLAN_PERMISSIONS` instead of hard-coding numbers. The billing portal (`profileTabs.tsx`) is fetched
+the same way via `billingPortal`.
