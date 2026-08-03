@@ -72,6 +72,18 @@
   --palette-7: #bdb2ff;
   --palette-8: #ffc6ff;
   --palette-9: #fffffc;
+
+  /* landing — superfícies dark-first (page mais escura, painéis levantados) */
+  --surface-page: light-dark(oklch(100% 0 0), oklch(13% 0.004 49.3));
+  --surface-card: light-dark(oklch(98% 0 0), oklch(19% 0.005 56));
+  --surface-panel: light-dark(oklch(100% 0 0), oklch(21.6% 0.006 56));
+  --surface-hover: light-dark(oklch(96.8% 0.001 286.4), oklch(24% 0.005 56));
+  --text-secondary: light-dark(oklch(38% 0.01 286), oklch(80% 0.01 286));
+  --accent-hover: oklch(54% 0.222 17.6);
+  --accent-subtle: color-mix(in oklch, var(--primary) 10%, transparent);
+  --accent-glow: color-mix(in oklch, var(--primary) 20%, transparent);
+  --border-highlight: light-dark(oklch(90% 0.004 286.3), oklch(30% 0.005 286));
+  --radius-panel: 1.375rem;
 }
 
 /* Bridge the class-based toggle to color-scheme so light-dark() flips. */
@@ -138,13 +150,27 @@
   --color-palette-7: var(--palette-7);
   --color-palette-8: var(--palette-8);
   --color-palette-9: var(--palette-9);
+
+  --color-surface-page: var(--surface-page);
+  --color-surface-card: var(--surface-card);
+  --color-surface-panel: var(--surface-panel);
+  --color-surface-hover: var(--surface-hover);
+  --color-text-secondary: var(--text-secondary);
+  --color-accent-primary: var(--primary);
+  --color-accent-hover: var(--accent-hover);
+  --color-accent-subtle: var(--accent-subtle);
+  --color-accent-glow: var(--accent-glow);
+  --color-border-highlight: var(--border-highlight);
+  --radius-panel: var(--radius-panel);
+  --shadow-panel: 0 24px 60px -20px light-dark(oklch(0% 0 0 / 0.18), oklch(0% 0 0 / 0.55));
 }
 
 @theme {
   /* Fonts — change --font-sans here to swap the app font globally (e.g. a Google font). */
   --font-sans:
-    ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol",
-    "Noto Color Emoji";
+    "Geist Variable", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
+    "Segoe UI Symbol", "Noto Color Emoji";
+  --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 
   /* Font sizes — Tailwind's text-xs..text-9xl scale plus a project 2xs (was text-[0.6rem]). */
   --text-2xs: 0.625rem;
