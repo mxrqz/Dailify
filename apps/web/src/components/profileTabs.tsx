@@ -9,8 +9,9 @@ import { Link, useSearchParams } from "react-router-dom";
 import { format } from "date-fns";
 import { useDailify } from "@/components/dailifyContext";
 import { Progress } from "@/components/ui/progress";
-import { planMap, serverURL } from "@/consts/conts";
-import { computeEntitlements } from "@/functions/functions";
+import { planMap } from "@/consts/conts";
+import { billingPortal } from "@/functions/api";
+import { computeEntitlements } from "@dailify/shared";
 import { FaCcVisa, FaCcAmex } from "react-icons/fa";
 import { RiMastercardFill } from "react-icons/ri";
 import ApplePayLogo from "@/components/ui/applePayLogo";
@@ -145,17 +146,10 @@ export function SubscriptionTab({
 
   const getBillingPortalUrl = async () => {
     const token = await getToken();
+    if (!token) return;
 
-    const response = await fetch(`${serverURL}billingPortal`, {
-      method: "GET",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    const { url } = await response.json();
-    window.location = url;
+    const { url } = await billingPortal(token);
+    window.location.href = url;
   };
 
   return (

@@ -10,8 +10,6 @@ import { LogOutIcon, SettingsIcon, UserIcon } from "lucide-react";
 import { useUser, useAuth } from "@clerk/clerk-react";
 import { Link, useNavigate } from "react-router-dom";
 import { Button } from "./ui/button";
-import { signOut } from "firebase/auth";
-import { auth } from "@/functions/firebase";
 
 export default function Header({ className }: { className?: string }) {
   const { signOut: clerkSignOut } = useAuth();
@@ -21,7 +19,6 @@ export default function Header({ className }: { className?: string }) {
 
   const handleLogout = async () => {
     await clerkSignOut();
-    await signOut(auth);
   };
 
   return (

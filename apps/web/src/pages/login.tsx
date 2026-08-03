@@ -13,8 +13,6 @@ import VerifyingLink from "../components/verifying-link";
 import { isClerkAPIResponseError } from "@clerk/clerk-react/errors";
 import { useLocation } from "react-router-dom";
 import { dailifyURL } from "@/consts/conts";
-import { auth } from "@/functions/firebase";
-import { signOut } from "firebase/auth";
 
 export default function Login() {
   const { signOut: clerkSignOut } = useAuth();
@@ -121,7 +119,6 @@ export default function Login() {
 
   const handleLogout = async () => {
     await clerkSignOut();
-    await signOut(auth);
   };
   return (
     <div className="w-full h-dvh flex flex-col justify-center items-center py-5 px-[clamp(1rem,5vw,6rem)]">
