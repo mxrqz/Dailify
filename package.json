@@ -3,7 +3,9 @@
   "private": true,
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
-    "dev": "bun --filter @dailify/web dev",
+    "dev": "bun --filter '*' dev",
+    "dev:front": "bun --filter @dailify/web dev",
+    "dev:api": "bun --filter @dailify/server dev",
     "build": "bun --filter @dailify/web build",
     "test": "bun --filter '*' test",
     "check": "bun --filter '*' check"
