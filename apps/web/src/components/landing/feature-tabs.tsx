@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { AnimatePresence, LayoutGroup, motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, LayoutGroup, motion, useReducedMotion, usePresence } from "framer-motion";
 import { CalendarDays, Columns3, Mic, RotateCw, type LucideIcon } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -250,6 +250,45 @@ function TabMock({ tabKey, reduce }: { tabKey: TabKey; reduce: boolean }): JSX.E
 }
 
 /**
+ * One tab's panel body, keyed by `tabKey` in the parent `AnimatePresence` so mounting a new one
+ * (tab switch) crossfades against the previous instance exiting. `TabsContent` needs `forceMount`
+ * so Radix doesn't hide/unmount the outgoing panel the instant `active` changes (before its exit
+ * animation can play) — but that also means Radix's own `hidden`/tabpanel bookkeeping no longer
+ * applies while it's mid-exit. `usePresence()` tells THIS instance whether it's the incoming
+ * panel (`isPresent`) or the one animating out; while exiting we override `aria-hidden`/`tabIndex`
+ * so a keyboard user tabbing into the panel (the standard Radix trigger → panel flow) can never
+ * land on content that's about to unmount — only the active panel stays in the a11y tree and tab
+ * order. Applies identically whether the crossfade takes 300ms or (reduced motion) ~0.
+ */
+function TabPanel({ tabKey, reduce }: { tabKey: TabKey; reduce: boolean }): JSX.Element {
+  const [isPresent] = usePresence();
+  const tabCopy = copy.features.tabs[tabKey];
+
+  return (
+    <TabsContent value={tabKey} forceMount asChild>
+      <motion.div
+        className="absolute inset-0 overflow-y-auto p-6 md:p-8"
+        initial={{ opacity: 0, y: reduce ? 0 : 12 }}
+        animate={{ opacity: 1, y: 0 }}
+        exit={{ opacity: 0, y: reduce ? 0 : -12 }}
+        transition={{ duration: reduce ? 0 : 0.3, ease: "easeOut" }}
+        aria-hidden={isPresent ? undefined : true}
+        tabIndex={isPresent ? undefined : -1}
+      >
+        <div className="mb-6 flex flex-col gap-1.5">
+          <h3 className="text-xl font-semibold tracking-[-0.02em] text-foreground">
+            {tabCopy.title}
+          </h3>
+          <p className="max-w-md text-sm text-muted-foreground">{tabCopy.blurb}</p>
+        </div>
+
+        <TabMock tabKey={tabKey} reduce={reduce} />
+      </motion.div>
+    </TabsContent>
+  );
+}
+
+/**
  * Browser-tab style feature switcher — one panel, four surfaces (Day / Calendário / Recorrência /
  * Voz). Radix `Tabs` driven controlled so the active trigger can carry a sliding `layoutId`
  * indicator (shared layout inside `LayoutGroup`) that visually connects to the panel body below,
@@ -263,7 +302,6 @@ function TabMock({ tabKey, reduce }: { tabKey: TabKey; reduce: boolean }): JSX.E
 export function FeatureTabs(): JSX.Element {
   const reduce = useReducedMotion();
   const [active, setActive] = useState<TabKey>("day");
-  const activeCopy = copy.features.tabs[active];
 
   return (
     <section className="px-[clamp(1rem,5vw,24rem)] py-20 md:py-28">
@@ -303,24 +341,7 @@ export function FeatureTabs(): JSX.Element {
 
         <div className="relative min-h-96 overflow-hidden rounded-b-panel rounded-tr-panel border border-highlight bg-surface-panel shadow-panel">
           <AnimatePresence initial={false}>
-            <TabsContent key={active} value={active} forceMount asChild>
-              <motion.div
-                className="absolute inset-0 overflow-y-auto p-6 md:p-8"
-                initial={{ opacity: 0, y: reduce ? 0 : 12 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: reduce ? 0 : -12 }}
-                transition={{ duration: reduce ? 0 : 0.3, ease: "easeOut" }}
-              >
-                <div className="mb-6 flex flex-col gap-1.5">
-                  <h3 className="text-xl font-semibold tracking-[-0.02em] text-foreground">
-                    {activeCopy.title}
-                  </h3>
-                  <p className="max-w-md text-sm text-muted-foreground">{activeCopy.blurb}</p>
-                </div>
-
-                <TabMock tabKey={active} reduce={Boolean(reduce)} />
-              </motion.div>
-            </TabsContent>
+            <TabPanel key={active} tabKey={active} reduce={Boolean(reduce)} />
           </AnimatePresence>
         </div>
       </Tabs>
