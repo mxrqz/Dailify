@@ -18,10 +18,11 @@ function readTimezone(user: User): string | undefined {
   return typeof tz === "string" ? tz : undefined;
 }
 
-// GPT is prompted to emit ISO strings tagged "Z" (see lib/openai.ts's PROMPT), but the wall-clock
-// values it produces are meant as local time in the user's timezone, not literal UTC — it reasons
-// using a "now" already expressed in that timezone. So we strip the offset and reinterpret the
-// wall-clock components as local to `timeZone` before converting to a real UTC instant.
+// GPT is prompted to emit naive local ISO strings with no 'Z'/offset (see lib/openai.ts's PROMPT) —
+// it reasons using a "now" already expressed as naive local time in the user's timezone, so its output
+// wall-clock values are meant as local time, not UTC. The regex strip below is belt-and-suspenders in
+// case GPT disobeys and tags a 'Z' or offset anyway. We reinterpret the wall-clock components as local
+// to `timeZone` before converting to a real UTC instant.
 function formatToUTC(iso: string, timeZone: string): number | null {
   const local = iso.replace(/(Z|[+-]\d{2}:?\d{2})$/, "");
   const dt = DateTime.fromISO(local, { zone: timeZone });

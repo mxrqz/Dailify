@@ -56,13 +56,18 @@ function isGPTResponse(v: unknown): v is GPTResponse {
   return true;
 }
 
-// Ported verbatim from the legacy server's generateAiResponse prompt (dailify-server/src/functions/openAI.ts).
-// Only the "current time" injection changed: `now` is pre-formatted in the user's timezone by the caller,
-// instead of a bare `new Date()` (which would reflect the Worker's own UTC clock, not the user's).
+// Based on the legacy server's generateAiResponse prompt (dailify-server/src/functions/openAI.ts), with two
+// deliberate deviations made during this migration (not authorized by any planning doc, decided as a bug fix
+// over the legacy behavior):
+// 1. `now` is naive local time in the user's timezone (no offset), not a bare `new Date()` (Worker's UTC clock).
+// 2. "date"/"alert" are required to come back as naive local ISO (no 'Z', no offset) so the server can
+//    unambiguously reinterpret them as local-to-timezone before converting to UTC — see formatToUTC in
+//    routes/voice.ts. Letting GPT emit its own offset/'Z' would make the server's reinterpretation ambiguous
+//    (double-conversion risk if GPT ever did the offset math itself).
 const PROMPT = (now: string) => `
             Você é um assistente que interpreta o que o usuário diz para **criar** ou **listar** tarefas.
 
-            O horário atual é: ${now} (considerar o horário local para expressões como "daqui a 30 minutos", "às 8 da manhã", "15 pras 6"  (que no caso seria 5:45), etc.)
+            O horário atual é: ${now}, no fuso horário local do usuário (considerar o horário local para expressões como "daqui a 30 minutos", "às 8 da manhã", "15 pras 6"  (que no caso seria 5:45), etc.)
 
             Sua função é analisar o texto enviado e classificar em **uma** das três ações:
 
@@ -85,9 +90,9 @@ const PROMPT = (now: string) => `
                         "duration": string (ex: "30min", "1h", "1h30min"),
                         "priority": number (0 a 4, sendo 0 nada importante e 4 mto importante),
                         "repeat": "Off" | "Daily" | "Monthly" | "Yearly" | { Weekly: string[] | undefined }, o array de strings será os dias da semana que o usuário quer que a task se repita Ex: {"Weekly": ["Monday", "Wednesday", "Friday"]}
-                        "date": string (em formato ISO ex: "2024-06-10T14:15:00.000Z"),
+                        "date": string (em formato ISO LOCAL, SEM 'Z' e SEM offset, ex: "2024-06-10T14:15:00"),
                         "tags": string[],
-                        "alert": string (em formato ISO ex: "2024-06-10T14:00:00.000Z"),
+                        "alert": string (em formato ISO LOCAL, SEM 'Z' e SEM offset, ex: "2024-06-10T14:00:00"),
                     }
                 ]
             }
@@ -97,6 +102,7 @@ const PROMPT = (now: string) => `
             ⚠️ O campo "repeat" só deve ser incluído se for explicitamente mencionado.
             ⚠️ O campo "id" será gerado pelo sistema, **não inclua**.
             ⚠️ O campo "alert" tem seu valor padrão como sendo 15 minutos antes do horário da tarefa, mudar esse valor de acordo com o solicitado pelo usuário, caso não solicitado retornar o padrão.
+            ⚠️ Retorne "date" e "alert" SEMPRE no horário LOCAL do usuário, em ISO SEM 'Z' e SEM offset de fuso (ex: "2024-06-10T14:15:00"). NUNCA faça conversão de fuso; NUNCA adicione 'Z' nem +/-hh:mm.
             ⚠️ A resposta **deve ser apenas o JSON**. Sem explicações, sem markdown, sem texto fora do objeto.
             ⚠️ Formate a mensagem de resposta para ser clara, curta e amigável. Use emojis no título e horários/data legíveis.
             ⚠️ Sempre retorne o campo "tasks" como um **array**, mesmo que o usuário peça apenas **uma única tarefa**.
@@ -149,7 +155,8 @@ export async function generateTasks(
   transcript: string,
   timezone: string,
 ): Promise<GPTResponse> {
-  const now = DateTime.now().setZone(timezone).toISO() ?? new Date().toISOString();
+  const now =
+    DateTime.now().setZone(timezone).toISO({ includeOffset: false }) ?? new Date().toISOString();
   const result = await openaiClient(env).responses.create({
     model: "gpt-4o-mini",
     instructions: PROMPT(now),

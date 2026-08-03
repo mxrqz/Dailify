@@ -110,6 +110,47 @@ describe("POST /tasks/voice", () => {
     expect(saved).toMatchObject({ title: "Reunião com o time", date: meeting.date });
   });
 
+  it("reinterprets GPT's naive-local dates using the user's non-UTC timezone (America/Sao_Paulo, UTC-3)", async () => {
+    role = "pro+ai";
+    userId = "vu3";
+    getUserMock.mockResolvedValue({
+      id: "vu3",
+      unsafeMetadata: { timezone: "America/Sao_Paulo" },
+    });
+    openaiMock.audio.transcriptions.create.mockResolvedValue({
+      text: "Adiciona reunião às 14h",
+    });
+    openaiMock.responses.create.mockResolvedValue({
+      output_text: JSON.stringify({
+        response: "Tarefa criada! ✅",
+        type: "create",
+        tasks: [
+          {
+            title: "Reunião",
+            description: "",
+            duration: "30min",
+            priority: 2,
+            repeat: "Off",
+            // Naive local (no 'Z', no offset) — GPT reasons entirely in the user's local time.
+            date: "2026-08-03T14:00:00",
+            alert: "2026-08-03T13:45:00",
+          },
+        ],
+      }),
+    });
+
+    const res = await audioRequest();
+    expect(res.status).toBe(200);
+    const body = await res.json<{ response: string; tasks: Task[] }>();
+    expect(body.tasks).toHaveLength(1);
+
+    // 14:00 BRT (UTC-3, no DST since 2019) === 17:00 UTC. A no-op conversion (interpreting the
+    // naive string as literal UTC) would wrongly yield Date.UTC(2026, 7, 3, 14, 0, 0) here.
+    expect(body.tasks[0].date).toBe(Date.UTC(2026, 7, 3, 17, 0, 0));
+    // 13:45 BRT === 16:45 UTC
+    expect(body.tasks[0].alert).toBe(Date.UTC(2026, 7, 3, 16, 45, 0));
+  });
+
   it("does not insert tasks for a non-create ('invalid') AI response", async () => {
     role = "pro+ai";
     userId = "vu2";
