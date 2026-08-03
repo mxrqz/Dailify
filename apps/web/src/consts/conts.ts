@@ -96,5 +96,5 @@ export const planMap: Record<string, "Free" | "Pro" | "Pro + AI"> = {
   [PLAN_ID.proAi]: "Pro + AI",
 };
 
-export const serverURL = "https://dailify-server.onrender.com/";
+export const apiURL = import.meta.env.VITE_API_URL;
 export const dailifyURL = "https://dailify.mxrqz.com/";
