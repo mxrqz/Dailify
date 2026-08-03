@@ -25,6 +25,8 @@ dist-ssr
 *.sw?
 .vercel
 .env*.local
+.wrangler
+.dev.vars
 
 # Beads / Dolt files (added by bd init)
 .dolt/

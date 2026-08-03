@@ -1,0 +1,12 @@
+name = "dailify-server"
+main = "src/index.ts"
+compatibility_date = "2026-01-01"
+compatibility_flags = ["nodejs_compat"]
+
+[[d1_databases]]
+binding = "DB"
+database_name = "dailify"
+database_id = "7fdd1f9f-c6b2-40e1-9a5f-3a13ec224580"
+
+[vars]
+ALLOWED_ORIGIN = "https://dailify.mxrqz.com"

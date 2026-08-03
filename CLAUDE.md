@@ -63,29 +63,45 @@ bun run format        # prettier --write src
 bun run check         # format:check + lint + typecheck + test (full gate)
 ```
 
+## Monorepo
+
+This is a bun-workspaces monorepo (`apps/*`, `packages/*`). The web app lives at `apps/web`
+(package `@dailify/web`); root `package.json` scripts (`dev`/`build`/`test`/`check`) delegate to
+it via `bun --filter`, so the `Build & Test` commands above still work unchanged from the repo
+root. Web deploy root (e.g. Cloudflare Pages) is now `apps/web`, build output `apps/web/dist`.
+
 ## Architecture Overview
 
-See `bd memories architecture`. In short: web app on Vercel (dailify.mxrqz.com) inside a
-vestigial Tauri shell. Auth = Clerk. Reads/deletes go client→Firestore via a Clerk→Firebase
-custom-token bridge (`protected-route.tsx`); creates/edits/voice/billing go through an external
-Node server on Render (separate repo) running Stripe. Plans: Free / Pro / Pro+AI.
+See `bd memories architecture`. In short: web app on Cloudflare (dailify.mxrqz.com) inside a
+vestigial Tauri shell. Auth = Clerk. All reads and writes go through the in-monorepo server
+(`apps/server`, Hono on Cloudflare Workers + D1) via a thin fetch client
+(`apps/web/src/functions/api.ts`) carrying a Clerk bearer token — no client-direct Firestore
+access. Stripe billing and OpenAI voice task creation also run in `apps/server`. Dates are
+epoch-ms numbers end to end. Plans: Free / Pro / Pro+AI.
 
-**Stack:** React 18 + Vite + TypeScript · Tailwind v4 + shadcn/ui · Clerk (auth) · Firebase/Firestore ·
-react-router · sonner · framer-motion. Package manager: **bun**.
+**Stack:** React 18 + Vite + TypeScript (web) · Hono + D1 + Clerk + Stripe + OpenAI (server,
+Cloudflare Workers) · Tailwind v4 + shadcn/ui · react-router · sonner · framer-motion. Package
+manager: **bun**.
 
 ## Code map
 
 Area-specific guidance lives in nested `CLAUDE.md` files (auto-loaded when you work in that folder):
 
-- **`src/functions/`** — data layer (Firestore reads/deletes + server API for writes) and pure,
-  tested helpers (dates, recurrence). Start here for anything data-shaped.
-- **`src/components/`** — React components, shared state (`dailifyContext`), dark mode; shadcn in `ui/`.
-- **`src/types/`** — the shared TS model (`TaskProps`, tiering `PermissionsProps`) and its invariants.
-- **`src/consts/`** — constants, plan ids, `serverURL`, color-token class names, priority scale.
-- **`src/pages/`** — routes, Clerk auth pages, Stripe checkout.
-
-There is **no backend and no tests folder in this repo**: the backend is a separate repo
-(`dailify-server`); tests are colocated `*.test.ts` (vitest) next to the code they cover.
+- **`apps/web/src/functions/`** — data layer: `api.ts` (fetch client to `apps/server`) and pure,
+  tested helpers (dates, task list ops). Start here for anything data-shaped.
+- **`apps/web/src/components/`** — React components, shared state (`dailifyContext`), dark mode;
+  shadcn in `ui/`.
+- **`apps/web/src/types/`** — re-exports the shared TS model (`TaskProps`/`Task`, tiering
+  `PermissionsProps`) from `@dailify/shared` and its invariants.
+- **`apps/web/src/consts/`** — constants, plan ids, `apiURL`, color-token class names, priority
+  scale.
+- **`apps/web/src/pages/`** — routes, Clerk auth pages, Stripe checkout.
+- **`apps/server/src/`** — the backend: Hono routes (`routes/`), D1 queries (`db/`),
+  Clerk/Stripe/OpenAI clients (`lib/`), auth middleware. Its own vitest suite lives in
+  `apps/server/test/`.
+- **`packages/shared/src/`** — the canonical `Task`/`Permissions`/pricing/recurrence model,
+  imported by both `apps/web` and `apps/server` so drift between client and server shapes is a
+  compile error.
 
 ## Conventions & Patterns
 
