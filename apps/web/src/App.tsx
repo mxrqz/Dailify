@@ -13,6 +13,7 @@ import TaskPreview from "./pages/[id]/taskPreview";
 import LandingPage from "./pages/landingPage";
 import PremiumPage from "./pages/premium";
 import { Toaster } from "@/components/ui/sonner";
+import { ErrorBoundary } from "./components/error-boundary";
 
 export default function App() {
   return (
@@ -20,56 +21,58 @@ export default function App() {
       <DailifyProvider>
         <Router>
           <ThemeProvider>
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
+            <ErrorBoundary>
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
 
-              <Route
-                path="/dashboard"
-                element={
-                  <ProtectedRoute>
-                    <Helmet>
-                      <title>Dailify - Dashboard</title>
-                    </Helmet>
+                <Route
+                  path="/dashboard"
+                  element={
+                    <ProtectedRoute>
+                      <Helmet>
+                        <title>Dailify - Dashboard</title>
+                      </Helmet>
 
-                    <Home />
-                  </ProtectedRoute>
-                }
-              />
+                      <Home />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/profile"
-                element={
-                  <ProtectedRoute>
-                    <Helmet>
-                      <title>Dailify - Profile</title>
-                    </Helmet>
+                <Route
+                  path="/profile"
+                  element={
+                    <ProtectedRoute>
+                      <Helmet>
+                        <title>Dailify - Profile</title>
+                      </Helmet>
 
-                    <ProfilePage />
-                  </ProtectedRoute>
-                }
-              />
+                      <ProfilePage />
+                    </ProtectedRoute>
+                  }
+                />
 
-              <Route
-                path="/login"
-                element={
-                  <>
-                    <Helmet>
-                      <title>Dailify - Login</title>
-                    </Helmet>
+                <Route
+                  path="/login"
+                  element={
+                    <>
+                      <Helmet>
+                        <title>Dailify - Login</title>
+                      </Helmet>
 
-                    <Login />
-                  </>
-                }
-              />
+                      <Login />
+                    </>
+                  }
+                />
 
-              <Route path="/login/sso-callback" element={<SSOCallback />} />
+                <Route path="/login/sso-callback" element={<SSOCallback />} />
 
-              <Route path="/sign-in/verify" element={<Verify />} />
+                <Route path="/sign-in/verify" element={<Verify />} />
 
-              <Route path="/task/:id" element={<TaskPreview />} />
+                <Route path="/task/:id" element={<TaskPreview />} />
 
-              <Route path="/premium" element={<PremiumPage />} />
-            </Routes>
+                <Route path="/premium" element={<PremiumPage />} />
+              </Routes>
+            </ErrorBoundary>
 
             <Toaster />
           </ThemeProvider>
