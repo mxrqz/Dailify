@@ -155,12 +155,12 @@
   --color-surface-card: var(--surface-card);
   --color-surface-panel: var(--surface-panel);
   --color-surface-hover: var(--surface-hover);
-  --color-text-secondary: var(--text-secondary);
+  --color-content-secondary: var(--text-secondary);
   --color-accent-primary: var(--primary);
   --color-accent-hover: var(--accent-hover);
   --color-accent-subtle: var(--accent-subtle);
   --color-accent-glow: var(--accent-glow);
-  --color-border-highlight: var(--border-highlight);
+  --color-highlight: var(--border-highlight);
   --radius-panel: var(--radius-panel);
   --shadow-panel: 0 24px 60px -20px light-dark(oklch(0% 0 0 / 0.18), oklch(0% 0 0 / 0.55));
 }
