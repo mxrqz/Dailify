@@ -10,6 +10,7 @@ import {
   SunIcon,
 } from "lucide-react";
 import Header from "../components/header";
+import { Link } from "react-router-dom";
 import { Button } from "../components/ui/button";
 import Calendar3 from "@/components/ui/calendar3";
 import { Separator } from "@/components/ui/separator";
@@ -606,14 +607,17 @@ export default function LandingPage() {
                 </a>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <Link
+                  to="/privacidade"
+                  className="text-gray-400 hover:text-white transition-colors"
+                >
                   Privacy Policy
-                </a>
+                </Link>
               </li>
               <li>
-                <a href="#" className="text-gray-400 hover:text-white transition-colors">
+                <Link to="/termos" className="text-gray-400 hover:text-white transition-colors">
                   Terms of Service
-                </a>
+                </Link>
               </li>
             </ul>
           </div>

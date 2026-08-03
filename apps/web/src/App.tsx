@@ -12,6 +12,8 @@ import { Helmet, HelmetProvider } from "react-helmet-async";
 import TaskPreview from "./pages/[id]/taskPreview";
 import LandingPage from "./pages/landingPage";
 import PremiumPage from "./pages/premium";
+import PrivacyPage from "./pages/privacy";
+import TermsPage from "./pages/terms";
 import { Toaster } from "@/components/ui/sonner";
 import { ErrorBoundary } from "./components/error-boundary";
 
@@ -71,6 +73,10 @@ export default function App() {
                 <Route path="/task/:id" element={<TaskPreview />} />
 
                 <Route path="/premium" element={<PremiumPage />} />
+
+                <Route path="/privacidade" element={<PrivacyPage />} />
+
+                <Route path="/termos" element={<TermsPage />} />
               </Routes>
             </ErrorBoundary>
 
