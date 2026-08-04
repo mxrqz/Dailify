@@ -4,14 +4,19 @@ import { copy } from "./copy";
 
 /**
  * Site footer (T10) — "dissolves" into the page instead of cutting hard under the crimson CTA
- * band (design doc § "Footer que dissolve"). `bg-surface-page` matches the page background so
- * the shared, fixed `<Grain />` overlay (mounted once at the page root) bleeds through unchanged
- * — no grain re-instantiated here. `mask-t-from-85%` (Tailwind v4 built-in mask utility) fades
- * the footer's own top edge to transparent, mirroring the `.mask-b` gradient already used for the
- * hero's bottom fade in `global.css`, so the top blends into the section above rather than
- * hard-cutting; large rounded top corners (`rounded-t-panel`) read as the footer emerging as its
- * own panel. Real content starts well below the faded sliver (generous `pt-*`) so nothing legible
- * is masked.
+ * band (design doc § "Footer que dissolve"). A mask alone can't produce this: the footer sits as
+ * a plain flow sibling below `<CtaBand>`, and both it and the page behind it share
+ * `bg-surface-page` — a mask fading the footer's own background to transparent would just reveal
+ * the identical color underneath (no visible effect). So the footer instead physically
+ * *overlaps* the CTA band (negative top margin, pulled up into the CTA's bottom padding —
+ * `-mt-20`/`md:-mt-24`, comfortably inside the CTA's `py-20`/`md:py-28` so its title/button are
+ * never covered) with `z-10` to stack above it. `mask-t-from-85%` (Tailwind v4 built-in mask
+ * utility, mirroring `.mask-b` in `global.css`) then fades the footer's own top edge to
+ * transparent over that overlapped region, letting the crimson CTA band show through and
+ * dissolve up into the dark, rounded-top (`rounded-t-panel`) footer panel below it — no hard
+ * seam. `bg-surface-page` still matches the page background beyond the overlap, so the shared,
+ * fixed `<Grain />` overlay bleeds through unchanged there. Extra top padding (`pt-28`/`pt-32`)
+ * keeps the real content (logo, columns) clear of both the overlap and the faded sliver.
  *
  * Only real links: Produto → in-page anchors `#features`/`#pricing` (Task 11 must add matching
  * `id`s to those sections); Legal → real routes `/privacidade` and `/termos`. No social links —
@@ -19,7 +24,7 @@ import { copy } from "./copy";
  */
 export function SiteFooter(): JSX.Element {
   return (
-    <footer className="relative mask-t-from-85% rounded-t-panel bg-surface-page px-[clamp(1rem,5vw,24rem)] pb-10 pt-24 md:pb-14 md:pt-32">
+    <footer className="relative z-10 -mt-20 mask-t-from-85% rounded-t-panel bg-surface-page px-[clamp(1rem,5vw,24rem)] pb-10 pt-28 md:-mt-24 md:pb-14 md:pt-32">
       <div className="grid gap-10 border-b pb-10 md:grid-cols-[1.5fr_1fr_1fr] md:gap-8">
         <div className="flex flex-col gap-3">
           <img
