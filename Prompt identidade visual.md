@@ -328,7 +328,7 @@ A landing atual tem conteúdo **falso/desatualizado**. Corrigir:
 - **Planos:** `Free` · `Pro` · `Pro+AI` (NÃO existe "Team"). Números de `@dailify/shared`
   `PLAN_PERMISSIONS`, preços do Stripe — **nunca hard-code**:
   - **Free:** 30 tarefas/mês, sem recorrência, sem voz.
-  - **Pro:** tarefas ilimitadas + recorrência.
+  - **Pro:** 300 tarefas/mês + recorrência ilimitada (só o Pro+AI é tarefas ilimitadas).
   - **Pro+AI:** tudo do Pro + **criação de tarefa por voz (IA)**.
 - **Remover:** "Up to 10 daily tasks", plano "Team $12", **a seção de depoimentos inteira** (eram
   pessoas inventadas — volta quando houver reais), e links de footer fantasma (Blog, API

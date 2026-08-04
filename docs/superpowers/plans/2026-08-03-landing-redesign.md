@@ -20,7 +20,7 @@ _Toda task herda estas regras. Valores copiados verbatim do doc/projeto._
 - **Sem `as` type assertions** (usar type guards / tipos corretos; `as const` ok). ESLint warning.
 - **Prettier** printWidth 100. Gate completo: `bun run check` (format+lint+typecheck+test) na raiz, ou `bun --filter @dailify/web check`.
 - **Sem hex / valor cru** em componente — só tokens semânticos de `global.css` (classes Tailwind mapeadas). Sem `rounded-lg`/`shadow-md`/`gray-*` padrão do Tailwind.
-- **Conteúdo verdadeiro:** planos `Free`/`Pro`/`Pro+AI` (NÃO existe "Team"). Free = 30 tarefas/mês, sem recorrência, sem voz. Pro = ilimitado + recorrência. Pro+AI = + voz. Números de `@dailify/shared` `PLAN_PERMISSIONS`; labels de `consts` `planMap`. Remover: "10 daily tasks", plano "Team", **seção de depoimentos inteira**, links-fantasma do footer (Blog, API Documentation, Careers, Integrations, Changelog, Help Center, Tutorials, About Us). Copyright **© 2026**.
+- **Conteúdo verdadeiro:** planos `Free`/`Pro`/`Pro+AI` (NÃO existe "Team"). Free = 30 tarefas/mês, sem recorrência, sem voz. Pro = 300 tarefas/mês + recorrência ilimitada, sem voz. Pro+AI = tarefas ilimitadas + recorrência ilimitada + voz. Números de `@dailify/shared` `PLAN_PERMISSIONS`; labels de `consts` `planMap`. Remover: "10 daily tasks", plano "Team", **seção de depoimentos inteira**, links-fantasma do footer (Blog, API Documentation, Careers, Integrations, Changelog, Help Center, Tutorials, About Us). Copyright **© 2026**.
 - **Copy pt-BR** num dicionário tipado (`copy.ts`); **nenhuma string solta no JSX** (pré-pronto para o locale `en` — bd `Dailify-17s`/`1xy`).
 - **`prefers-reduced-motion` respeitado** em TODA animação, via `useReducedMotion()` do framer-motion (troca `translate`→`opacity`, mata loops, grão estático).
 - **Commits locais frequentes** (um por task). **NÃO dar `git push`** (instrução permanente do usuário). Trabalhar na branch `feat/landing-redesign`.
@@ -42,7 +42,7 @@ git checkout -b feat/landing-redesign
 - Modify: `apps/web/src/global.css` (`--font-sans`, `--font-mono`, tokens de superfície/accent/borda/raio + mapeamentos `@theme inline`)
 
 **Interfaces:**
-- Produces (classes Tailwind disponíveis p/ tasks seguintes): `font-sans` (Geist), `font-mono` (Geist Mono), `bg-surface-page`, `bg-surface-card`, `bg-surface-panel`, `bg-surface-hover`, `text-secondary`, `text-muted` (já existe `text-muted-foreground`), `bg-accent-primary`/`hover:bg-accent-hover`/`bg-accent-subtle`, `shadow-panel`, `rounded-panel`, `border-highlight`. (`--primary`, `--foreground`, `--muted-foreground`, `--border`, `--success` já existem — reusar.)
+- Produces (classes Tailwind disponíveis p/ tasks seguintes): `font-sans` (Geist), `font-mono` (Geist Mono), `bg-surface-page`, `bg-surface-card`, `bg-surface-panel`, `bg-surface-hover`, `text-content-secondary`, `text-muted` (já existe `text-muted-foreground`), `bg-accent-primary`/`hover:bg-accent-hover`/`bg-accent-subtle`, `shadow-panel`, `rounded-panel`, `border-highlight`. (`--primary`, `--foreground`, `--muted-foreground`, `--border`, `--success` já existem — reusar.)
 
 - [ ] **Step 1: Instalar fontes**
 ```bash
@@ -84,12 +84,12 @@ Trocar `--font-sans` para começar com `"Geist Variable"` e adicionar `--font-mo
 --color-surface-card: var(--surface-card);
 --color-surface-panel: var(--surface-panel);
 --color-surface-hover: var(--surface-hover);
---color-text-secondary: var(--text-secondary);
+--color-content-secondary: var(--text-secondary);
 --color-accent-primary: var(--primary);
 --color-accent-hover: var(--accent-hover);
 --color-accent-subtle: var(--accent-subtle);
 --color-accent-glow: var(--accent-glow);
---color-border-highlight: var(--border-highlight);
+--color-highlight: var(--border-highlight);
 --radius-panel: var(--radius-panel);
 --shadow-panel: 0 24px 60px -20px light-dark(oklch(0% 0 0 / 0.18), oklch(0% 0 0 / 0.55));
 ```
@@ -216,7 +216,7 @@ git commit -m "feat(web): pt-BR landing copy dictionary (i18n-ready) + test"
 - Produces: `export function Hero(): JSX.Element`.
 
 - [ ] **Step 1: Implementar o Hero**
-Layout 2 colunas (`grid md:grid-cols-2`), gutters `px-[clamp(1rem,5vw,24rem)]`, `py-20+`. **Esquerda:** eyebrow mono (`font-mono text-xs uppercase text-muted-foreground tracking-[0.04em]`) = `copy.hero.eyebrow`; headline `font-sans` grande (`text-5xl sm:text-6xl`), tracking negativo (`tracking-[-0.03em]`), com `copy.hero.titleAccent` em `text-accent-primary`; subtitle `text-secondary`; 2 botões — primário `bg-accent-primary hover:bg-accent-hover` + secundário ghost (`bg-transparent border hover:bg-surface-hover`). **Direita:** painel-mock **presentational** do day-view (NÃO acoplar ao `daily-tasks.tsx` real, que exige auth/dados — construir um mock fiel: header com 3 dots + toggle tema, mini-calendário, linhas de tarefa com horário/badge de duração). Painel: `bg-surface-panel border rounded-panel shadow-panel`, leve `[transform:perspective(1200px)_rotateY(-6deg)]`. **Animação de entrada** (`whileInView`, `viewport={{ once: true }}`): a coluna de horas aparece, os blocos de tarefa entram em `staggerChildren`, a **linha "agora"** (`bg-accent-primary`, com `shadow-[…accent-glow…]` via token) faz `pulse` em loop, a célula "hoje" acende. **Parallax** no scroll: `useScroll` + `useTransform` movendo o painel em Y sutilmente. **`useReducedMotion()`** → tudo estático no estado final, sem pulso/stagger/parallax. Cena detalhada no doc § "Hero — o painel de produto que se monta".
+Layout 2 colunas (`grid md:grid-cols-2`), gutters `px-[clamp(1rem,5vw,24rem)]`, `py-20+`. **Esquerda:** eyebrow mono (`font-mono text-xs uppercase text-muted-foreground tracking-[0.04em]`) = `copy.hero.eyebrow`; headline `font-sans` grande (`text-5xl sm:text-6xl`), tracking negativo (`tracking-[-0.03em]`), com `copy.hero.titleAccent` em `text-accent-primary`; subtitle `text-content-secondary`; 2 botões — primário `bg-accent-primary hover:bg-accent-hover` + secundário ghost (`bg-transparent border hover:bg-surface-hover`). **Direita:** painel-mock **presentational** do day-view (NÃO acoplar ao `daily-tasks.tsx` real, que exige auth/dados — construir um mock fiel: header com 3 dots + toggle tema, mini-calendário, linhas de tarefa com horário/badge de duração). Painel: `bg-surface-panel border rounded-panel shadow-panel`, leve `[transform:perspective(1200px)_rotateY(-6deg)]`. **Animação de entrada** (`whileInView`, `viewport={{ once: true }}`): a coluna de horas aparece, os blocos de tarefa entram em `staggerChildren`, a **linha "agora"** (`bg-accent-primary`, com `shadow-[…accent-glow…]` via token) faz `pulse` em loop, a célula "hoje" acende. **Parallax** no scroll: `useScroll` + `useTransform` movendo o painel em Y sutilmente. **`useReducedMotion()`** → tudo estático no estado final, sem pulso/stagger/parallax. Cena detalhada no doc § "Hero — o painel de produto que se monta".
 
 - [ ] **Step 2: Verificar**
 Run: `bun --filter @dailify/web check`
@@ -295,7 +295,7 @@ git commit -m "feat(web): 6 TIME concept SVG scenes for feature bento"
 - Produces: `export function FeatureBento(): JSX.Element`.
 
 - [ ] **Step 1: Implementar o bento**
-Grade assimétrica (CSS grid) onde a célula **Voz** ocupa 2× (largura ou altura) e tem `bg-accent-subtle` de fundo; as outras 5 preenchem ao redor. Cada célula = `bg-surface-card border rounded-card` + a `Scene*` correspondente ocupando o topo/fundo + título (`copy.bento.*`) e 1 linha de apoio. Reveal em `whileInView` com `staggerChildren`. `useReducedMotion` → sem stagger. Layout responsivo (empilha no mobile). Cena/hierarquia no doc § "Bento de conceitos".
+Grade assimétrica (CSS grid) onde a célula **Voz** ocupa 2× (largura ou altura) e tem `bg-accent-subtle` de fundo; as outras 5 preenchem ao redor. Cada célula = `bg-surface-card border rounded-xl` + a `Scene*` correspondente ocupando o topo/fundo + título (`copy.bento.*`) e 1 linha de apoio. Reveal em `whileInView` com `staggerChildren`. `useReducedMotion` → sem stagger. Layout responsivo (empilha no mobile). Cena/hierarquia no doc § "Bento de conceitos".
 
 - [ ] **Step 2: Verificar**
 Run: `bun --filter @dailify/web check`
@@ -341,7 +341,7 @@ git commit -m "feat(web): how-it-works 3-step timeline"
 
 **Interfaces:**
 - Consumes: `PLAN_PERMISSIONS` + `PLAN_ID` de `@dailify/shared`, `planMap` de `consts/conts`, `copy.pricing` (T3), tokens, `Link`/`Button`.
-- Produces: `export function Pricing(): JSX.Element` + helper puro `export function planFeatures(role): string[]` (deriva bullets de `PLAN_PERMISSIONS` — ex: "30 tarefas/mês", "Tarefas ilimitadas", "Recorrência", "Criação por voz").
+- Produces: `export function Pricing(): JSX.Element` + helper puro `export function planFeatures(role): string[]` (deriva bullets de `PLAN_PERMISSIONS` — Free "30 tarefas/mês"; Pro "300 tarefas/mês" + "Recorrência ilimitada"; Pro+AI "Tarefas ilimitadas" + "Recorrência ilimitada" + "Criação por voz". Regra: `monthly === -1` ⇒ "Tarefas ilimitadas", senão "{monthly} tarefas/mês"; `recurring === -1` ⇒ "Recorrência ilimitada", `recurring === 0` ⇒ omitir; `voiceCreation` ⇒ "Criação por voz").
 
 - [ ] **Step 1: Escrever o teste do helper (falha primeiro)** — `pricing.test.ts`
 ```ts
@@ -355,9 +355,9 @@ describe("planFeatures", () => {
     expect(f).not.toContain("ilimitad");
     expect(f).not.toContain("voz");
   });
-  it("Pro = ilimitado + recorrência, sem voz", () => {
+  it("Pro = 300/mês + recorrência ilimitada, sem voz", () => {
     const f = planFeatures("pro").join(" | ").toLowerCase();
-    expect(f).toContain("ilimitad");
+    expect(f).toContain("300");
     expect(f).toContain("recorr");
     expect(f).not.toContain("voz");
   });
@@ -372,7 +372,7 @@ Run: `bun --filter @dailify/web test pricing`
 Expected: FAIL (`planFeatures` não existe).
 
 - [ ] **Step 3: Implementar `pricing.tsx`**
-`planFeatures(role)` lê `PLAN_PERMISSIONS[role]` (`taskLimits.monthly` -1=ilimitado, `taskLimits.recurring`, `features.voiceCreation`) e retorna os bullets em pt-BR. O componente `Pricing` renderiza 3 cards (`free`/`pro`/`pro+ai` via `PLAN_ID`), rótulos de `planMap`, bullets de `planFeatures`, **crimson só no recomendado** (Pro+AI: borda `border-accent-primary` + badge mono `bg-accent-subtle text-accent-primary` "RECOMENDADO"). Preços: usar `copy.pricing` (marketing) — NÃO hard-codar número de plano/limite (limites vêm do helper). CTA de cada card → `<Link to="/premium">` (ou `/login`). Cards limpos (`bg-surface-card border rounded-card`), sem cena pesada.
+`planFeatures(role)` lê `PLAN_PERMISSIONS[role]` (`taskLimits.monthly` -1=ilimitado, `taskLimits.recurring`, `features.voiceCreation`) e retorna os bullets em pt-BR. O componente `Pricing` renderiza 3 cards (`free`/`pro`/`pro+ai` via `PLAN_ID`), rótulos de `planMap`, bullets de `planFeatures`, **crimson só no recomendado** (Pro+AI: borda `border-accent-primary` + badge mono `bg-accent-subtle text-accent-primary` "RECOMENDADO"). Preços: usar `copy.pricing` (marketing) — NÃO hard-codar número de plano/limite (limites vêm do helper). CTA de cada card → `<Link to="/premium">` (ou `/login`). Cards limpos (`bg-surface-card border rounded-xl`), sem cena pesada.
 
 - [ ] **Step 4: Rodar (deve passar)**
 Run: `bun --filter @dailify/web test pricing`
