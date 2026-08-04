@@ -1,5 +1,5 @@
-import type { ReactNode } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { useRef, type ReactNode, type RefObject } from "react";
+import { motion, useInView, useReducedMotion } from "framer-motion";
 
 import { cn } from "@/lib/utils";
 
@@ -10,6 +10,11 @@ import { cn } from "@/lib/utils";
  * color. Each accepts an optional `className`, fills its container, and gates EVERY animation
  * behind `useReducedMotion()`: when reduced, the scene renders its final static state (no sweep,
  * orbit, waveform pulse, or "agora" pulse).
+ *
+ * Scenes with `repeat: Infinity` loop drivers (calendar sweep, hours pulse, recurrence orbit,
+ * voice waveform/chevrons, reminders bell/sonar) additionally gate those loops on `useInView` of
+ * the scene root, so they idle while the bento is scrolled off-screen. Entrance reveals
+ * (`whileInView`) are untouched by this — they still fire once, reduced-motion or not.
  *
  * Fill/stroke use Tailwind's token-generated `fill-*` / `stroke-*` utilities; gradient stops and
  * glows reference the `--primary` / `--accent-glow` CSS vars directly (tokens, never raw hex).
@@ -42,13 +47,15 @@ function SceneFrame({
   viewBox,
   className,
   children,
+  containerRef,
 }: {
   viewBox: string;
   className?: string;
   children: ReactNode;
+  containerRef?: RefObject<HTMLDivElement>;
 }): JSX.Element {
   return (
-    <div className={cn("h-full w-full", className)} aria-hidden="true">
+    <div ref={containerRef} className={cn("h-full w-full", className)} aria-hidden="true">
       <svg viewBox={viewBox} className="h-full w-full" preserveAspectRatio="xMidYMid meet">
         {children}
       </svg>
@@ -84,10 +91,13 @@ const CAL_ROW_Y = (row: number): number => 34 + row * 30;
 
 export function SceneCalendar({ className }: { className?: string }): JSX.Element {
   const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { amount: 0.2, once: false });
+  const idle = reduce || !inView;
   const cells = Array.from({ length: 35 }, (_, i) => i - CAL_FIRST_WEEKDAY + 1);
 
   return (
-    <SceneFrame viewBox="0 0 208 192" className={className}>
+    <SceneFrame viewBox="0 0 208 192" className={className} containerRef={ref}>
       <defs>
         <linearGradient id="cal-sweep" x1="0" y1="0" x2="1" y2="0">
           <stop offset="0%" stopColor="var(--primary)" stopOpacity="0" />
@@ -163,7 +173,7 @@ export function SceneCalendar({ className }: { className?: string }): JSX.Elemen
         })}
       </Reveal>
 
-      {!reduce && (
+      {!idle && (
         <motion.rect
           x={-24}
           y={26}
@@ -196,9 +206,12 @@ const HOURS_NOW_Y = 96;
 
 export function SceneHours({ className }: { className?: string }): JSX.Element {
   const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { amount: 0.2, once: false });
+  const idle = reduce || !inView;
 
   return (
-    <SceneFrame viewBox="0 0 200 192" className={className}>
+    <SceneFrame viewBox="0 0 200 192" className={className} containerRef={ref}>
       <Reveal reduce={reduce}>
         {/* axis */}
         <line x1={44} y1={22} x2={44} y2={182} className="stroke-border" strokeWidth={1} />
@@ -285,8 +298,8 @@ export function SceneHours({ className }: { className?: string }): JSX.Element {
           className="stroke-accent-primary"
           strokeWidth={1.5}
           style={{ filter: "drop-shadow(0 0 5px var(--accent-glow))" }}
-          animate={reduce ? undefined : { opacity: [0.55, 1, 0.55] }}
-          transition={reduce ? undefined : { duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
+          animate={idle ? undefined : { opacity: [0.55, 1, 0.55] }}
+          transition={idle ? undefined : { duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
         />
         <circle cx={44} cy={HOURS_NOW_Y} r={3.5} className="fill-accent-primary" />
         <text
@@ -421,9 +434,12 @@ const REC_LABELS = [
 
 export function SceneRecurrence({ className }: { className?: string }): JSX.Element {
   const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { amount: 0.2, once: false });
+  const idle = reduce || !inView;
 
   return (
-    <SceneFrame viewBox="0 0 220 196" className={className}>
+    <SceneFrame viewBox="0 0 220 196" className={className} containerRef={ref}>
       <Reveal reduce={reduce}>
         {/* the loop */}
         <circle
@@ -456,8 +472,8 @@ export function SceneRecurrence({ className }: { className?: string }): JSX.Elem
         {/* orbiting node + trailing ghosts */}
         <motion.g
           style={{ transformOrigin: "110px 84px", transformBox: "view-box" }}
-          animate={reduce ? undefined : { rotate: 360 }}
-          transition={reduce ? undefined : { duration: 14, repeat: Infinity, ease: "linear" }}
+          animate={idle ? undefined : { rotate: 360 }}
+          transition={idle ? undefined : { duration: 14, repeat: Infinity, ease: "linear" }}
         >
           {REC_NODES.map((n, i) => (
             <circle
@@ -519,9 +535,12 @@ const VOICE_ROWS = [
 
 export function SceneVoice({ className }: { className?: string }): JSX.Element {
   const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { amount: 0.2, once: false });
+  const idle = reduce || !inView;
 
   return (
-    <SceneFrame viewBox="0 0 340 170" className={className}>
+    <SceneFrame viewBox="0 0 340 170" className={className} containerRef={ref}>
       {/* waveform — pulses in a listening pattern */}
       <Reveal reduce={reduce}>
         <g style={{ filter: "drop-shadow(0 0 5px var(--accent-glow))" }}>
@@ -535,9 +554,9 @@ export function SceneVoice({ className }: { className?: string }): JSX.Element {
               rx={1.7}
               className="fill-accent-primary"
               style={{ transformBox: "fill-box", transformOrigin: "center" }}
-              animate={reduce ? undefined : { scaleY: [0.45, 1.1, 0.45] }}
+              animate={idle ? undefined : { scaleY: [0.45, 1.1, 0.45] }}
               transition={
-                reduce
+                idle
                   ? undefined
                   : {
                       duration: 1.5,
@@ -561,9 +580,9 @@ export function SceneVoice({ className }: { className?: string }): JSX.Element {
             strokeWidth={1.6}
             strokeLinecap="round"
             strokeLinejoin="round"
-            animate={reduce ? undefined : { opacity: [0.25, 1, 0.25] }}
+            animate={idle ? undefined : { opacity: [0.25, 1, 0.25] }}
             transition={
-              reduce
+              idle
                 ? undefined
                 : { duration: 1.4, repeat: Infinity, ease: "easeInOut", delay: i * 0.18 }
             }
@@ -650,15 +669,18 @@ const REM_TICKS = [24, 62, 100, REM_ALERT_X, 176] as const;
 
 export function SceneReminders({ className }: { className?: string }): JSX.Element {
   const reduce = useReducedMotion();
+  const ref = useRef<HTMLDivElement>(null);
+  const inView = useInView(ref, { amount: 0.2, once: false });
+  const idle = reduce || !inView;
 
   return (
-    <SceneFrame viewBox="0 0 200 180" className={className}>
+    <SceneFrame viewBox="0 0 200 180" className={className} containerRef={ref}>
       <Reveal reduce={reduce}>
         {/* bell — wobbles around its top pivot */}
         <motion.g
           style={{ transformOrigin: "100px 34px", transformBox: "view-box" }}
-          animate={reduce ? undefined : { rotate: [-9, 9, -9] }}
-          transition={reduce ? undefined : { duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
+          animate={idle ? undefined : { rotate: [-9, 9, -9] }}
+          transition={idle ? undefined : { duration: 2.6, repeat: Infinity, ease: "easeInOut" }}
         >
           <circle cx={100} cy={34} r={3} className="fill-muted-foreground" />
           <path
@@ -710,7 +732,7 @@ export function SceneReminders({ className }: { className?: string }): JSX.Eleme
         ))}
 
         {/* alert marker + pulsing sonar ring */}
-        {!reduce &&
+        {!idle &&
           [0, 1].map((i) => (
             <motion.circle
               key={i}

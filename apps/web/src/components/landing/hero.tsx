@@ -154,7 +154,7 @@ export function Hero(): JSX.Element {
         </p>
       </div>
 
-      <div ref={panelAnchorRef}>
+      <div ref={panelAnchorRef} aria-hidden="true">
         <motion.div style={{ y: reduce ? 0 : parallaxY }}>
           <motion.div
             variants={panelVariants}
