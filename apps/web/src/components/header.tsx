@@ -23,7 +23,7 @@ export default function Header({ className }: { className?: string }) {
 
   return (
     <header
-      className={`${className} sticky top-0 py-5 inline-flex justify-between items-center w-full dark:bg-zinc-900/70 bg-zinc-100/70 backdrop-blur z-10 rounded-b-md`}
+      className={`${className} sticky top-0 py-5 inline-flex justify-between items-center w-full bg-surface-header/70 backdrop-blur z-10 rounded-b-md`}
     >
       <a href={path === "/" ? "/" : "/dashboard"} className="inline-flex gap-2 items-center">
         <div className="relative h-7 aspect-square">

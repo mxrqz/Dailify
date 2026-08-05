@@ -19,11 +19,20 @@ export const copy = {
 
   hero: {
     eyebrow: "// ORGANIZE SEU DIA",
-    titleLead: "O seu dia,",
-    titleAccent: "projetado",
-    titleTail: "— não improvisado.",
-    subtitle:
-      "Tarefas, horários e recorrência num só lugar — o Dailify monta seu dia pra você só executar.",
+    title: "Planeje seu dia",
+    // Partes do subtítulo; as marcadas `cycle` recebem o accent em rodízio (mesmo trigger).
+    subtitle: [
+      { text: "Suas ", cycle: false },
+      { text: "tarefas", cycle: true },
+      { text: ", ", cycle: false },
+      { text: "horários", cycle: true },
+      { text: " e ", cycle: false },
+      { text: "recorrência", cycle: true },
+      {
+        text: ", tudo num só lugar. O Dailify monta o seu dia pra você só executar.",
+        cycle: false,
+      },
+    ],
     ctaPrimary: "Começar — é grátis",
     ctaSecondary: "Ver como funciona",
     commandHint: "sem cartão de crédito",

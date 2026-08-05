@@ -74,10 +74,14 @@
   --palette-9: #fffffc;
 
   /* landing — superfícies dark-first (page mais escura, painéis levantados) */
-  --surface-page: light-dark(oklch(100% 0 0), oklch(13% 0.004 49.3));
+  --surface-page: light-dark(oklch(100% 0 0), oklch(14.5% 0 0)); /* dark = #0a0a0a, preto neutro */
   --surface-card: light-dark(oklch(98% 0 0), oklch(19% 0.005 56));
   --surface-panel: light-dark(oklch(100% 0 0), oklch(21.6% 0.006 56));
   --surface-hover: light-dark(oklch(96.8% 0.001 286.4), oklch(24% 0.005 56));
+  --surface-header: light-dark(
+    oklch(96.7% 0.001 286),
+    oklch(16.8% 0 0)
+  ); /* dark = #0f0f0f, barra levantada sobre a page */
   --text-secondary: light-dark(oklch(38% 0.01 286), oklch(80% 0.01 286));
   --accent-hover: oklch(54% 0.222 17.6);
   --accent-subtle: color-mix(in oklch, var(--primary) 10%, transparent);
@@ -155,6 +159,7 @@
   --color-surface-card: var(--surface-card);
   --color-surface-panel: var(--surface-panel);
   --color-surface-hover: var(--surface-hover);
+  --color-surface-header: var(--surface-header);
   --color-content-secondary: var(--text-secondary);
   --color-accent-primary: var(--primary);
   --color-accent-hover: var(--accent-hover);
@@ -171,6 +176,12 @@
     "Geist Variable", ui-sans-serif, system-ui, sans-serif, "Apple Color Emoji", "Segoe UI Emoji",
     "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
+
+  /* Easings — curvas usadas em produção (Ghost/Vercel/Radix). Gera utilitários `ease-*`.
+     out-expo = "premium", entra rápido e assenta; in-out-quint = simétrica, boa pra loop/crossfade. */
+  --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
 
   /* Font sizes — Tailwind's text-xs..text-9xl scale plus a project 2xs (was text-[0.6rem]). */
   --text-2xs: 0.625rem;

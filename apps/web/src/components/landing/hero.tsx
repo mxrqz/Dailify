@@ -5,6 +5,7 @@ import { SunIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { copy } from "./copy";
+import { useCycle } from "./use-cycle";
 
 /**
  * Static mock of a week strip — purely decorative, not wired to a real calendar/date. One cell is
@@ -76,6 +77,11 @@ function TaskRow({
  */
 export function Hero(): JSX.Element {
   const reduce = useReducedMotion();
+
+  // Rodízio do accent entre as palavras `cycle` do subtítulo — todas leem o mesmo índice.
+  const cycleCount = copy.hero.subtitle.filter((part) => part.cycle).length;
+  const activeWord = useCycle(cycleCount, 2200, !reduce);
+
   const panelAnchorRef = useRef<HTMLDivElement | null>(null);
   const { scrollYProgress } = useScroll({
     target: panelAnchorRef,
@@ -120,50 +126,74 @@ export function Hero(): JSX.Element {
   };
 
   return (
-    <section className="grid w-full items-center gap-10 px-[clamp(1rem,5vw,24rem)] py-20 md:grid-cols-2 md:gap-16 md:py-28">
-      <div className="flex flex-col gap-6 md:gap-8">
-        <p className="font-mono text-xs uppercase tracking-[0.04em] text-muted-foreground">
-          {copy.hero.eyebrow}
-        </p>
+    <section className="flex w-full items-center p-[5rem_0rem_0_2rem] border-b h-[80dvh]">
+      <div className="mr-5 w-[65ch] grid grid-rows-3 justify-center gap-6 md:gap-8 h-full pb-10">
+        <div className="row-start-2">
+          <h1 className="whitespace-nowrap text-5xl font-semibold leading-[1.05] tracking-[-0.03em] text-foreground ">
+            {copy.hero.title}
+          </h1>
 
-        <h1 className="text-5xl font-semibold leading-[1.05] tracking-[-0.03em] text-foreground sm:text-6xl">
-          {copy.hero.titleLead} <span className="text-accent-primary">{copy.hero.titleAccent}</span>{" "}
-          {copy.hero.titleTail}
-        </h1>
-
-        <p className="max-w-md text-lg text-content-secondary">{copy.hero.subtitle}</p>
-
-        <div className="flex flex-wrap items-center gap-4">
-          <Button
-            size="lg"
-            className="bg-accent-primary text-primary-foreground hover:bg-accent-hover"
-          >
-            {copy.hero.ctaPrimary}
-          </Button>
-          <Button
-            size="lg"
-            variant="ghost"
-            className="border bg-transparent hover:bg-surface-hover"
-          >
-            {copy.hero.ctaSecondary}
-          </Button>
+          <p className="text-xl text-content-secondary">
+            {(() => {
+              let ci = -1;
+              return copy.hero.subtitle.map((part, idx) => {
+                if (!part.cycle) return <span key={idx}>{part.text}</span>;
+                ci += 1;
+                return (
+                  <span
+                    key={idx}
+                    className={cn(
+                      "transition-colors duration-700 ease-out-expo",
+                      ci === activeWord ? "text-accent-primary" : "text-content-secondary",
+                    )}
+                  >
+                    {part.text}
+                  </span>
+                );
+              });
+            })()}
+          </p>
         </div>
 
-        <p className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
-          {copy.hero.commandHint}
-        </p>
+        <div className="flex flex-col justify-end row-start-3 gap-5">
+          <p className="pl-5 font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
+            {copy.hero.commandHint}
+          </p>
+
+          <div className="flex flex-wrap items-center gap-4">
+            <Button
+              size="lg"
+              className="rounded-full border-t border-t-foreground/10 bg-card/30 text-primary-foreground hover:bg-accent-hover"
+            >
+              {copy.hero.ctaPrimary}
+            </Button>
+
+            <Button
+              size="lg"
+              variant="ghost"
+              className="rounded-full border-t border-t-foreground/10 bg-card/30 hover:bg-surface-hover"
+            >
+              {copy.hero.ctaSecondary}
+            </Button>
+          </div>
+        </div>
       </div>
 
-      <div ref={panelAnchorRef} aria-hidden="true">
+      <div className="h-full w-full relative flex pt-44">
+        <div className="absolute top-0 left-36 h-full w-full bg-linear-150 from-card-foreground/10 to-45% to-surface-page rounded-tl-panel border-l"></div>
+
+        <div className="relative bg-surface-panel h-56 w-56 rounded-panel"></div>
+      </div>
+
+      {/*<div ref={panelAnchorRef} aria-hidden="true" className="h-full">
         <motion.div style={{ y: reduce ? 0 : parallaxY }}>
           <motion.div
             variants={panelVariants}
             initial={reduce ? "visible" : "hidden"}
             whileInView="visible"
             viewport={{ once: true }}
-            className="[transform:perspective(1200px)_rotateY(-6deg)] overflow-hidden rounded-panel border border-t-highlight bg-surface-panel shadow-panel"
+            className="h-full transform-[perspective(1200px)_rotateY(-6deg)] overflow-hidden rounded-panel border border-t-highlight bg-surface-panel shadow-panel"
           >
-            {/* header — 3 window dots + decorative theme icon */}
             <div className="flex items-center justify-between border-b px-5 py-3">
               <div className="flex gap-1.5" aria-hidden="true">
                 <span className="size-2.5 rounded-full bg-border" />
@@ -173,7 +203,6 @@ export function Hero(): JSX.Element {
               <SunIcon className="size-4 text-muted-foreground" aria-hidden="true" />
             </div>
 
-            {/* mini week strip — "hoje" lit in crimson */}
             <motion.div
               variants={weekVariants}
               className="flex items-center justify-between gap-1 border-b px-5 py-4"
@@ -198,8 +227,7 @@ export function Hero(): JSX.Element {
               ))}
             </motion.div>
 
-            {/* task rows around the pulsing "agora" line */}
-            <div className="flex flex-col gap-3 px-5 py-5">
+            <div className="flex flex-col gap-3 px-5 py-5 ">
               {earlyTasks.map((task) => (
                 <TaskRow
                   key={task.time}
@@ -244,7 +272,7 @@ export function Hero(): JSX.Element {
             </div>
           </motion.div>
         </motion.div>
-      </div>
+      </div>*/}
     </section>
   );
 }

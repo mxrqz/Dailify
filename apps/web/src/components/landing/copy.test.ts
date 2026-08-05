@@ -19,8 +19,9 @@ describe("landing copy", () => {
     expect(flat).not.toMatch(/""/); // nenhuma string vazia
   });
 
-  it("hero tem headline em 3 partes e 2 CTAs", () => {
-    expect(copy.hero.titleAccent.length).toBeGreaterThan(0);
+  it("hero tem título, subtítulo com palavras em rodízio e 2 CTAs", () => {
+    expect(copy.hero.title.length).toBeGreaterThan(0);
+    expect(copy.hero.subtitle.filter((p) => p.cycle).length).toBeGreaterThanOrEqual(2);
     expect(copy.hero.ctaPrimary.length).toBeGreaterThan(0);
     expect(copy.hero.ctaSecondary.length).toBeGreaterThan(0);
   });
