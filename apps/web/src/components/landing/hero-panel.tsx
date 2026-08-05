@@ -3,6 +3,7 @@ import { AnimatePresence, motion, type Variants } from "framer-motion";
 
 import { TaskCard, type TaskCardData } from "./task-card";
 import { RadialGlow, Noise } from "./panel-fx";
+import { TaskOptions } from "./task-options";
 
 /**
  * Painel animado da direita do hero. Lê `activeWord` do MESMO `useCycle` do subtítulo (via prop),
@@ -142,8 +143,8 @@ export function HeroPanel({
         </div>
       </div>
 
-      {/* card menor flutuante — slot reservado pras "options" da task (a fazer) */}
-      <div className="relative bg-surface-panel h-56 w-56 rounded-panel"></div>
+      {/* menu de ações da task (mock) — box fixo; só o conteúdo entra/sai na cena de tarefas */}
+      <TaskOptions active={activeWord === 0} reduce={reduce} />
     </div>
   );
 }

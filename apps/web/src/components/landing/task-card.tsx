@@ -107,7 +107,7 @@ function CardBody({ time, title, tags, duration, loading }: TaskCardData & { loa
         </div>
 
         {(shown.length > 0 || extra > 0) && (
-          <div className="mt-2 flex flex-wrap items-center gap-1.5">
+          <div className="mt-2 flex items-center gap-1.5 overflow-hidden">
             {shown.map((tag, i) => (
               <TagBadge key={i} label={tag} loading={loading} />
             ))}
