@@ -76,7 +76,7 @@ function SceneTarefas({ reduce }: { reduce: boolean }): JSX.Element {
     >
       {tarefasMock.map((t, i) => (
         <motion.li key={t.time} variants={rowVariants}>
-          <TaskCard {...t} loading={i >= resolved} />
+          <TaskCard {...t} selected={i === 0} loading={i >= resolved} />
         </motion.li>
       ))}
     </motion.ul>

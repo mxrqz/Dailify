@@ -76,7 +76,6 @@ export function SceneHorarios({ reduce }: { reduce: boolean }): JSX.Element {
           <span className="w-7 shrink-0 text-right font-mono text-2xs text-muted-foreground">
             {pad(Math.floor(min / 60))}
           </span>
-          <span className="h-px flex-1 bg-surface-line" />
         </div>
       ))}
 

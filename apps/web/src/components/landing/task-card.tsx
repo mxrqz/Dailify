@@ -87,7 +87,14 @@ export interface TaskCardData {
 }
 
 /** Corpo do card — mesma estrutura em loading/ready (alturas casam, sem jump no crossfade). */
-function CardBody({ time, title, tags, duration, loading }: TaskCardData & { loading?: boolean }) {
+function CardBody({
+  time,
+  title,
+  tags,
+  duration,
+  loading,
+  selected,
+}: TaskCardData & { loading?: boolean; selected?: boolean }) {
   const shown = tags.slice(0, MAX_TAGS);
   const extra = tags.length - shown.length;
   return (
@@ -96,7 +103,12 @@ function CardBody({ time, title, tags, duration, loading }: TaskCardData & { loa
         {time}
       </span>
 
-      <div className="min-w-0 flex-1 rounded-lg border border-surface-line bg-transparent px-3 py-2.5">
+      <div
+        className={cn(
+          "min-w-0 flex-1 rounded-lg border bg-transparent px-3 py-2.5",
+          selected && !loading ? "border-accent-primary" : "border-surface-line",
+        )}
+      >
         <div className="flex items-center justify-between gap-3">
           {loading ? (
             <span className="skeleton h-3.5 w-32 rounded" />
@@ -125,7 +137,11 @@ function CardBody({ time, title, tags, duration, loading }: TaskCardData & { loa
  * entra". Mesma estrutura dos dois lados, então a altura casa e não há jump. `initial={false}`: sem
  * fade no mount (a entrada em stagger é do pai); aqui anima só o resolve skeleton→conteúdo.
  */
-export function TaskCard({ loading, ...data }: TaskCardData & { loading?: boolean }): JSX.Element {
+export function TaskCard({
+  loading,
+  selected,
+  ...data
+}: TaskCardData & { loading?: boolean; selected?: boolean }): JSX.Element {
   return (
     <div className="grid">
       <motion.div
@@ -135,7 +151,7 @@ export function TaskCard({ loading, ...data }: TaskCardData & { loading?: boolea
         animate={{ opacity: loading ? 1 : 0 }}
         transition={{ duration: 0.45, ease: EXPO }}
       >
-        <CardBody {...data} loading />
+        <CardBody {...data} loading selected={selected} />
       </motion.div>
       <motion.div
         className="col-start-1 row-start-1"
@@ -143,7 +159,7 @@ export function TaskCard({ loading, ...data }: TaskCardData & { loading?: boolea
         animate={{ opacity: loading ? 0 : 1 }}
         transition={{ duration: 0.45, ease: EXPO }}
       >
-        <CardBody {...data} />
+        <CardBody {...data} selected={selected} />
       </motion.div>
     </div>
   );
