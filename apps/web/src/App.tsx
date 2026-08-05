@@ -22,7 +22,7 @@ export default function App() {
     <HelmetProvider>
       <DailifyProvider>
         <Router>
-          <ThemeProvider>
+          <ThemeProvider defaultTheme="dark">
             <ErrorBoundary>
               <Routes>
                 <Route path="/" element={<LandingPage />} />

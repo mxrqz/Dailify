@@ -304,34 +304,34 @@ export function FeatureTabs(): JSX.Element {
   const [active, setActive] = useState<TabKey>("day");
 
   return (
-    <section className="px-[clamp(1rem,5vw,24rem)] py-20 md:py-28">
+    <section className="py-20 md:py-28 w-full">
       <Tabs
         value={active}
         onValueChange={(value) => {
           if (isTabKey(value)) setActive(value);
         }}
-        className="gap-0"
+        className="gap-5 p-5 bg-black"
       >
         <LayoutGroup>
-          <TabsList className="relative z-10 -mb-px h-auto w-fit gap-1 rounded-none bg-transparent p-0">
+          <TabsList className="flex w-full justify-between relative z-10 bg-transparent -mb-px rounded-panel h-auto gap-5 p-0">
             {TABS.map(({ key, icon: Icon }) => {
               const isActive = active === key;
               return (
                 <TabsTrigger
                   key={key}
                   value={key}
-                  className="relative z-10 flex flex-none items-center gap-2 rounded-none border-none bg-transparent px-4 py-2.5 font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground shadow-none data-[state=active]:bg-transparent data-[state=active]:text-accent-primary data-[state=active]:shadow-none"
+                  className="relative bg-card/30 z-10 flex items-center justify-center text-center gap-2 rounded-4xl border-t border-t-foreground/10 border-r border-r-foreground/10 px-4 py-5 font-mono uppercase tracking-[0.04em] text-muted-foreground shadow-none data-[state=active]:bg-transparent data-[state=active]:text-accent-primary data-[state=active]:shadow-none data-[state=active]:border-none"
                 >
                   {isActive && (
                     <motion.span
                       layoutId="tab-active"
-                      className="absolute inset-0 -z-10 rounded-t-xl border border-b-0 border-highlight bg-surface-panel"
+                      className={`absolute border-none inset-0 -z-10 rounded-t-4xl bg-surface-panel`}
                       transition={
                         reduce ? { duration: 0 } : { type: "spring", bounce: 0.2, duration: 0.5 }
                       }
                     />
                   )}
-                  <Icon className="size-3.5" aria-hidden="true" />
+                  <Icon className="size-5" aria-hidden="true" />
                   {copy.features.tabs[key].label}
                 </TabsTrigger>
               );
@@ -339,7 +339,7 @@ export function FeatureTabs(): JSX.Element {
           </TabsList>
         </LayoutGroup>
 
-        <div className="relative min-h-96 overflow-hidden rounded-b-panel rounded-tr-panel border border-highlight bg-surface-panel shadow-panel">
+        <div className="relative min-h-168 overflow-hidden rounded-panel border border-highlight bg-surface-panel shadow-panel">
           <AnimatePresence initial={false}>
             <TabPanel key={active} tabKey={active} reduce={Boolean(reduce)} />
           </AnimatePresence>
