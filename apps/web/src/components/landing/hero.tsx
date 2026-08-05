@@ -16,7 +16,7 @@ export function Hero(): JSX.Element {
 
   // Índice ativo compartilhado (mesmo trigger) entre as palavras `cycle` do subtítulo e o painel.
   const cycleCount = copy.hero.subtitle.filter((part) => part.cycle).length;
-  const activeWord = useCycle(cycleCount, 4000, !reduce);
+  const activeWord = useCycle(cycleCount, 7000, !reduce);
 
   return (
     <section className="flex w-full items-center p-[5rem_0rem_0_2rem] border-b h-[80dvh]">

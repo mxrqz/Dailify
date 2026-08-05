@@ -1,26 +1,35 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 
+import { TaskCard, type TaskCardData } from "./task-card";
+
 /**
  * Painel animado da direita do hero. Lê `activeWord` do MESMO `useCycle` do subtítulo (via prop),
  * então a cena e a palavra crimson nunca dessincronizam. Cada palavra terá sua cena; por ora só
  * "tarefas" (0) está feita — 1/2 mostram um placeholder discreto no mesmo slot.
  *
  * `SceneTarefas` roda em 2 fases e replaya a cada reativação (a troca de `key` no `AnimatePresence`
- * remonta a cena): (A) skeleton com shimmer carrega rápido, (B) as tasks mock entram 1 a 1.
- * `reduce` (prefers-reduced-motion) colapsa pro estado final populado — sem skeleton/stagger.
+ * remonta a cena): (A) os cards entram em stagger como skeleton, (B) resolvem 1 a 1 pro conteúdo
+ * (o crossfade skeleton→conteúdo mora dentro do TaskCard). `reduce` colapsa pro estado final.
  */
 
-/** Task rows decorativas (mock, sem dados reais). */
-const tarefasMock = [
-  { time: "08:30", title: "Revisar proposta", duration: "30min" },
-  { time: "09:15", title: "Reunião de time", duration: "45min" },
-  { time: "11:00", title: "Escrever relatório", duration: "1h30" },
-  { time: "14:00", title: "Deploy da build", duration: "20min" },
+/** Task cards decorativas (mock, sem dados reais). Uma linha estoura 3 tags pra mostrar os dots. */
+const tarefasMock: readonly TaskCardData[] = [
+  { time: "08:30", title: "Revisar proposta", duration: "30min", tags: ["design", "urgente"] },
+  {
+    time: "09:15",
+    title: "Reunião de time",
+    duration: "45min",
+    tags: ["time", "sync", "q3", "roadmap", "async", "ops", "ux"],
+  },
+  { time: "11:00", title: "Escrever relatório", duration: "1h30", tags: ["docs"] },
+  { time: "14:00", title: "Deploy da build", duration: "20min", tags: ["ci", "release", "infra"] },
 ] as const;
 
-/** ms que o skeleton segura antes de resolver pro conteúdo (knob). */
-const SKELETON_MS = 700;
+/** ms que o skeleton segura antes do 1º card resolver (knob). */
+const SKELETON_MS = 600;
+/** atraso entre um card resolver e o próximo (resolve de cima pra baixo). */
+const RESOLVE_STAGGER_MS = 220;
 
 const EXPO = [0.16, 1, 0.3, 1] as const; // ease-out-expo, espelha o token do global.css
 
@@ -32,109 +41,63 @@ const sceneVariants: Variants = {
 
 const listVariants: Variants = {
   hidden: {},
-  visible: { transition: { staggerChildren: 0.18 } },
+  visible: { transition: { staggerChildren: 0.14, delayChildren: 0.05 } },
 };
 const rowVariants: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.08 } },
+  hidden: { opacity: 0, y: 8 },
+  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EXPO } },
 };
-const timeVariants: Variants = {
-  hidden: { opacity: 0, x: -8 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.3, ease: EXPO } },
-};
-const chipVariants: Variants = {
-  hidden: { opacity: 0, x: 10 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.3, ease: EXPO } },
-};
-
-/** Uma linha real (hora · título · duração) — a hora puxa o chip via stagger interno. */
-function TaskRow({ time, title, duration }: { time: string; title: string; duration: string }) {
-  return (
-    <motion.li variants={rowVariants} className="flex items-center gap-3">
-      <motion.span
-        variants={timeVariants}
-        className="w-12 shrink-0 text-right font-mono text-2xs text-muted-foreground"
-      >
-        {time}
-      </motion.span>
-      <motion.div
-        variants={chipVariants}
-        className="flex flex-1 items-center justify-between gap-3 border-l-2 border-surface-line py-2 pl-3"
-      >
-        <span className="truncate text-sm font-medium text-foreground">{title}</span>
-        <span className="shrink-0 rounded-full border border-surface-line px-2 py-0.5 font-mono text-2xs text-muted-foreground">
-          {duration}
-        </span>
-      </motion.div>
-    </motion.li>
-  );
-}
-
-/** Uma linha de skeleton (shimmer), mesmo layout da TaskRow. */
-function SkeletonRow(): JSX.Element {
-  return (
-    <div className="flex items-center gap-3">
-      <div className="skeleton h-3 w-12 shrink-0 rounded" />
-      <div className="flex flex-1 items-center justify-between gap-3 border-l-2 border-surface-line py-2 pl-3">
-        <div className="skeleton h-3 w-28 rounded" />
-        <div className="skeleton h-4 w-10 shrink-0 rounded-full" />
-      </div>
-    </div>
-  );
-}
 
 function SceneTarefas({ reduce }: { reduce: boolean }): JSX.Element {
-  const [ready, setReady] = useState(reduce);
+  // nº de cards já resolvidos (de cima pra baixo); card i troca skeleton→conteúdo quando resolved > i.
+  const [resolved, setResolved] = useState(reduce ? tarefasMock.length : 0);
 
   useEffect(() => {
     if (reduce) return;
-    const id = setTimeout(() => setReady(true), SKELETON_MS);
-    return () => clearTimeout(id);
+    setResolved(0);
+    const timers = tarefasMock.map((_, i) =>
+      setTimeout(
+        () => setResolved((n) => Math.max(n, i + 1)),
+        SKELETON_MS + i * RESOLVE_STAGGER_MS,
+      ),
+    );
+    return () => timers.forEach(clearTimeout);
   }, [reduce]);
 
   return (
-    <div className="relative flex flex-col gap-3">
-      {/* conteúdo — define a altura (linhas ficam invisíveis até `visible`), evita jump no swap */}
-      <motion.ul
-        variants={listVariants}
-        initial={reduce ? "visible" : "hidden"}
-        animate={ready ? "visible" : "hidden"}
-        className="flex flex-col gap-3"
-      >
-        {tarefasMock.map((t) => (
-          <TaskRow key={t.time} {...t} />
-        ))}
-      </motion.ul>
-
-      {/* skeleton sobreposto, some (fade) quando resolve */}
-      {!reduce && (
-        <AnimatePresence>
-          {!ready && (
-            <motion.div
-              exit={{ opacity: 0, transition: { duration: 0.3 } }}
-              className="absolute inset-0 flex flex-col gap-3"
-            >
-              {tarefasMock.map((t) => (
-                <SkeletonRow key={t.time} />
-              ))}
-            </motion.div>
-          )}
-        </AnimatePresence>
-      )}
-    </div>
+    <motion.ul
+      variants={listVariants}
+      initial={reduce ? "visible" : "hidden"}
+      animate="visible"
+      className="flex flex-col gap-2.5"
+    >
+      {tarefasMock.map((t, i) => (
+        <motion.li key={t.time} variants={rowVariants}>
+          <TaskCard {...t} loading={i >= resolved} />
+        </motion.li>
+      ))}
+    </motion.ul>
   );
 }
 
-/** Placeholder discreto pras cenas ainda não feitas (horários/recorrência). */
+/** Placeholder discreto e estático pras cenas ainda não feitas (horários/recorrência). */
 function ScenePlaceholder(): JSX.Element {
   return (
-    <div className="flex flex-col gap-3 opacity-40">
-      {tarefasMock.map((t) => (
-        <div key={t.time} className="flex items-center gap-3">
-          <div className="h-3 w-12 shrink-0 rounded bg-surface-hover" />
-          <div className="flex flex-1 items-center justify-between gap-3 border-l-2 border-surface-line py-2 pl-3">
-            <div className="h-3 w-24 rounded bg-surface-hover" />
-            <div className="h-4 w-10 shrink-0 rounded-full bg-surface-hover" />
+    <div className="flex flex-col gap-2.5 opacity-40">
+      {tarefasMock.slice(0, 3).map((t) => (
+        <div key={t.time} className="flex items-start gap-3">
+          <span className="w-12 shrink-0 pt-2.5 text-right font-mono text-2xs text-muted-foreground">
+            {t.time}
+          </span>
+          <div className="min-w-0 flex-1 rounded-lg border border-surface-line px-3 py-2.5">
+            <div className="flex items-center justify-between gap-3">
+              <div className="h-3.5 w-28 rounded bg-surface-hover" />
+              <div className="h-[1.125rem] w-10 rounded-md bg-surface-hover" />
+            </div>
+            <div className="mt-2 flex gap-1.5">
+              <div className="h-[1.125rem] w-12 rounded-md bg-surface-hover" />
+              <div className="h-[1.125rem] w-10 rounded-md bg-surface-hover" />
+            </div>
           </div>
         </div>
       ))}
@@ -152,7 +115,7 @@ export function HeroPanel({
   return (
     <div className="relative flex h-full w-full pt-44" aria-hidden="true">
       {/* painel principal (gradiente) — contém a cena da palavra ativa */}
-      <div className="absolute top-0 left-36 h-full w-full rounded-tl-panel border-l border-l-surface-line bg-linear-150 from-surface-card to-surface-page to-55% p-8">
+      <div className="absolute top-0 left-36 h-full w-full rounded-tl-panel border-l border-l-surface-line bg-linear-150 from-surface-card to-surface-page to-55% p-8 pl-28">
         <div className="w-80">
           <AnimatePresence mode="wait">
             <motion.div
