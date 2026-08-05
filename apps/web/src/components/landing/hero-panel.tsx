@@ -4,6 +4,7 @@ import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { TaskCard, type TaskCardData } from "./task-card";
 import { RadialGlow, Noise } from "./panel-fx";
 import { TaskOptions } from "./task-options";
+import { SceneHorarios } from "./scene-horarios";
 
 /**
  * Painel animado da direita do hero. Lê `activeWord` do MESMO `useCycle` do subtítulo (via prop),
@@ -137,14 +138,20 @@ export function HeroPanel({
               animate="visible"
               exit={reduce ? undefined : "exit"}
             >
-              {activeWord === 0 ? <SceneTarefas reduce={reduce} /> : <ScenePlaceholder />}
+              {activeWord === 0 ? (
+                <SceneTarefas reduce={reduce} />
+              ) : activeWord === 1 ? (
+                <SceneHorarios reduce={reduce} />
+              ) : (
+                <ScenePlaceholder />
+              )}
             </motion.div>
           </AnimatePresence>
         </div>
       </div>
 
       {/* menu de ações da task (mock) — box fixo; só o conteúdo entra/sai na cena de tarefas */}
-      <TaskOptions active={activeWord === 0} reduce={reduce} />
+      <TaskOptions activeWord={activeWord} reduce={reduce} />
     </div>
   );
 }
