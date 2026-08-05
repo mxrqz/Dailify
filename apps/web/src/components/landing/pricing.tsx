@@ -42,7 +42,7 @@ export function Pricing(): JSX.Element {
   const reduce = useReducedMotion();
 
   return (
-    <section className="px-[clamp(1rem,5vw,24rem)] py-20 md:py-28">
+    <section className="px-gutter py-20 md:py-28">
       <div className="mx-auto max-w-2xl text-center">
         <p className="font-mono text-xs uppercase tracking-[0.04em] text-muted-foreground">
           {copy.pricing.tagline}

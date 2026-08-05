@@ -13,7 +13,7 @@ import { copy } from "./copy";
  */
 export function CtaBand(): JSX.Element {
   return (
-    <section className="bg-accent-primary px-[clamp(1rem,5vw,24rem)] py-20 text-primary-foreground md:py-28">
+    <section className="bg-accent-primary px-gutter py-20 text-primary-foreground md:py-28">
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 text-center">
         <h2 className="text-4xl font-semibold leading-[1.1] tracking-[-0.03em] sm:text-5xl">
           {copy.cta.title}

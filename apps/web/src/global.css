@@ -95,6 +95,7 @@
   --accent-glow: color-mix(in oklch, var(--primary) 20%, transparent);
   --border-highlight: light-dark(oklch(90% 0.004 286.3), oklch(30% 0.005 286));
   --radius-panel: 1.375rem;
+  --layout-content: 1380px; /* teto de largura do conteúdo (mastra-like) */
 }
 
 /* Bridge the class-based toggle to color-scheme so light-dark() flips. */
@@ -211,6 +212,15 @@
       opacity: 0;
     }
   }
+}
+
+/*
+ * Gutter horizontal das seções (mastra-like): seção fica full-bleed (bg/borda), o conteúdo centra
+ * num teto de `--layout-content`. Mantém o padding atual (5vw) em telas menores; em telas largas o
+ * `(100% - teto)/2` vence e vira margem que centra e limita a largura.
+ */
+@utility px-gutter {
+  padding-inline: max(1rem, 5vw, calc((100% - var(--layout-content)) / 2));
 }
 
 @layer base {

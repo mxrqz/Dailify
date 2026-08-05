@@ -22,7 +22,7 @@ export function HowItWorks(): JSX.Element {
   const pointLeft = useTransform(scrollYProgress, [0.1, 0.9], ["0%", "100%"]);
 
   return (
-    <section className="px-[clamp(1rem,5vw,24rem)] py-20 md:py-28">
+    <section className="px-gutter py-20 md:py-28">
       <div ref={sectionRef} className="relative">
         <div className="absolute inset-x-0 top-6 hidden h-px bg-border md:block" aria-hidden="true">
           <motion.span

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 
 import { TaskCard, type TaskCardData } from "./task-card";
+import { RadialGlow, Noise } from "./panel-fx";
 
 /**
  * Painel animado da direita do hero. Lê `activeWord` do MESMO `useCycle` do subtítulo (via prop),
@@ -92,11 +93,11 @@ function ScenePlaceholder(): JSX.Element {
           <div className="min-w-0 flex-1 rounded-lg border border-surface-line px-3 py-2.5">
             <div className="flex items-center justify-between gap-3">
               <div className="h-3.5 w-28 rounded bg-surface-hover" />
-              <div className="h-[1.125rem] w-10 rounded-md bg-surface-hover" />
+              <div className="h-4.5 w-10 rounded-md bg-surface-hover" />
             </div>
             <div className="mt-2 flex gap-1.5">
-              <div className="h-[1.125rem] w-12 rounded-md bg-surface-hover" />
-              <div className="h-[1.125rem] w-10 rounded-md bg-surface-hover" />
+              <div className="h-4.5 w-12 rounded-md bg-surface-hover" />
+              <div className="h-4.5 w-10 rounded-md bg-surface-hover" />
             </div>
           </div>
         </div>
@@ -114,9 +115,19 @@ export function HeroPanel({
 }): JSX.Element {
   return (
     <div className="relative flex h-full w-full pt-44" aria-hidden="true">
-      {/* painel principal (gradiente) — contém a cena da palavra ativa */}
-      <div className="absolute top-0 left-36 h-full w-full rounded-tl-panel border-l border-l-surface-line bg-linear-150 from-surface-card to-surface-page to-55% p-8 pl-28">
-        <div className="w-80">
+      {/* painel principal — base chapada + glow radial + noise (efeitos em ./panel-fx) */}
+      <div className="absolute top-0 left-28 h-full w-full rounded-tl-panel border-l border-l-surface-line bg-surface-card mask-r-from-80% p-8 px-28">
+        <RadialGlow />
+
+        {/* mask radial casando com o RadialGlow: o grão só vive no glow (forte no canto → some em 70%) */}
+        <Noise
+          id="hero-noise"
+          blend="soft-light"
+          opacity={0.5}
+          className="mask-radial-at-top-left mask-radial-from-0% mask-radial-to-70%"
+        />
+
+        <div className="relative z-10 w-full">
           <AnimatePresence mode="wait">
             <motion.div
               key={activeWord}

@@ -13,7 +13,7 @@ export default function LandingPage() {
       {/* <Grain /> removido do QA — reintroduzir refatorado depois (componente em @/components/landing/grain) */}
 
       <div className="relative z-10 flex flex-col">
-        <Header className="px-[clamp(1rem,5vw,24rem)]" />
+        <Header className="px-gutter" />
         <Hero />
 
         <div id="features">

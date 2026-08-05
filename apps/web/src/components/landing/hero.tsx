@@ -19,7 +19,7 @@ export function Hero(): JSX.Element {
   const activeWord = useCycle(cycleCount, 7000, !reduce);
 
   return (
-    <section className="flex w-full items-center p-[5rem_0rem_0_2rem] border-b h-[80dvh]">
+    <section className="flex w-full items-center px-gutter pt-[5rem] border-b h-[80dvh]">
       <div className="mr-5 w-[65ch] grid grid-rows-3 justify-center gap-6 md:gap-8 h-full pb-10">
         <div className="row-start-2">
           <h1 className="whitespace-nowrap text-5xl font-semibold leading-[1.05] tracking-[-0.03em] text-foreground ">

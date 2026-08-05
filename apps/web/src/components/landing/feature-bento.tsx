@@ -57,7 +57,7 @@ export function FeatureBento(): JSX.Element {
   };
 
   return (
-    <section className="px-[clamp(1rem,5vw,24rem)] py-20 md:py-28">
+    <section className="px-gutter py-20 md:py-28">
       <motion.div
         variants={containerVariants}
         initial={reduce ? "visible" : "hidden"}

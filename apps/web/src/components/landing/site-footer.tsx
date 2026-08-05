@@ -24,7 +24,7 @@ import { copy } from "./copy";
  */
 export function SiteFooter(): JSX.Element {
   return (
-    <footer className="relative z-10 -mt-20 mask-t-from-85% rounded-t-panel bg-surface-page px-[clamp(1rem,5vw,24rem)] pb-10 pt-28 md:-mt-24 md:pb-14 md:pt-32">
+    <footer className="relative z-10 -mt-20 mask-t-from-85% rounded-t-panel bg-surface-page px-gutter pb-10 pt-28 md:-mt-24 md:pb-14 md:pt-32">
       <div className="grid gap-10 border-b pb-10 md:grid-cols-[1.5fr_1fr_1fr] md:gap-8">
         <div className="flex flex-col gap-3">
           <img
