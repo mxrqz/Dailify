@@ -163,7 +163,7 @@ export function Hero(): JSX.Element {
           <div className="flex flex-wrap items-center gap-4">
             <Button
               size="lg"
-              className="rounded-full border-t border-t-foreground/10 bg-card/30 text-primary-foreground hover:bg-accent-hover"
+              className="rounded-full border-t border-t-surface-line bg-surface-card text-primary-foreground hover:bg-accent-hover"
             >
               {copy.hero.ctaPrimary}
             </Button>
@@ -171,7 +171,7 @@ export function Hero(): JSX.Element {
             <Button
               size="lg"
               variant="ghost"
-              className="rounded-full border-t border-t-foreground/10 bg-card/30 hover:bg-surface-hover"
+              className="rounded-full border-t border-t-surface-line bg-surface-card hover:bg-surface-hover"
             >
               {copy.hero.ctaSecondary}
             </Button>
@@ -180,7 +180,7 @@ export function Hero(): JSX.Element {
       </div>
 
       <div className="h-full w-full relative flex pt-44">
-        <div className="absolute top-0 left-36 h-full w-full bg-linear-150 from-card-foreground/10 to-45% to-surface-page rounded-tl-panel border-l"></div>
+        <div className="absolute top-0 left-36 h-full w-full bg-linear-150 from-surface-card to-surface-page to-55% rounded-tl-panel border-l border-l-surface-line"></div>
 
         <div className="relative bg-surface-panel h-56 w-56 rounded-panel"></div>
       </div>
