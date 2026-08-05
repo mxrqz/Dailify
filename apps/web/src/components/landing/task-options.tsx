@@ -21,9 +21,18 @@ const OPTIONS: { icon: LucideIcon; label: string; danger?: boolean }[] = [
 
 const EXPO = [0.16, 1, 0.3, 1] as const;
 
+// Atraso (s) da entrada do menu na cena "tarefas": só aparece depois do skeleton resolver.
+// ~ SKELETON_MS(600) + 3*RESOLVE_STAGGER(220) do hero-panel; alinha o menu ao 1º card já real.
+const MENU_DELAY = 1.3;
+
+// `custom` = atraso (s) da entrada; delayChildren casa a lista de itens ao mesmo atraso.
 const contentVariants: Variants = {
   hidden: { opacity: 0, y: 6 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: EXPO } },
+  visible: (custom: number = 0) => ({
+    opacity: 1,
+    y: 0,
+    transition: { duration: 0.3, ease: EXPO, delay: custom, delayChildren: custom },
+  }),
   exit: { opacity: 0, y: -6, transition: { duration: 0.2, ease: EXPO } },
 };
 const listVariants: Variants = {
@@ -40,6 +49,7 @@ function ActionsMenu({ reduce }: { reduce: boolean }): JSX.Element {
   return (
     <motion.div
       variants={contentVariants}
+      custom={reduce ? 0 : MENU_DELAY}
       initial={reduce ? false : "hidden"}
       animate="visible"
       exit={reduce ? undefined : "exit"}
@@ -79,6 +89,7 @@ function AgoraNext({ reduce }: { reduce: boolean }): JSX.Element {
   return (
     <motion.div
       variants={contentVariants}
+      custom={0}
       initial={reduce ? false : "hidden"}
       animate="visible"
       exit={reduce ? undefined : "exit"}

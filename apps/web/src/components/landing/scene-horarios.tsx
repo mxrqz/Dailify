@@ -94,7 +94,7 @@ export function SceneHorarios({ reduce }: { reduce: boolean }): JSX.Element {
               key={s.title}
               variants={blockVariants}
               className={cn(
-                "absolute left-9 right-1 flex items-start justify-between gap-2 overflow-hidden rounded-lg border py-2 pl-3 pr-2.5",
+                "absolute left-9 right-14 flex items-start justify-between gap-2 overflow-hidden rounded-lg border py-2 pl-3 pr-2.5",
                 now
                   ? "border-accent-primary bg-accent-subtle"
                   : "border-surface-line bg-transparent",
