@@ -5,6 +5,7 @@ import { TaskCard, type TaskCardData } from "./task-card";
 import { RadialGlow, Noise } from "./panel-fx";
 import { TaskOptions } from "./task-options";
 import { SceneHorarios } from "./scene-horarios";
+import { SceneRecorrencia } from "./scene-recorrencia";
 
 /**
  * Painel animado da direita do hero. Lê `activeWord` do MESMO `useCycle` do subtítulo (via prop),
@@ -83,31 +84,6 @@ function SceneTarefas({ reduce }: { reduce: boolean }): JSX.Element {
   );
 }
 
-/** Placeholder discreto e estático pras cenas ainda não feitas (horários/recorrência). */
-function ScenePlaceholder(): JSX.Element {
-  return (
-    <div className="flex flex-col gap-2.5 opacity-40">
-      {tarefasMock.slice(0, 3).map((t) => (
-        <div key={t.time} className="flex items-start gap-3">
-          <span className="w-12 shrink-0 pt-2.5 text-right font-mono text-2xs text-muted-foreground">
-            {t.time}
-          </span>
-          <div className="min-w-0 flex-1 rounded-lg border border-surface-line px-3 py-2.5">
-            <div className="flex items-center justify-between gap-3">
-              <div className="h-3.5 w-28 rounded bg-surface-hover" />
-              <div className="h-4.5 w-10 rounded-md bg-surface-hover" />
-            </div>
-            <div className="mt-2 flex gap-1.5">
-              <div className="h-4.5 w-12 rounded-md bg-surface-hover" />
-              <div className="h-4.5 w-10 rounded-md bg-surface-hover" />
-            </div>
-          </div>
-        </div>
-      ))}
-    </div>
-  );
-}
-
 export function HeroPanel({
   activeWord,
   reduce,
@@ -143,7 +119,7 @@ export function HeroPanel({
               ) : activeWord === 1 ? (
                 <SceneHorarios reduce={reduce} />
               ) : (
-                <ScenePlaceholder />
+                <SceneRecorrencia reduce={reduce} />
               )}
             </motion.div>
           </AnimatePresence>
