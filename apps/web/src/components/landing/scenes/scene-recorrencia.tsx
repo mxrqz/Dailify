@@ -1,25 +1,23 @@
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion, type Variants } from "framer-motion";
+import { motion } from "framer-motion";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Orbit } from "../orbit";
 import { TagBadge } from "../task-card";
+import { boxResolveMs, CROSSFADE_S } from "./timing";
 
 /**
- * Cena "recorrência" (activeWord===2). Duas fases, no espírito do skeleton→conteúdo das tarefas:
- * (A) o laço <Orbit> gira no centro por ~LOOP_MS como "skeleton", com a cadência alternando
- * Diário→Semanal→Mensal em crossfade; (B) o laço dissolve e resolve pro "Config + próximas":
- * card recorrente (ícone Orbit estático) + seletor de cadência + preview das próximas ocorrências.
- * `reduce` vai direto pro estado de repouso (Fase B), sem laço nem animação.
+ * Cena "recorrência" (activeWord===2): como tarefas/horários, o config entra como skeleton (shimmer)
+ * e resolve num crossfade — sincronizado com o box. O laço <Orbit> animado agora vive no BOX
+ * (task-options) como skeleton dele. Conteúdo: card recorrente (ícone Orbit estático) + seletor de
+ * cadência + preview das próximas ocorrências. `reduce` vai direto pro conteúdo.
  */
 
-const LOOP_MS = 3000; // duração da Fase A antes de resolver
-const CAD_MS = 1000; // troca da cadência em rodízio na Fase A
 const EXPO = [0.16, 1, 0.3, 1] as const;
 
 const CADENCES = ["Diário", "Semanal", "Mensal"] as const;
-const ACTIVE_CAD = 1; // "Semanal" fica selecionada no repouso
+const ACTIVE_CAD = 1; // "Semanal" selecionada
 
 interface Occurrence {
   date: string;
@@ -37,21 +35,12 @@ export const recorrenciaMeta = {
   next: PROXIMAS[0],
 };
 
-const bodyVariants: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.09, delayChildren: 0.05 } },
-};
-const blockVariants: Variants = {
-  hidden: { opacity: 0, y: 8 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EXPO } },
-};
-
-/** Pílula de cadência (crossfade suave de cor ao alternar/selecionar). */
+/** Pílula de cadência. */
 function CadencePill({ label, active }: { label: string; active: boolean }): JSX.Element {
   return (
     <span
       className={cn(
-        "rounded-full border px-3 py-1 text-2xs transition-colors duration-500",
+        "rounded-full border px-3 py-1 text-2xs",
         active
           ? "border-accent-primary bg-accent-subtle text-accent-primary"
           : "border-surface-line text-muted-foreground",
@@ -59,27 +48,6 @@ function CadencePill({ label, active }: { label: string; active: boolean }): JSX
     >
       {label}
     </span>
-  );
-}
-
-/** Fase A: laço girando + cadência em rodízio Diário→Semanal→Mensal. */
-function LoopPhase({ reduce }: { reduce: boolean }): JSX.Element {
-  const [active, setActive] = useState(0);
-  useEffect(() => {
-    if (reduce) return;
-    const id = setInterval(() => setActive((n) => (n + 1) % CADENCES.length), CAD_MS);
-    return () => clearInterval(id);
-  }, [reduce]);
-
-  return (
-    <div className="flex flex-col items-center gap-7">
-      <Orbit size={176} animated={!reduce} glow glyph speed={6} strokeWidth={1} dash={[2, 8]} />
-      <div className="flex gap-2">
-        {CADENCES.map((c, i) => (
-          <CadencePill key={c} label={c} active={i === active} />
-        ))}
-      </div>
-    </div>
   );
 }
 
@@ -156,59 +124,81 @@ function ProximasList(): JSX.Element {
   );
 }
 
+/** Conteúdo real do config (o crossfade da cena controla a opacidade). */
+function ConfigContent(): JSX.Element {
+  return (
+    <div className="flex flex-col gap-4">
+      <RecurringCard />
+      <div className="flex gap-2">
+        {CADENCES.map((c, i) => (
+          <CadencePill key={c} label={c} active={i === ACTIVE_CAD} />
+        ))}
+      </div>
+      <ProximasList />
+    </div>
+  );
+}
+
+/** Skeleton do config (placeholders com shimmer; cruza pro ConfigContent). */
+function ConfigSkeleton(): JSX.Element {
+  return (
+    <div className="flex flex-col gap-4">
+      <div className="flex items-center gap-3 rounded-lg border border-surface-line px-4 py-3.5">
+        <span className="skeleton size-9 shrink-0 rounded-full" />
+        <div className="flex flex-1 flex-col gap-1.5">
+          <span className="skeleton h-4 w-32 rounded" />
+          <span className="skeleton h-3 w-20 rounded" />
+        </div>
+        <span className="skeleton h-5 w-16 shrink-0 rounded-full" />
+      </div>
+      <div className="flex gap-2">
+        <span className="skeleton h-6 w-14 rounded-full" />
+        <span className="skeleton h-6 w-16 rounded-full" />
+        <span className="skeleton h-6 w-14 rounded-full" />
+      </div>
+      <div>
+        <span className="skeleton mb-2 block h-2.5 w-24 rounded" />
+        <div className="flex flex-col gap-2">
+          <span className="skeleton h-3.5 w-40 rounded" />
+          <span className="skeleton h-3.5 w-36 rounded" />
+          <span className="skeleton h-3.5 w-40 rounded" />
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export function SceneRecorrencia({ reduce }: { reduce: boolean }): JSX.Element {
-  // fase: 'loop' (laço/skeleton) → 'config' (repouso). reduce vai direto pro repouso.
-  const [phase, setPhase] = useState<"loop" | "config">(reduce ? "config" : "loop");
+  const [resolved, setResolved] = useState(reduce);
 
   useEffect(() => {
     if (reduce) return;
-    setPhase("loop");
-    const t = setTimeout(() => setPhase("config"), LOOP_MS);
+    setResolved(false);
+    const t = setTimeout(() => setResolved(true), boxResolveMs(4)); // casa com o box (1260ms)
     return () => clearTimeout(t);
   }, [reduce]);
 
   return (
     <div className="flex min-h-80 flex-col justify-center">
-      <AnimatePresence mode="wait">
-        {phase === "loop" ? (
-          <motion.div
-            key="loop"
-            initial={reduce ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={reduce ? undefined : { opacity: 0 }}
-            transition={{ duration: 0.3, ease: EXPO }}
-          >
-            <LoopPhase reduce={reduce} />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="config"
-            initial={reduce ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={reduce ? undefined : { opacity: 0 }}
-            transition={{ duration: 0.3, ease: EXPO }}
-          >
-            <motion.div
-              variants={bodyVariants}
-              initial={reduce ? "visible" : "hidden"}
-              animate="visible"
-              className="flex flex-col gap-4 pl-5"
-            >
-              <motion.div variants={blockVariants}>
-                <RecurringCard />
-              </motion.div>
-              <motion.div variants={blockVariants} className="flex gap-2">
-                {CADENCES.map((c, i) => (
-                  <CadencePill key={c} label={c} active={i === ACTIVE_CAD} />
-                ))}
-              </motion.div>
-              <motion.div variants={blockVariants}>
-                <ProximasList />
-              </motion.div>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      <div className="grid pl-5">
+        <motion.div
+          aria-hidden="true"
+          className="pointer-events-none col-start-1 row-start-1"
+          initial={false}
+          animate={{ opacity: resolved ? 0 : 1 }}
+          transition={{ duration: CROSSFADE_S, ease: EXPO }}
+        >
+          <ConfigSkeleton />
+        </motion.div>
+        <motion.div
+          className="col-start-1 row-start-1"
+          initial={false}
+          animate={{ opacity: resolved ? 1 : 0 }}
+          transition={{ duration: CROSSFADE_S, ease: EXPO }}
+        >
+          <ConfigContent />
+        </motion.div>
+      </div>
     </div>
   );
 }

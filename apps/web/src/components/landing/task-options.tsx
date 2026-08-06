@@ -5,6 +5,7 @@ import { Bell, Check, CheckCircle, Edit, Repeat, Trash2, type LucideIcon } from 
 import { cn } from "@/lib/utils";
 import { Checklist } from "./checklist";
 import { NowLine } from "./now-line";
+import { Orbit } from "./orbit";
 import { recorrenciaMeta } from "./scenes/scene-recorrencia";
 import { scheduleMeta } from "./scenes/scene-horarios";
 import { boxResolveMs, CROSSFADE_S } from "./scenes/timing";
@@ -12,10 +13,10 @@ import { boxResolveMs, CROSSFADE_S } from "./scenes/timing";
 /**
  * Box flutuante ao lado da lista — SEMPRE montado (slot fixo); só o CONTEÚDO troca por cena, via
  * `AnimatePresence` interno (mesmo `useCycle` do hero). Scene-aware: em "tarefas" (0) o menu de
- * ações; em "horários" (1) o "Agora / A seguir"; em "recorrência" (2) a sequência/streak.
- * Tarefas e horários têm skeleton na cena → o box mostra o ícone da família (<Checklist>/<NowLine>)
- * e faz crossfade SIMULTÂNEO pro conteúdo (grid-stack, igual o TaskCard) no MESMO instante que o
- * último item da cena resolve (~1710ms). `reduce` colapsa pro estado final. Mock, sem interação.
+ * ações; em "horários" (1) o "Agora / A seguir"; em "recorrência" (2) a sequência/streak. As 3 cenas
+ * têm skeleton → o box mostra o ícone da família (<Checklist>/<NowLine>/<Orbit>) e faz crossfade
+ * SIMULTÂNEO pro conteúdo (grid-stack, igual o TaskCard) no MESMO instante que a cena resolve
+ * (~1710ms). `reduce` colapsa pro estado final. Mock, sem interação.
  */
 const OPTIONS: { icon: LucideIcon; label: string; danger?: boolean }[] = [
   { icon: CheckCircle, label: "Concluir" },
@@ -27,7 +28,7 @@ const OPTIONS: { icon: LucideIcon; label: string; danger?: boolean }[] = [
 
 const EXPO = [0.16, 1, 0.3, 1] as const;
 
-// Tarefas e horários têm 4 itens → o box cruza junto com o último (SKELETON_MS + 3*RESOLVE_STAGGER).
+// As cenas têm 4 itens (recorrência resolve junto em 1260) → o box cruza no mesmo instante.
 const BOX_SKELETON_MS = boxResolveMs(4);
 
 const contentVariants: Variants = {
@@ -35,18 +36,10 @@ const contentVariants: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: EXPO } },
   exit: { opacity: 0, y: -6, transition: { duration: 0.2, ease: EXPO } },
 };
-const listVariants: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.06, delayChildren: 0.1 } },
-};
-const checkVariants: Variants = {
-  hidden: { opacity: 0, scale: 0.5 },
-  visible: { opacity: 1, scale: 1, transition: { duration: 0.25, ease: EXPO } },
-};
 
 /**
- * Slot da cena que tem skeleton (tarefas/horários): ícone da família ↔ conteúdo, empilhados no grid
- * e cruzando a opacidade em `resolved` (mesmo 0.45s do TaskCard).
+ * Slot da cena: ícone da família ↔ conteúdo, empilhados no grid e cruzando a opacidade em `resolved`
+ * (mesmo 0.45s do TaskCard), pra sair/entrar em sincronia com o skeleton da cena.
  */
 function SceneBox({
   reduce,
@@ -88,7 +81,7 @@ function SceneBox({
   );
 }
 
-/** Conteúdo do menu de ações (o crossfade do box controla a opacidade). */
+/** Conteúdo do menu de ações. */
 function ActionsMenuBody(): JSX.Element {
   return (
     <>
@@ -144,17 +137,11 @@ function AgoraNextBody(): JSX.Element {
   );
 }
 
-/** Cena "recorrência": streak da série (sem skeleton por ora — entra direto). */
-function StreakWidget({ reduce }: { reduce: boolean }): JSX.Element {
+/** Conteúdo do streak da série (checks + próxima ocorrência). */
+function StreakBody(): JSX.Element {
   const { streakWeeks, next } = recorrenciaMeta;
   return (
-    <motion.div
-      variants={contentVariants}
-      initial={reduce ? false : "hidden"}
-      animate="visible"
-      exit={reduce ? undefined : "exit"}
-      className="flex flex-1 flex-col"
-    >
+    <>
       <div className="px-2 pb-2 pt-1">
         <p className="text-2xs uppercase tracking-[0.06em] text-muted-foreground">Sequência</p>
         <p className="mt-0.5 flex items-baseline gap-1.5">
@@ -168,20 +155,19 @@ function StreakWidget({ reduce }: { reduce: boolean }): JSX.Element {
       <div className="h-px bg-surface-line" />
 
       <div className="px-2 pt-3">
-        <motion.div variants={listVariants} className="grid grid-cols-4 gap-1.5">
+        <div className="grid grid-cols-4 gap-1.5">
           {Array.from({ length: streakWeeks }).map((_, i) => (
-            <motion.span
+            <span
               key={i}
-              variants={checkVariants}
               className="flex aspect-square items-center justify-center rounded-md bg-accent-subtle text-accent-primary"
             >
               <Check className="size-3.5" aria-hidden="true" />
-            </motion.span>
+            </span>
           ))}
-        </motion.div>
+        </div>
         <p className="mt-3 font-mono text-2xs text-muted-foreground">Próxima · {next.date}</p>
       </div>
-    </motion.div>
+    </>
   );
 }
 
@@ -192,14 +178,11 @@ export function TaskOptions({
   activeWord: number;
   reduce: boolean;
 }): JSX.Element {
-  // tarefas (0) e horários (1) têm skeleton na cena → o box cruza o ícone→conteúdo junto com ela.
-  const [resolved, setResolved] = useState(
-    () => !((activeWord === 0 || activeWord === 1) && !reduce),
-  );
+  // As 3 cenas têm skeleton → o box cruza o ícone→conteúdo junto com a cena.
+  const [resolved, setResolved] = useState(reduce);
 
   useEffect(() => {
-    const hasSkeleton = activeWord === 0 || activeWord === 1;
-    if (!hasSkeleton || reduce) {
+    if (reduce) {
       setResolved(true);
       return;
     }
@@ -234,7 +217,26 @@ export function TaskOptions({
             <AgoraNextBody />
           </SceneBox>
         )}
-        {activeWord === 2 && <StreakWidget key="streak" reduce={reduce} />}
+        {activeWord === 2 && (
+          <SceneBox
+            key="streak"
+            reduce={reduce}
+            resolved={resolved}
+            icon={
+              <Orbit
+                size={100}
+                animated={!reduce}
+                glow
+                glyph
+                speed={6}
+                strokeWidth={1.2}
+                dash={[2, 8]}
+              />
+            }
+          >
+            <StreakBody />
+          </SceneBox>
+        )}
       </AnimatePresence>
     </div>
   );
