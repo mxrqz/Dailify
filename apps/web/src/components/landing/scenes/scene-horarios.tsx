@@ -1,18 +1,16 @@
-import { useEffect, useState } from "react";
-import { AnimatePresence, motion, type Variants } from "framer-motion";
+import { motion, type Variants } from "framer-motion";
 
 import { cn } from "@/lib/utils";
-import { NowLine } from "../now-line";
 
 /**
- * Cena "horários" do painel do hero (activeWord===1). Duas fases, como a recorrência: (A) intro
- * ~INTRO_MS = o ícone <NowLine> animado no centro; (B) resolve pra agenda compacta empilhada —
- * cada linha traz a hora de início + um `TimeBlock` UNIFORME (mesmo estilo, só mudam os valores)
- * com a duração; a linha do "agora" fica em accent com o marcador AGORA. `reduce` vai direto pra
- * agenda, sem intro.
+ * Cena "horários" do painel do hero (activeWord===1): as MESMAS tarefas da cena de lista, agora
+ * como uma agenda compacta empilhada — cada linha traz a hora de início + um `TimeBlock` UNIFORME
+ * (mesmo estilo, só mudam os valores) com a duração; a linha que contém o "agora" fica em accent e
+ * ganha o marcador AGORA à direita. Vende "suas tarefas → seus horários". Mock, sem relógio real.
+ *
+ * `reduce` colapsa pro estado final (blocos postos, sem stagger).
  */
 
-const INTRO_MS = 1600; // duração da Fase A (ícone) antes de resolver
 const AGORA_MIN = 592; // 09:52 — cai dentro da "Reunião de time"
 
 const pad = (n: number): string => String(n).padStart(2, "0");
@@ -93,8 +91,7 @@ function TimeBlock({
   );
 }
 
-/** Fase B: a agenda empilhada (hora + TimeBlock + slot do AGORA). */
-function Agenda({ reduce }: { reduce: boolean }): JSX.Element {
+export function SceneHorarios({ reduce }: { reduce: boolean }): JSX.Element {
   return (
     <motion.ul
       variants={trackVariants}
@@ -124,45 +121,5 @@ function Agenda({ reduce }: { reduce: boolean }): JSX.Element {
         );
       })}
     </motion.ul>
-  );
-}
-
-export function SceneHorarios({ reduce }: { reduce: boolean }): JSX.Element {
-  // fase: 'intro' (ícone) → 'agenda' (conteúdo). reduce vai direto pra agenda.
-  const [phase, setPhase] = useState<"intro" | "agenda">(reduce ? "agenda" : "intro");
-
-  useEffect(() => {
-    if (reduce) return;
-    setPhase("intro");
-    const t = setTimeout(() => setPhase("agenda"), INTRO_MS);
-    return () => clearTimeout(t);
-  }, [reduce]);
-
-  return (
-    <div className="flex min-h-80 flex-col justify-center">
-      <AnimatePresence mode="wait">
-        {phase === "intro" ? (
-          <motion.div
-            key="intro"
-            initial={reduce ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={reduce ? undefined : { opacity: 0 }}
-            transition={{ duration: 0.3, ease: EXPO }}
-            className="flex justify-center"
-          >
-            <NowLine size={120} animated={!reduce} />
-          </motion.div>
-        ) : (
-          <motion.div
-            key="agenda"
-            initial={reduce ? false : { opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: 0.3, ease: EXPO }}
-          >
-            <Agenda reduce={reduce} />
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
   );
 }

@@ -1,16 +1,19 @@
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { Bell, Check, CheckCircle, Edit, Repeat, Trash2, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { Checklist } from "./checklist";
 import { recorrenciaMeta } from "./scenes/scene-recorrencia";
 import { scheduleMeta } from "./scenes/scene-horarios";
 
 /**
  * Box flutuante ao lado da lista — SEMPRE montado (slot fixo); só o CONTEÚDO troca por cena, via
  * `AnimatePresence` interno (mesmo `useCycle` do hero). Scene-aware: em "tarefas" (0) mostra o menu
- * de ações (o "⋮" da linha); em "horários" (1) o widget "Agora / A seguir"; em "recorrência" (2) a
- * sequência/streak da série. Entrada em fade + itens/blocos em stagger. `reduce` colapsa pro estado
- * final. Mock, sem interação.
+ * de ações; em "horários" (1) o widget "Agora / A seguir"; em "recorrência" (2) a sequência/streak.
+ * Na cena de tarefas o box tem seu próprio skeleton: enquanto a lista carrega, mostra o ícone
+ * <Checklist> animado; depois resolve pro menu. Entrada em fade + itens em stagger. `reduce` colapsa
+ * pro estado final. Mock, sem interação.
  */
 const OPTIONS: { icon: LucideIcon; label: string; danger?: boolean }[] = [
   { icon: CheckCircle, label: "Concluir" },
@@ -22,9 +25,9 @@ const OPTIONS: { icon: LucideIcon; label: string; danger?: boolean }[] = [
 
 const EXPO = [0.16, 1, 0.3, 1] as const;
 
-// Atraso (s) da entrada do menu na cena "tarefas": só aparece depois do skeleton resolver.
-// ~ SKELETON_MS(600) + 3*RESOLVE_STAGGER(220) do hero-panel; alinha o menu ao 1º card já real.
-const MENU_DELAY = 1.3;
+// Enquanto a cena de tarefas roda o skeleton, o box mostra o ícone <Checklist>; depois resolve pro
+// menu. ~ SKELETON_MS(600) + stagger de resolve da lista.
+const BOX_SKELETON_MS = 1500;
 
 // `custom` = atraso (s) da entrada; delayChildren casa a lista de itens ao mesmo atraso.
 const contentVariants: Variants = {
@@ -49,12 +52,34 @@ const checkVariants: Variants = {
   visible: { opacity: 1, scale: 1, transition: { duration: 0.25, ease: EXPO } },
 };
 
+/** Skeleton do box: o ícone da família animado, centrado (enquanto a cena carrega). */
+function IconSkeleton({
+  reduce,
+  children,
+}: {
+  reduce: boolean;
+  children: JSX.Element;
+}): JSX.Element {
+  return (
+    <motion.div
+      variants={contentVariants}
+      custom={0}
+      initial={reduce ? false : "hidden"}
+      animate="visible"
+      exit={reduce ? undefined : "exit"}
+      className="flex flex-1 items-center justify-center"
+    >
+      {children}
+    </motion.div>
+  );
+}
+
 /** Cena "tarefas": menu de ações da linha (Concluir/Editar/…). */
 function ActionsMenu({ reduce }: { reduce: boolean }): JSX.Element {
   return (
     <motion.div
       variants={contentVariants}
-      custom={reduce ? 0 : MENU_DELAY}
+      custom={0}
       initial={reduce ? false : "hidden"}
       animate="visible"
       exit={reduce ? undefined : "exit"}
@@ -169,13 +194,33 @@ export function TaskOptions({
   activeWord: number;
   reduce: boolean;
 }): JSX.Element {
+  // Na cena de tarefas o box mostra o ícone (skeleton) e depois resolve pro menu.
+  const [resolved, setResolved] = useState(() => !(activeWord === 0 && !reduce));
+
+  useEffect(() => {
+    if (activeWord !== 0 || reduce) {
+      setResolved(true);
+      return;
+    }
+    setResolved(false);
+    const t = setTimeout(() => setResolved(true), BOX_SKELETON_MS);
+    return () => clearTimeout(t);
+  }, [activeWord, reduce]);
+
   return (
     <div
       aria-hidden="true"
       className="relative flex h-56 w-56 flex-col rounded-panel border border-surface-line bg-surface-panel p-2 shadow-panel"
     >
       <AnimatePresence mode="wait">
-        {activeWord === 0 && <ActionsMenu key="acoes" reduce={reduce} />}
+        {activeWord === 0 &&
+          (resolved ? (
+            <ActionsMenu key="acoes" reduce={reduce} />
+          ) : (
+            <IconSkeleton key="t-skel" reduce={reduce}>
+              <Checklist size={84} animated={!reduce} />
+            </IconSkeleton>
+          ))}
         {activeWord === 1 && <AgoraNext key="agora" reduce={reduce} />}
         {activeWord === 2 && <StreakWidget key="streak" reduce={reduce} />}
       </AnimatePresence>
