@@ -31,6 +31,12 @@ const PROXIMAS: readonly Occurrence[] = [
   { date: "seg, 18 ago", time: "10:00" },
 ] as const;
 
+/** Meta pro widget de streak do box (task-options): semanas já feitas + próxima ocorrência. */
+export const recorrenciaMeta = {
+  streakWeeks: 8,
+  next: PROXIMAS[0],
+};
+
 const bodyVariants: Variants = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.09, delayChildren: 0.05 } },

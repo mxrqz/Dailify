@@ -1,15 +1,16 @@
 import { AnimatePresence, motion, type Variants } from "framer-motion";
-import { Bell, CheckCircle, Edit, Repeat, Trash2, type LucideIcon } from "lucide-react";
+import { Bell, Check, CheckCircle, Edit, Repeat, Trash2, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
+import { recorrenciaMeta } from "./scenes/scene-recorrencia";
 import { scheduleMeta } from "./scenes/scene-horarios";
 
 /**
  * Box flutuante ao lado da lista — SEMPRE montado (slot fixo); só o CONTEÚDO troca por cena, via
  * `AnimatePresence` interno (mesmo `useCycle` do hero). Scene-aware: em "tarefas" (0) mostra o menu
- * de ações (o "⋮" da linha); em "horários" (1) mostra o widget "Agora / A seguir". Nas demais cenas
- * fica só a moldura. Entrada em fade + itens/blocos em stagger. `reduce` colapsa pro estado final.
- * Mock, sem interação.
+ * de ações (o "⋮" da linha); em "horários" (1) o widget "Agora / A seguir"; em "recorrência" (2) a
+ * sequência/streak da série. Entrada em fade + itens/blocos em stagger. `reduce` colapsa pro estado
+ * final. Mock, sem interação.
  */
 const OPTIONS: { icon: LucideIcon; label: string; danger?: boolean }[] = [
   { icon: CheckCircle, label: "Concluir" },
@@ -42,6 +43,10 @@ const listVariants: Variants = {
 const itemVariants: Variants = {
   hidden: { opacity: 0, x: -6 },
   visible: { opacity: 1, x: 0, transition: { duration: 0.25, ease: EXPO } },
+};
+const checkVariants: Variants = {
+  hidden: { opacity: 0, scale: 0.5 },
+  visible: { opacity: 1, scale: 1, transition: { duration: 0.25, ease: EXPO } },
 };
 
 /** Cena "tarefas": menu de ações da linha (Concluir/Editar/…). */
@@ -115,6 +120,48 @@ function AgoraNext({ reduce }: { reduce: boolean }): JSX.Element {
   );
 }
 
+/** Cena "recorrência": streak da série (semanas feitas em checks + próxima ocorrência). */
+function StreakWidget({ reduce }: { reduce: boolean }): JSX.Element {
+  const { streakWeeks, next } = recorrenciaMeta;
+  return (
+    <motion.div
+      variants={contentVariants}
+      custom={0}
+      initial={reduce ? false : "hidden"}
+      animate="visible"
+      exit={reduce ? undefined : "exit"}
+      className="flex flex-1 flex-col"
+    >
+      <div className="px-2 pb-2 pt-1">
+        <p className="text-2xs uppercase tracking-[0.06em] text-muted-foreground">Sequência</p>
+        <p className="mt-0.5 flex items-baseline gap-1.5">
+          <span className="font-mono text-2xl font-medium tabular-nums text-foreground">
+            {streakWeeks}
+          </span>
+          <span className="text-xs text-muted-foreground">semanas seguidas</span>
+        </p>
+      </div>
+
+      <div className="h-px bg-surface-line" />
+
+      <div className="px-2 pt-3">
+        <motion.div variants={listVariants} className="grid grid-cols-4 gap-1.5">
+          {Array.from({ length: streakWeeks }).map((_, i) => (
+            <motion.span
+              key={i}
+              variants={checkVariants}
+              className="flex aspect-square items-center justify-center rounded-md bg-accent-subtle text-accent-primary"
+            >
+              <Check className="size-3.5" aria-hidden="true" />
+            </motion.span>
+          ))}
+        </motion.div>
+        <p className="mt-3 font-mono text-2xs text-muted-foreground">Próxima · {next.date}</p>
+      </div>
+    </motion.div>
+  );
+}
+
 export function TaskOptions({
   activeWord,
   reduce,
@@ -130,6 +177,7 @@ export function TaskOptions({
       <AnimatePresence mode="wait">
         {activeWord === 0 && <ActionsMenu key="acoes" reduce={reduce} />}
         {activeWord === 1 && <AgoraNext key="agora" reduce={reduce} />}
+        {activeWord === 2 && <StreakWidget key="streak" reduce={reduce} />}
       </AnimatePresence>
     </div>
   );
