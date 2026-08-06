@@ -14,7 +14,7 @@ export function Grain(): JSX.Element {
   return (
     <div className="fixed inset-0 z-0 overflow-hidden pointer-events-none" aria-hidden="true">
       <motion.div
-        className="absolute -inset-[10%] opacity-5 mix-blend-overlay"
+        className="absolute inset-[-10%] opacity-5 mix-blend-overlay"
         animate={reduce ? undefined : { x: ["0%", "-2%", "0%"], y: ["0%", "1.5%", "0%"] }}
         transition={{ duration: 18, ease: "easeInOut", repeat: Infinity }}
       >

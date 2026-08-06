@@ -169,7 +169,7 @@ function RecurrenceMock({ reduce }: { reduce: boolean }): JSX.Element {
           <span
             key={deg}
             aria-hidden="true"
-            className="absolute left-1/2 top-1/2 -ml-[3px] -mt-[3px] size-1.5 rounded-full bg-muted-foreground/40"
+            className="absolute left-1/2 top-1/2 -ml-0.75 -mt-0.75 size-1.5 rounded-full bg-muted-foreground/40"
             style={{ transform: `rotate(${deg}deg) translateY(-58px)` }}
           />
         ))}
