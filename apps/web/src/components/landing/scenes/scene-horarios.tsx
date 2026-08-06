@@ -4,12 +4,11 @@ import { cn } from "@/lib/utils";
 
 /**
  * Cena "horários" do painel do hero (activeWord===1): o dia como coluna cronometrada. As MESMAS
- * tarefas da cena de lista, agora encaixadas num eixo de tempo proporcional — altura do bloco ∝
- * duração, o bloco que contém o "agora" em accent, e a linha do agora cruzando a coluna com pulso.
- * Vende literalmente "suas tarefas → seus horários". Mock decorativo, sem relógio real.
+ * tarefas da cena de lista, agora posicionadas pela HORA DE INÍCIO num eixo de tempo — blocos
+ * UNIFORMES (mesmo `TimeBlock`, só mudam os valores), o que contém o "agora" em accent, e a linha
+ * do agora cruzando a coluna com pulso. Vende "suas tarefas → seus horários". Mock, sem relógio real.
  *
- * Geometria: minutos-desde-meia-noite mapeados numa janela fixa (WINDOW_*) pra altura do track.
- * `MIN_H` garante que blocos curtos (20/30min) continuem legíveis — mesmo truque de calendário real.
+ * Geometria: minutos-desde-meia-noite mapeados numa janela fixa (WINDOW_*) pro `top` de cada bloco.
  * `reduce` colapsa pro estado final (blocos postos, linha parada, sem pulso).
  */
 
@@ -17,8 +16,6 @@ const WINDOW_START = 525; // 08:45 — início da janela visível
 const WINDOW_END = 765; // 12:45
 const RANGE = WINDOW_END - WINDOW_START;
 const TRACK_H = 320; // px (== h-80); casa ~ com a altura da lista da cena de tarefas
-const MIN_H = 40; // altura mínima legível de um bloco
-const MAX_H = 84; // teto: dur longa não vira um paredão (o 1h30 não domina os curtos/médios)
 const AGORA_MIN = 592; // 09:52 — cai dentro da "Reunião de time"
 
 const pad = (n: number): string => String(n).padStart(2, "0");
@@ -41,7 +38,6 @@ const SLOTS: readonly Slot[] = [
 const HOUR_TICKS = [540, 600, 660, 720] as const; // 09..12
 
 const yOf = (min: number): number => ((min - WINDOW_START) / RANGE) * TRACK_H;
-const hOf = (dur: number): number => Math.min(MAX_H, Math.max(MIN_H, (dur / RANGE) * TRACK_H));
 const isNow = (s: Slot): boolean => s.startMin <= AGORA_MIN && AGORA_MIN < s.startMin + s.durMin;
 
 /** Meta pro widget "Agora / A seguir" do box (task-options), derivada do mesmo schedule. */
@@ -64,6 +60,42 @@ const blockVariants: Variants = {
   visible: { opacity: 1, x: 0, transition: { duration: 0.4, ease: EXPO } },
 };
 
+/** Bloco da timeline — MESMO estilo pra todos; só `title`/`durLabel`/`now` mudam. Posição vem do pai. */
+function TimeBlock({
+  title,
+  durLabel,
+  now,
+}: {
+  title: string;
+  durLabel: string;
+  now: boolean;
+}): JSX.Element {
+  return (
+    <div
+      className={cn(
+        "relative flex items-center justify-between gap-2 rounded-lg border py-2 pl-3 pr-2.5",
+        now ? "border-accent-primary bg-accent-subtle" : "border-surface-line bg-transparent",
+      )}
+    >
+      <span
+        className={cn(
+          "absolute inset-y-0 left-0 w-0.5 rounded-l",
+          now ? "bg-accent-primary" : "bg-muted-foreground/40",
+        )}
+      />
+      <span
+        className={cn(
+          "truncate text-sm font-medium",
+          now ? "text-foreground" : "text-content-secondary",
+        )}
+      >
+        {title}
+      </span>
+      <span className="shrink-0 font-mono text-2xs text-muted-foreground">{durLabel}</span>
+    </div>
+  );
+}
+
 export function SceneHorarios({ reduce }: { reduce: boolean }): JSX.Element {
   return (
     <div className="relative h-80 w-full">
@@ -80,47 +112,23 @@ export function SceneHorarios({ reduce }: { reduce: boolean }): JSX.Element {
         </div>
       ))}
 
-      {/* blocos encaixados na hora, altura ∝ duração — entram em stagger cima→baixo */}
+      {/* blocos UNIFORMES posicionados pela hora de início — entram em stagger cima→baixo */}
       <motion.div
         variants={trackVariants}
         initial={reduce ? "visible" : "hidden"}
         animate="visible"
         className="absolute inset-0"
       >
-        {SLOTS.map((s) => {
-          const now = isNow(s);
-          return (
-            <motion.div
-              key={s.title}
-              variants={blockVariants}
-              className={cn(
-                "absolute left-9 right-14 flex items-start justify-between gap-2 overflow-hidden rounded-lg border py-2 pl-3 pr-2.5",
-                now
-                  ? "border-accent-primary bg-accent-subtle"
-                  : "border-surface-line bg-transparent",
-              )}
-              style={{ top: yOf(s.startMin), height: hOf(s.durMin) }}
-            >
-              <span
-                className={cn(
-                  "absolute inset-y-0 left-0 w-0.5 rounded-l",
-                  now ? "bg-accent-primary" : "bg-muted-foreground/40",
-                )}
-              />
-              <span
-                className={cn(
-                  "truncate text-sm font-medium",
-                  now ? "text-foreground" : "text-content-secondary",
-                )}
-              >
-                {s.title}
-              </span>
-              <span className="shrink-0 font-mono text-2xs text-muted-foreground">
-                {s.durLabel}
-              </span>
-            </motion.div>
-          );
-        })}
+        {SLOTS.map((s) => (
+          <motion.div
+            key={s.title}
+            variants={blockVariants}
+            className="absolute left-9 right-14"
+            style={{ top: yOf(s.startMin) }}
+          >
+            <TimeBlock title={s.title} durLabel={s.durLabel} now={isNow(s)} />
+          </motion.div>
+        ))}
       </motion.div>
 
       {/* linha do agora cruzando a coluna — fade-in atrasado + pulso suave */}
