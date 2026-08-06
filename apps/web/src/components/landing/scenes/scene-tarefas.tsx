@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { motion, type Variants } from "framer-motion";
 
 import { TaskCard, type TaskCardData } from "../task-card";
+import { RESOLVE_STAGGER_MS, SKELETON_MS } from "./timing";
 
 /**
  * Cena "tarefas" (activeWord===0). Roda em 2 fases e replaya a cada reativação (a troca de `key` no
@@ -22,11 +23,6 @@ const tarefasMock: readonly TaskCardData[] = [
   { time: "11:00", title: "Escrever relatório", duration: "1h30", tags: ["docs"] },
   { time: "14:00", title: "Deploy da build", duration: "20min", tags: ["ci", "release", "infra"] },
 ] as const;
-
-/** ms que o skeleton segura antes do 1º card resolver (knob). */
-const SKELETON_MS = 600;
-/** atraso entre um card resolver e o próximo (resolve de cima pra baixo). */
-const RESOLVE_STAGGER_MS = 220;
 
 const EXPO = [0.16, 1, 0.3, 1] as const; // ease-out-expo
 

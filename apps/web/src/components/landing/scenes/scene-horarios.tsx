@@ -1,14 +1,15 @@
+import { useEffect, useState } from "react";
 import { motion, type Variants } from "framer-motion";
 
 import { cn } from "@/lib/utils";
+import { CROSSFADE_S, RESOLVE_STAGGER_MS, SKELETON_MS } from "./timing";
 
 /**
  * Cena "horários" do painel do hero (activeWord===1): as MESMAS tarefas da cena de lista, agora
  * como uma agenda compacta empilhada — cada linha traz a hora de início + um `TimeBlock` UNIFORME
- * (mesmo estilo, só mudam os valores) com a duração; a linha que contém o "agora" fica em accent e
- * ganha o marcador AGORA à direita. Vende "suas tarefas → seus horários". Mock, sem relógio real.
- *
- * `reduce` colapsa pro estado final (blocos postos, sem stagger).
+ * (mesmo estilo, só mudam os valores) com a duração. Igual tarefas, os blocos entram como skeleton
+ * e resolvem 1 a 1 (crossfade dentro do TimeBlock); a linha que contém o "agora" fica em accent com
+ * o marcador AGORA. `reduce` colapsa pro estado final.
  */
 
 const AGORA_MIN = 592; // 09:52 — cai dentro da "Reunião de time"
@@ -52,22 +53,27 @@ const rowVariants: Variants = {
   visible: { opacity: 1, x: 0, transition: { duration: 0.4, ease: EXPO } },
 };
 
-/** Bloco da agenda — MESMO estilo pra todos; só `title`/`durLabel`/`now` mudam. */
+/**
+ * Bloco da agenda — MESMO estilo pra todos; só `title`/`durLabel`/`now` mudam. Skeleton e conteúdo
+ * ficam EMPILHADOS (grid) e cruzam a opacidade em `loading` (mesmo crossfade do TaskCard).
+ */
 function TimeBlock({
   title,
   durLabel,
   now,
+  loading,
   className,
 }: {
   title: string;
   durLabel: string;
   now: boolean;
+  loading: boolean;
   className?: string;
 }): JSX.Element {
   return (
     <div
       className={cn(
-        "relative flex items-center justify-between gap-2 rounded-lg border py-2 pl-3 pr-2.5",
+        "relative grid rounded-lg border py-2 pl-3 pr-2.5",
         now ? "border-accent-primary bg-accent-subtle" : "border-surface-line bg-transparent",
         className,
       )}
@@ -78,20 +84,52 @@ function TimeBlock({
           now ? "bg-accent-primary" : "bg-muted-foreground/40",
         )}
       />
-      <span
-        className={cn(
-          "truncate text-sm font-medium",
-          now ? "text-foreground" : "text-content-secondary",
-        )}
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none col-start-1 row-start-1 flex items-center justify-between gap-2"
+        initial={false}
+        animate={{ opacity: loading ? 1 : 0 }}
+        transition={{ duration: CROSSFADE_S, ease: EXPO }}
       >
-        {title}
-      </span>
-      <span className="shrink-0 font-mono text-2xs text-muted-foreground">{durLabel}</span>
+        <span className="skeleton h-3.5 w-24 rounded" />
+        <span className="skeleton h-3 w-8 rounded" />
+      </motion.div>
+      <motion.div
+        className="col-start-1 row-start-1 flex items-center justify-between gap-2"
+        initial={false}
+        animate={{ opacity: loading ? 0 : 1 }}
+        transition={{ duration: CROSSFADE_S, ease: EXPO }}
+      >
+        <span
+          className={cn(
+            "truncate text-sm font-medium",
+            now ? "text-foreground" : "text-content-secondary",
+          )}
+        >
+          {title}
+        </span>
+        <span className="shrink-0 font-mono text-2xs text-muted-foreground">{durLabel}</span>
+      </motion.div>
     </div>
   );
 }
 
 export function SceneHorarios({ reduce }: { reduce: boolean }): JSX.Element {
+  // nº de blocos já resolvidos (de cima pra baixo); bloco i troca skeleton→conteúdo quando resolved > i.
+  const [resolved, setResolved] = useState(reduce ? SLOTS.length : 0);
+
+  useEffect(() => {
+    if (reduce) return;
+    setResolved(0);
+    const timers = SLOTS.map((_, i) =>
+      setTimeout(
+        () => setResolved((n) => Math.max(n, i + 1)),
+        SKELETON_MS + i * RESOLVE_STAGGER_MS,
+      ),
+    );
+    return () => timers.forEach(clearTimeout);
+  }, [reduce]);
+
   return (
     <motion.ul
       variants={trackVariants}
@@ -99,7 +137,7 @@ export function SceneHorarios({ reduce }: { reduce: boolean }): JSX.Element {
       animate="visible"
       className="flex flex-col gap-2"
     >
-      {SLOTS.map((s) => {
+      {SLOTS.map((s, i) => {
         const now = isNow(s);
         return (
           <motion.li key={s.title} variants={rowVariants} className="flex items-center gap-3">
@@ -111,7 +149,13 @@ export function SceneHorarios({ reduce }: { reduce: boolean }): JSX.Element {
               {label(s.startMin)}
             </span>
 
-            <TimeBlock title={s.title} durLabel={s.durLabel} now={now} className="flex-1" />
+            <TimeBlock
+              title={s.title}
+              durLabel={s.durLabel}
+              now={now}
+              loading={i >= resolved}
+              className="flex-1"
+            />
 
             {/* slot fixo do AGORA (mantém a largura dos blocos alinhada) */}
             <span className="w-12 shrink-0 font-mono text-2xs tracking-[0.08em] text-accent-primary">

@@ -4,17 +4,18 @@ import { Bell, Check, CheckCircle, Edit, Repeat, Trash2, type LucideIcon } from 
 
 import { cn } from "@/lib/utils";
 import { Checklist } from "./checklist";
+import { NowLine } from "./now-line";
 import { recorrenciaMeta } from "./scenes/scene-recorrencia";
 import { scheduleMeta } from "./scenes/scene-horarios";
+import { boxResolveMs, CROSSFADE_S } from "./scenes/timing";
 
 /**
  * Box flutuante ao lado da lista — SEMPRE montado (slot fixo); só o CONTEÚDO troca por cena, via
- * `AnimatePresence` interno (mesmo `useCycle` do hero). Scene-aware: em "tarefas" (0) mostra o menu
- * de ações; em "horários" (1) o widget "Agora / A seguir"; em "recorrência" (2) a sequência/streak.
- * Na cena de tarefas o box tem seu próprio skeleton: enquanto a lista carrega, mostra o ícone
- * <Checklist> animado e faz crossfade pro menu — SIMULTÂNEO (grid-stack, igual o TaskCard) e no
- * mesmo instante que a última card da lista resolve (~1710ms), pra sair/entrar em sincronia.
- * `reduce` colapsa pro estado final. Mock, sem interação.
+ * `AnimatePresence` interno (mesmo `useCycle` do hero). Scene-aware: em "tarefas" (0) o menu de
+ * ações; em "horários" (1) o "Agora / A seguir"; em "recorrência" (2) a sequência/streak.
+ * Tarefas e horários têm skeleton na cena → o box mostra o ícone da família (<Checklist>/<NowLine>)
+ * e faz crossfade SIMULTÂNEO pro conteúdo (grid-stack, igual o TaskCard) no MESMO instante que o
+ * último item da cena resolve (~1710ms). `reduce` colapsa pro estado final. Mock, sem interação.
  */
 const OPTIONS: { icon: LucideIcon; label: string; danger?: boolean }[] = [
   { icon: CheckCircle, label: "Concluir" },
@@ -26,10 +27,8 @@ const OPTIONS: { icon: LucideIcon; label: string; danger?: boolean }[] = [
 
 const EXPO = [0.16, 1, 0.3, 1] as const;
 
-// Dispara o crossfade do box junto com a ÚLTIMA card da lista: SKELETON_MS(600) + 3*RESOLVE_STAGGER(220)
-// = 1260ms. Com 0.45s de crossfade, box e lista completam juntos em ~1710ms.
-const BOX_SKELETON_MS = 1260;
-const CROSSFADE = 0.45; // s — espelha o crossfade do TaskCard
+// Tarefas e horários têm 4 itens → o box cruza junto com o último (SKELETON_MS + 3*RESOLVE_STAGGER).
+const BOX_SKELETON_MS = boxResolveMs(4);
 
 const contentVariants: Variants = {
   hidden: { opacity: 0, y: 6 },
@@ -45,7 +44,51 @@ const checkVariants: Variants = {
   visible: { opacity: 1, scale: 1, transition: { duration: 0.25, ease: EXPO } },
 };
 
-/** Conteúdo do menu de ações (sem wrapper animado — o crossfade do box controla a opacidade). */
+/**
+ * Slot da cena que tem skeleton (tarefas/horários): ícone da família ↔ conteúdo, empilhados no grid
+ * e cruzando a opacidade em `resolved` (mesmo 0.45s do TaskCard).
+ */
+function SceneBox({
+  reduce,
+  resolved,
+  icon,
+  children,
+}: {
+  reduce: boolean;
+  resolved: boolean;
+  icon: JSX.Element;
+  children: JSX.Element;
+}): JSX.Element {
+  return (
+    <motion.div
+      variants={contentVariants}
+      initial={reduce ? false : "hidden"}
+      animate="visible"
+      exit={reduce ? undefined : "exit"}
+      className="grid flex-1"
+    >
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none col-start-1 row-start-1 flex items-center justify-center"
+        initial={false}
+        animate={{ opacity: resolved ? 0 : 1 }}
+        transition={{ duration: CROSSFADE_S, ease: EXPO }}
+      >
+        {icon}
+      </motion.div>
+      <motion.div
+        className="col-start-1 row-start-1 flex flex-col"
+        initial={false}
+        animate={{ opacity: resolved ? 1 : 0 }}
+        transition={{ duration: CROSSFADE_S, ease: EXPO }}
+      >
+        {children}
+      </motion.div>
+    </motion.div>
+  );
+}
+
+/** Conteúdo do menu de ações (o crossfade do box controla a opacidade). */
 function ActionsMenuBody(): JSX.Element {
   return (
     <>
@@ -76,51 +119,11 @@ function ActionsMenuBody(): JSX.Element {
   );
 }
 
-/**
- * Cena "tarefas": crossfade SIMULTÂNEO skeleton(<Checklist>)→menu, empilhados no grid (igual o
- * TaskCard). `resolved` cruza as opacidades no mesmo 0.45s que a última card da lista.
- */
-function TaskBox({ reduce, resolved }: { reduce: boolean; resolved: boolean }): JSX.Element {
-  return (
-    <motion.div
-      variants={contentVariants}
-      initial={reduce ? false : "hidden"}
-      animate="visible"
-      exit={reduce ? undefined : "exit"}
-      className="grid flex-1"
-    >
-      <motion.div
-        aria-hidden="true"
-        className="pointer-events-none col-start-1 row-start-1 flex items-center justify-center"
-        initial={false}
-        animate={{ opacity: resolved ? 0 : 1 }}
-        transition={{ duration: CROSSFADE, ease: EXPO }}
-      >
-        <Checklist size={84} animated={!reduce} />
-      </motion.div>
-      <motion.div
-        className="col-start-1 row-start-1 flex flex-col"
-        initial={false}
-        animate={{ opacity: resolved ? 1 : 0 }}
-        transition={{ duration: CROSSFADE, ease: EXPO }}
-      >
-        <ActionsMenuBody />
-      </motion.div>
-    </motion.div>
-  );
-}
-
-/** Cena "horários": relógio do agora + próxima tarefa da timeline. */
-function AgoraNext({ reduce }: { reduce: boolean }): JSX.Element {
+/** Conteúdo do "Agora / A seguir". */
+function AgoraNextBody(): JSX.Element {
   const { nowLabel, next } = scheduleMeta;
   return (
-    <motion.div
-      variants={contentVariants}
-      initial={reduce ? false : "hidden"}
-      animate="visible"
-      exit={reduce ? undefined : "exit"}
-      className="flex flex-1 flex-col"
-    >
+    <>
       <div className="px-2 pb-2 pt-1">
         <p className="font-mono text-2xl font-medium tabular-nums text-foreground">{nowLabel}</p>
         <p className="font-mono text-2xs tracking-[0.08em] text-accent-primary">AGORA</p>
@@ -137,11 +140,11 @@ function AgoraNext({ reduce }: { reduce: boolean }): JSX.Element {
           </p>
         </div>
       )}
-    </motion.div>
+    </>
   );
 }
 
-/** Cena "recorrência": streak da série (semanas feitas em checks + próxima ocorrência). */
+/** Cena "recorrência": streak da série (sem skeleton por ora — entra direto). */
 function StreakWidget({ reduce }: { reduce: boolean }): JSX.Element {
   const { streakWeeks, next } = recorrenciaMeta;
   return (
@@ -189,11 +192,14 @@ export function TaskOptions({
   activeWord: number;
   reduce: boolean;
 }): JSX.Element {
-  // Na cena de tarefas o box mostra o ícone (skeleton) e cruza pro menu junto com a lista.
-  const [resolved, setResolved] = useState(() => !(activeWord === 0 && !reduce));
+  // tarefas (0) e horários (1) têm skeleton na cena → o box cruza o ícone→conteúdo junto com ela.
+  const [resolved, setResolved] = useState(
+    () => !((activeWord === 0 || activeWord === 1) && !reduce),
+  );
 
   useEffect(() => {
-    if (activeWord !== 0 || reduce) {
+    const hasSkeleton = activeWord === 0 || activeWord === 1;
+    if (!hasSkeleton || reduce) {
       setResolved(true);
       return;
     }
@@ -208,8 +214,26 @@ export function TaskOptions({
       className="relative flex h-56 w-56 flex-col rounded-panel border border-surface-line bg-surface-panel p-2 shadow-panel"
     >
       <AnimatePresence mode="wait">
-        {activeWord === 0 && <TaskBox key="tarefas" reduce={reduce} resolved={resolved} />}
-        {activeWord === 1 && <AgoraNext key="agora" reduce={reduce} />}
+        {activeWord === 0 && (
+          <SceneBox
+            key="tarefas"
+            reduce={reduce}
+            resolved={resolved}
+            icon={<Checklist size={84} animated={!reduce} />}
+          >
+            <ActionsMenuBody />
+          </SceneBox>
+        )}
+        {activeWord === 1 && (
+          <SceneBox
+            key="agora"
+            reduce={reduce}
+            resolved={resolved}
+            icon={<NowLine size={84} animated={!reduce} />}
+          >
+            <AgoraNextBody />
+          </SceneBox>
+        )}
         {activeWord === 2 && <StreakWidget key="streak" reduce={reduce} />}
       </AnimatePresence>
     </div>
