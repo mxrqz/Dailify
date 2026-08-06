@@ -18,6 +18,7 @@ const WINDOW_END = 765; // 12:45
 const RANGE = WINDOW_END - WINDOW_START;
 const TRACK_H = 320; // px (== h-80); casa ~ com a altura da lista da cena de tarefas
 const MIN_H = 40; // altura mínima legível de um bloco
+const MAX_H = 84; // teto: dur longa não vira um paredão (o 1h30 não domina os curtos/médios)
 const AGORA_MIN = 592; // 09:52 — cai dentro da "Reunião de time"
 
 const pad = (n: number): string => String(n).padStart(2, "0");
@@ -40,7 +41,7 @@ const SLOTS: readonly Slot[] = [
 const HOUR_TICKS = [540, 600, 660, 720] as const; // 09..12
 
 const yOf = (min: number): number => ((min - WINDOW_START) / RANGE) * TRACK_H;
-const hOf = (dur: number): number => Math.max(MIN_H, (dur / RANGE) * TRACK_H);
+const hOf = (dur: number): number => Math.min(MAX_H, Math.max(MIN_H, (dur / RANGE) * TRACK_H));
 const isNow = (s: Slot): boolean => s.startMin <= AGORA_MIN && AGORA_MIN < s.startMin + s.durMin;
 
 /** Meta pro widget "Agora / A seguir" do box (task-options), derivada do mesmo schedule. */
