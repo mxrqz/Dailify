@@ -12,8 +12,9 @@ import { scheduleMeta } from "./scenes/scene-horarios";
  * `AnimatePresence` interno (mesmo `useCycle` do hero). Scene-aware: em "tarefas" (0) mostra o menu
  * de ações; em "horários" (1) o widget "Agora / A seguir"; em "recorrência" (2) a sequência/streak.
  * Na cena de tarefas o box tem seu próprio skeleton: enquanto a lista carrega, mostra o ícone
- * <Checklist> animado; depois resolve pro menu. Entrada em fade + itens em stagger. `reduce` colapsa
- * pro estado final. Mock, sem interação.
+ * <Checklist> animado e faz crossfade pro menu — SIMULTÂNEO (grid-stack, igual o TaskCard) e no
+ * mesmo instante que a última card da lista resolve (~1710ms), pra sair/entrar em sincronia.
+ * `reduce` colapsa pro estado final. Mock, sem interação.
  */
 const OPTIONS: { icon: LucideIcon; label: string; danger?: boolean }[] = [
   { icon: CheckCircle, label: "Concluir" },
@@ -25,66 +26,29 @@ const OPTIONS: { icon: LucideIcon; label: string; danger?: boolean }[] = [
 
 const EXPO = [0.16, 1, 0.3, 1] as const;
 
-// Enquanto a cena de tarefas roda o skeleton, o box mostra o ícone <Checklist>; depois resolve pro
-// menu. ~ SKELETON_MS(600) + stagger de resolve da lista.
-const BOX_SKELETON_MS = 1500;
+// Dispara o crossfade do box junto com a ÚLTIMA card da lista: SKELETON_MS(600) + 3*RESOLVE_STAGGER(220)
+// = 1260ms. Com 0.45s de crossfade, box e lista completam juntos em ~1710ms.
+const BOX_SKELETON_MS = 1260;
+const CROSSFADE = 0.45; // s — espelha o crossfade do TaskCard
 
-// `custom` = atraso (s) da entrada; delayChildren casa a lista de itens ao mesmo atraso.
 const contentVariants: Variants = {
   hidden: { opacity: 0, y: 6 },
-  visible: (custom: number = 0) => ({
-    opacity: 1,
-    y: 0,
-    transition: { duration: 0.3, ease: EXPO, delay: custom, delayChildren: custom },
-  }),
+  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: EXPO } },
   exit: { opacity: 0, y: -6, transition: { duration: 0.2, ease: EXPO } },
 };
 const listVariants: Variants = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.06, delayChildren: 0.1 } },
 };
-const itemVariants: Variants = {
-  hidden: { opacity: 0, x: -6 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.25, ease: EXPO } },
-};
 const checkVariants: Variants = {
   hidden: { opacity: 0, scale: 0.5 },
   visible: { opacity: 1, scale: 1, transition: { duration: 0.25, ease: EXPO } },
 };
 
-/** Skeleton do box: o ícone da família animado, centrado (enquanto a cena carrega). */
-function IconSkeleton({
-  reduce,
-  children,
-}: {
-  reduce: boolean;
-  children: JSX.Element;
-}): JSX.Element {
+/** Conteúdo do menu de ações (sem wrapper animado — o crossfade do box controla a opacidade). */
+function ActionsMenuBody(): JSX.Element {
   return (
-    <motion.div
-      variants={contentVariants}
-      custom={0}
-      initial={reduce ? false : "hidden"}
-      animate="visible"
-      exit={reduce ? undefined : "exit"}
-      className="flex flex-1 items-center justify-center"
-    >
-      {children}
-    </motion.div>
-  );
-}
-
-/** Cena "tarefas": menu de ações da linha (Concluir/Editar/…). */
-function ActionsMenu({ reduce }: { reduce: boolean }): JSX.Element {
-  return (
-    <motion.div
-      variants={contentVariants}
-      custom={0}
-      initial={reduce ? false : "hidden"}
-      animate="visible"
-      exit={reduce ? undefined : "exit"}
-      className="flex flex-1 flex-col"
-    >
+    <>
       <div className="px-2 pb-2 pt-1">
         <p className="truncate text-sm font-medium text-foreground">Revisar proposta</p>
         <p className="font-mono text-2xs text-muted-foreground">08:30 · 30min</p>
@@ -92,11 +56,10 @@ function ActionsMenu({ reduce }: { reduce: boolean }): JSX.Element {
 
       <div className="h-px bg-surface-line" />
 
-      <motion.ul variants={listVariants} className="mt-1 flex flex-col gap-0.5">
+      <ul className="mt-1 flex flex-col gap-0.5">
         {OPTIONS.map(({ icon: Icon, label, danger }, i) => (
-          <motion.li
+          <li
             key={label}
-            variants={itemVariants}
             className={cn(
               "flex items-center gap-2.5 rounded-md px-2 py-1.5 text-xs",
               i === 0 && "bg-surface-hover text-foreground",
@@ -106,9 +69,43 @@ function ActionsMenu({ reduce }: { reduce: boolean }): JSX.Element {
           >
             <Icon className="size-3.5 shrink-0" aria-hidden="true" />
             <span>{label}</span>
-          </motion.li>
+          </li>
         ))}
-      </motion.ul>
+      </ul>
+    </>
+  );
+}
+
+/**
+ * Cena "tarefas": crossfade SIMULTÂNEO skeleton(<Checklist>)→menu, empilhados no grid (igual o
+ * TaskCard). `resolved` cruza as opacidades no mesmo 0.45s que a última card da lista.
+ */
+function TaskBox({ reduce, resolved }: { reduce: boolean; resolved: boolean }): JSX.Element {
+  return (
+    <motion.div
+      variants={contentVariants}
+      initial={reduce ? false : "hidden"}
+      animate="visible"
+      exit={reduce ? undefined : "exit"}
+      className="grid flex-1"
+    >
+      <motion.div
+        aria-hidden="true"
+        className="pointer-events-none col-start-1 row-start-1 flex items-center justify-center"
+        initial={false}
+        animate={{ opacity: resolved ? 0 : 1 }}
+        transition={{ duration: CROSSFADE, ease: EXPO }}
+      >
+        <Checklist size={84} animated={!reduce} />
+      </motion.div>
+      <motion.div
+        className="col-start-1 row-start-1 flex flex-col"
+        initial={false}
+        animate={{ opacity: resolved ? 1 : 0 }}
+        transition={{ duration: CROSSFADE, ease: EXPO }}
+      >
+        <ActionsMenuBody />
+      </motion.div>
     </motion.div>
   );
 }
@@ -119,7 +116,6 @@ function AgoraNext({ reduce }: { reduce: boolean }): JSX.Element {
   return (
     <motion.div
       variants={contentVariants}
-      custom={0}
       initial={reduce ? false : "hidden"}
       animate="visible"
       exit={reduce ? undefined : "exit"}
@@ -151,7 +147,6 @@ function StreakWidget({ reduce }: { reduce: boolean }): JSX.Element {
   return (
     <motion.div
       variants={contentVariants}
-      custom={0}
       initial={reduce ? false : "hidden"}
       animate="visible"
       exit={reduce ? undefined : "exit"}
@@ -194,7 +189,7 @@ export function TaskOptions({
   activeWord: number;
   reduce: boolean;
 }): JSX.Element {
-  // Na cena de tarefas o box mostra o ícone (skeleton) e depois resolve pro menu.
+  // Na cena de tarefas o box mostra o ícone (skeleton) e cruza pro menu junto com a lista.
   const [resolved, setResolved] = useState(() => !(activeWord === 0 && !reduce));
 
   useEffect(() => {
@@ -213,14 +208,7 @@ export function TaskOptions({
       className="relative flex h-56 w-56 flex-col rounded-panel border border-surface-line bg-surface-panel p-2 shadow-panel"
     >
       <AnimatePresence mode="wait">
-        {activeWord === 0 &&
-          (resolved ? (
-            <ActionsMenu key="acoes" reduce={reduce} />
-          ) : (
-            <IconSkeleton key="t-skel" reduce={reduce}>
-              <Checklist size={84} animated={!reduce} />
-            </IconSkeleton>
-          ))}
+        {activeWord === 0 && <TaskBox key="tarefas" reduce={reduce} resolved={resolved} />}
         {activeWord === 1 && <AgoraNext key="agora" reduce={reduce} />}
         {activeWord === 2 && <StreakWidget key="streak" reduce={reduce} />}
       </AnimatePresence>
