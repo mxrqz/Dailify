@@ -3,8 +3,8 @@ import { AnimatePresence, motion, type Variants } from "framer-motion";
 
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
-import { Orbit } from "./orbit";
-import { TagBadge } from "./task-card";
+import { Orbit } from "../orbit";
+import { TagBadge } from "../task-card";
 
 /**
  * Cena "recorrência" (activeWord===2). Duas fases, no espírito do skeleton→conteúdo das tarefas:
@@ -162,7 +162,7 @@ export function SceneRecorrencia({ reduce }: { reduce: boolean }): JSX.Element {
   }, [reduce]);
 
   return (
-    <div className="flex min-h-[20rem] flex-col justify-center">
+    <div className="flex min-h-80 flex-col justify-center">
       <AnimatePresence mode="wait">
         {phase === "loop" ? (
           <motion.div
@@ -186,7 +186,7 @@ export function SceneRecorrencia({ reduce }: { reduce: boolean }): JSX.Element {
               variants={bodyVariants}
               initial={reduce ? "visible" : "hidden"}
               animate="visible"
-              className="flex flex-col gap-4 pl-15"
+              className="flex flex-col gap-4 pl-5"
             >
               <motion.div variants={blockVariants}>
                 <RecurringCard />

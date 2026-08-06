@@ -1,39 +1,17 @@
-import { useEffect, useState } from "react";
 import { AnimatePresence, motion, type Variants } from "framer-motion";
 
-import { TaskCard, type TaskCardData } from "./task-card";
 import { RadialGlow, Noise } from "./panel-fx";
 import { TaskOptions } from "./task-options";
-import { SceneHorarios } from "./scene-horarios";
-import { SceneRecorrencia } from "./scene-recorrencia";
+import { SceneTarefas } from "./scenes/scene-tarefas";
+import { SceneHorarios } from "./scenes/scene-horarios";
+import { SceneRecorrencia } from "./scenes/scene-recorrencia";
 
 /**
  * Painel animado da direita do hero. Lê `activeWord` do MESMO `useCycle` do subtítulo (via prop),
- * então a cena e a palavra crimson nunca dessincronizam. Cada palavra terá sua cena; por ora só
- * "tarefas" (0) está feita — 1/2 mostram um placeholder discreto no mesmo slot.
- *
- * `SceneTarefas` roda em 2 fases e replaya a cada reativação (a troca de `key` no `AnimatePresence`
- * remonta a cena): (A) os cards entram em stagger como skeleton, (B) resolvem 1 a 1 pro conteúdo
- * (o crossfade skeleton→conteúdo mora dentro do TaskCard). `reduce` colapsa pro estado final.
+ * então a cena e a palavra crimson nunca dessincronizam. Cada palavra tem sua cena (em ./scenes):
+ * tarefas (0), horários (1), recorrência (2). A troca de `key` no AnimatePresence remonta a cena a
+ * cada reativação, então cada uma replaya sua entrada. `reduce` congela no estado estático.
  */
-
-/** Task cards decorativas (mock, sem dados reais). Uma linha estoura 3 tags pra mostrar os dots. */
-const tarefasMock: readonly TaskCardData[] = [
-  { time: "08:30", title: "Revisar proposta", duration: "30min", tags: ["design", "urgente"] },
-  {
-    time: "09:15",
-    title: "Reunião de time",
-    duration: "45min",
-    tags: ["time", "sync", "q3", "roadmap", "async", "ops", "ux"],
-  },
-  { time: "11:00", title: "Escrever relatório", duration: "1h30", tags: ["docs"] },
-  { time: "14:00", title: "Deploy da build", duration: "20min", tags: ["ci", "release", "infra"] },
-] as const;
-
-/** ms que o skeleton segura antes do 1º card resolver (knob). */
-const SKELETON_MS = 600;
-/** atraso entre um card resolver e o próximo (resolve de cima pra baixo). */
-const RESOLVE_STAGGER_MS = 220;
 
 const EXPO = [0.16, 1, 0.3, 1] as const; // ease-out-expo, espelha o token do global.css
 
@@ -42,47 +20,6 @@ const sceneVariants: Variants = {
   visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EXPO } },
   exit: { opacity: 0, y: -8, transition: { duration: 0.25 } },
 };
-
-const listVariants: Variants = {
-  hidden: {},
-  visible: { transition: { staggerChildren: 0.14, delayChildren: 0.05 } },
-};
-const rowVariants: Variants = {
-  hidden: { opacity: 0, y: 8 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EXPO } },
-};
-
-function SceneTarefas({ reduce }: { reduce: boolean }): JSX.Element {
-  // nº de cards já resolvidos (de cima pra baixo); card i troca skeleton→conteúdo quando resolved > i.
-  const [resolved, setResolved] = useState(reduce ? tarefasMock.length : 0);
-
-  useEffect(() => {
-    if (reduce) return;
-    setResolved(0);
-    const timers = tarefasMock.map((_, i) =>
-      setTimeout(
-        () => setResolved((n) => Math.max(n, i + 1)),
-        SKELETON_MS + i * RESOLVE_STAGGER_MS,
-      ),
-    );
-    return () => timers.forEach(clearTimeout);
-  }, [reduce]);
-
-  return (
-    <motion.ul
-      variants={listVariants}
-      initial={reduce ? "visible" : "hidden"}
-      animate="visible"
-      className="flex flex-col gap-2.5"
-    >
-      {tarefasMock.map((t, i) => (
-        <motion.li key={t.time} variants={rowVariants}>
-          <TaskCard {...t} selected={i === 0} loading={i >= resolved} />
-        </motion.li>
-      ))}
-    </motion.ul>
-  );
-}
 
 export function HeroPanel({
   activeWord,

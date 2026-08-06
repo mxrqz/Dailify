@@ -2,7 +2,7 @@ import { AnimatePresence, motion, type Variants } from "framer-motion";
 import { Bell, CheckCircle, Edit, Repeat, Trash2, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { scheduleMeta } from "./scene-horarios";
+import { scheduleMeta } from "./scenes/scene-horarios";
 
 /**
  * Box flutuante ao lado da lista — SEMPRE montado (slot fixo); só o CONTEÚDO troca por cena, via
