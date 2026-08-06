@@ -186,7 +186,7 @@ export function SceneRecorrencia({ reduce }: { reduce: boolean }): JSX.Element {
               variants={bodyVariants}
               initial={reduce ? "visible" : "hidden"}
               animate="visible"
-              className="flex flex-col gap-4"
+              className="flex flex-col gap-4 pl-15"
             >
               <motion.div variants={blockVariants}>
                 <RecurringCard />
