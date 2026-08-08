@@ -47,10 +47,15 @@ const BASE: Required<GrainParams> = {
  * ponytail: colours are shader inputs (WebGL needs concrete values), not CSS tokens.
  */
 export const grainPresets = {
-  /** Soft light spots wandering across the dark surface — the holographic default. */
+  /** Soft light spots wandering across the dark surface — the default. */
   aurora: { colors: ["#141318", "#1b1b22", "#3d3d49", "#4e4e5c"], opacity: 0.6 },
   /** The negative: dark spots drifting across a faintly lit field. */
   eclipse: { colors: ["#3c3c46", "#44444f", "#4c4c58", "#101015"], opacity: 0.45 },
+  /** Iridescent oil-slick anchored on the accent (#e11d48 = --primary): crimson → magenta → violet → cyan. */
+  holographic: {
+    colors: ["#e11d48", "#f43f8e", "#8b5cf6", "#22d3ee", "#0d0d12"],
+    opacity: 0.4,
+  },
 } satisfies Record<string, Partial<GrainParams>>;
 
 export type GrainPreset = keyof typeof grainPresets;
