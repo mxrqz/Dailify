@@ -422,7 +422,7 @@ export function FeatureTabs(): JSX.Element {
         onValueChange={(value) => {
           if (isTabKey(value)) setActive(value);
         }}
-        className="rounded-4xl bg-black p-5"
+        className="bg-black p-5"
       >
         <div ref={shellRef} className="relative grid gap-4">
           {/* fill + border, both traced by the same computed outline */}
@@ -451,12 +451,12 @@ export function FeatureTabs(): JSX.Element {
             </>
           )}
 
-          <TabsList className="relative z-10 grid h-auto grid-cols-4 gap-3 bg-transparent p-0">
+          <TabsList className="relative z-10 flex h-auto w-full justify-between gap-5 bg-transparent p-0">
             {TABS.map(({ key, icon: Icon }) => (
               <TabsTrigger
                 key={key}
                 value={key}
-                className="relative flex h-14 items-center justify-center gap-2 rounded-2xl border border-transparent px-4 font-mono uppercase tracking-[0.04em] text-muted-foreground shadow-none data-[state=active]:border-transparent dark:data-[state=active]:border-transparent data-[state=active]:bg-transparent data-[state=active]:text-accent-primary data-[state=active]:shadow-none data-[state=inactive]:border-highlight data-[state=inactive]:bg-surface-card"
+                className="relative flex h-14 items-center justify-center gap-2 rounded-full border border-transparent px-4 font-mono uppercase tracking-[0.04em] text-muted-foreground shadow-none data-[state=active]:border-transparent dark:data-[state=active]:border-transparent data-[state=active]:bg-transparent data-[state=active]:text-accent-primary data-[state=active]:shadow-none data-[state=inactive]:border-highlight data-[state=inactive]:bg-surface-card"
               >
                 <Icon className="size-5" aria-hidden="true" />
                 {copy.features.tabs[key].label}
