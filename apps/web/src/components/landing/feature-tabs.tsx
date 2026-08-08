@@ -1,5 +1,5 @@
-import { useState } from "react";
-import { AnimatePresence, LayoutGroup, motion, useReducedMotion, usePresence } from "framer-motion";
+import { useLayoutEffect, useRef, useState } from "react";
+import { AnimatePresence, motion, useReducedMotion, usePresence } from "framer-motion";
 import { CalendarDays, Columns3, Mic, RotateCw, type LucideIcon } from "lucide-react";
 
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -288,61 +288,183 @@ function TabPanel({ tabKey, reduce }: { tabKey: TabKey; reduce: boolean }): JSX.
   );
 }
 
+// ─── Shell geometry ─────────────────────────────────────────────────────────
+// The tab row + panel are drawn as ONE outline: a rounded panel with the active tab raised as a
+// bump on top, joined by concave "neck" arcs (negative radius). The SAME path clips the fill and
+// strokes the border — mastra.ai's technique. `buildShellPath` was reverse-engineered from their
+// own computed <path> and is pinned to it in feature-tabs.test.ts. ponytail: radii/gap hardcoded
+// as design constants; tune visually.
+const PANEL_R = 22; // panel corner radius (~ --radius-panel)
+const TAB_R = 20; // active-tab top corner radius
+const NECK = 36; // concave flare radius joining tab → panel
+const GAP = 16; // intentional gap between tab row and panel (px); the neck bridges it — keep in sync with `gap-4`
+
+const r3 = (x: number): number => Math.round(x * 1000) / 1000;
+
+/** SVG outline for the shell: rounded panel + active-tab bump joined by concave necks. */
+export function buildShellPath(o: {
+  w: number;
+  h: number;
+  tabLeft: number;
+  tabRight: number;
+  panelTop: number;
+  R?: number;
+  tr?: number;
+  neck?: number;
+}): string {
+  const { w, h, tabLeft, tabRight, panelTop } = o;
+  const R = o.R ?? PANEL_R;
+  const tr = Math.min(o.tr ?? TAB_R, (tabRight - tabLeft) / 2);
+  const neck = Math.max(0, Math.min(o.neck ?? NECK, panelTop - tr));
+  const flushL = tabLeft - neck < R; // active tab hugs the shell's left edge → merge, no left neck
+  const flushR = tabRight + neck > w - R; // ... right edge
+  const tabTR = flushR ? w : tabRight; // x of the tab's top-right corner
+  const p: string[] = [];
+
+  // left approach + tab top-left corner
+  if (flushL) {
+    p.push(`M ${r3(tr)} 0`);
+  } else {
+    p.push(`M ${R} ${r3(panelTop)}`);
+    p.push(`H ${r3(tabLeft - neck)}`);
+    p.push(`A ${neck} ${neck} 0 0 0 ${r3(tabLeft)} ${r3(panelTop - neck)}`); // left neck up (concave)
+    p.push(`V ${tr}`);
+    p.push(`A ${tr} ${tr} 0 0 1 ${r3(tabLeft + tr)} 0`); // convex
+  }
+  // tab flat top + top-right corner
+  p.push(`H ${r3(tabTR - tr)}`);
+  p.push(`A ${tr} ${tr} 0 0 1 ${r3(tabTR)} ${tr}`);
+  // right approach: neck down into panel, or straight wall if flush
+  if (!flushR) {
+    p.push(`V ${r3(panelTop - neck)}`);
+    p.push(`A ${neck} ${neck} 0 0 0 ${r3(tabRight + neck)} ${r3(panelTop)}`); // right neck down (concave)
+    p.push(`H ${r3(w - R)}`);
+    p.push(`A ${R} ${R} 0 0 1 ${r3(w)} ${r3(panelTop + R)}`);
+  }
+  // right wall → bottom edge → bottom-left corner
+  p.push(`V ${r3(h - R)}`);
+  p.push(`A ${R} ${R} 0 0 1 ${r3(w - R)} ${r3(h)}`);
+  p.push(`H ${R}`);
+  p.push(`A ${R} ${R} 0 0 1 0 ${r3(h - R)}`);
+  // left wall close
+  if (flushL) {
+    p.push(`V ${tr}`);
+    p.push(`A ${tr} ${tr} 0 0 1 ${r3(tr)} 0`);
+  } else {
+    p.push(`V ${r3(panelTop + R)}`);
+    p.push(`A ${R} ${R} 0 0 1 ${R} ${r3(panelTop)}`);
+  }
+  p.push("Z");
+  return p.join(" ");
+}
+
+type ShellGeom = { w: number; h: number; d: string };
+
+/** Measure the shell + active trigger, recompute the outline on tab-change / resize. */
+function useShellGeometry(active: TabKey): {
+  ref: React.RefObject<HTMLDivElement>;
+  geom: ShellGeom | null;
+} {
+  const ref = useRef<HTMLDivElement>(null);
+  const [geom, setGeom] = useState<ShellGeom | null>(null);
+
+  useLayoutEffect(() => {
+    const shell = ref.current;
+    if (!shell) return;
+    const measure = (): void => {
+      const trigger = shell.querySelector<HTMLElement>(
+        '[data-slot="tabs-trigger"][data-state="active"]',
+      );
+      if (!trigger) return;
+      const s = shell.getBoundingClientRect();
+      const t = trigger.getBoundingClientRect();
+      setGeom({
+        w: s.width,
+        h: s.height,
+        d: buildShellPath({
+          w: s.width,
+          h: s.height,
+          tabLeft: t.left - s.left,
+          tabRight: t.right - s.left,
+          panelTop: t.height + GAP,
+        }),
+      });
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(shell);
+    return () => ro.disconnect();
+  }, [active]);
+
+  return { ref, geom };
+}
+
 /**
- * Browser-tab style feature switcher — one panel, four surfaces (Day / Calendário / Recorrência /
- * Voz). Radix `Tabs` driven controlled so the active trigger can carry a sliding `layoutId`
- * indicator (shared layout inside `LayoutGroup`) that visually connects to the panel body below,
- * and so the body can crossfade between mock surfaces via `AnimatePresence`.
+ * Feature switcher whose active tab melts into the panel via a single computed SVG outline
+ * (fill = `clip-path`, border = stroked `<path>`) joined by concave "neck" arcs — mastra.ai's
+ * folder-tab connection that fills the gap between the tab row and the panel. Radix `Tabs` still
+ * drives state + keyboard nav (arrow keys / roving tabindex); the outline snaps to the active tab
+ * (no slide, matching mastra) while the panel body crossfades via `AnimatePresence`.
  *
- * `useReducedMotion()` collapses the indicator slide to an instant jump (`duration: 0`) and the
- * content crossfade to an instant swap (no slide), and kills the per-mock loops (agora pulse,
- * recurrence orbit, waveform pulse). Radix keyboard navigation (arrow keys / roving tabindex) is
- * untouched — only the active trigger's own styling and this indicator are added on top.
+ * `useReducedMotion()` collapses the content crossfade to an instant swap and kills the per-mock
+ * loops (agora pulse, recurrence orbit, waveform pulse).
  */
 export function FeatureTabs(): JSX.Element {
   const reduce = useReducedMotion();
   const [active, setActive] = useState<TabKey>("day");
+  const { ref: shellRef, geom } = useShellGeometry(active);
 
   return (
-    <section className="py-20 md:py-28 w-full">
+    <section className="w-full py-20 md:py-28">
       <Tabs
         value={active}
         onValueChange={(value) => {
           if (isTabKey(value)) setActive(value);
         }}
-        className="gap-5 p-5 bg-black"
       >
-        <LayoutGroup>
-          <TabsList className="flex w-full justify-between relative z-10 bg-transparent -mb-px rounded-panel h-auto gap-5 p-0">
-            {TABS.map(({ key, icon: Icon }) => {
-              const isActive = active === key;
-              return (
-                <TabsTrigger
-                  key={key}
-                  value={key}
-                  className="relative bg-card/30 z-10 flex items-center justify-center text-center gap-2 rounded-4xl border-t border-t-foreground/10 border-r border-r-foreground/10 px-4 py-5 font-mono uppercase tracking-[0.04em] text-muted-foreground shadow-none data-[state=active]:bg-transparent data-[state=active]:text-accent-primary data-[state=active]:shadow-none data-[state=active]:border-none"
-                >
-                  {isActive && (
-                    <motion.span
-                      layoutId="tab-active"
-                      className={`absolute border-none inset-0 -z-10 rounded-t-4xl bg-surface-panel`}
-                      transition={
-                        reduce ? { duration: 0 } : { type: "spring", bounce: 0.2, duration: 0.5 }
-                      }
-                    />
-                  )}
-                  <Icon className="size-5" aria-hidden="true" />
-                  {copy.features.tabs[key].label}
-                </TabsTrigger>
-              );
-            })}
-          </TabsList>
-        </LayoutGroup>
+        <div ref={shellRef} className="relative grid gap-4">
+          {/* fill + border, both traced by the same computed outline */}
+          {geom && (
+            <>
+              <div
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 z-0 bg-surface-panel"
+                style={{ clipPath: `path('${geom.d}')` }}
+              />
+              <svg
+                aria-hidden="true"
+                className="pointer-events-none absolute inset-0 z-[1] h-full w-full overflow-visible"
+                viewBox={`0 0 ${geom.w} ${geom.h}`}
+              >
+                <path
+                  d={geom.d}
+                  fill="none"
+                  stroke="var(--border-highlight)"
+                  strokeWidth={2}
+                  vectorEffect="non-scaling-stroke"
+                />
+              </svg>
+            </>
+          )}
 
-        <div className="relative min-h-168 overflow-hidden rounded-panel border border-highlight bg-surface-panel shadow-panel">
-          <AnimatePresence initial={false}>
-            <TabPanel key={active} tabKey={active} reduce={Boolean(reduce)} />
-          </AnimatePresence>
+          <TabsList className="relative z-10 grid h-auto grid-cols-4 gap-3 bg-transparent p-0">
+            {TABS.map(({ key, icon: Icon }) => (
+              <TabsTrigger
+                key={key}
+                value={key}
+                className="relative flex h-14 items-center justify-center gap-2 rounded-2xl border border-transparent px-4 font-mono uppercase tracking-[0.04em] text-muted-foreground shadow-none data-[state=active]:border-transparent dark:data-[state=active]:border-transparent data-[state=active]:bg-transparent data-[state=active]:text-accent-primary data-[state=active]:shadow-none data-[state=inactive]:border-highlight data-[state=inactive]:bg-surface-card"
+              >
+                <Icon className="size-5" aria-hidden="true" />
+                {copy.features.tabs[key].label}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+
+          <div className="relative z-10 min-h-168 overflow-hidden">
+            <AnimatePresence initial={false}>
+              <TabPanel key={active} tabKey={active} reduce={Boolean(reduce)} />
+            </AnimatePresence>
+          </div>
         </div>
       </Tabs>
     </section>
