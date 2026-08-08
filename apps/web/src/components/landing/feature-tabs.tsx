@@ -6,6 +6,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { copy } from "./copy";
 import { Grain } from "./grain";
+import { DayColumn } from "./mocks/day-column";
+import { TabScene } from "./tab-scene";
+import { TaskCard } from "./task-card";
 
 type TabKey = keyof typeof copy.features.tabs;
 
@@ -276,14 +279,35 @@ function TabPanel({ tabKey, reduce }: { tabKey: TabKey; reduce: boolean }): JSX.
         aria-hidden={isPresent ? undefined : true}
         tabIndex={isPresent ? undefined : -1}
       >
-        <div className="mb-6 flex flex-col gap-1.5">
-          <h3 className="text-xl font-semibold tracking-[-0.02em] text-foreground">
-            {tabCopy.title}
-          </h3>
-          <p className="max-w-md text-sm text-muted-foreground">{tabCopy.blurb}</p>
-        </div>
+        {tabKey === "day" ? (
+          <TabScene title={tabCopy.title} blurb={tabCopy.blurb}>
+            {/* back layer: day timeline, bleeding top/left */}
+            <div className="absolute -left-6 -top-8 w-[22rem] max-w-[70%] md:w-[26rem]">
+              <DayColumn />
+            </div>
+            {/* front layer: one emphasised card, bleeding off the right */}
+            <div className="absolute -right-6 top-24 w-72 md:w-80">
+              <TaskCard
+                time="16:00"
+                title="Deploy da landing"
+                duration="30min"
+                tags={["dev", "prio"]}
+                selected
+              />
+            </div>
+          </TabScene>
+        ) : (
+          <>
+            <div className="mb-6 flex flex-col gap-1.5">
+              <h3 className="text-xl font-semibold tracking-[-0.02em] text-foreground">
+                {tabCopy.title}
+              </h3>
+              <p className="max-w-md text-sm text-muted-foreground">{tabCopy.blurb}</p>
+            </div>
 
-        <TabMock tabKey={tabKey} reduce={reduce} />
+            <TabMock tabKey={tabKey} reduce={reduce} />
+          </>
+        )}
       </motion.div>
     </TabsContent>
   );
