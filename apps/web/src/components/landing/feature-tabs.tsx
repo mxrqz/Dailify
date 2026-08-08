@@ -5,6 +5,7 @@ import { CalendarDays, Columns3, Mic, RotateCw, type LucideIcon } from "lucide-r
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { copy } from "./copy";
+import { Grain } from "./grain";
 
 type TabKey = keyof typeof copy.features.tabs;
 
@@ -421,6 +422,7 @@ export function FeatureTabs(): JSX.Element {
         onValueChange={(value) => {
           if (isTabKey(value)) setActive(value);
         }}
+        className="rounded-4xl bg-black p-5"
       >
         <div ref={shellRef} className="relative grid gap-4">
           {/* fill + border, both traced by the same computed outline */}
@@ -428,9 +430,11 @@ export function FeatureTabs(): JSX.Element {
             <>
               <div
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 z-0 bg-surface-panel"
+                className="pointer-events-none absolute inset-0 z-0 bg-background"
                 style={{ clipPath: `path('${geom.d}')` }}
-              />
+              >
+                <Grain />
+              </div>
               <svg
                 aria-hidden="true"
                 className="pointer-events-none absolute inset-0 z-[1] h-full w-full overflow-visible"
