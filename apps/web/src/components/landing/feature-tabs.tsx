@@ -433,7 +433,7 @@ export function FeatureTabs(): JSX.Element {
                 className="pointer-events-none absolute inset-0 z-0 bg-background"
                 style={{ clipPath: `path('${geom.d}')` }}
               >
-                <Grain />
+                <Grain preset="aurora" />
               </div>
               <svg
                 aria-hidden="true"
