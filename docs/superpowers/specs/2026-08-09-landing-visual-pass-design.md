@@ -112,12 +112,12 @@ De 14 usos para 6. A regra: **crimson marca ação ou o estado ativo. Nada mais.
 
 | Onde                             | Por quê                     |
 | -------------------------------- | --------------------------- |
-| `hero.tsx` — botão CTA           | ação                        |
+| `hero.tsx:59` — botão CTA        | ação — **vira** crimson: hoje é `bg-surface-card` e só fica crimson no hover, então a ação principal do topo não tem cor |
 | `cta.tsx` — botão do fechamento  | ação                        |
 | `pricing.tsx` — botão Assinar Pro+AI | ação                    |
-| `pricing.tsx` — `border-accent-primary` do card Pro+AI | é o alvo da ação |
+| `pricing.tsx:110` — `border-accent-primary` do card Pro+AI | é o alvo da ação |
+| `pricing.tsx:84` — pill ativa do toggle mensal/anual | estado ativo   |
 | `feature-tabs.tsx:96` — tab ativa | estado ativo               |
-| linha do agora nos mocks         | estado ativo                |
 
 **Sai** (vira `text-muted-foreground` / neutro):
 
@@ -137,8 +137,9 @@ os botões no topo dela. Os 245px não são padding, são uma linha de grid vazi
 Troca por coluna flex com espaçamento explícito, e o `SEM CARTÃO DE CRÉDITO` sobe para eyebrow acima
 do h1, preenchendo o vazio superior em vez de ficar solto sobre os botões.
 
-O `h-[80dvh]` sai junto: a altura passa a vir do conteúdo mais o ritmo de seção. Isso remove o
-acoplamento entre altura de viewport e posição do texto, que é o que produziu o buraco.
+**O `h-[80dvh]` fica.** Cheguei a considerar removê-lo, mas `hero-panel.tsx:32` é `h-full` — ele
+depende de a seção ter altura definida, e tirar isso colapsaria o painel. O buraco é do
+`grid-rows-3`, não da altura da seção; o conserto portanto se limita ao layout interno da coluna.
 
 ### 5. Ritmo vertical
 
@@ -178,4 +179,5 @@ Não há lógica nova para testar em unit test; a verificação é visual e de r
 | `raised` a 17.5% ficar invisível como laje                 | screenshot; se sumir, sobe o L ou reforça o hairline |
 | Algum filho de seção `raised` usar `surface-card` e eu não achar | grep por `surface-card` nos dois arquivos após a mudança |
 | Crimson sobre branco no pricing ficar vibrante demais      | é o único ponto onde o acento encosta em fundo claro; avaliar no screenshot |
-| Remover `h-[80dvh]` mudar a dobra mais do que o esperado   | screenshot do hero em 1440×900 antes/depois       |
+| Trocar o grid do hero por flex colapsar o `HeroPanel` (`h-full`) | a seção mantém `h-[80dvh]`; screenshot do hero em 1440×900 antes/depois |
+| Hero CTA virar crimson competir com o CTA do fechamento    | são as duas pontas da página, nunca visíveis juntas; confirmar no full-page |
