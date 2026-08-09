@@ -6,6 +6,7 @@ import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { copy } from "./copy";
 import { Grain } from "./grain";
+import { CalendarAppWindow } from "./mocks/calendar-app-window";
 import { DayAppWindow } from "./mocks/day-app-window";
 import { TaskDetailSheet } from "./mocks/task-detail-sheet";
 import { TabScene } from "./tab-scene";
@@ -21,133 +22,6 @@ const TABS: ReadonlyArray<{ key: TabKey; icon: LucideIcon }> = [
 
 function isTabKey(value: string): value is TabKey {
   return value === "day" || value === "calendar" || value === "recurrence" || value === "voice";
-}
-
-/** Decorative day-column mock — fake times/tasks, not wired to real data. */
-const dayMockEarly = [{ time: "08:30", title: "Revisar PRs" }] as const;
-const dayMockLate = [
-  { time: "11:00", title: "Escrever proposta" },
-  { time: "13:30", title: "Almoço com o time" },
-] as const;
-
-function DayMock(): JSX.Element {
-  return (
-    <div className="flex flex-col gap-2.5">
-      {dayMockEarly.map((task) => (
-        <div key={task.time} className="flex items-center gap-3">
-          <span className="w-12 shrink-0 text-right font-mono text-2xs text-muted-foreground">
-            {task.time}
-          </span>
-          <span className="flex-1 truncate border-l-2 border-border py-1.5 pl-3 text-sm text-foreground">
-            {task.title}
-          </span>
-        </div>
-      ))}
-
-      <div className="flex items-center gap-3 py-0.5">
-        <span className="w-12 shrink-0 text-right font-mono text-2xs text-accent-primary">
-          agora
-        </span>
-        <span className="h-px flex-1 bg-accent-primary shadow-[0_0_10px_var(--accent-glow)]" />
-      </div>
-
-      {dayMockLate.map((task) => (
-        <div key={task.time} className="flex items-center gap-3">
-          <span className="w-12 shrink-0 text-right font-mono text-2xs text-muted-foreground">
-            {task.time}
-          </span>
-          <span className="flex-1 truncate border-l-2 border-border py-1.5 pl-3 text-sm text-foreground">
-            {task.title}
-          </span>
-        </div>
-      ))}
-    </div>
-  );
-}
-
-/** Decorative month grid — fake dates, not a real calendar. Monday-start week, matching the app. */
-const WEEKDAY_LABELS = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"] as const;
-const MONTH_DAYS: ReadonlyArray<number | null> = [
-  null,
-  null,
-  1,
-  2,
-  3,
-  4,
-  5,
-  6,
-  7,
-  8,
-  9,
-  10,
-  11,
-  12,
-  13,
-  14,
-  15,
-  16,
-  17,
-  18,
-  19,
-  20,
-  21,
-  22,
-  23,
-  24,
-  25,
-  26,
-  27,
-  28,
-  29,
-  30,
-  null,
-  null,
-  null,
-];
-const TODAY_MOCK = 14;
-const TASK_DAYS_MOCK: ReadonlySet<number> = new Set([3, 7, 8, 12, 17, 22, 27]);
-
-function CalendarMock(): JSX.Element {
-  return (
-    <div className="flex flex-col gap-1.5">
-      <div className="grid grid-cols-7 gap-1">
-        {WEEKDAY_LABELS.map((label) => (
-          <span
-            key={label}
-            className="text-center font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground"
-          >
-            {label}
-          </span>
-        ))}
-      </div>
-      <div className="grid grid-cols-7 gap-1">
-        {MONTH_DAYS.map((day, index) => (
-          <div key={index} className="flex flex-col items-center gap-0.5 py-0.5">
-            {day !== null && (
-              <>
-                <span
-                  className={cn(
-                    "flex size-7 items-center justify-center rounded-full font-mono text-xs",
-                    day === TODAY_MOCK
-                      ? "bg-accent-primary text-primary-foreground"
-                      : "text-foreground",
-                  )}
-                >
-                  {day}
-                </span>
-                <span
-                  className={cn(
-                    "size-1 rounded-full",
-                    TASK_DAYS_MOCK.has(day) ? "bg-accent-primary" : "bg-transparent",
-                  )}
-                />
-              </>
-            )}
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 /** Decorative loop mock — a node orbits the ring, ghost dots mark past occurrences. */
@@ -240,12 +114,14 @@ function VoiceMock({ reduce }: { reduce: boolean }): JSX.Element {
   );
 }
 
-function TabMock({ tabKey, reduce }: { tabKey: TabKey; reduce: boolean }): JSX.Element {
+function TabMock({
+  tabKey,
+  reduce,
+}: {
+  tabKey: Exclude<TabKey, "day" | "calendar">;
+  reduce: boolean;
+}): JSX.Element {
   switch (tabKey) {
-    case "day":
-      return <DayMock />;
-    case "calendar":
-      return <CalendarMock />;
     case "recurrence":
       return <RecurrenceMock reduce={reduce} />;
     case "voice":
@@ -266,17 +142,37 @@ function TabMock({ tabKey, reduce }: { tabKey: TabKey; reduce: boolean }): JSX.E
 function TabPanelBody({ tabKey, reduce }: { tabKey: TabKey; reduce: boolean }): JSX.Element {
   const tabCopy = copy.features.tabs[tabKey];
 
-  return tabKey === "day" ? (
-    <TabScene title={tabCopy.title} blurb={tabCopy.blurb}>
-      <div className="absolute bottom-0 left-16 h-3/5 w-1/2">
-        <TaskDetailSheet />
-      </div>
+  if (tabKey === "day") {
+    return (
+      <TabScene title={tabCopy.title} blurb={tabCopy.blurb}>
+        <div className="absolute bottom-0 left-16 h-3/5 w-1/2">
+          <TaskDetailSheet />
+        </div>
 
-      <div className="absolute bottom-0 -right-5 w-1/2">
-        <DayAppWindow />
-      </div>
-    </TabScene>
-  ) : (
+        <div className="absolute bottom-0 -right-5 w-1/2">
+          <DayAppWindow />
+        </div>
+      </TabScene>
+    );
+  }
+
+  if (tabKey === "calendar") {
+    return (
+      <TabScene title={tabCopy.title} blurb={tabCopy.blurb}>
+        {/* peek do dia 14 (hoje) por cima, à esquerda — reusa a janela de dia menor */}
+        <div className="absolute bottom-0 left-16 h-3/5 w-1/2">
+          <DayAppWindow date="Qui · 14 Ago" className="h-full" />
+        </div>
+
+        {/* mês sangrando pra direita — a janela grande */}
+        <div className="absolute bottom-0 -right-5 w-1/2">
+          <CalendarAppWindow />
+        </div>
+      </TabScene>
+    );
+  }
+
+  return (
     <>
       <div className="mb-6 flex flex-col gap-1.5">
         <h3 className="text-xl font-semibold tracking-[-0.02em] text-foreground">
@@ -472,7 +368,7 @@ export function FeatureTabs(): JSX.Element {
                 aria-label={copy.features.tabs[active].label}
                 className={cn(
                   "absolute inset-0 rounded-3xl overflow-hidden",
-                  active === "day" ? "overflow-hidden" : "overflow-y-auto p-6 md:p-8",
+                  active === "day" ? "overflow-hidden" : "overflow-y-auto",
                 )}
                 initial={{ opacity: 0, y: reduce ? 0 : 12 }}
                 animate={{ opacity: 1, y: 0 }}
