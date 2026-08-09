@@ -17,7 +17,7 @@
 - **Sem hex nem cor arbitrária em componente.** Toda cor sai de token em `global.css` mapeado via `@theme inline`. Cor nova = token novo + mapeamento.
 - **Tokens são declarados uma vez** com `light-dark(claro, escuro)` em `oklch`. Não duplicar por tema, não usar `display-p3`.
 - **Preferir cor sólida a `/opacity`** em elementos interativos.
-- **Prettier, `printWidth: 100`.** Rodar `bun run format` antes de cada commit.
+- **Prettier, `printWidth: 100`.** Rodar `bun --filter @dailify/web format` antes de cada commit.
 - **Gate completo:** `bun run check` (format + lint + typecheck + os 3 suites de teste) precisa passar em todo commit.
 - **Não dar `git push`.** O usuário controla o push; commitar apenas.
 - **Não tocar** em `task-card.tsx` nem `task-options.tsx` — são mocks da UI do produto, o crimson ali é intencional.
@@ -93,7 +93,10 @@ const report = await page.evaluate((crimson: string[]) => {
 
   // Vão vertical no hero: base do parágrafo do subtítulo até o topo dos botões.
   const heroSec = document.querySelector("main section");
-  const p = heroSec?.querySelector("p + p, p");
+  // `h1 + p` e não `p` solto: a Task 6 move o eyebrow pra cima do h1, e um seletor de
+  // primeiro-parágrafo passaria a medir eyebrow→botão em vez de subtítulo→botão — a métrica
+  // cresceria em vez de encolher. O subtítulo é irmão adjacente do h1 antes e depois.
+  const p = heroSec?.querySelector("h1 + p");
   const btn = heroSec?.querySelector("button, a[role='button']");
   const heroGap =
     p && btn ? Math.round(btn.getBoundingClientRect().top - p.getBoundingClientRect().bottom) : -1;
@@ -131,7 +134,8 @@ cd "$SCRATCH" && bun probe.ts > antes.json && cat antes.json
 
 Esperado — este é o defeito que o passe conserta:
 - todas as entradas de `secoes[].bg` iguais ou `rgba(0, 0, 0, 0)` (nenhuma seção pinta superfície própria);
-- `heroGap` em torno de **245**;
+- `heroGap` em torno de **214** (o ~245 que eu tinha estimado veio de ler coordenada em
+  screenshot; o valor do DOM é 214 — use o que o probe imprimir, não a estimativa);
 - `crimson[]` com bem mais de 6 entradas.
 
 Guardar `antes.json`; as tasks seguintes comparam contra ele.
@@ -169,7 +173,7 @@ Logo abaixo do bloco `.dark { color-scheme: dark; }` que já existe:
 - [ ] **Step 6: Verificar que o Tailwind emitiu tudo**
 
 ```bash
-bun run format && bun run build 2>&1 | grep -iE "error|Exited"
+bun --filter @dailify/web format && bun run build 2>&1 | grep -iE "error|Exited"
 grep -c "surface-raised" apps/web/dist/assets/*.css
 grep -o "\.light{color-scheme:light}" apps/web/dist/assets/*.css
 ```
@@ -378,7 +382,7 @@ Se der `MUDOU`, a causa mais provável é `--spacing(20)` não resolver para `5r
 - [ ] **Step 6: Gate e commit**
 
 ```bash
-bun run format && bun run check 2>&1 | grep -iE "✖|Exited"
+bun --filter @dailify/web format && bun run check 2>&1 | grep -iE "✖|Exited"
 git add apps/web/src/global.css apps/web/src/components/landing/
 git commit -m "refactor(web): ritmo de seção da landing vira @utility section-y
 
@@ -461,7 +465,7 @@ subir os filhos de `surface-panel` para `surface-hover` (22.5%) para manter o de
 - [ ] **Step 6: Gate e commit**
 
 ```bash
-bun run format && bun run check 2>&1 | grep -iE "✖|Exited"
+bun --filter @dailify/web format && bun run check 2>&1 | grep -iE "✖|Exited"
 git add apps/web/src/components/landing/
 git commit -m "feat(web): landing — Tabs e Como funciona viram lajes raised
 
@@ -527,7 +531,7 @@ transição preços→CTA é limpa, sem véu claro invadindo a laje branca.
 - [ ] **Step 5: Gate e commit**
 
 ```bash
-bun run format && bun run check 2>&1 | grep -iE "✖|Exited"
+bun --filter @dailify/web format && bun run check 2>&1 | grep -iE "✖|Exited"
 git add apps/web/src/components/landing/pricing.tsx
 git commit -m "feat(web): landing — preços viram laje clara
 
@@ -624,7 +628,7 @@ elemento de mock antes de tratar como regressão.
 - [ ] **Step 6: Gate e commit**
 
 ```bash
-bun run format && bun run check 2>&1 | grep -iE "✖|Exited"
+bun --filter @dailify/web format && bun run check 2>&1 | grep -iE "✖|Exited"
 git add apps/web/src/components/landing/
 git commit -m "feat(web): landing — crimson só para ação e estado ativo
 
@@ -721,7 +725,12 @@ O que saiu: `grid grid-rows-3`, `justify-center` de grid, `row-start-2`, `row-st
 cd "$SCRATCH" && bun probe.ts > depois-task6.json && grep heroGap depois-task6.json
 ```
 
-Esperado: `heroGap` **abaixo de 120** (era ~245 em `antes.json`).
+Esperado: `heroGap` **abaixo de 120**. O baseline real medido na Task 1 é **214** (`antes.json`) —
+não ~245, que era estimativa em cima de screenshot.
+
+O probe mede `h1 + p` até o primeiro botão, de propósito: esta task move o eyebrow pra cima do h1, e
+um seletor de primeiro-parágrafo passaria a medir eyebrow→botão, uma distância maior. Se o
+`probe.ts` do scratchpad ainda tiver `p + p, p` no lugar de `h1 + p`, corrija antes de medir.
 
 - [ ] **Step 4: Confirmar que o painel não colapsou**
 
@@ -735,7 +744,7 @@ Abrir `s00.png`. Critérios: o painel da direita continua com a mesma altura de 
 - [ ] **Step 5: Gate e commit**
 
 ```bash
-bun run format && bun run check 2>&1 | grep -iE "✖|Exited"
+bun --filter @dailify/web format && bun run check 2>&1 | grep -iE "✖|Exited"
 git add apps/web/src/components/landing/hero.tsx
 git commit -m "fix(web): hero — remove a linha de grid vazia que abria 245px
 
