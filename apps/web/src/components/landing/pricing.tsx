@@ -54,7 +54,8 @@ type Cycle = "monthly" | "yearly";
  * Os valores vêm de `PLAN_PRICING` (`@/consts/pricing`), a mesma fonte que `/premium` consome —
  * sem número digitado à mão em dois lugares. Free = "Grátis"; Pro/Pro+AI mostram
  * mensal/anual conforme o toggle, com a economia do anual em `text-success`. Crimson fica
- * reservado ao card recomendado (Pro+AI): `border-accent-primary` + badge + leve glow, seguindo
+ * reservado à borda + leve glow do card recomendado (Pro+AI, `border-accent-primary`) e ao botão
+ * "Assinar Pro+AI"; o badge "Recomendado" é neutro (`bg-surface-hover`/`text-foreground`), seguindo
  * a regra de uma-cor-só. Cards limpos, sem cena bento — o contraste com a seção rica é proposital.
  */
 export function Pricing(): JSX.Element {
@@ -115,7 +116,7 @@ export function Pricing(): JSX.Element {
                 {plan.copy.name}
               </h3>
               {plan.recommended && (
-                <span className="rounded-full bg-accent-subtle px-2 py-0.5 font-mono text-2xs uppercase tracking-[0.04em] text-accent-primary">
+                <span className="rounded-full bg-surface-hover px-2 py-0.5 font-mono text-2xs uppercase tracking-[0.04em] text-foreground">
                   {copy.pricing.recommendedBadge}
                 </span>
               )}

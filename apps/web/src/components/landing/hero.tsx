@@ -7,9 +7,11 @@ import { useCycle } from "./use-cycle";
 import { HeroPanel } from "./hero-panel";
 
 /**
- * Landing hero — título + subtítulo (com accent em rodízio) à esquerda, painel animado à direita.
- * Um único `useCycle` dá o índice ativo; subtítulo e painel leem o mesmo valor, então a palavra
- * crimson e a cena do painel nunca dessincronizam. `useReducedMotion()` congela no estado estático.
+ * Landing hero — título + subtítulo (com palavra em rodízio) à esquerda, painel animado à direita.
+ * Um único `useCycle` dá o índice ativo; subtítulo e painel leem o mesmo valor, então a palavra em
+ * rodízio e a cena do painel nunca dessincronizam. A palavra ativa é `text-foreground` (sem
+ * crimson — accent fica reservado a ação/estado ativo). `useReducedMotion()` congela no estado
+ * estático.
  */
 export function Hero(): JSX.Element {
   const reduce = useReducedMotion();
