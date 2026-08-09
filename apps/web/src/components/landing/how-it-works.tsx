@@ -23,7 +23,7 @@ export function HowItWorks(): JSX.Element {
   return (
     <section className="border-y border-surface-line bg-surface-raised px-gutter section-y">
       <div className="mx-auto mb-14 flex max-w-2xl flex-col items-center gap-4 text-center">
-        <p className="font-mono text-xs uppercase tracking-[0.12em] text-accent-primary">
+        <p className="font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground">
           {copy.howItWorks.eyebrow}
         </p>
         <h2 className="text-balance text-2xl font-semibold tracking-[-0.02em] text-foreground md:text-3xl">
@@ -38,7 +38,7 @@ export function HowItWorks(): JSX.Element {
           aria-hidden="true"
         >
           <motion.span
-            className="absolute top-1/2 size-2.5 -translate-y-1/2 rounded-full bg-accent-primary shadow-[0_0_12px_var(--accent-glow)]"
+            className="absolute top-1/2 size-2.5 -translate-y-1/2 rounded-full bg-foreground"
             style={{ left: reduce ? "100%" : pointLeft, x: "-50%" }}
           />
         </div>
@@ -46,7 +46,7 @@ export function HowItWorks(): JSX.Element {
         <ol className="relative grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-8">
           {copy.howItWorks.steps.map((item) => (
             <li key={item.step} className="flex flex-col items-center gap-3 text-center">
-              <span className="relative z-10 flex size-12 items-center justify-center rounded-full border bg-surface-panel font-mono text-sm text-accent-primary">
+              <span className="relative z-10 flex size-12 items-center justify-center rounded-full border bg-surface-panel font-mono text-sm text-muted-foreground">
                 {item.step}
               </span>
               <h3 className="text-lg font-semibold tracking-[-0.01em] text-foreground">

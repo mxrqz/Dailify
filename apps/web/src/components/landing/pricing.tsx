@@ -65,7 +65,7 @@ export function Pricing(): JSX.Element {
   return (
     <section className="light border-y border-surface-line bg-surface-page px-gutter section-y">
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-        <p className="font-mono text-xs uppercase tracking-[0.12em] text-accent-primary">
+        <p className="font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground">
           {copy.pricing.eyebrow}
         </p>
         <h2 className="text-balance text-2xl font-semibold tracking-[-0.02em] text-foreground md:text-3xl">
@@ -87,7 +87,7 @@ export function Pricing(): JSX.Element {
             >
               {c === "monthly" ? billing.monthly : billing.yearly}
               {c === "yearly" && cycle !== "yearly" && (
-                <span className="rounded-full bg-accent-subtle px-1.5 py-0.5 text-2xs normal-case text-accent-primary">
+                <span className="rounded-full bg-surface-hover px-1.5 py-0.5 text-2xs normal-case text-foreground">
                   {billing.save}
                 </span>
               )}

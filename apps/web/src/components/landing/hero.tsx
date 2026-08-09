@@ -37,7 +37,7 @@ export function Hero(): JSX.Element {
                     key={idx}
                     className={cn(
                       "transition-colors duration-700 ease-out-expo",
-                      ci === activeWord ? "text-accent-primary" : "text-content-secondary",
+                      ci === activeWord ? "text-foreground" : "text-content-secondary",
                     )}
                   >
                     {part.text}
@@ -56,7 +56,7 @@ export function Hero(): JSX.Element {
           <div className="flex flex-wrap items-center gap-4">
             <Button
               size="lg"
-              className="rounded-full border-t border-t-surface-line bg-surface-card text-primary-foreground hover:bg-accent-hover"
+              className="rounded-full border-t border-t-surface-line bg-accent-primary text-primary-foreground hover:bg-accent-hover"
             >
               {copy.hero.ctaPrimary}
             </Button>
