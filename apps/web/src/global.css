@@ -233,6 +233,49 @@
   padding-inline: max(1rem, 5vw, calc((100% - var(--layout-content)) / 2));
 }
 
+/*
+ * Plinto: caixa recuada de `--skirt` cuja base alarga até as bordas do pai, por duas saias côncavas
+ * (máscara radial de mesmo raio que o recuo — é o que faz a ponta cair exatamente na borda) nos
+ * cantos de baixo. Só a FORMA mora aqui: cor e padding ficam com as utilities de quem usa, e as
+ * saias herdam o `background-color` do plinto. `--skirt` é fonte única (recuo + tamanho da saia +
+ * raio da máscara) e é sobrescrevível no uso: `class="plinth [--skirt:3rem]"`.
+ */
+@utility plinth {
+  --skirt: 1.75rem;
+  position: relative;
+  margin-inline: var(--skirt);
+  border-start-start-radius: var(--radius-panel);
+  border-start-end-radius: var(--radius-panel);
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    bottom: 0;
+    width: var(--skirt);
+    height: var(--skirt);
+    background-color: inherit;
+  }
+
+  &::before {
+    right: 100%;
+    mask-image: radial-gradient(
+      circle at top left,
+      transparent var(--skirt),
+      black calc(var(--skirt) + 0.5px)
+    );
+  }
+
+  &::after {
+    left: 100%;
+    mask-image: radial-gradient(
+      circle at top right,
+      transparent var(--skirt),
+      black calc(var(--skirt) + 0.5px)
+    );
+  }
+}
+
 @layer base {
   * {
     @apply border-border outline-ring/50;
