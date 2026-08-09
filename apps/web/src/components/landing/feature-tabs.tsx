@@ -3,7 +3,6 @@ import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CalendarDays, Columns3, Mic, RotateCw, type LucideIcon } from "lucide-react";
 
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { cn } from "@/lib/utils";
 import { copy } from "./copy";
 import { Grain } from "./grain";
 import { CalendarTab } from "./tabs/calendar-tab";
@@ -108,10 +107,7 @@ export function FeatureTabs(): JSX.Element {
                 key={active}
                 role="tabpanel"
                 aria-label={copy.features.tabs[active].label}
-                className={cn(
-                  "absolute inset-0 overflow-hidden rounded-3xl",
-                  active === "day" ? "overflow-hidden" : "overflow-y-auto",
-                )}
+                className={"absolute inset-0 overflow-hidden rounded-3xl"}
                 initial={{ opacity: 0, y: reduce ? 0 : 12 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: reduce ? 0 : -12 }}
