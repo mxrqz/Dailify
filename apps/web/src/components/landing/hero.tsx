@@ -22,9 +22,13 @@ export function Hero(): JSX.Element {
 
   return (
     <section className="flex w-full items-center px-gutter pt-20 border-b h-[80dvh]">
-      <div className="mr-5 w-[65ch] grid grid-rows-3 justify-center gap-6 md:gap-8 h-full pb-10">
-        <div className="row-start-2">
-          <h1 className="whitespace-nowrap text-5xl font-semibold leading-[1.05] tracking-[-0.03em] text-foreground ">
+      <div className="mr-5 flex h-full w-[65ch] flex-col justify-center gap-6 pb-10 md:gap-8">
+        <p className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
+          {copy.hero.commandHint}
+        </p>
+
+        <div>
+          <h1 className="whitespace-nowrap text-5xl font-semibold leading-[1.05] tracking-[-0.03em] text-foreground">
             {copy.hero.title}
           </h1>
 
@@ -50,27 +54,21 @@ export function Hero(): JSX.Element {
           </p>
         </div>
 
-        <div className="flex flex-col justify-end row-start-3 gap-5">
-          <p className="pl-5 font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
-            {copy.hero.commandHint}
-          </p>
+        <div className="flex flex-wrap items-center gap-4">
+          <Button
+            size="lg"
+            className="rounded-full bg-accent-primary text-primary-foreground hover:bg-accent-hover"
+          >
+            {copy.hero.ctaPrimary}
+          </Button>
 
-          <div className="flex flex-wrap items-center gap-4">
-            <Button
-              size="lg"
-              className="rounded-full border-t border-t-surface-line bg-accent-primary text-primary-foreground hover:bg-accent-hover"
-            >
-              {copy.hero.ctaPrimary}
-            </Button>
-
-            <Button
-              size="lg"
-              variant="ghost"
-              className="rounded-full border-t border-t-surface-line bg-surface-card hover:bg-surface-hover"
-            >
-              {copy.hero.ctaSecondary}
-            </Button>
-          </div>
+          <Button
+            size="lg"
+            variant="ghost"
+            className="rounded-full border-t border-t-surface-line bg-surface-card hover:bg-surface-hover"
+          >
+            {copy.hero.ctaSecondary}
+          </Button>
         </div>
       </div>
 
