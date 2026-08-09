@@ -52,6 +52,38 @@ subtree color-scheme:light  → --surface-page   oklch(1 0 0)       (branco)
 Portanto **uma seção clara é uma classe num wrapper**: texto, bordas, cards e muted flipam sozinhos.
 Isso é o que torna a laje clara barata o bastante para entrar neste passe.
 
+**Mas isso vale só para quem re-especifica a cor.** Descoberto ao inspecionar o resultado da Task 4:
+os botões `variant="outline"` dos cards Free e Pro ficaram com texto `oklch(0.962 0 0)` sobre fundo
+`oklab(0.92 … / 0.3)` — contraste ~1:1, rótulo invisível.
+
+A causa não é a variante `dark:` (foi a minha primeira hipótese, e está errada). É que **`light-dark()`
+resolve no ponto onde a declaração é especificada, não em cada descendente que herda.** O
+`text-foreground` é aplicado uma única vez no `body` (`global.css`), que está fora da laje e portanto
+sob `color-scheme: dark`; ali ele resolve para o ramo escuro — quase branco — e esse valor **concreto**
+herda pra dentro da laje. O `outline` do shadcn não define cor de texto em repouso, então herda o
+branco e a laje não tem como alcançá-lo. A prova é o hover: `hover:text-accent-foreground`
+re-especifica `color`, e o rótulo aparece.
+
+A correção é re-especificar a cor na própria fronteira, para o `light-dark()` resolver ali dentro:
+
+```css
+.light {
+  color-scheme: light;
+  color: var(--foreground); /* re-resolve aqui: sem isso, descendentes herdam o valor já resolvido em dark */
+}
+```
+
+Escolhido em vez de remendar os dois botões em `pricing.tsx` porque o defeito é da fronteira, não dos
+botões: **qualquer** elemento que dependa de cor herdada dentro da laje quebra igual, e os botões só
+foram os primeiros a aparecer.
+
+**Armadilha adjacente, deliberadamente não corrigida aqui:** o dark mode é por classe
+(`global.css:4`, `@custom-variant dark (&:is(.dark *))`), então as utilities `dark:` continuam
+casando dentro da laje. Hoje isso não quebra nada por coincidência — os ramos claros de `--border` e
+`--input` são idênticos byte a byte. Se algum dia forem desacoplados, os `dark:bg-input/30` e
+`dark:border-input` do `outline` voltam a pintar valores errados na laje, sem nada que pegue. Mexer
+no `@custom-variant` afeta o app inteiro, não só a landing — fica registrado para decisão própria.
+
 ## Design
 
 ### 1. Sistema
@@ -97,12 +129,18 @@ de tom — o hero já usa `border-b`, então é o padrão da casa, não uma inve
 
 O `<main>` continua `bg-surface-page`, então as seções `page` não precisam declarar nada.
 
-**Consequência obrigatória:** os dois filhos que hoje usam `surface-card` dentro de seções que viram
-`raised` ficariam *abaixo* da própria seção (16.8% sobre 17.5%), invertendo a elevação. Precisam subir
-para `surface-panel`:
+**Consequência obrigatória:** `how-it-works.tsx:49` — os chips `01/02/03` usam `surface-card`
+(16.8%) e ficariam *abaixo* da própria seção (17.5%), invertendo a elevação. Sobem para
+`surface-panel` (19.5%).
 
-- `how-it-works.tsx:49` — chips `01/02/03`
-- `feature-tabs.tsx:96` — `data-[state=inactive]:bg-surface-card` das pills
+`feature-tabs.tsx:96` — as pills inativas também sobem para `surface-panel`, mas **não pelo motivo
+que eu escrevi aqui originalmente**. Achado no review final: elas não sentam na seção. O
+`feature-tabs.tsx:63` envolve tudo num `<Tabs className="rounded-4xl bg-black p-5">`, e o
+`tabs/shell-path.ts` recorta o preenchimento do shell ao painel mais a aba *ativa* — então as pills
+inativas sentam em `#000000`, nunca em `bg-surface-raised`. Nada estava invertido ali: tanto
+`#0f0f0f` quanto `#151515` estão acima do preto. A troca continua defensável (um pouco mais de
+separação contra o preto), mas a justificativa de elevação invertida vale só para os chips.
+A afirmação errada também está na mensagem do commit `e3c30d2`, que não dá para reescrever.
 
 ### 3. Disciplina do crimson
 
