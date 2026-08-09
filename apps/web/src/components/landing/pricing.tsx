@@ -63,7 +63,7 @@ export function Pricing(): JSX.Element {
   const { billing } = copy.pricing;
 
   return (
-    <section className="px-gutter section-y">
+    <section className="light border-y border-surface-line bg-surface-page px-gutter section-y">
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
         <p className="font-mono text-xs uppercase tracking-[0.12em] text-accent-primary">
           {copy.pricing.eyebrow}
