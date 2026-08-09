@@ -1,29 +1,47 @@
+import { Fragment } from "react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { copy } from "./copy";
 
 /**
- * Final CTA band (T10). The one deliberate full-bleed solid-color block on the landing page —
- * everywhere else crimson is an accent, here it's the whole section background, per the design
- * doc's "regra da cor única" ("the CTA crimson band is the intentional exception"). Button uses
- * `bg-primary-foreground` — a fixed light token, not `light-dark`-flipped — so it stays a light
- * "botão branco" chip against the crimson fill in both themes; `text-foreground`/
- * `dark:text-background` keeps the label dark-on-light regardless of scheme.
+ * Renderiza uma linha cujos trechos são indivisíveis: cada `chunk` vai num `whitespace-nowrap`, e o
+ * único espaço quebrável fica ENTRE eles — então o texto fica em 1 linha quando cabe, e quando não
+ * cabe quebra só nos limites dos trechos (nunca no meio de um). Pontos de quebra vêm de `copy` (T10).
+ */
+function BreakableLine({ chunks }: { chunks: readonly string[] }): JSX.Element {
+  return (
+    <>
+      {chunks.map((chunk, i) => (
+        <Fragment key={chunk}>
+          {i > 0 ? " " : null}
+          <span className="whitespace-nowrap">{chunk}</span>
+        </Fragment>
+      ))}
+    </>
+  );
+}
+
+/**
+ * Final CTA (T10) — conteúdo do topo da região de fechamento escura. A tinta (`bg-surface-ink`) e o
+ * grain animado NÃO vivem aqui: são do container compartilhado em `landingPage` que envolve a CTA e o
+ * footer, pra o grain ser um campo único no fundo dos dois (espírito Mastra). Aqui fica só o conteúdo
+ * transparente por cima: título, subtítulo e o botão crimson (variante default do `Button` — o único
+ * crimson que sobra, já que o antigo bloco crimson full-bleed virou tinta escura). Título e subtítulo
+ * usam `BreakableLine` (sem `max-w` os prendendo) pra ficarem em 1 linha, quebrando só no ponto
+ * definido em `copy.cta` quando a viewport é estreita. `px-6` só pro texto não colar na borda.
  */
 export function CtaBand(): JSX.Element {
   return (
-    <section className="bg-accent-primary px-gutter py-20 text-primary-foreground md:py-28">
-      <div className="mx-auto flex max-w-2xl flex-col items-center gap-6 text-center">
-        <h2 className="text-4xl font-semibold leading-[1.1] tracking-[-0.03em] sm:text-5xl">
-          {copy.cta.title}
+    <section className="py-20 text-center md:py-28">
+      <div className="mx-auto flex flex-col items-center gap-6 px-6">
+        <h2 className="text-4xl font-semibold leading-[1.1] tracking-[-0.03em] text-surface-ink-foreground sm:text-5xl">
+          <BreakableLine chunks={copy.cta.title} />
         </h2>
-        <p className="max-w-lg text-lg text-primary-foreground/80">{copy.cta.subtitle}</p>
-        <Button
-          asChild
-          size="lg"
-          className="bg-primary-foreground text-foreground hover:bg-primary-foreground/90 dark:text-background"
-        >
+        <p className="text-lg text-surface-ink-muted">
+          <BreakableLine chunks={copy.cta.subtitle} />
+        </p>
+        <Button asChild size="lg">
           <Link to="/login">{copy.cta.button}</Link>
         </Button>
       </div>

@@ -89,6 +89,12 @@
     oklch(90% 0.004 286.3),
     oklch(24% 0 0)
   ); /* hairline sólida, dark = #202020 (substitui os border-*-foreground/10) */
+  /* tinta sempre-escura (CTA/footer): o grain (blend screen) só lê bem sobre superfície escura, então
+     NÃO é light-dark — fica dark nos dois temas (como o antigo bloco crimson era crimson nos dois). */
+  --surface-ink: oklch(14.5% 0 0); /* #0a0a0a, mesmo preto neutro da page dark */
+  --surface-ink-foreground: oklch(96.2% 0 0); /* texto claro sobre a tinta */
+  --surface-ink-muted: oklch(70% 0.01 286); /* texto secundário sobre a tinta */
+  --surface-ink-line: oklch(100% 0 0 / 10%); /* hairline claro sutil sobre a tinta escura */
   --text-secondary: light-dark(oklch(38% 0.01 286), oklch(80% 0.01 286));
   --accent-hover: oklch(54% 0.222 17.6);
   --accent-subtle: color-mix(in oklch, var(--primary) 10%, transparent);
@@ -169,6 +175,10 @@
   --color-surface-hover: var(--surface-hover);
   --color-surface-header: var(--surface-header);
   --color-surface-line: var(--surface-line);
+  --color-surface-ink: var(--surface-ink);
+  --color-surface-ink-foreground: var(--surface-ink-foreground);
+  --color-surface-ink-muted: var(--surface-ink-muted);
+  --color-surface-ink-line: var(--surface-ink-line);
   --color-content-secondary: var(--text-secondary);
   --color-accent-primary: var(--primary);
   --color-accent-hover: var(--accent-hover);

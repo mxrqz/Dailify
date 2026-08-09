@@ -91,6 +91,8 @@ export const copy = {
   },
 
   howItWorks: {
+    eyebrow: "// COMO FUNCIONA",
+    title: "Do jeito mais simples possível",
     steps: [
       {
         step: "01",
@@ -112,7 +114,17 @@ export const copy = {
   },
 
   pricing: {
-    tagline: "Preço simples, sem letra miúda",
+    eyebrow: "// PREÇOS",
+    title: "Preço simples, sem letra miúda",
+    billing: {
+      monthly: "Mensal",
+      yearly: "Anual",
+      save: "2 meses grátis",
+      perMonth: "/mês",
+      perYear: "/ano",
+    },
+    freePrice: "Grátis",
+    freeNote: "pra sempre",
     plans: {
       free: {
         name: "Free",
@@ -134,8 +146,11 @@ export const copy = {
   },
 
   cta: {
-    title: "Pronto pra projetar seu dia?",
-    subtitle: "Leva menos de um minuto pra criar sua conta e organizar sua primeira tarefa.",
+    // Cada item é um trecho indivisível (renderizado em whitespace-nowrap): a quebra de linha só
+    // acontece ENTRE trechos, e só quando não cabe em 1 linha. Editar aqui = mudar onde a quebra cai.
+    // Título: quebra (se houver) obrigatoriamente antes de "seu dia".
+    title: ["Comece a organizar", "seu dia hoje"],
+    subtitle: ["Leva menos de um minuto pra criar sua conta", "e organizar sua primeira tarefa."],
     button: "Começar — é grátis",
   },
 

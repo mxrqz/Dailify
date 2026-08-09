@@ -4,7 +4,15 @@ import { cn } from "@/lib/utils";
 import { TaskCard } from "../task-card";
 
 /** Um slot da agenda (a nova tarefa em accent). */
-function Slot({ time, title, active }: { time: string; title: string; active?: boolean }): JSX.Element {
+function Slot({
+  time,
+  title,
+  active,
+}: {
+  time: string;
+  title: string;
+  active?: boolean;
+}): JSX.Element {
   return (
     <div className="flex items-center gap-3">
       <span className="w-11 shrink-0 text-right font-mono text-2xs text-muted-foreground">

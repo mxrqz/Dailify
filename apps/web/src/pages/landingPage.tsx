@@ -6,6 +6,7 @@ import { HowItWorks } from "@/components/landing/how-it-works";
 import { Pricing } from "@/components/landing/pricing";
 import { CtaBand } from "@/components/landing/cta";
 import { SiteFooter } from "@/components/landing/site-footer";
+import { Grain } from "@/components/landing/grain";
 
 export default function LandingPage() {
   return (
@@ -28,9 +29,17 @@ export default function LandingPage() {
           <Pricing />
         </div>
 
-        <CtaBand />
+        {/* Fechamento: container escuro full-bleed com um grain animado ÚNICO no fundo dos dois */}
+        <div className="relative overflow-hidden bg-surface-ink">
+          <Grain preset="aurora" />
+          <div className="relative z-10">
+            <CtaBand />
 
-        <SiteFooter />
+            <div className="w-full px-5">
+              <SiteFooter />
+            </div>
+          </div>
+        </div>
       </div>
     </main>
   );

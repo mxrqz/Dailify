@@ -21,6 +21,7 @@ import { toast } from "sonner";
 import { Link } from "react-router-dom";
 import Header from "@/components/header";
 import { PLAN_ID } from "@/consts/conts";
+import { PLAN_PRICING } from "@/consts/pricing";
 import { checkout } from "@/functions/api";
 import { PLAN_PERMISSIONS } from "@dailify/shared";
 import { useAuth } from "@clerk/clerk-react";
@@ -52,9 +53,7 @@ export default function PremiumPage() {
       id: "pro",
       name: "Pro",
       description: "Produtividade avançada sem IA",
-      monthlyPrice: "R$ 9,90",
-      yearlyPrice: "R$ 99,90",
-      yearlyDiscount: "Economize R$ 19,80",
+      pricing: PLAN_PRICING.pro,
       features: [
         `Limite de ${proMonthlyLimit} tarefas por mês`,
         "Tarefas recorrentes",
@@ -72,9 +71,7 @@ export default function PremiumPage() {
       id: "pro+ai",
       name: "Pro + IA",
       description: "Automação inteligente com IA",
-      monthlyPrice: "R$ 19,90",
-      yearlyPrice: "R$ 199,90",
-      yearlyDiscount: "Economize R$ 38,80",
+      pricing: PLAN_PRICING["pro+ai"],
       features: [
         "Tudo do plano Pro",
         "Criar tarefas por voz",
@@ -157,7 +154,7 @@ export default function PremiumPage() {
                   variant="outline"
                   className="ml-2 bg-green-100 text-green-800 border-green-200"
                 >
-                  -15%
+                  -17%
                 </Badge>
               </Button>
             </div>
@@ -196,7 +193,7 @@ export default function PremiumPage() {
                   <div className="mt-4">
                     <div className="flex items-end">
                       <span className="text-3xl font-bold">
-                        {billingCycle === "monthly" ? plan.monthlyPrice : plan.yearlyPrice}
+                        {billingCycle === "monthly" ? plan.pricing.monthly : plan.pricing.yearly}
                       </span>
                       <span className="text-muted-foreground ml-2">
                         /{billingCycle === "monthly" ? "mês" : "ano"}
@@ -205,7 +202,7 @@ export default function PremiumPage() {
 
                     {billingCycle === "yearly" && (
                       <p className="text-sm text-green-600 dark:text-green-400 mt-1">
-                        {plan.yearlyDiscount}
+                        {plan.pricing.yearlySavings}
                       </p>
                     )}
                   </div>
