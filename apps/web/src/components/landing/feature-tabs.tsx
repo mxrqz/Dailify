@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { copy } from "./copy";
 import { Grain } from "./grain";
 import { DayAppWindow } from "./mocks/day-app-window";
+import { TaskDetailSheet } from "./mocks/task-detail-sheet";
 import { TabScene } from "./tab-scene";
 
 type TabKey = keyof typeof copy.features.tabs;
@@ -267,8 +268,11 @@ function TabPanelBody({ tabKey, reduce }: { tabKey: TabKey; reduce: boolean }): 
 
   return tabKey === "day" ? (
     <TabScene title={tabCopy.title} blurb={tabCopy.blurb}>
-      {/* day-view app window: 16:9, anchored bottom-right, ~33% off the right edge */}
-      <div className="absolute bottom-0 right-[-33%] w-full">
+      <div className="absolute bottom-0 left-16 h-3/5 w-1/2">
+        <TaskDetailSheet />
+      </div>
+
+      <div className="absolute bottom-0 -right-5 w-1/2">
         <DayAppWindow />
       </div>
     </TabScene>
