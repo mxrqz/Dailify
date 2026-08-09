@@ -56,12 +56,12 @@ export function VoiceAppWindow({
           <div className="flex size-9 shrink-0 items-center justify-center rounded-full bg-accent-primary shadow-[0_0_16px_var(--accent-glow)]">
             <Mic className="size-4 text-white" aria-hidden="true" />
           </div>
-          <div className="flex h-8 flex-1 items-end justify-between" aria-hidden="true">
+          <div className="flex h-8 flex-1 items-center justify-between" aria-hidden="true">
             {WAVE_HEIGHTS.map((height, index) => (
               <motion.span
                 key={index}
                 className="w-0.5 rounded-full bg-accent-primary"
-                style={{ height, transformOrigin: "bottom" }}
+                style={{ height, transformOrigin: "center" }}
                 animate={reduce ? undefined : { scaleY: [1, 1.7, 1] }}
                 transition={
                   reduce
