@@ -623,6 +623,16 @@ de cor continua existindo (o rodízio ainda se vê), só não usa mais o acento:
                 <span className="rounded-full bg-surface-hover px-1.5 py-0.5 text-2xs normal-case text-foreground">
 ```
 
+`pricing.tsx:118` — o badge `RECOMENDADO` também perde o par `bg-accent-subtle` /
+`text-accent-primary`. Ele é rótulo, não ação nem estado ativo, e a regra vale pra ele igual:
+
+```tsx
+                <span className="rounded-full bg-surface-hover px-2 py-0.5 font-mono text-2xs uppercase tracking-[0.04em] text-foreground">
+```
+
+O card recomendado continua se destacando pela borda crimson (`:110`) e pelo botão — o badge em
+neutro segue legível e o cartão não perde o destaque.
+
 Manter intocados nesse arquivo: `:84` (pill ativa do toggle — estado ativo), `:110`
 (`border-accent-primary` do card recomendado — alvo da ação) e o botão Assinar Pro+AI.
 
