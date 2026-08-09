@@ -41,7 +41,7 @@
   --canvas: light-dark(oklch(96.7% 0.001 286.4), oklch(21% 0.006 285.9));
 
   /* semantic status */
-  --success: light-dark(oklch(72.3% 0.19 149.6), oklch(69.6% 0.17 149.6));
+  --success: light-dark(oklch(52% 0.15 149.6), oklch(69.6% 0.17 149.6));
   --success-foreground: light-dark(oklch(98.5% 0 0), oklch(14.7% 0.004 49.3));
   --premium: light-dark(oklch(55.8% 0.24 302.3), oklch(62% 0.23 303));
   --premium-foreground: oklch(98.5% 0 0);
@@ -80,7 +80,7 @@
   --surface-raised: light-dark(
     oklch(98% 0 0),
     oklch(17.5% 0 0)
-  ); /* dark = degrau de SEÇÃO; cards em cima usam surface-panel (19.5%) */
+  ); /* dark = #101010, degrau de SEÇÃO; cards em cima usam surface-panel */
   --surface-hover: light-dark(
     oklch(96.8% 0.001 286.4),
     oklch(22.5% 0 0)
@@ -115,7 +115,10 @@
 
 /* Contraparte do bridge acima: inverte um subtree pro tema claro dentro de uma página dark
    (a laje de preços). Como os tokens são light-dark() resolvidos no ponto de uso, texto, bordas
-   e superfícies do subtree flipam junto — exceto --surface-ink, que é sempre escuro por projeto. */
+   e superfícies do subtree flipam junto — exceto --surface-ink, que é sempre escuro por projeto.
+   Atenção: `.light` é escopado ao DOM, então um portal Radix (Tooltip, Dialog) aberto de dentro da
+   laje monta em `document.body`, fora do escopo, e renderiza escuro — hoje não há nenhum componente
+   assim na laje, mas o próximo baseado em portal precisa levar isso em conta. */
 .light {
   color-scheme: light;
   /* re-resolve aqui: sem isso, descendentes herdam o valor já resolvido em dark (color-scheme

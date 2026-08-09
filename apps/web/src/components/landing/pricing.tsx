@@ -55,8 +55,9 @@ type Cycle = "monthly" | "yearly";
  * sem número digitado à mão em dois lugares. Free = "Grátis"; Pro/Pro+AI mostram
  * mensal/anual conforme o toggle, com a economia do anual em `text-success`. Crimson fica
  * reservado à borda + leve glow do card recomendado (Pro+AI, `border-accent-primary`) e ao botão
- * "Assinar Pro+AI"; o badge "Recomendado" é neutro (`bg-surface-hover`/`text-foreground`), seguindo
- * a regra de uma-cor-só. Cards limpos, sem cena bento — o contraste com a seção rica é proposital.
+ * "Assinar Pro+AI"; o badge "Recomendado" é um label mono neutro (`text-muted-foreground`, sem
+ * pill/fundo), seguindo a regra de uma-cor-só. Cards limpos, sem cena bento — o contraste com a
+ * seção rica é proposital.
  */
 export function Pricing(): JSX.Element {
   const reduce = useReducedMotion();
@@ -88,9 +89,7 @@ export function Pricing(): JSX.Element {
             >
               {c === "monthly" ? billing.monthly : billing.yearly}
               {c === "yearly" && cycle !== "yearly" && (
-                <span className="rounded-full bg-surface-hover px-1.5 py-0.5 text-2xs normal-case text-foreground">
-                  {billing.save}
-                </span>
+                <span className="text-2xs normal-case text-muted-foreground">{billing.save}</span>
               )}
             </button>
           ))}
@@ -116,7 +115,7 @@ export function Pricing(): JSX.Element {
                 {plan.copy.name}
               </h3>
               {plan.recommended && (
-                <span className="rounded-full bg-surface-hover px-2 py-0.5 font-mono text-2xs uppercase tracking-[0.04em] text-foreground">
+                <span className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
                   {copy.pricing.recommendedBadge}
                 </span>
               )}

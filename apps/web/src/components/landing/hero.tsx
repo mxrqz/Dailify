@@ -21,7 +21,7 @@ export function Hero(): JSX.Element {
   const activeWord = useCycle(cycleCount, 7000, !reduce);
 
   return (
-    <section className="flex w-full items-center px-gutter pt-20 border-b h-[80dvh]">
+    <section className="flex w-full items-center px-gutter pt-20 h-[80dvh]">
       <div className="mr-5 flex h-full w-[65ch] flex-col justify-center gap-6 pb-10 md:gap-8">
         <p className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
           {copy.hero.commandHint}

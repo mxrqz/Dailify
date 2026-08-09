@@ -26,8 +26,8 @@ function BreakableLine({ chunks }: { chunks: readonly string[] }): JSX.Element {
  * Final CTA (T10) — conteúdo do topo da região de fechamento escura. A tinta (`bg-surface-ink`) e o
  * grain animado NÃO vivem aqui: são do container compartilhado em `landingPage` que envolve a CTA e o
  * footer, pra o grain ser um campo único no fundo dos dois (espírito Mastra). Aqui fica só o conteúdo
- * transparente por cima: título, subtítulo e o botão crimson (variante default do `Button` — o único
- * crimson que sobra, já que o antigo bloco crimson full-bleed virou tinta escura). Título e subtítulo
+ * transparente por cima: título, subtítulo e o botão crimson (variante default do `Button`) — um dos
+ * seis usos de acento que a página permite (ação/estado ativo). Título e subtítulo
  * usam `BreakableLine` (sem `max-w` os prendendo) pra ficarem em 1 linha, quebrando só no ponto
  * definido em `copy.cta` quando a viewport é estreita. `px-6` só pro texto não colar na borda.
  */
