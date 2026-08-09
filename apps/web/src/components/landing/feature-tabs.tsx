@@ -54,7 +54,7 @@ export function FeatureTabs(): JSX.Element {
   const { ref: shellRef, geom } = useShellGeometry(active);
 
   return (
-    <section className="w-full px-gutter py-20 md:py-28">
+    <section className="w-full px-gutter section-y">
       <Tabs
         value={active}
         onValueChange={(value) => {

@@ -33,7 +33,7 @@ function BreakableLine({ chunks }: { chunks: readonly string[] }): JSX.Element {
  */
 export function CtaBand(): JSX.Element {
   return (
-    <section className="py-20 text-center md:py-28">
+    <section className="section-y text-center">
       <div className="mx-auto flex flex-col items-center gap-6 px-6">
         <h2 className="text-4xl font-semibold leading-[1.1] tracking-[-0.03em] text-surface-ink-foreground sm:text-5xl">
           <BreakableLine chunks={copy.cta.title} />

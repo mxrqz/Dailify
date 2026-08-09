@@ -21,7 +21,7 @@ export function HowItWorks(): JSX.Element {
   const pointLeft = useTransform(scrollYProgress, [0.1, 0.9], ["0%", "100%"]);
 
   return (
-    <section className="px-gutter py-20 md:py-28">
+    <section className="px-gutter section-y">
       <div className="mx-auto mb-14 flex max-w-2xl flex-col items-center gap-4 text-center">
         <p className="font-mono text-xs uppercase tracking-[0.12em] text-accent-primary">
           {copy.howItWorks.eyebrow}

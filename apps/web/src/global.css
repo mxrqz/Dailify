@@ -246,6 +246,18 @@
 }
 
 /*
+ * Ritmo vertical de seção. Estava hardcoded como `py-20 md:py-28` nos seis arquivos de seção da
+ * landing; centralizar aqui torna o respiro da página inteira ajustável numa linha. O valor é o
+ * mesmo de antes — este utility é refator, não mudança de layout.
+ */
+@utility section-y {
+  padding-block: --spacing(20);
+  @variant md {
+    padding-block: --spacing(28);
+  }
+}
+
+/*
  * Plinto: caixa recuada de `--skirt` cuja base alarga até as bordas do pai, por duas saias côncavas
  * (máscara radial de mesmo raio que o recuo — é o que faz a ponta cair exatamente na borda) nos
  * cantos de baixo. Só a FORMA mora aqui: cor e padding ficam com as utilities de quem usa, e as

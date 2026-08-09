@@ -63,7 +63,7 @@ export function FeatureBento(): JSX.Element {
   };
 
   return (
-    <section className="px-gutter py-20 md:py-28">
+    <section className="px-gutter section-y">
       <motion.div
         ref={ref}
         variants={containerVariants}
