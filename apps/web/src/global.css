@@ -246,9 +246,9 @@
 }
 
 /*
- * Ritmo vertical de seção. Estava hardcoded como `py-20 md:py-28` nos seis arquivos de seção da
- * landing; centralizar aqui torna o respiro da página inteira ajustável numa linha. O valor é o
- * mesmo de antes — este utility é refator, não mudança de layout.
+ * Ritmo vertical de seção. Estava hardcoded como `py-20 md:py-28` em cinco das seis seções da
+ * landing — o hero é a exceção, com `pt-20` e altura fixa. Centralizar aqui torna o respiro da
+ * página inteira ajustável numa linha. O valor é o mesmo de antes: refator, não mudança de layout.
  */
 @utility section-y {
   padding-block: --spacing(20);
