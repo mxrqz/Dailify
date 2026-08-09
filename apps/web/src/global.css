@@ -118,6 +118,9 @@
    e superfícies do subtree flipam junto — exceto --surface-ink, que é sempre escuro por projeto. */
 .light {
   color-scheme: light;
+  /* re-resolve aqui: sem isso, descendentes herdam o valor já resolvido em dark (color-scheme
+     não re-resolve light-dark() em cada descendente, só onde a propriedade é especificada). */
+  color: var(--foreground);
 }
 
 @theme inline {
