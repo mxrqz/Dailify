@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { buildShellPath } from "./feature-tabs";
+import { buildShellPath } from "./tabs/shell-path";
 
 describe("buildShellPath", () => {
   it("reproduces mastra.ai's own computed outline for a flush-left active tab", () => {
