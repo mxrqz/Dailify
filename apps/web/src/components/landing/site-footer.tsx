@@ -1,20 +1,27 @@
 import { Link } from "react-router-dom";
 
 import { copy } from "./copy";
-import { useFooterFrameGeometry } from "./footer-frame";
 
+/**
+ * Plinto preto do fechamento: uma caixa normal recuada de `--skirt`, com duas "saias" côncavas nos
+ * cantos de baixo que alargam a base até as bordas da página. Antes a forma inteira era um
+ * `clip-path` em px medido por ResizeObserver (`footer-frame.ts`) — mas ela não depende da largura,
+ * então virou CSS puro e o conteúdo voltou a ser um filho normal, com padding normal. `--skirt` é a
+ * única fonte do recuo: alimenta a margem, o tamanho das saias e o raio das máscaras.
+ */
 export function SiteFooter(): JSX.Element {
-  const { ref, geom } = useFooterFrameGeometry();
-
   return (
-    <footer ref={ref} className="relative p-5">
+    <footer className="relative mx-(--skirt) rounded-t-panel bg-black p-5 [--skirt:1.75rem]">
       <div
         aria-hidden="true"
-        className="absolute inset-0 bg-black"
-        style={geom ? { clipPath: `path('${geom.d}')` } : undefined}
+        className="absolute bottom-0 right-full size-(--skirt) bg-black mask-[radial-gradient(circle_at_top_left,transparent_var(--skirt),black_calc(var(--skirt)+0.5px))]"
+      />
+      <div
+        aria-hidden="true"
+        className="absolute bottom-0 left-full size-(--skirt) bg-black mask-[radial-gradient(circle_at_top_right,transparent_var(--skirt),black_calc(var(--skirt)+0.5px))]"
       />
 
-      <div className="relative z-10 rounded-panel border border-surface-ink-line bg-surface-ink px-6 py-12 md:px-10 md:py-14">
+      <div className="rounded-panel border border-surface-ink-line bg-surface-ink px-6 py-12 md:px-10 md:py-14">
         <div className="grid gap-10 border-b border-surface-ink-line pb-10 md:grid-cols-[1.5fr_1fr_1fr] md:gap-8">
           <div className="flex flex-col gap-3">
             <img
