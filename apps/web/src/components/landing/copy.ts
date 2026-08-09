@@ -64,25 +64,25 @@ export const copy = {
   },
 
   bento: {
-    calendar: {
-      title: "Calendário",
-      description: "Sua vida num relance — hoje sempre em destaque.",
+    duracao: {
+      title: "Duração",
+      description: "Cada tarefa ocupa um bloco real de tempo — dá pra ver o dia caber.",
     },
-    timeSlots: {
-      title: "Tarefas por horário",
-      description: "O dia como uma linha do tempo cronometrada, hora a hora.",
+    comeceGratis: {
+      title: "Comece grátis",
+      description: "Organize seu dia sem pagar nada e sem cartão de crédito.",
     },
     priority: {
       title: "Prioridade",
       description: "O que importa mais sobe pro topo automaticamente.",
     },
-    recurrence: {
-      title: "Recorrência",
-      description: "Tarefas que voltam sozinhas, no seu ritmo.",
+    concluido: {
+      title: "Concluído",
+      description: "Marque com um toque e veja o dia avançar.",
     },
-    voice: {
-      title: "Voz (Pro+AI)",
-      description: "Você fala, a IA transforma em tarefa estruturada.",
+    navegador: {
+      title: "No navegador",
+      description: "Abre em qualquer device, nada pra instalar.",
     },
     reminders: {
       title: "Lembretes",

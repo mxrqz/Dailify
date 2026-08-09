@@ -4,25 +4,26 @@ import { motion, useInView, useReducedMotion } from "framer-motion";
 import { cn } from "@/lib/utils";
 
 /**
- * Six original "concept scenes" that visualize TIME for the landing feature bento (Task 7 cell
- * contents). Each is a pure, presentational SVG/CSS composition — crimson (`accent-primary` /
- * `--accent-glow`) + neutrals (`muted-foreground`, `border`, `surface-card`) only, no second vivid
- * color. Each accepts an optional `className`, fills its container, and gates EVERY animation
- * behind `useReducedMotion()`: when reduced, the scene renders its final static state (no sweep,
- * orbit, waveform pulse, or "agora" pulse).
+ * Six "concept scenes" for the landing feature bento (Task 7 cell contents) — the DETAILS that make
+ * daily execution good, deliberately distinct from the hero/tabs which own the core views (day,
+ * calendar, recurrence, voice). Each is a pure, presentational SVG/CSS composition — crimson
+ * (`accent-primary` / `--accent-glow`) + neutrals (`muted-foreground`, `border`, `surface-card`)
+ * only, no second vivid color. Each accepts an optional `className`, fills its container, and gates
+ * EVERY animation behind `useReducedMotion()`: when reduced, the scene renders its final static
+ * state (no draw-in, pulse, or sonar).
  *
- * Scenes with `repeat: Infinity` loop drivers (calendar sweep, hours pulse, recurrence orbit,
- * voice waveform/chevrons, reminders bell/sonar) additionally gate those loops on `useInView` of
- * the scene root, so they idle while the bento is scrolled off-screen. Entrance reveals
- * (`whileInView`) are untouched by this — they still fire once, reduced-motion or not.
+ * The three WIDE cells (duration / complete / browser) use a ~5:1 viewBox so their content fills the
+ * ribbon's wide, short boxes; the narrow cells (free / priority / reminders) stay square-ish.
+ * Scenes with `repeat: Infinity` loops (reminders bell/sonar) additionally gate those on `useInView`
+ * so they idle while scrolled off-screen. Entrance reveals (`whileInView`) fire once regardless.
  *
- * Fill/stroke use Tailwind's token-generated `fill-*` / `stroke-*` utilities; gradient stops and
- * glows reference the `--primary` / `--accent-glow` CSS vars directly (tokens, never raw hex).
+ * Fill/stroke use Tailwind's token-generated `fill-*` / `stroke-*` utilities; glows reference the
+ * `--accent-glow` CSS var directly (tokens, never raw hex).
  */
 
 /**
- * Shared entrance wrapper: fades a whole scene in once on scroll. Loops (pulse/sweep/orbit) live on
- * inner elements and are gated separately. `reduce` collapses the fade to an instant final state.
+ * Shared entrance wrapper: fades a whole scene in once on scroll. Loops (pulse/sonar) live on inner
+ * elements and are gated separately. `reduce` collapses the fade to an instant final state.
  */
 function Reveal({
   reduce,
@@ -64,255 +65,145 @@ function SceneFrame({
 }
 
 /* -------------------------------------------------------------------------------------------------
- * SceneCalendar — your month at a glance, today is now.
- * A mini month grid; task ticks fill some days; the "hoje" cell is lit crimson; a soft crimson
- * sheen sweeps across the grid and settles the eye on today.
+ * SceneDuration — every task takes real time. (WIDE cell.)
+ * A horizontal hour ruler with task blocks on it; each block's WIDTH is its duration and the gaps
+ * between them are the free time left in the day. Blocks grow in from the left on entrance.
  * ---------------------------------------------------------------------------------------------- */
 
-const CAL_FIRST_WEEKDAY = 2; // month starts on a Tuesday (Sun = 0)
-const CAL_DAYS = 31;
-const CAL_TODAY = 14;
-const CAL_TASK_COUNTS: Record<number, number> = {
-  2: 1,
-  5: 2,
-  8: 1,
-  11: 3,
-  14: 2,
-  16: 1,
-  19: 2,
-  22: 1,
-  23: 1,
-  27: 3,
-  29: 1,
-};
-const CAL_WEEKDAYS = ["D", "S", "T", "Q", "Q", "S", "S"] as const;
-const CAL_COL_X = (col: number): number => 16 + col * 28;
-const CAL_ROW_Y = (row: number): number => 34 + row * 30;
+const DURATION_HOURS = ["09", "10", "11", "12", "13", "14", "15"] as const;
+const durTickX = (i: number): number => 30 + i * 72;
+const DURATION_BLOCKS = [
+  { x: 30, w: 108, label: 68, accent: true, delay: 0.2 },
+  { x: 174, w: 108, label: 60, accent: false, delay: 0.34 },
+  { x: 318, w: 144, label: 96, accent: false, delay: 0.48 },
+] as const;
 
-export function SceneCalendar({ className }: { className?: string }): JSX.Element {
+export function SceneDuration({ className }: { className?: string }): JSX.Element {
   const reduce = useReducedMotion();
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { amount: 0.2, once: false });
-  const idle = reduce || !inView;
-  const cells = Array.from({ length: 35 }, (_, i) => i - CAL_FIRST_WEEKDAY + 1);
 
   return (
-    <SceneFrame viewBox="0 0 208 192" className={className} containerRef={ref}>
-      <defs>
-        <linearGradient id="cal-sweep" x1="0" y1="0" x2="1" y2="0">
-          <stop offset="0%" stopColor="var(--primary)" stopOpacity="0" />
-          <stop offset="50%" stopColor="var(--primary)" stopOpacity="0.55" />
-          <stop offset="100%" stopColor="var(--primary)" stopOpacity="0" />
-        </linearGradient>
-      </defs>
-
+    <SceneFrame viewBox="0 0 490 100" className={className}>
       <Reveal reduce={reduce}>
-        {CAL_WEEKDAYS.map((wd, col) => (
-          <text
-            key={col}
-            x={CAL_COL_X(col) + 12}
-            y={18}
-            textAnchor="middle"
-            fontSize="8"
-            letterSpacing="0.6"
-            className="fill-muted-foreground font-mono"
-          >
-            {wd}
-          </text>
+        {/* hour ruler */}
+        <line x1={30} y1={74} x2={462} y2={74} className="stroke-border" strokeWidth={1} />
+        {DURATION_HOURS.map((h, i) => (
+          <g key={h + i}>
+            <line
+              x1={durTickX(i)}
+              y1={70}
+              x2={durTickX(i)}
+              y2={78}
+              className="stroke-muted-foreground"
+              strokeWidth={1}
+            />
+            <text
+              x={durTickX(i)}
+              y={92}
+              textAnchor="middle"
+              fontSize="8"
+              letterSpacing="0.5"
+              className="fill-muted-foreground font-mono"
+            >
+              {h}
+            </text>
+          </g>
         ))}
 
-        {cells.map((day, i) => {
-          if (day < 1 || day > CAL_DAYS) return null;
-          const x = CAL_COL_X(i % 7);
-          const y = CAL_ROW_Y(Math.floor(i / 7));
-          const isToday = day === CAL_TODAY;
-          const count = CAL_TASK_COUNTS[day] ?? 0;
-
-          return (
-            <g key={day}>
-              <rect
-                x={x}
-                y={y}
-                width={24}
-                height={22}
-                rx={5}
-                className={cn(
-                  isToday ? "fill-accent-primary stroke-accent-primary" : "fill-none stroke-border",
-                )}
-                strokeWidth={1}
-                style={isToday ? { filter: "drop-shadow(0 0 6px var(--accent-glow))" } : undefined}
-              />
-              <text
-                x={x + 12}
-                y={count > 0 ? y + 10 : y + 13}
-                textAnchor="middle"
-                fontSize="8.5"
-                className={cn(
-                  "font-mono",
-                  isToday
-                    ? "fill-primary-foreground"
-                    : count > 0
-                      ? "fill-foreground"
-                      : "fill-muted-foreground",
-                )}
-              >
-                {day}
-              </text>
-              {count > 0 &&
-                Array.from({ length: count }, (_, k) => (
-                  <circle
-                    key={k}
-                    cx={x + 12 + (k - (count - 1) / 2) * 4.5}
-                    cy={y + 16}
-                    r={1.3}
-                    className={isToday ? "fill-primary-foreground" : "fill-muted-foreground"}
-                  />
-                ))}
-            </g>
-          );
-        })}
+        {/* task blocks — width = duration */}
+        {DURATION_BLOCKS.map((b, i) => (
+          <motion.g
+            key={i}
+            initial={{ opacity: reduce ? 1 : 0, scaleX: reduce ? 1 : 0 }}
+            whileInView={{ opacity: 1, scaleX: 1 }}
+            viewport={{ once: true }}
+            transition={{
+              duration: reduce ? 0 : 0.5,
+              delay: reduce ? 0 : b.delay,
+              ease: "easeOut",
+            }}
+            style={{ transformOrigin: `${b.x}px 45px`, transformBox: "view-box" }}
+          >
+            <rect
+              x={b.x}
+              y={32}
+              width={b.w}
+              height={26}
+              rx={8}
+              className={
+                b.accent
+                  ? "fill-accent-subtle stroke-accent-primary"
+                  : "fill-surface-card stroke-border"
+              }
+              strokeWidth={1}
+              style={b.accent ? { filter: "drop-shadow(0 0 6px var(--accent-glow))" } : undefined}
+            />
+            <rect
+              x={b.x + 12}
+              y={41}
+              width={b.label}
+              height={5}
+              rx={2.5}
+              className={b.accent ? "fill-accent-primary/70" : "fill-muted-foreground/55"}
+            />
+          </motion.g>
+        ))}
       </Reveal>
-
-      {!idle && (
-        <motion.rect
-          x={-24}
-          y={26}
-          width={40}
-          height={158}
-          fill="url(#cal-sweep)"
-          style={{ filter: "blur(1px)" }}
-          animate={{ x: [-24, 192] }}
-          transition={{ duration: 3.4, repeat: Infinity, repeatDelay: 1.4, ease: "easeInOut" }}
-        />
-      )}
     </SceneFrame>
   );
 }
 
 /* -------------------------------------------------------------------------------------------------
- * SceneHours — the day as a timed column.
- * A vertical timeline axis with hour marks; task blocks slotted at their hours; a crimson "agora"
- * line crosses the column and pulses.
+ * SceneFree — start for free. (narrow cell.)
+ * A bold GRÁTIS wordmark over a short checklist whose crimson checks draw themselves in.
  * ---------------------------------------------------------------------------------------------- */
 
-const HOURS_MARKS = ["08", "10", "12", "14", "16", "18"] as const;
-const HOURS_BLOCKS = [
-  { y: 32, h: 24, w: 96, accent: false },
-  { y: 60, h: 16, w: 74, accent: false },
-  { y: 104, h: 30, w: 116, accent: true },
-  { y: 148, h: 18, w: 88, accent: false },
+const FREE_ITEMS = [
+  { y: 92, text: "sem cartão", delay: 0.3 },
+  { y: 120, text: "grátis pra sempre", delay: 0.45 },
 ] as const;
-const HOURS_NOW_Y = 96;
 
-export function SceneHours({ className }: { className?: string }): JSX.Element {
+export function SceneFree({ className }: { className?: string }): JSX.Element {
   const reduce = useReducedMotion();
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { amount: 0.2, once: false });
-  const idle = reduce || !inView;
 
   return (
-    <SceneFrame viewBox="0 0 200 192" className={className} containerRef={ref}>
+    <SceneFrame viewBox="0 0 200 150" className={className}>
       <Reveal reduce={reduce}>
-        {/* axis */}
-        <line x1={44} y1={22} x2={44} y2={182} className="stroke-border" strokeWidth={1} />
-        {HOURS_MARKS.map((mark, i) => {
-          const y = 28 + i * 29;
-          return (
-            <g key={mark}>
-              <line
-                x1={40}
-                y1={y}
-                x2={44}
-                y2={y}
-                className="stroke-muted-foreground"
-                strokeWidth={1}
-              />
-              <text
-                x={34}
-                y={y + 3}
-                textAnchor="end"
-                fontSize="8"
-                letterSpacing="0.4"
-                className="fill-muted-foreground font-mono"
-              >
-                {mark}
-              </text>
-            </g>
-          );
-        })}
-
-        {/* task blocks slotted into their hours */}
-        {HOURS_BLOCKS.map((b, i) => (
-          <motion.g
-            key={i}
-            initial={{ opacity: reduce ? 1 : 0, x: reduce ? 0 : -12 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: reduce ? 0 : 0.5, delay: reduce ? 0 : 0.2 + i * 0.12 }}
-          >
-            <rect
-              x={54}
-              y={b.y}
-              width={b.w}
-              height={b.h}
-              rx={5}
-              className={cn(
-                b.accent
-                  ? "fill-accent-subtle stroke-accent-primary"
-                  : "fill-surface-card stroke-border",
-              )}
-              strokeWidth={1}
+        <text
+          x={100}
+          y={52}
+          textAnchor="middle"
+          fontSize="30"
+          fontWeight={600}
+          letterSpacing="1"
+          className="fill-accent-primary font-mono"
+          style={{ filter: "drop-shadow(0 0 8px var(--accent-glow))" }}
+        >
+          GRÁTIS
+        </text>
+        {FREE_ITEMS.map((it, i) => (
+          <g key={i}>
+            <motion.path
+              d={`M34 ${it.y}l3.4 3.6 6.6-8`}
+              fill="none"
+              className="stroke-accent-primary"
+              strokeWidth={2.2}
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              initial={{ pathLength: reduce ? 1 : 0 }}
+              whileInView={{ pathLength: 1 }}
+              viewport={{ once: true }}
+              transition={{
+                duration: reduce ? 0 : 0.4,
+                delay: reduce ? 0 : it.delay,
+                ease: "easeOut",
+              }}
             />
-            <rect
-              x={54}
-              y={b.y}
-              width={3}
-              height={b.h}
-              className={b.accent ? "fill-accent-primary" : "fill-muted-foreground"}
-            />
-            <rect
-              x={64}
-              y={b.y + b.h / 2 - 2.5}
-              width={b.w - 22}
-              height={5}
-              rx={2.5}
-              className="fill-muted-foreground/50"
-            />
-          </motion.g>
+            <text x={54} y={it.y + 4} fontSize="12" className="fill-muted-foreground">
+              {it.text}
+            </text>
+          </g>
         ))}
       </Reveal>
-
-      {/* "agora" line crossing the column */}
-      <motion.g
-        initial={{ opacity: reduce ? 1 : 0, scaleX: reduce ? 1 : 0 }}
-        whileInView={{ opacity: 1, scaleX: 1 }}
-        viewport={{ once: true }}
-        transition={{ duration: reduce ? 0 : 0.5, delay: reduce ? 0 : 0.7 }}
-        style={{ transformOrigin: "44px 96px", transformBox: "view-box" }}
-      >
-        <motion.line
-          x1={30}
-          y1={HOURS_NOW_Y}
-          x2={190}
-          y2={HOURS_NOW_Y}
-          className="stroke-accent-primary"
-          strokeWidth={1.5}
-          style={{ filter: "drop-shadow(0 0 5px var(--accent-glow))" }}
-          animate={idle ? undefined : { opacity: [0.55, 1, 0.55] }}
-          transition={idle ? undefined : { duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-        />
-        <circle cx={44} cy={HOURS_NOW_Y} r={3.5} className="fill-accent-primary" />
-        <text
-          x={190}
-          y={HOURS_NOW_Y - 5}
-          textAnchor="end"
-          fontSize="8"
-          letterSpacing="0.6"
-          className="fill-accent-primary font-mono"
-        >
-          AGORA
-        </text>
-      </motion.g>
     </SceneFrame>
   );
 }
@@ -412,104 +303,81 @@ export function ScenePriority({ className }: { className?: string }): JSX.Elemen
 }
 
 /* -------------------------------------------------------------------------------------------------
- * SceneRecurrence — it comes back on its own.
- * A dashed loop with a crimson task node orbiting; faint "ghost" repeats trail behind it; mono
- * cadence labels Diário / Semanal / Mensal below, the active one lit crimson.
+ * SceneComplete — one tap and the day moves forward. (WIDE cell.)
+ * A short checklist: the done rows get a crimson check that draws itself in plus a struck-through
+ * title; the last row is still open. Progress you can see.
  * ---------------------------------------------------------------------------------------------- */
 
-const REC_CENTER = { x: 110, y: 84 } as const;
-const REC_RADIUS = 56;
-// Ghost nodes trail the head (top of ring) at widening clockwise offsets, fading out.
-const REC_NODES = [
-  { x: 110, y: 28, r: 6, opacityClass: "fill-accent-primary", head: true },
-  { x: 96, y: 30, r: 5, opacityClass: "fill-accent-primary/50", head: false },
-  { x: 83, y: 35, r: 4.5, opacityClass: "fill-accent-primary/30", head: false },
-  { x: 71, y: 42, r: 4, opacityClass: "fill-accent-primary/16", head: false },
-] as const;
-const REC_LABELS = [
-  { text: "DIÁRIO", x: 55, active: false },
-  { text: "SEMANAL", x: 110, active: true },
-  { text: "MENSAL", x: 165, active: false },
+const COMPLETE_ROWS = [
+  { y: 12, done: true, w: 300, delay: 0.2 },
+  { y: 44, done: true, w: 360, delay: 0.38 },
+  { y: 76, done: false, w: 250, delay: 0.56 },
 ] as const;
 
-export function SceneRecurrence({ className }: { className?: string }): JSX.Element {
+export function SceneComplete({ className }: { className?: string }): JSX.Element {
   const reduce = useReducedMotion();
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { amount: 0.2, once: false });
-  const idle = reduce || !inView;
 
   return (
-    <SceneFrame viewBox="0 0 220 196" className={className} containerRef={ref}>
+    <SceneFrame viewBox="0 0 490 100" className={className}>
       <Reveal reduce={reduce}>
-        {/* the loop */}
-        <circle
-          cx={REC_CENTER.x}
-          cy={REC_CENTER.y}
-          r={REC_RADIUS}
-          fill="none"
-          className="stroke-border"
-          strokeWidth={1.5}
-          strokeDasharray="2 6"
-          strokeLinecap="round"
-        />
-        {/* recurrence glyph at the center */}
-        <path
-          d="M104 84a6 6 0 1 1 1.8 4.3"
-          fill="none"
-          className="stroke-muted-foreground"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-        />
-        <path
-          d="M104 78v6h6"
-          fill="none"
-          className="stroke-muted-foreground"
-          strokeWidth={1.5}
-          strokeLinecap="round"
-          strokeLinejoin="round"
-        />
-
-        {/* orbiting node + trailing ghosts */}
-        <motion.g
-          style={{ transformOrigin: "110px 84px", transformBox: "view-box" }}
-          animate={idle ? undefined : { rotate: 360 }}
-          transition={idle ? undefined : { duration: 14, repeat: Infinity, ease: "linear" }}
-        >
-          {REC_NODES.map((n, i) => (
-            <circle
-              key={i}
-              cx={n.x}
-              cy={n.y}
-              r={n.r}
-              className={n.opacityClass}
-              style={n.head ? { filter: "drop-shadow(0 0 5px var(--accent-glow))" } : undefined}
+        {COMPLETE_ROWS.map((r, i) => (
+          <g key={i}>
+            {/* checkbox */}
+            <rect
+              x={24}
+              y={r.y}
+              width={18}
+              height={18}
+              rx={5}
+              className={r.done ? "fill-accent-primary" : "fill-surface-card stroke-border"}
+              strokeWidth={1}
+              style={r.done ? { filter: "drop-shadow(0 0 5px var(--accent-glow))" } : undefined}
             />
-          ))}
-        </motion.g>
-
-        {/* cadence labels */}
-        {REC_LABELS.map((l) => (
-          <g key={l.text}>
-            <text
-              x={l.x}
-              y={180}
-              textAnchor="middle"
-              fontSize="8.5"
-              letterSpacing="0.6"
-              className={
-                l.active ? "fill-accent-primary font-mono" : "fill-muted-foreground font-mono"
-              }
-            >
-              {l.text}
-            </text>
-            {l.active && (
-              <rect
-                x={l.x - 12}
-                y={185}
-                width={24}
-                height={2}
-                rx={1}
-                className="fill-accent-primary"
+            {r.done && (
+              <motion.path
+                d={`M28.5 ${r.y + 9.5}l3.4 3.6 6.6-7.8`}
+                fill="none"
+                className="stroke-primary-foreground"
+                strokeWidth={2}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                initial={{ pathLength: reduce ? 1 : 0 }}
+                whileInView={{ pathLength: 1 }}
+                viewport={{ once: true }}
+                transition={{
+                  duration: reduce ? 0 : 0.4,
+                  delay: reduce ? 0 : r.delay,
+                  ease: "easeOut",
+                }}
+              />
+            )}
+            {/* title line */}
+            <rect
+              x={54}
+              y={r.y + 6}
+              width={r.w}
+              height={6}
+              rx={3}
+              className={r.done ? "fill-muted-foreground/35" : "fill-muted-foreground/70"}
+            />
+            {/* strike-through on done rows */}
+            {r.done && (
+              <motion.rect
+                x={54}
+                y={r.y + 8.5}
+                width={r.w}
+                height={1.5}
+                rx={0.75}
+                className="fill-accent-primary/60"
+                style={{ transformBox: "fill-box", transformOrigin: "left" }}
+                initial={{ scaleX: reduce ? 1 : 0 }}
+                whileInView={{ scaleX: 1 }}
+                viewport={{ once: true }}
+                transition={{
+                  duration: reduce ? 0 : 0.4,
+                  delay: reduce ? 0 : r.delay + 0.15,
+                  ease: "easeOut",
+                }}
               />
             )}
           </g>
@@ -520,138 +388,121 @@ export function SceneRecurrence({ className }: { className?: string }): JSX.Elem
 }
 
 /* -------------------------------------------------------------------------------------------------
- * SceneVoice — you speak, it becomes tasks. (HERO scene, gets the 2× cell.)
- * A crimson waveform on the left resolves, left→right, into two structured task rows: the row
- * "title" lines transcribe in (grow width from the left), chevrons flow toward them.
+ * SceneBrowser — runs in the browser, on any device. (WIDE cell.)
+ * A wide browser window (traffic-light dots + a dailify.app address bar) with a mini task list
+ * inside, and a phone peeking past its right edge — same app, nothing to install.
  * ---------------------------------------------------------------------------------------------- */
 
-const VOICE_BARS = [
-  6, 11, 16, 23, 14, 29, 20, 35, 24, 41, 30, 45, 34, 41, 26, 37, 22, 31, 16, 23, 11, 15,
-] as const;
-const VOICE_ROWS = [
-  { y: 40, title: 66, sub: 40, tag: "09:00" },
-  { y: 96, title: 52, sub: 32, tag: "AMANHÃ" },
+const BROWSER_LINES = [
+  { y: 52, w: 150, accent: true },
+  { y: 68, w: 120, accent: false },
+  { y: 84, w: 134, accent: false },
 ] as const;
 
-export function SceneVoice({ className }: { className?: string }): JSX.Element {
+export function SceneBrowser({ className }: { className?: string }): JSX.Element {
   const reduce = useReducedMotion();
-  const ref = useRef<HTMLDivElement>(null);
-  const inView = useInView(ref, { amount: 0.2, once: false });
-  const idle = reduce || !inView;
 
   return (
-    <SceneFrame viewBox="0 0 340 170" className={className} containerRef={ref}>
-      {/* waveform — pulses in a listening pattern */}
+    <SceneFrame viewBox="0 0 490 100" className={className}>
       <Reveal reduce={reduce}>
-        <g style={{ filter: "drop-shadow(0 0 5px var(--accent-glow))" }}>
-          {VOICE_BARS.map((h, i) => (
-            <motion.rect
-              key={i}
-              x={18 + i * 6}
-              y={85 - h / 2}
-              width={3.4}
-              height={h}
-              rx={1.7}
-              className="fill-accent-primary"
-              style={{ transformBox: "fill-box", transformOrigin: "center" }}
-              animate={idle ? undefined : { scaleY: [0.45, 1.1, 0.45] }}
-              transition={
-                idle
-                  ? undefined
-                  : {
-                      duration: 1.5,
-                      repeat: Infinity,
-                      repeatType: "mirror",
-                      ease: "easeInOut",
-                      delay: i * 0.05,
-                    }
-              }
-            />
-          ))}
-        </g>
-
-        {/* flow chevrons: waveform → tasks */}
+        {/* browser window */}
+        <rect
+          x={22}
+          y={8}
+          width={396}
+          height={84}
+          rx={10}
+          className="fill-surface-card stroke-border"
+          strokeWidth={1}
+        />
+        {/* chrome: traffic lights */}
         {[0, 1, 2].map((i) => (
-          <motion.path
+          <circle
             key={i}
-            d={`M${160 + i * 9} 79l6 6-6 6`}
-            fill="none"
-            className="stroke-muted-foreground"
-            strokeWidth={1.6}
-            strokeLinecap="round"
-            strokeLinejoin="round"
-            animate={idle ? undefined : { opacity: [0.25, 1, 0.25] }}
-            transition={
-              idle
-                ? undefined
-                : { duration: 1.4, repeat: Infinity, ease: "easeInOut", delay: i * 0.18 }
-            }
+            cx={40 + i * 12}
+            cy={22}
+            r={3.5}
+            className={i === 0 ? "fill-accent-primary" : "fill-muted-foreground/45"}
           />
         ))}
-
-        {/* structured task rows */}
-        {VOICE_ROWS.map((row, i) => (
-          <motion.g
-            key={i}
-            initial={{ opacity: reduce ? 1 : 0, x: reduce ? 0 : 10 }}
-            whileInView={{ opacity: 1, x: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: reduce ? 0 : 0.5, delay: reduce ? 0 : 0.2 + i * 0.18 }}
-          >
-            <rect
-              x={196}
-              y={row.y}
-              width={130}
-              height={46}
-              rx={10}
-              className="fill-surface-card stroke-border"
-              strokeWidth={1}
-            />
+        {/* address bar */}
+        <rect
+          x={92}
+          y={15}
+          width={200}
+          height={14}
+          rx={7}
+          className="fill-background stroke-border"
+          strokeWidth={1}
+        />
+        <text
+          x={104}
+          y={25}
+          fontSize="8.5"
+          letterSpacing="0.4"
+          className="fill-muted-foreground font-mono"
+        >
+          dailify.app
+        </text>
+        {/* chrome divider */}
+        <line x1={22} y1={36} x2={418} y2={36} className="stroke-border" strokeWidth={1} />
+        {/* mini task list inside */}
+        {BROWSER_LINES.map((l, i) => (
+          <g key={i}>
             <circle
-              cx={214}
-              cy={row.y + 23}
-              r={5}
-              className="fill-accent-primary"
-              style={{ filter: "drop-shadow(0 0 4px var(--accent-glow))" }}
+              cx={44}
+              cy={l.y}
+              r={3.5}
+              className={l.accent ? "fill-accent-primary" : "fill-muted-foreground/50"}
             />
-            <motion.rect
-              x={228}
-              y={row.y + 13}
-              width={row.title}
+            <rect
+              x={56}
+              y={l.y - 3}
+              width={l.w}
               height={6}
               rx={3}
-              className="fill-muted-foreground/70"
-              style={{ transformBox: "fill-box", transformOrigin: "left" }}
-              initial={{ scaleX: reduce ? 1 : 0 }}
-              whileInView={{ scaleX: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: reduce ? 0 : 0.6, delay: reduce ? 0 : 0.4 + i * 0.18 }}
+              className={l.accent ? "fill-muted-foreground/70" : "fill-muted-foreground/40"}
             />
-            <motion.rect
-              x={228}
-              y={row.y + 25}
-              width={row.sub}
+          </g>
+        ))}
+
+        {/* phone peeking past the right edge — same app, on mobile */}
+        <motion.g
+          initial={{ opacity: reduce ? 1 : 0, x: reduce ? 0 : 14 }}
+          whileInView={{ opacity: 1, x: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: reduce ? 0 : 0.5, delay: reduce ? 0 : 0.3, ease: "easeOut" }}
+        >
+          <rect
+            x={398}
+            y={30}
+            width={46}
+            height={62}
+            rx={9}
+            className="fill-surface-card stroke-accent-primary"
+            strokeWidth={1.5}
+            style={{ filter: "drop-shadow(0 0 6px var(--accent-glow))" }}
+          />
+          <rect
+            x={412}
+            y={36}
+            width={18}
+            height={2.5}
+            rx={1.25}
+            className="fill-muted-foreground/50"
+          />
+          {[0, 1, 2].map((i) => (
+            <rect
+              key={i}
+              x={406}
+              y={48 + i * 12}
+              width={i === 0 ? 30 : 22}
               height={5}
               rx={2.5}
-              className="fill-muted-foreground/40"
-              style={{ transformBox: "fill-box", transformOrigin: "left" }}
-              initial={{ scaleX: reduce ? 1 : 0 }}
-              whileInView={{ scaleX: 1 }}
-              viewport={{ once: true }}
-              transition={{ duration: reduce ? 0 : 0.6, delay: reduce ? 0 : 0.55 + i * 0.18 }}
+              className={i === 0 ? "fill-accent-primary/70" : "fill-muted-foreground/40"}
             />
-            <text
-              x={316}
-              y={row.y + 15}
-              textAnchor="end"
-              fontSize="7.5"
-              letterSpacing="0.5"
-              className="fill-accent-primary font-mono"
-            >
-              {row.tag}
-            </text>
-          </motion.g>
-        ))}
+          ))}
+        </motion.g>
       </Reveal>
     </SceneFrame>
   );

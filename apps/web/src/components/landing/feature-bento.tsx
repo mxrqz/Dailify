@@ -2,48 +2,53 @@ import { motion, useReducedMotion, type Variants } from "framer-motion";
 
 import { cn } from "@/lib/utils";
 import {
-  SceneCalendar,
-  SceneHours,
+  SceneDuration,
+  SceneFree,
   ScenePriority,
-  SceneRecurrence,
-  SceneVoice,
+  SceneComplete,
+  SceneBrowser,
   SceneReminders,
 } from "./scenes";
 import { copy } from "./copy";
+import { useRibbonGeometry } from "./ribbon-path";
 
 type BentoKey = keyof typeof copy.bento;
 
 /**
- * One bento cell: which TIME scene (T6) illustrates it, keyed to `copy.bento` (T3), and whether
- * it's the Voice hero cell. Order here drives both the DOM/mobile stack order and the desktop
- * grid flow below.
+ * One bento cell: which concept scene illustrates it, keyed to `copy.bento`, and whether it's `wide`
+ * (spans 2 of 3 columns). These six are the execution DETAILS — deliberately NOT the core views the
+ * hero/tabs already show. The three wide cells (duration / complete / browser) are the ones the
+ * ribbon connects. Order here drives both the DOM/mobile stack order and the desktop grid flow.
  */
 const CELLS: ReadonlyArray<{
   key: BentoKey;
   Scene: (props: { className?: string }) => JSX.Element;
-  hero?: boolean;
+  wide?: boolean;
 }> = [
-  { key: "calendar", Scene: SceneCalendar },
-  { key: "timeSlots", Scene: SceneHours },
+  { key: "duracao", Scene: SceneDuration, wide: true },
+  { key: "comeceGratis", Scene: SceneFree },
   { key: "priority", Scene: ScenePriority },
-  { key: "recurrence", Scene: SceneRecurrence },
-  { key: "voice", Scene: SceneVoice, hero: true },
+  { key: "concluido", Scene: SceneComplete, wide: true },
+  { key: "navegador", Scene: SceneBrowser, wide: true },
   { key: "reminders", Scene: SceneReminders },
 ];
 
 /**
- * Feature bento — the six TIME concept scenes (T6) assembled into an asymmetric CSS grid. On a
- * 4-column desktop track, the first four cells (calendar/hours/priority/recurrence) fill row one
- * as uniform squares; Voice then spans 2 columns on row two — matching `SceneVoice`'s 2:1 viewBox
- * so it never letterboxes — with reminders alongside it. Voice is the only cell tinted
- * `bg-accent-subtle`; every other cell is neutral `bg-surface-card`. Collapses to a single
- * stacked column on mobile (each scene full-width, Voice included).
+ * Feature bento — six execution-detail scenes in a 3-column zigzag: each row pairs one `wide` cell
+ * (spans 2 columns) with one square cell, alternating side to side (duração+grátis /
+ * prioridade+concluído / navegador+lembretes). The three wide cells overlap in the middle column, so a
+ * single computed SVG outline (`ribbon-path.ts`) connects them into one surface — fill via
+ * `clip-path`, border via a stroked `<path>` — joined by concave necks that bridge the row gaps
+ * (the tabs shell trick). At `md`+ the wide cells go transparent and let that ribbon show through.
+ * On mobile the ribbon is dropped and every cell is a plain
+ * stacked card. Scene boxes are a fixed height (`h-44`) so the section stays compact.
  *
  * Reveal: the grid fades/slides its cells in on scroll (`whileInView`, `staggerChildren`).
  * `useReducedMotion()` drops the stagger/delay so every cell renders in its final place instantly.
  */
 export function FeatureBento(): JSX.Element {
   const reduce = useReducedMotion();
+  const { ref, geom } = useRibbonGeometry();
 
   const containerVariants: Variants = {
     hidden: {},
@@ -59,32 +64,53 @@ export function FeatureBento(): JSX.Element {
   return (
     <section className="px-gutter py-20 md:py-28">
       <motion.div
+        ref={ref}
         variants={containerVariants}
         initial={reduce ? "visible" : "hidden"}
         whileInView="visible"
         viewport={{ once: true }}
-        className="grid grid-cols-1 gap-4 md:grid-cols-4 md:gap-5"
+        className="relative grid grid-cols-1 gap-4 md:grid-cols-3 md:gap-5"
       >
-        {CELLS.map(({ key, Scene, hero }) => {
+        {geom && (
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 z-0 hidden md:block"
+          >
+            <div
+              className="absolute inset-0 bg-surface-card"
+              style={{ clipPath: `path('${geom.d}')` }}
+            />
+            <svg
+              className="absolute inset-0 h-full w-full overflow-visible"
+              viewBox={`0 0 ${geom.w} ${geom.h}`}
+            >
+              <path
+                d={geom.d}
+                fill="none"
+                stroke="var(--border)"
+                strokeWidth={1}
+                vectorEffect="non-scaling-stroke"
+              />
+            </svg>
+          </div>
+        )}
+
+        {CELLS.map(({ key, Scene, wide }) => {
           const cellCopy = copy.bento[key];
           return (
             <motion.div
               key={key}
               variants={cellVariants}
+              data-ribbon-cell={wide ? "" : undefined}
               className={cn(
-                "flex flex-col gap-4 rounded-xl border p-5",
-                hero ? "bg-accent-subtle md:col-span-2" : "bg-surface-card",
+                "relative z-10 flex flex-col gap-4 rounded-panel border bg-surface-card p-5",
+                wide && "md:col-span-2 md:border-transparent md:bg-transparent",
               )}
             >
-              <div
-                className={cn(
-                  "overflow-hidden rounded-lg",
-                  hero ? "aspect-[2/1]" : "aspect-square",
-                )}
-              >
+              <div className="relative h-44 overflow-hidden rounded-lg">
                 <Scene className="h-full w-full" />
               </div>
-              <div className="flex flex-col gap-1">
+              <div className="relative flex flex-col gap-1">
                 <h3 className="text-base font-semibold tracking-[-0.01em] text-foreground">
                   {cellCopy.title}
                 </h3>
