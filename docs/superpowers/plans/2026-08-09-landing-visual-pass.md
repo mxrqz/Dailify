@@ -307,9 +307,9 @@ Em `apps/web/src/global.css`, logo depois do bloco `@utility px-gutter`:
 
 ```css
 /*
- * Ritmo vertical de seção. Estava hardcoded como `py-20 md:py-28` nos seis arquivos de seção da
- * landing; centralizar aqui torna o respiro da página inteira ajustável numa linha. O valor é o
- * mesmo de antes — este utility é refator, não mudança de layout.
+ * Ritmo vertical de seção. Estava hardcoded como `py-20 md:py-28` em cinco das seis seções da
+ * landing — o hero é a exceção, com `pt-20` e altura fixa. Centralizar aqui torna o respiro da
+ * página inteira ajustável numa linha. O valor é o mesmo de antes: refator, não mudança de layout.
  */
 @utility section-y {
   padding-block: --spacing(20);
@@ -323,10 +323,15 @@ Em `apps/web/src/global.css`, logo depois do bloco `@utility px-gutter`:
 
 ```bash
 bun run build 2>&1 | grep -iE "error|Exited"
-grep -o "\.section-y{[^}]*}" apps/web/dist/assets/*.css
 ```
 
-Esperado: `Exited with code 0` e uma regra `.section-y{padding-block:5rem}` (mais a variante `md` num `@media`). Se o build reclamar de `@variant` dentro de `@utility`, trocar o bloco por:
+Esperado: `Exited with code 0`.
+
+**Não grepar o CSS emitido ainda.** O Tailwind v4 faz tree-shake de `@utility` que ninguém usa, então
+`.section-y` só aparece no bundle depois do Step 4 — grepar aqui volta vazio e parece erro de
+sintaxe quando não é. A conferência da regra emitida está no Step 5.
+
+Se o build reclamar de `@variant` dentro de `@utility`, trocar o bloco por:
 
 ```css
 @utility section-y {
@@ -353,9 +358,18 @@ Em cada arquivo, substituir `py-20 md:py-28` por `section-y`:
 O hero é o único que não usa `py-20 md:py-28` — ele tem `pt-20` e altura fixa. **Não mexer no hero
 nesta task**; ele é tratado na Task 6.
 
-- [ ] **Step 5: Provar que a geometria não mudou**
+- [ ] **Step 5: Conferir a regra emitida e provar que a geometria não mudou**
 
-Rodar o mesmo comando do Step 1, gravando em `geo-depois.json`, e comparar:
+Agora que a classe está em uso, ela existe no bundle:
+
+```bash
+bun run build >/dev/null 2>&1 && grep -o "\.section-y{[^}]*}" apps/web/dist/assets/*.css
+```
+
+Esperado: `padding-block` resolvendo para `5rem` (`calc(var(--spacing) * 20)` também serve — é a
+forma que o Tailwind v4 emite), mais a variante `md` dentro de um `@media (min-width: 48rem)`.
+
+Depois, rodar o mesmo comando do Step 1, gravando em `geo-depois.json`, e comparar:
 
 ```bash
 cd "$SCRATCH" && bun -e '
