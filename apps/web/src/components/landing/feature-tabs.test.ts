@@ -39,8 +39,22 @@ describe("buildShellPath", () => {
   });
 
   it("merges the tab into the wall at the edges (single neck)", () => {
-    const left = buildShellPath({ w: 900, h: 600, tabLeft: 0, tabRight: 210, panelTop: 72, neck: 36 });
-    const right = buildShellPath({ w: 900, h: 600, tabLeft: 690, tabRight: 900, panelTop: 72, neck: 36 });
+    const left = buildShellPath({
+      w: 900,
+      h: 600,
+      tabLeft: 0,
+      tabRight: 210,
+      panelTop: 72,
+      neck: 36,
+    });
+    const right = buildShellPath({
+      w: 900,
+      h: 600,
+      tabLeft: 690,
+      tabRight: 900,
+      panelTop: 72,
+      neck: 36,
+    });
     expect(left.match(/A 36 36 0 0 0/g)).toHaveLength(1);
     expect(right.match(/A 36 36 0 0 0/g)).toHaveLength(1);
   });

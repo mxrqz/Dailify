@@ -1,14 +1,13 @@
 import { useLayoutEffect, useRef, useState } from "react";
-import { AnimatePresence, motion, useReducedMotion, usePresence } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { CalendarDays, Columns3, Mic, RotateCw, type LucideIcon } from "lucide-react";
 
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cn } from "@/lib/utils";
 import { copy } from "./copy";
 import { Grain } from "./grain";
-import { DayColumn } from "./mocks/day-column";
+import { DayAppWindow } from "./mocks/day-app-window";
 import { TabScene } from "./tab-scene";
-import { TaskCard } from "./task-card";
 
 type TabKey = keyof typeof copy.features.tabs;
 
@@ -254,62 +253,36 @@ function TabMock({ tabKey, reduce }: { tabKey: TabKey; reduce: boolean }): JSX.E
 }
 
 /**
- * One tab's panel body, keyed by `tabKey` in the parent `AnimatePresence` so mounting a new one
- * (tab switch) crossfades against the previous instance exiting. `TabsContent` needs `forceMount`
- * so Radix doesn't hide/unmount the outgoing panel the instant `active` changes (before its exit
- * animation can play) — but that also means Radix's own `hidden`/tabpanel bookkeeping no longer
- * applies while it's mid-exit. `usePresence()` tells THIS instance whether it's the incoming
- * panel (`isPresent`) or the one animating out; while exiting we override `aria-hidden`/`tabIndex`
- * so a keyboard user tabbing into the panel (the standard Radix trigger → panel flow) can never
- * land on content that's about to unmount — only the active panel stays in the a11y tree and tab
- * order. Applies identically whether the crossfade takes 300ms or (reduced motion) ~0.
+ * Pure panel content for one tab — the animated wrapper + keying live in `FeatureTabs`. Deliberately
+ * free of `motion`/`usePresence`: the panel is animated by a `motion.div` that is the DIRECT keyed
+ * child of `AnimatePresence`. The previous design keyed a custom component that called `usePresence()`
+ * but never called its `safeToRemove()`; per framer's docs that registers an exit-blocking id that
+ * never releases, so the outgoing panel never finishes exiting and, on RETURN to a tab,
+ * `AnimatePresence` never re-mounts it fresh → the panel renders blank (the "only loads the first
+ * time" bug). Framer's rule: the key belongs on the motion element, and manual `usePresence` MUST
+ * call `safeToRemove`. So we key the motion.div directly and let framer auto-manage exit.
  */
-function TabPanel({ tabKey, reduce }: { tabKey: TabKey; reduce: boolean }): JSX.Element {
-  const [isPresent] = usePresence();
+function TabPanelBody({ tabKey, reduce }: { tabKey: TabKey; reduce: boolean }): JSX.Element {
   const tabCopy = copy.features.tabs[tabKey];
 
-  return (
-    <TabsContent value={tabKey} forceMount asChild>
-      <motion.div
-        className="absolute inset-0 overflow-y-auto p-6 md:p-8"
-        initial={{ opacity: 0, y: reduce ? 0 : 12 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: reduce ? 0 : -12 }}
-        transition={{ duration: reduce ? 0 : 0.3, ease: "easeOut" }}
-        aria-hidden={isPresent ? undefined : true}
-        tabIndex={isPresent ? undefined : -1}
-      >
-        {tabKey === "day" ? (
-          <TabScene title={tabCopy.title} blurb={tabCopy.blurb}>
-            {/* back layer: day timeline, bleeding top/left */}
-            <div className="absolute -left-6 -top-8 w-[22rem] max-w-[70%] md:w-[26rem]">
-              <DayColumn />
-            </div>
-            {/* front layer: one emphasised card, bleeding off the right */}
-            <div className="absolute -right-6 top-24 w-72 md:w-80">
-              <TaskCard
-                time="16:00"
-                title="Deploy da landing"
-                duration="30min"
-                tags={["dev", "prio"]}
-                selected
-              />
-            </div>
-          </TabScene>
-        ) : (
-          <>
-            <div className="mb-6 flex flex-col gap-1.5">
-              <h3 className="text-xl font-semibold tracking-[-0.02em] text-foreground">
-                {tabCopy.title}
-              </h3>
-              <p className="max-w-md text-sm text-muted-foreground">{tabCopy.blurb}</p>
-            </div>
+  return tabKey === "day" ? (
+    <TabScene title={tabCopy.title} blurb={tabCopy.blurb}>
+      {/* day-view app window: 16:9, anchored bottom-right, ~33% off the right edge */}
+      <div className="absolute bottom-0 right-[-33%] w-full">
+        <DayAppWindow />
+      </div>
+    </TabScene>
+  ) : (
+    <>
+      <div className="mb-6 flex flex-col gap-1.5">
+        <h3 className="text-xl font-semibold tracking-[-0.02em] text-foreground">
+          {tabCopy.title}
+        </h3>
+        <p className="max-w-md text-sm text-muted-foreground">{tabCopy.blurb}</p>
+      </div>
 
-            <TabMock tabKey={tabKey} reduce={reduce} />
-          </>
-        )}
-      </motion.div>
-    </TabsContent>
+      <TabMock tabKey={tabKey} reduce={reduce} />
+    </>
   );
 }
 
@@ -440,16 +413,15 @@ export function FeatureTabs(): JSX.Element {
   const { ref: shellRef, geom } = useShellGeometry(active);
 
   return (
-    <section className="w-full py-20 md:py-28">
+    <section className="w-full px-gutter py-20 md:py-28">
       <Tabs
         value={active}
         onValueChange={(value) => {
           if (isTabKey(value)) setActive(value);
         }}
-        className="bg-black p-5"
+        className="rounded-4xl bg-black p-5"
       >
         <div ref={shellRef} className="relative grid gap-4">
-          {/* fill + border, both traced by the same computed outline */}
           {geom && (
             <>
               <div
@@ -461,7 +433,7 @@ export function FeatureTabs(): JSX.Element {
               </div>
               <svg
                 aria-hidden="true"
-                className="pointer-events-none absolute inset-0 z-[1] h-full w-full overflow-visible"
+                className="pointer-events-none absolute inset-0 z-1 h-full w-full overflow-visible"
                 viewBox={`0 0 ${geom.w} ${geom.h}`}
               >
                 <path
@@ -488,9 +460,23 @@ export function FeatureTabs(): JSX.Element {
             ))}
           </TabsList>
 
-          <div className="relative z-10 min-h-168 overflow-hidden">
+          <div className="relative z-10 min-h-168">
             <AnimatePresence initial={false}>
-              <TabPanel key={active} tabKey={active} reduce={Boolean(reduce)} />
+              <motion.div
+                key={active}
+                role="tabpanel"
+                aria-label={copy.features.tabs[active].label}
+                className={cn(
+                  "absolute inset-0 rounded-3xl overflow-hidden",
+                  active === "day" ? "overflow-hidden" : "overflow-y-auto p-6 md:p-8",
+                )}
+                initial={{ opacity: 0, y: reduce ? 0 : 12 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: reduce ? 0 : -12 }}
+                transition={{ duration: reduce ? 0 : 0.3, ease: "easeOut" }}
+              >
+                <TabPanelBody tabKey={active} reduce={Boolean(reduce)} />
+              </motion.div>
             </AnimatePresence>
           </div>
         </div>

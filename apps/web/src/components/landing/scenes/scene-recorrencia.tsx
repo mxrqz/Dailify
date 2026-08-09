@@ -97,7 +97,7 @@ function ProximasList(): JSX.Element {
         {/* conector tracejado ligando as ocorrências (dots por cima) */}
         <span
           aria-hidden
-          className="absolute bottom-2 left-[3px] top-2 border-l border-dashed border-surface-line"
+          className="absolute bottom-2 left-0.75 top-2 border-l border-dashed border-surface-line"
         />
         {PROXIMAS.map((o, i) => (
           <div
