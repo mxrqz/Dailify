@@ -5,7 +5,7 @@ import { copy } from "./copy";
 
 /**
  * "Como funciona" — 3-step timeline (T8). Heading (eyebrow + h2) + steps de `copy.howItWorks`.
- * No desktop cada passo é um NÓ numerado (chip mono `01/02/03`, `bg-surface-card` sólido) sentado
+ * No desktop cada passo é um NÓ numerado (chip mono `01/02/03`, `bg-surface-panel` sólido) sentado
  * sobre uma linha `bg-border` chip-a-chip — o motivo "linha do tempo" deitado — com um ponto crimson
  * que percorre a linha conforme a seção passa pela viewport (`useScroll` + `useTransform` mapeando o
  * progresso do scroll pra posição `left` do ponto). `useReducedMotion()` estaciona o ponto no fim.
@@ -21,7 +21,7 @@ export function HowItWorks(): JSX.Element {
   const pointLeft = useTransform(scrollYProgress, [0.1, 0.9], ["0%", "100%"]);
 
   return (
-    <section className="px-gutter section-y">
+    <section className="border-y border-surface-line bg-surface-raised px-gutter section-y">
       <div className="mx-auto mb-14 flex max-w-2xl flex-col items-center gap-4 text-center">
         <p className="font-mono text-xs uppercase tracking-[0.12em] text-accent-primary">
           {copy.howItWorks.eyebrow}
@@ -46,7 +46,7 @@ export function HowItWorks(): JSX.Element {
         <ol className="relative grid grid-cols-1 gap-10 md:grid-cols-3 md:gap-8">
           {copy.howItWorks.steps.map((item) => (
             <li key={item.step} className="flex flex-col items-center gap-3 text-center">
-              <span className="relative z-10 flex size-12 items-center justify-center rounded-full border bg-surface-card font-mono text-sm text-accent-primary">
+              <span className="relative z-10 flex size-12 items-center justify-center rounded-full border bg-surface-panel font-mono text-sm text-accent-primary">
                 {item.step}
               </span>
               <h3 className="text-lg font-semibold tracking-[-0.01em] text-foreground">

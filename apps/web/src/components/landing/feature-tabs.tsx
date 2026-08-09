@@ -54,7 +54,7 @@ export function FeatureTabs(): JSX.Element {
   const { ref: shellRef, geom } = useShellGeometry(active);
 
   return (
-    <section className="w-full px-gutter section-y">
+    <section className="w-full border-y border-surface-line bg-surface-raised px-gutter section-y">
       <Tabs
         value={active}
         onValueChange={(value) => {
@@ -93,7 +93,7 @@ export function FeatureTabs(): JSX.Element {
               <TabsTrigger
                 key={key}
                 value={key}
-                className="relative flex h-14 items-center justify-center gap-2 rounded-full border border-transparent px-4 font-mono uppercase tracking-[0.04em] text-muted-foreground shadow-none data-[state=active]:border-transparent dark:data-[state=active]:border-transparent data-[state=active]:bg-transparent data-[state=active]:text-accent-primary data-[state=active]:shadow-none data-[state=inactive]:border-highlight data-[state=inactive]:bg-surface-card"
+                className="relative flex h-14 items-center justify-center gap-2 rounded-full border border-transparent px-4 font-mono uppercase tracking-[0.04em] text-muted-foreground shadow-none data-[state=active]:border-transparent dark:data-[state=active]:border-transparent data-[state=active]:bg-transparent data-[state=active]:text-accent-primary data-[state=active]:shadow-none data-[state=inactive]:border-highlight data-[state=inactive]:bg-surface-panel"
               >
                 <Icon className="size-5" aria-hidden="true" />
                 {copy.features.tabs[key].label}
