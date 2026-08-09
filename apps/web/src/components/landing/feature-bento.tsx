@@ -10,6 +10,7 @@ import {
   SceneReminders,
 } from "./scenes";
 import { copy } from "./copy";
+import { Grain } from "./grain";
 import { useRibbonGeometry } from "./ribbon-path";
 
 type BentoKey = keyof typeof copy.bento;
@@ -79,7 +80,9 @@ export function FeatureBento(): JSX.Element {
             <div
               className="absolute inset-0 bg-surface-card"
               style={{ clipPath: `path('${geom.d}')` }}
-            />
+            >
+              <Grain preset="eclipse" speed={0} opacity={0.2} />
+            </div>
             <svg
               className="absolute inset-0 h-full w-full overflow-visible"
               viewBox={`0 0 ${geom.w} ${geom.h}`}
