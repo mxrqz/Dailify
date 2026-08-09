@@ -116,7 +116,11 @@ E a ponte que falta ao lado do `.dark` que já existe:
 ### 2. Mapa de tom da página
 
 Aplicado no `<section>` que cada componente já tem como raiz. Hairline (`--surface-line`) nas trocas
-de tom — o hero já usa `border-b`, então é o padrão da casa, não uma invenção.
+de tom. **Uma hairline por costura, sempre da seção de baixo.** Bordas de bloco não colapsam, então
+duas seções vizinhas declarando borda renderizam 2px — e no caso hero/tabs eram 2px em *tons
+diferentes*, porque o `border-b` do hero usava o `--border` tingido e não o `--surface-line` neutro
+das costuras novas. Achado no review final: o `border-b` do hero saiu e o `how-it-works` virou
+`border-t`. O `border-y` da laje clara fica, porque ali as duas bordas são o contorno próprio dela.
 
 | Seção          | Arquivo             | Tom      |
 | -------------- | ------------------- | -------- |
