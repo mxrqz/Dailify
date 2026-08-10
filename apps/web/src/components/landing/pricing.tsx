@@ -65,7 +65,7 @@ export function Pricing(): JSX.Element {
   const { billing } = copy.pricing;
 
   return (
-    <section className="light border-y border-surface-line bg-surface-page px-gutter section-y">
+    <section className="border-y border-surface-line bg-surface-slab px-gutter section-y">
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
         <p className="font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground">
           {copy.pricing.eyebrow}
@@ -74,7 +74,7 @@ export function Pricing(): JSX.Element {
           {copy.pricing.title}
         </h2>
 
-        <div className="mt-2 inline-flex items-center gap-1 rounded-full border bg-surface-card p-1">
+        <div className="mt-2 inline-flex items-center gap-1 rounded-full border bg-surface-slab-card p-1">
           {(["monthly", "yearly"] as const).map((c) => (
             <button
               key={c}
@@ -105,7 +105,7 @@ export function Pricing(): JSX.Element {
             viewport={{ once: true }}
             transition={{ duration: 0.5, ease: "easeOut" }}
             className={cn(
-              "flex flex-col gap-6 rounded-xl border bg-surface-card p-6",
+              "flex flex-col gap-6 rounded-xl border bg-surface-slab-card p-6",
               plan.recommended &&
                 "border-accent-primary shadow-[0_0_40px_-16px_var(--accent-glow)]",
             )}

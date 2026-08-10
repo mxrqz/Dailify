@@ -81,6 +81,12 @@
     oklch(98% 0 0),
     oklch(17.5% 0 0)
   ); /* dark = #101010, degrau de SEÇÃO; cards em cima usam surface-panel */
+  /* Laje de destaque: o degrau mais alto que uma seção alcança, reservado a UMA seção da página
+     (preços). Chegou substituindo uma inversão pro claro, que ganhava o marco pelo valor e destoava
+     do compromisso dark — aqui o marco vem de um salto grande dentro do escuro (+9.5 L sobre a
+     page, contra os +3 do raised). Segue a mesma regra: o card fica ~2 pontos acima da sua seção. */
+  --surface-slab: light-dark(oklch(96% 0 0), oklch(24% 0 0)); /* dark = #1e1e1e */
+  --surface-slab-card: light-dark(oklch(100% 0 0), oklch(26% 0 0)); /* dark = #212121 */
   --surface-hover: light-dark(
     oklch(96.8% 0.001 286.4),
     oklch(22.5% 0 0)
@@ -190,6 +196,8 @@
   --color-surface-card: var(--surface-card);
   --color-surface-panel: var(--surface-panel);
   --color-surface-raised: var(--surface-raised);
+  --color-surface-slab: var(--surface-slab);
+  --color-surface-slab-card: var(--surface-slab-card);
   --color-surface-hover: var(--surface-hover);
   --color-surface-header: var(--surface-header);
   --color-surface-line: var(--surface-line);
