@@ -157,16 +157,31 @@ export const priorityBgColor = [
   "bg-priority-bg-3",
   "bg-priority-bg-4",
 ];
+// Selecionado = contorno + texto na cor, NÃO fill sólido. Um fill saturado poria o `text-foreground`
+// herdado do ToggleGroupItem sobre priority-4 (70% L no dark) — contraste ruim, e um bloco de cor
+// chapado destoa do sistema, que trata cartão e chip como contorno. O `/70` antigo saiu junto (k00).
 export const prioritySelectedBgColor = [
-  "data-[state=on]:bg-priority-0",
-  "data-[state=on]:bg-priority-1",
-  "data-[state=on]:bg-priority-2",
-  "data-[state=on]:bg-priority-3",
-  "data-[state=on]:bg-priority-4",
+  "data-[state=on]:border-priority-0 data-[state=on]:text-priority-0",
+  "data-[state=on]:border-priority-1 data-[state=on]:text-priority-1",
+  "data-[state=on]:border-priority-2 data-[state=on]:text-priority-2",
+  "data-[state=on]:border-priority-3 data-[state=on]:text-priority-3",
+  "data-[state=on]:border-priority-4 data-[state=on]:text-priority-4",
 ];
 ```
 
-Note que `priorityText` também foi traduzido — era `["Not Important", "Low", …]`.
+**Duas consequências desta task que alcançam arquivos fora do escopo do redesign — são intencionais:**
+
+1. `priorityText` também foi traduzido (era `["Not Important", "Low", …]`). Ele é lido por
+   `calendar-view.tsx:244` (ainda com a cara antiga, fase 3) e por `task-preview.tsx:47`+ (a imagem
+   compartilhável, declarada fora de escopo no spec). Ambos passam a mostrar pt-BR. É desejado: o
+   "fora de escopo" do `task-preview` era sobre as **cores**, que existem para sobreviver à
+   serialização do `html-to-image` — um rótulo em inglês numa UI pt-BR é a inconsistência que este
+   passe existe para matar. As cores dele não são tocadas.
+2. `task-preview.tsx` e `calendar-view.tsx` passam a renderizar os chips de prioridade com os tokens
+   novos. Confira no Step 6 que a imagem do `/task/:id` continua legível — `color-mix` e `light-dark`
+   são CSS moderno e o `html-to-image` serializa estilo computado, então deve resolver antes da
+   captura; se a imagem sair sem cor, registre como concern e **não** reverta a tokenização (o
+   conserto é no `task-preview`, arquivo fora deste plano).
 
 - [ ] **Step 5: Run test to verify it passes**
 
@@ -846,6 +861,8 @@ export const copy = {
     nextTaskLabel: "PRÓXIMA TAREFA",
     noNextTask: "Nada pela frente neste mês.",
     calendarLabel: "CALENDÁRIO",
+    prevMonth: "Mês anterior",
+    nextMonth: "Próximo mês",
   },
 
   task: {
@@ -1410,7 +1427,7 @@ Substitua o `return` de `MiniCalendar` por:
           variant="ghost"
           size="icon"
           onClick={goToPreviousMonth}
-          aria-label="Mês anterior"
+          aria-label={copy.aside.prevMonth}
           className="size-7 rounded-full text-muted-foreground hover:bg-surface-hover"
         >
           <ChevronLeftIcon />
@@ -1428,7 +1445,7 @@ Substitua o `return` de `MiniCalendar` por:
           variant="ghost"
           size="icon"
           onClick={goToNextMonth}
-          aria-label="Próximo mês"
+          aria-label={copy.aside.nextMonth}
           className="size-7 rounded-full text-muted-foreground hover:bg-surface-hover"
         >
           <ChevronRightIcon />
@@ -1477,7 +1494,7 @@ Substitua o `return` de `MiniCalendar` por:
   );
 ```
 
-Adicione ao topo do arquivo os imports que passaram a ser usados: `ptBR` de `date-fns/locale` e `cn` de `@/lib/utils`. O `div` externo perdeu `bg-background rounded-md p-5 border` de propósito — quem dá a superfície agora é o cartão do aside.
+Adicione ao topo do arquivo os imports que passaram a ser usados: `ptBR` de `date-fns/locale`, `cn` de `@/lib/utils` e `copy` de `@/components/dashboard/copy`. O `div` externo perdeu `bg-background rounded-md p-5 border` de propósito — quem dá a superfície agora é o cartão do aside.
 
 **Atenção, comportamento preservado:** `goToPreviousMonth`/`goToNextMonth` chamam `setSelectedDay(subMonths(...))`, ou seja trocar de mês troca o dia selecionado — e o `protected-route` refetcha quando o mês muda. Não mexa nisso aqui.
 
