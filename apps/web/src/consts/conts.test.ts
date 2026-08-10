@@ -40,7 +40,10 @@ describe("priority scale", () => {
     };
     for (const [name, scale] of Object.entries(colorScales)) {
       scale.forEach((cls, i) => {
-        expect(cls, `${name}[${i}]`).toContain(`priority-${i}`);
+        // Aceita `…priority-0` (cor sólida) e `…priority-bg-0` (o fill suave do chip) — o que
+        // importa é o índice do token bater com a posição no array, que é o erro que dói:
+        // um array fora de ordem pinta "urgente" de cinza sem quebrar nada.
+        expect(cls, `${name}[${i}]`).toMatch(new RegExp(`priority-(bg-)?${i}\\b`));
         expect(cls, `${name}[${i}]`).not.toMatch(/-(red|green|yellow|orange|gray|zinc)-\d/);
       });
     }
