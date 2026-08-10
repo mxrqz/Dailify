@@ -46,6 +46,19 @@
   --premium: light-dark(oklch(55.8% 0.24 302.3), oklch(62% 0.23 303));
   --premium-foreground: oklch(98.5% 0 0);
 
+  /* escala de prioridade 0–4 (bd emm) — substitui gray/green/yellow/orange/red crus */
+  --priority-0: light-dark(oklch(55.2% 0.014 285.9), oklch(71.2% 0.013 286.1));
+  --priority-1: light-dark(oklch(52% 0.15 149.6), oklch(69.6% 0.17 149.6));
+  --priority-2: light-dark(oklch(66% 0.14 85), oklch(80% 0.16 85));
+  --priority-3: light-dark(oklch(63% 0.18 50), oklch(75% 0.17 55));
+  --priority-4: light-dark(oklch(58.6% 0.222 17.6), oklch(70% 0.2 20));
+  /* fundo do chip de prioridade: mistura sólida, não /opacity (bd k00) */
+  --priority-bg-0: color-mix(in oklch, var(--priority-0) 12%, var(--surface-card));
+  --priority-bg-1: color-mix(in oklch, var(--priority-1) 12%, var(--surface-card));
+  --priority-bg-2: color-mix(in oklch, var(--priority-2) 12%, var(--surface-card));
+  --priority-bg-3: color-mix(in oklch, var(--priority-3) 12%, var(--surface-card));
+  --priority-bg-4: color-mix(in oklch, var(--priority-4) 12%, var(--surface-card));
+
   /* brand gradient (task preview) — mode-independent */
   --brand-from: #5a24d6;
   --brand-via: #b92f84;
@@ -167,6 +180,17 @@
   --color-success-foreground: var(--success-foreground);
   --color-premium: var(--premium);
   --color-premium-foreground: var(--premium-foreground);
+
+  --color-priority-0: var(--priority-0);
+  --color-priority-1: var(--priority-1);
+  --color-priority-2: var(--priority-2);
+  --color-priority-3: var(--priority-3);
+  --color-priority-4: var(--priority-4);
+  --color-priority-bg-0: var(--priority-bg-0);
+  --color-priority-bg-1: var(--priority-bg-1);
+  --color-priority-bg-2: var(--priority-bg-2);
+  --color-priority-bg-3: var(--priority-bg-3);
+  --color-priority-bg-4: var(--priority-bg-4);
 
   --color-brand-from: var(--brand-from);
   --color-brand-via: var(--brand-via);

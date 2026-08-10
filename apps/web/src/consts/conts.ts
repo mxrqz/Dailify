@@ -1,31 +1,34 @@
-export const priorityText = ["Not Important", "Low", "Medium", "High", "Very Important"];
+export const priorityText = ["Sem prioridade", "Baixa", "Média", "Alta", "Urgente"];
 export const priorityTextColor = [
-  "text-gray-500",
-  "text-green-500",
-  "text-yellow-500",
-  "text-orange-500",
-  "text-red-500",
+  "text-priority-0",
+  "text-priority-1",
+  "text-priority-2",
+  "text-priority-3",
+  "text-priority-4",
 ];
 export const priorityBorderColor = [
-  "border-gray-500",
-  "border-green-500",
-  "border-yellow-500",
-  "border-orange-500",
-  "border-red-500",
+  "border-priority-0",
+  "border-priority-1",
+  "border-priority-2",
+  "border-priority-3",
+  "border-priority-4",
 ];
 export const priorityBgColor = [
-  "bg-gray-500/10",
-  "bg-green-500/10",
-  "bg-yellow-500/10",
-  "bg-orange-500/10",
-  "bg-red-500/10",
+  "bg-priority-bg-0",
+  "bg-priority-bg-1",
+  "bg-priority-bg-2",
+  "bg-priority-bg-3",
+  "bg-priority-bg-4",
 ];
+// Selecionado = contorno + texto na cor, NÃO fill sólido. Um fill saturado poria o `text-foreground`
+// herdado do ToggleGroupItem sobre priority-4 (70% L no dark) — contraste ruim, e um bloco de cor
+// chapado destoa do sistema, que trata cartão e chip como contorno. O `/70` antigo saiu junto (k00).
 export const prioritySelectedBgColor = [
-  "data-[state=on]:bg-gray-500/70",
-  "data-[state=on]:bg-green-500/70",
-  "data-[state=on]:bg-yellow-500/70",
-  "data-[state=on]:bg-orange-500/70",
-  "data-[state=on]:bg-red-500/70",
+  "data-[state=on]:border-priority-0 data-[state=on]:text-priority-0",
+  "data-[state=on]:border-priority-1 data-[state=on]:text-priority-1",
+  "data-[state=on]:border-priority-2 data-[state=on]:text-priority-2",
+  "data-[state=on]:border-priority-3 data-[state=on]:text-priority-3",
+  "data-[state=on]:border-priority-4 data-[state=on]:text-priority-4",
 ];
 export const tagsBgColors2 = [
   "bg-tag-1",
