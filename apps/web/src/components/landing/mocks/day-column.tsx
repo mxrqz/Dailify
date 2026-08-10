@@ -1,4 +1,4 @@
-import { TaskCard, type TaskCardData } from "../task-card";
+import { TaskCard, type TaskCardData } from "@/components/task-card";
 
 const DAY_EARLY: ReadonlyArray<TaskCardData> = [
   { time: "08:30", title: "Revisar PRs", duration: "45min", tags: ["dev", "review"] },

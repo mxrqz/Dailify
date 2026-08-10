@@ -3,7 +3,7 @@ import { type ReactNode } from "react";
 import { Badge } from "@/components/ui/badge";
 import { cn } from "@/lib/utils";
 import { Orbit } from "../orbit";
-import { TagBadge } from "../task-card";
+import { TagBadge } from "@/components/task-card";
 
 const CADENCES = ["Diário", "Semanal", "Mensal"] as const;
 const ACTIVE_CADENCE = 1; // "Semanal"
