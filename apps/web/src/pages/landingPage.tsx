@@ -35,9 +35,7 @@ export default function LandingPage() {
           <div className="relative z-10">
             <CtaBand />
 
-            <div className="w-full px-5">
-              <SiteFooter />
-            </div>
+            <SiteFooter />
           </div>
         </div>
       </div>
