@@ -1,7 +1,7 @@
 import { ChevronLeft } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import Header from "../components/header";
+import { AppHeader } from "@/components/app-header";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PersonalTab, SecurityTab, SubscriptionTab } from "@/components/profileTabs";
@@ -22,7 +22,7 @@ export default function ProfilePage() {
 
   return (
     <main className="w-full h-full px-[clamp(1rem,5vw,6rem)] flex flex-col">
-      <Header />
+      <AppHeader />
 
       <div className="w-full flex flex-col justify-center py-6 space-y-6">
         <div className="flex items-center gap-2">

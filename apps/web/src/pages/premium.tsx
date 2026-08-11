@@ -19,7 +19,7 @@ import {
 import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import { Link } from "react-router-dom";
-import Header from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { PLAN_ID } from "@/consts/conts";
 import { PLAN_PRICING } from "@/consts/pricing";
 import { checkout } from "@/functions/api";
@@ -117,7 +117,7 @@ export default function PremiumPage() {
 
   return (
     <>
-      <Header className="px-[clamp(1rem,5vw,24rem)]" />
+      <SiteHeader className="px-[clamp(1rem,5vw,24rem)]" />
 
       <div className="px-[clamp(1rem,5vw,24rem)] min-h-screen bg-gradient-to-br from-background to-foreground/5">
         <div className="py-12 px-4 sm:px-6 lg:py-16 lg:px-8">

@@ -1,6 +1,6 @@
 import { Link } from "react-router-dom";
 import { Helmet } from "react-helmet-async";
-import Header from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 
 // NOTE: template app-specific de Termos de Uso. Preencha os campos [entre colchetes]
 // e faça uma revisão jurídica antes de considerar isto final.
@@ -11,7 +11,7 @@ export default function TermsPage() {
         <title>Dailify - Termos de Uso</title>
       </Helmet>
 
-      <Header className="px-[clamp(1rem,5vw,24rem)]" />
+      <SiteHeader className="px-[clamp(1rem,5vw,24rem)]" />
 
       <main className="px-[clamp(1rem,5vw,24rem)] py-12 bg-background text-foreground">
         <div className="mx-auto max-w-3xl flex flex-col gap-6">
