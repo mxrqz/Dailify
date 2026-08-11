@@ -71,5 +71,14 @@ export const planMap: Record<string, "Free" | "Pro" | "Pro + AI"> = {
   [PLAN_ID.proAi]: "Pro + AI",
 };
 
-export const apiURL = import.meta.env.VITE_API_URL;
+/**
+ * Base das chamadas de API.
+ *
+ * Em dev é o caminho relativo "/api", servido pelo proxy do `vite.config.ts`: o dev server roda em
+ * HTTPS (mkcert) e o worker local em HTTP, e o navegador bloquearia a chamada direta como mixed
+ * content — com o proxy, o browser só fala com a própria origem. Em build volta a ser o
+ * `VITE_API_URL` absoluto, onde o problema não existe (produção é HTTPS ponta a ponta).
+ * Ver bd Dailify-6aq.
+ */
+export const apiURL = import.meta.env.DEV ? "/api" : import.meta.env.VITE_API_URL;
 export const dailifyURL = "https://dailify.mxrqz.com/";

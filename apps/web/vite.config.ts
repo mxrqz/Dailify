@@ -1,4 +1,6 @@
 import { defineConfig } from "vitest/config";
+// `loadEnv` só existe no "vite"; o "vitest/config" reexporta `defineConfig`, não ele.
+import { loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path"
 import tailwindcss from "@tailwindcss/vite"
@@ -6,8 +8,17 @@ import mkcert from 'vite-plugin-mkcert'
 
 const host = process.env.TAURI_DEV_HOST;
 
+/**
+ * Alvo do proxy de API em dev. O dev server roda em HTTPS (mkcert) e o `apps/server` local roda em
+ * HTTP (wrangler, :8787) — o navegador bloqueia essa chamada como mixed content e ela nunca sai.
+ * Com o proxy, o browser só fala com o próprio dev server (mesma origem, mesmo esquema) e é o Vite,
+ * server-side, que conversa com o worker. Ver bd Dailify-6aq.
+ */
+const apiTarget = (mode: string) =>
+  loadEnv(mode, path.resolve(__dirname), "VITE_").VITE_API_URL || "http://localhost:8787";
+
 // https://vitejs.dev/config/
-export default defineConfig(async () => ({
+export default defineConfig(async ({ mode }) => ({
   plugins: [
     react(),
     tailwindcss(),
@@ -42,6 +53,16 @@ export default defineConfig(async () => ({
       : undefined,
     watch: {
       ignored: ["**/src-tauri/**"],
+    },
+    proxy: {
+      // `apiURL` (consts) vira "/api" em dev justamente para cair aqui; em build ele volta a ser o
+      // VITE_API_URL absoluto e este proxy não existe.
+      "/api": {
+        target: apiTarget(mode),
+        changeOrigin: true,
+        secure: false,
+        rewrite: (p: string) => p.replace(/^\/api/, ""),
+      },
     },
   },
 }));
