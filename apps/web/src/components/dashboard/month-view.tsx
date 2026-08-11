@@ -12,12 +12,14 @@ import {
   subMonths,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ChevronLeft, ChevronRight } from "lucide-react";
+import { ChevronLeft, ChevronRight, Loader2 } from "lucide-react";
 import { motion, useReducedMotion } from "framer-motion";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { MonthDayCell } from "@/components/dashboard/month-day-cell";
+import NewTask from "@/components/new-task";
+import NewTaskVoice from "@/components/new-task-voice";
 import { Button } from "@/components/ui/button";
 import { getTasksForDay } from "@/functions/functions";
 
@@ -30,7 +32,7 @@ import { getTasksForDay } from "@/functions/functions";
  * recorrência semanal depende disso). Os rótulos vêm de `copy.aside.weekDayInitials`.
  */
 export function MonthView(): JSX.Element {
-  const { selectedDay, setSelectedDay, tasks } = useDailify();
+  const { selectedDay, setSelectedDay, tasks, isLoading } = useDailify();
   const reduce = useReducedMotion();
 
   const days = eachDayOfInterval({
@@ -46,38 +48,51 @@ export function MonthView(): JSX.Element {
       className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-surface-line bg-surface-card shadow-panel"
     >
       <header className="flex items-center justify-between border-b border-surface-line px-6 py-4">
-        <span className="text-sm font-medium text-foreground">
-          {format(selectedDay, "MMMM yyyy", { locale: ptBR })}
-        </span>
+        <div className="flex items-center gap-2">
+          <span className="text-sm font-medium text-foreground">
+            {format(selectedDay, "MMMM yyyy", { locale: ptBR })}
+          </span>
+          {isLoading && (
+            <Loader2
+              className="size-3.5 shrink-0 animate-spin text-muted-foreground"
+              aria-hidden="true"
+            />
+          )}
+        </div>
 
-        <div className="flex items-center gap-1">
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={copy.month.prevMonth}
-            onClick={() => setSelectedDay(subMonths(selectedDay, 1))}
-            className="size-8 rounded-full text-muted-foreground hover:bg-surface-hover"
-          >
-            <ChevronLeft className="size-4" />
-          </Button>
+        <div className="flex items-center gap-2">
+          <NewTask className="h-8 rounded-full bg-accent-primary px-4 text-primary-foreground hover:bg-accent-hover" />
+          <NewTaskVoice />
 
-          <Button
-            variant="ghost"
-            onClick={() => setSelectedDay(new Date())}
-            className="h-8 rounded-full px-3 font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground hover:bg-surface-hover hover:text-foreground"
-          >
-            {copy.month.today}
-          </Button>
+          <div className="flex items-center gap-1">
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={copy.month.prevMonth}
+              onClick={() => setSelectedDay(subMonths(selectedDay, 1))}
+              className="size-8 rounded-full text-muted-foreground hover:bg-surface-hover"
+            >
+              <ChevronLeft className="size-4" />
+            </Button>
 
-          <Button
-            variant="ghost"
-            size="icon"
-            aria-label={copy.month.nextMonth}
-            onClick={() => setSelectedDay(addMonths(selectedDay, 1))}
-            className="size-8 rounded-full text-muted-foreground hover:bg-surface-hover"
-          >
-            <ChevronRight className="size-4" />
-          </Button>
+            <Button
+              variant="ghost"
+              onClick={() => setSelectedDay(new Date())}
+              className="h-8 rounded-full px-3 font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground hover:bg-surface-hover hover:text-foreground"
+            >
+              {copy.month.today}
+            </Button>
+
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={copy.month.nextMonth}
+              onClick={() => setSelectedDay(addMonths(selectedDay, 1))}
+              className="size-8 rounded-full text-muted-foreground hover:bg-surface-hover"
+            >
+              <ChevronRight className="size-4" />
+            </Button>
+          </div>
         </div>
       </header>
 

@@ -41,7 +41,6 @@ export const copy = {
     today: "Hoje",
     prevMonth: "Mês anterior",
     nextMonth: "Próximo mês",
-    goToToday: "Ir para hoje",
     moreTasks: "+{n}",
     sheetTitle: "Tarefas do dia",
     sheetEmpty: "Nenhuma tarefa neste dia.",
