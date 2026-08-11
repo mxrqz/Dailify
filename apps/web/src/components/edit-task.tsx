@@ -33,10 +33,20 @@ type EditTaskProps = Record<string, never>;
 
 const EditTaskContext = createContext<EditTaskProps | undefined>(undefined);
 
-export function EditTask({ children }: { children: ReactNode }) {
+export function EditTask({
+  children,
+  open,
+  onOpenChange,
+}: {
+  children: ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+}) {
   return (
     <EditTaskContext.Provider value={{}}>
-      <Sheet>{children}</Sheet>
+      <Sheet open={open} onOpenChange={onOpenChange}>
+        {children}
+      </Sheet>
     </EditTaskContext.Provider>
   );
 }

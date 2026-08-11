@@ -36,6 +36,7 @@ export const copy = {
     calendarLabel: "CALENDÁRIO",
     prevMonth: "Mês anterior",
     nextMonth: "Próximo mês",
+    weekDayInitials: ["D", "S", "T", "Q", "Q", "S", "S"],
   },
 
   task: {

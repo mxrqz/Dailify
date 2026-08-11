@@ -10,6 +10,7 @@ import { motion } from "framer-motion";
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isSignedIn, isLoaded, user } = useUser();
   const {
+    tasks,
     selectedDay,
     setTasks,
     setIsLoading,
@@ -82,7 +83,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   }, [selectedDay, isLoaded, userId]);
 
   // 🧭 Redirecionar se não estiver logado
-  if (!isLoaded || isLoading) {
+  if (!isLoaded || (isLoading && !tasks)) {
     return (
       <div className="w-full h-dvh flex flex-col items-center justify-center gap-5 bg-background">
         <Loader2Icon className="size-12 text-foreground animate-spin" />

@@ -5,12 +5,12 @@ import { Fragment } from "react";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
+import { DayTaskRow } from "@/components/dashboard/day-task-row";
 import { TaskCard } from "@/components/task-card";
 import {
   getTasksForDay,
   groupTasksByTime,
   nowLineIndex,
-  taskToCardData,
   type TimeGroup,
 } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
@@ -47,14 +47,11 @@ function TimeGroupRows({
 }): JSX.Element {
   return (
     <>
-      {group.tasks.map((task, index) => {
-        const data = taskToCardData(task, day);
-        return (
-          <motion.li key={task.id} variants={variants}>
-            <TaskCard {...data} time={index === 0 ? data.time : ""} />
-          </motion.li>
-        );
-      })}
+      {group.tasks.map((task, index) => (
+        <motion.li key={task.id} variants={variants}>
+          <DayTaskRow task={task} day={day} showTime={index === 0} />
+        </motion.li>
+      ))}
     </>
   );
 }

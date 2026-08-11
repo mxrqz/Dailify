@@ -1,4 +1,3 @@
-import { weekDays } from "@/consts/conts";
 import {
   addMonths,
   eachDayOfInterval,
@@ -87,12 +86,12 @@ export function MiniCalendar() {
 
       <div className="flex flex-col gap-1">
         <ul className="grid w-full grid-cols-7 justify-items-center gap-1">
-          {weekDays.map((day, index) => (
+          {copy.aside.weekDayInitials.map((day, index) => (
             <li
               key={index}
               className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground"
             >
-              {day.slice(0, 1)}
+              {day}
             </li>
           ))}
         </ul>
@@ -112,7 +111,7 @@ export function MiniCalendar() {
                     "flex size-7 items-center justify-center rounded-full font-mono text-xs transition-colors",
                     isCurrentMonth ? "text-foreground" : "text-muted-foreground",
                     isCurrentDay && "bg-accent-primary text-primary-foreground",
-                    !isCurrentDay && isSelectedDay && "border border-accent-primary",
+                    !isCurrentDay && isSelectedDay && "border border-foreground",
                     !isCurrentDay && !isSelectedDay && "hover:bg-surface-hover",
                   )}
                 >
