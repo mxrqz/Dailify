@@ -15,6 +15,7 @@ import { useEffect, useState } from "react";
 import { TaskProps } from "@/types/types";
 import { TaskDetailView } from "./task-preview";
 import { useDailify } from "./dailifyContext";
+import { copy } from "@/components/dashboard/copy";
 import { useEntitlements } from "@/hooks/useEntitlements";
 import { toast } from "sonner";
 import { format } from "date-fns";
@@ -45,12 +46,10 @@ export default function NewTaskVoice() {
       <DialogTrigger asChild>
         <Button
           size={"icon"}
-          className={
-            "w-full aspect-square shrink md:h-full border cursor-pointer bg-foreground text-background hover:bg-foreground/90"
-          }
+          className="size-10 shrink-0 rounded-full border border-surface-line bg-surface-card text-foreground hover:bg-surface-hover"
         >
           <MicIcon />
-          <span className="sr-only">Create task by voice</span>
+          <span className="sr-only">{copy.day.voiceTask}</span>
         </Button>
       </DialogTrigger>
 

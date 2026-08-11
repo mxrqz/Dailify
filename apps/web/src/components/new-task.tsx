@@ -20,6 +20,7 @@ import { useDailify } from "./dailifyContext";
 import { DatetimePicker } from "./ui/datetime-picker";
 import { DateInput, TimeField } from "@/components/ui/timefield";
 import { TimeValue } from "react-aria-components";
+import { copy } from "@/components/dashboard/copy";
 import { createTask } from "@/functions/api";
 import { upsertTaskById } from "@/functions/functions";
 import { useEntitlements } from "@/hooks/useEntitlements";
@@ -129,8 +130,9 @@ export default function NewTask({ className }: { className: string }) {
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size={"icon"} className={className}>
+        <Button size={"default"} className={className}>
           <PlusIcon />
+          {copy.day.newTask}
         </Button>
       </DialogTrigger>
 
