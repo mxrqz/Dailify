@@ -12,8 +12,9 @@ Single source of truth via `useDailify()`: `tasks`, `currentMonthTasks`, `select
   `getTasks()` (→ `getTasksForMonth`, `@/functions/api`) for the selected month, plus
   permissions/invoices/payment (also `api.ts`). It refetches when the month changes.
 - **`dashboard/day-view.tsx`** derives `dayTasks` from `getTasksForDay(tasks, selectedDay)` then
-  `groupTasksByTime`, rendering a 2-column layout with the task list and an aside. **`calendar-view.tsx`**
-  reads `tasks` per day. Both read from the shared array — so any write must update it.
+  `groupTasksByTime`. (The two-column day+aside layout lives one level up, in `pages/home.tsx`, which
+  mounts `DayView` beside `DayAside`.) **`calendar-view.tsx`** reads `tasks` per day. Both read from
+  the shared array — so any write must update it.
 
 ## Writes are optimistic against the shared array
 
