@@ -9,6 +9,7 @@ import {
   returnFractedDate,
   unixToDate,
   groupTasksByTime,
+  taskToCardData,
 } from "./functions";
 import type { TaskProps } from "@/types/types";
 
@@ -168,5 +169,43 @@ describe("groupTasksByTime", () => {
     const input = [a, b];
     groupTasksByTime(input);
     expect(input.map((t) => t.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("taskToCardData", () => {
+  const day = new Date(2026, 7, 10);
+
+  test("maps the card fields off the task", () => {
+    const task = makeTask({
+      title: "Revisar PRs",
+      duration: "45min",
+      priority: 3,
+      tags: ["dev", "review"],
+      date: new Date(2026, 7, 10, 8, 30).getTime(),
+    });
+    expect(taskToCardData(task, day)).toEqual({
+      time: "08:30",
+      title: "Revisar PRs",
+      duration: "45min",
+      tags: ["dev", "review"],
+      priority: 3,
+      completed: false,
+    });
+  });
+
+  test("missing tags become an empty array, never undefined", () => {
+    const task = makeTask({ tags: undefined });
+    expect(taskToCardData(task, day).tags).toEqual([]);
+  });
+
+  test("completed is true only when the task was completed on THAT day", () => {
+    const onDay = makeTask({ completed: [new Date(2026, 7, 10, 18, 0).getTime()] });
+    const otherDay = makeTask({ completed: [new Date(2026, 7, 9, 18, 0).getTime()] });
+    expect(taskToCardData(onDay, day).completed).toBe(true);
+    expect(taskToCardData(otherDay, day).completed).toBe(false);
+  });
+
+  test("completed is false (never undefined) for an empty completed list", () => {
+    expect(taskToCardData(makeTask({ completed: [] }), day).completed).toBe(false);
   });
 });

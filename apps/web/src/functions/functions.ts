@@ -1,6 +1,7 @@
 import { TaskProps } from "@/types/types";
 import { format, isSameDay } from "date-fns";
 import { enUS, ptBR } from "date-fns/locale";
+import type { TaskCardData } from "@/components/task-card";
 
 export const returnFractedDate = (date: Date) => {
   const day = date.getDate();
@@ -114,4 +115,23 @@ export function groupTasksByTime(tasks: ReadonlyArray<TaskProps>): TimeGroup[] {
 function timeToMinutes(time: string): number {
   const [hours, minutes] = time.split(":").map(Number);
   return hours * 60 + minutes;
+}
+
+/**
+ * Converte a tarefa do domínio (epoch-ms, priority numérico, completed[]) no formato de strings que
+ * o `TaskCard` consome. `day` é o dia em que o cartão está sendo renderizado — é ele que decide se a
+ * tarefa conta como concluída (uma recorrente é concluída por ocorrência, não de uma vez).
+ */
+export function taskToCardData(
+  task: TaskProps,
+  day: Date,
+): TaskCardData & { completed: boolean; priority: number } {
+  return {
+    time: getTime(task.date, "HH:MM"),
+    title: task.title,
+    duration: task.duration,
+    tags: task.tags ?? [],
+    priority: task.priority,
+    completed: getCompletionDate(task, day) === true,
+  };
 }
