@@ -14,6 +14,7 @@ export const copy = {
     viewMonth: "Mês",
     upgrade: "Assinar",
     profile: "Perfil",
+    accountMenu: "Menu da conta",
     settings: "Configurações",
     signOut: "Sair",
     signIn: "Entrar",

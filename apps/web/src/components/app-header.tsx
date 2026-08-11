@@ -82,7 +82,7 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
         )}
 
         <DropdownMenu>
-          <DropdownMenuTrigger>
+          <DropdownMenuTrigger aria-label={copy.header.accountMenu}>
             <Avatar className="size-9 cursor-pointer">
               <AvatarImage src={user?.imageUrl} alt="" />
               <AvatarFallback>
