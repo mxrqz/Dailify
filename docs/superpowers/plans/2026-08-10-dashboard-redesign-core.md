@@ -844,6 +844,7 @@ export const copy = {
     viewDay: "Hoje",
     viewMonth: "Mês",
     upgrade: "Assinar",
+    accountMenu: "Menu da conta",
     profile: "Perfil",
     settings: "Configurações",
     signOut: "Sair",
@@ -1084,7 +1085,11 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
         )}
 
         <DropdownMenu>
-          <DropdownMenuTrigger>
+          {/* O rótulo vai no GATILHO, não na imagem: o avatar é todo o conteúdo do botão, e quando a
+              imagem carrega o AvatarFallback (as iniciais) não renderiza — sem isto o botão fica sem
+              nome acessível. A imagem fica decorativa (`alt=""`), que é o correto dentro de um
+              controle já rotulado. */}
+          <DropdownMenuTrigger aria-label={copy.header.accountMenu}>
             <Avatar className="size-9 cursor-pointer">
               <AvatarImage src={user?.imageUrl} alt="" />
               <AvatarFallback>
