@@ -14,7 +14,7 @@ Estas valem para **toda** task deste plano. Vêm do spec `docs/superpowers/specs
 
 - **Sem `as`.** Type assertions são warning de lint (`consistent-type-assertions`). `as const` é permitido. Use type guards.
 - **Sem hex, sem cor arbitrária em componente.** Só tokens. Cor nova = token em `global.css` + mapeamento em `@theme inline`.
-- **Sem `/opacity` em elemento interativo ou superfície.** Cor sólida (bd `k00`). `shadow-[0_0_8px_var(--accent-glow)]` é permitido — o token já carrega a transparência.
+- **Sem `/opacity` em elemento interativo ou superfície.** Cor sólida (bd `k00`). Duas exceções, ambas já registradas no repo: `shadow-[…var(--accent-glow)]` (o token já carrega a transparência) e os **focus rings / `aria-invalid` do shadcn** (`ring-ring/50` e afins), que o `components/ui/CLAUDE.md` manda explicitamente deixar como estão.
 - **Escada de superfícies do app:** `surface-page` (shell) → `surface-card` (janelas) → cartão de tarefa **sem fill**, só `border-surface-line`; `surface-hover` no hover. **Nunca** usar `surface-raised`, `surface-panel`, `surface-slab*` ou `surface-ink*` no dashboard.
 - **Crimson (`accent-primary`) só em cinco papéis:** ação primária · view ativa · hoje · agora · tarefa aberta. Qualquer sexto uso é bug.
 - **Mono para dado de máquina** (`font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground`), sans para texto humano. Texto secundário é `text-content-secondary`, não `text-muted-foreground`.
