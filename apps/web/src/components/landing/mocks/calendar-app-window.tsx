@@ -2,9 +2,12 @@ import { ChevronLeft, ChevronRight } from "lucide-react";
 
 import { cn } from "@/lib/utils";
 
-/** Grid do mês — segunda-a-domingo, casando com o app. Decorativo (datas fake). */
-const WEEKDAY_LABELS = ["SEG", "TER", "QUA", "QUI", "SEX", "SÁB", "DOM"] as const;
+/** Grid do mês — domingo-a-sábado, casando com o app. Decorativo (datas fake). */
+const WEEKDAY_LABELS = ["DOM", "SEG", "TER", "QUA", "QUI", "SEX", "SÁB"] as const;
 const MONTH_DAYS: ReadonlyArray<number | null> = [
+  null,
+  null,
+  null,
   null,
   null,
   1,
@@ -37,9 +40,6 @@ const MONTH_DAYS: ReadonlyArray<number | null> = [
   28,
   29,
   30,
-  null,
-  null,
-  null,
 ];
 const TODAY = 14; // Qui, 14 Ago — mesmo dia do peek <DayAppWindow>
 const TASK_DAYS: ReadonlySet<number> = new Set([3, 7, 8, 12, 17, 22, 27]);
