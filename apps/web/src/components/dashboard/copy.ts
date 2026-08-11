@@ -9,7 +9,6 @@
  */
 export const copy = {
   header: {
-    logoAlt: "Dailify",
     viewDay: "Hoje",
     viewMonth: "Mês",
     upgrade: "Assinar",

@@ -3,6 +3,11 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Check, Flag, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
+/**
+ * Labels de acessibilidade (sr-only) pro `completed` e `priority` — estados que só existem no app.
+ * Mocks da landing passam só os 4 campos base e nunca atingem este código, então a dependência
+ * transativa do landing no dicionário do dashboard é segura e inevitável.
+ */
 import { copy } from "@/components/dashboard/copy";
 import { priorityText, priorityTextColor, tagsBgColors2 } from "@/consts/conts";
 import { cn } from "@/lib/utils";
