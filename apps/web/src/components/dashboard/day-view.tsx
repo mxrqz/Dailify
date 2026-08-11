@@ -82,7 +82,7 @@ export function DayView(): JSX.Element {
   };
 
   return (
-    <section className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-surface-line bg-surface-card shadow-panel">
+    <section className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-surface-line bg-surface-card shadow-panel">
       <header className="flex items-center justify-between border-b border-surface-line px-6 py-4">
         <div className="flex items-center gap-2.5">
           <span
@@ -103,7 +103,7 @@ export function DayView(): JSX.Element {
         </span>
       </header>
 
-      <div className="min-h-0 flex-1 p-6">
+      <div className="scrollbar-floating min-h-0 flex-1 overflow-y-auto p-6">
         {isLoading ? (
           <ul className="flex flex-col gap-3">
             {Array.from({ length: SKELETON_ROWS }).map((_, i) => (

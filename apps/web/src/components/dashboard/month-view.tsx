@@ -45,7 +45,7 @@ export function MonthView(): JSX.Element {
       initial={reduce ? false : { opacity: 0 }}
       animate={{ opacity: 1 }}
       transition={{ duration: reduce ? 0 : 0.25, ease: "easeOut" }}
-      className="flex min-h-0 flex-col overflow-hidden rounded-2xl border border-surface-line bg-surface-card shadow-panel"
+      className="flex h-full min-h-0 flex-col overflow-hidden rounded-2xl border border-surface-line bg-surface-card shadow-panel"
     >
       <header className="flex items-center justify-between border-b border-surface-line px-6 py-4">
         <div className="flex items-center gap-2">

@@ -28,7 +28,7 @@ export function DayAside(): JSX.Element {
   const nextTask = currentMonthTasks ? getNextTask(currentMonthTasks) : undefined;
 
   return (
-    <aside className="flex flex-col gap-4">
+    <aside className="flex flex-col gap-4 self-start">
       <AsideCard>
         <MiniCalendar />
       </AsideCard>

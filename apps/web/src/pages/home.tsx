@@ -13,14 +13,14 @@ export default function Home() {
   const { isCalendar } = useDailify();
 
   return (
-    <main className="flex min-h-dvh flex-col bg-surface-page text-foreground" id="main">
+    <main className="flex h-dvh flex-col bg-surface-page text-foreground" id="main">
       <AppHeader className="px-gutter" />
 
-      <div className="px-gutter pb-10 pt-6">
+      <div className="min-h-0 flex-1 px-gutter pb-10 pt-6">
         {isCalendar ? (
           <MonthView />
         ) : (
-          <div className="grid gap-5 md:grid-cols-[minmax(0,1fr)_20rem]">
+          <div className="grid h-full min-h-0 gap-5 md:grid-cols-[minmax(0,1fr)_20rem]">
             <DayView />
             <DayAside />
           </div>
