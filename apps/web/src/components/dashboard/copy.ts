@@ -87,6 +87,23 @@ export const copy = {
     upgrade: "Assinar",
   },
 
+  profile: {
+    pageTitle: "Perfil",
+    back: "Voltar",
+    personalTitle: "Informações pessoais",
+    personalDescription: "Gerencie seus dados e como eles aparecem.",
+    editProfile: "Editar perfil",
+    editTitle: "Editar perfil",
+    editDescription: "Atualize suas informações e salve quando terminar.",
+    notificationsTitle: "Notificações",
+    notificationsDescription: "Escolha como você quer ser avisado sobre suas tarefas.",
+    notificationsSoon: "As opções de notificação chegam em breve.",
+    emailLocked: "O e-mail não pode ser alterado.",
+    saving: "Salvando",
+    addPhone: "Adicionar telefone",
+    revokeDevice: "Encerrar sessão",
+  },
+
   voice: {
     title: "Criar tarefa por voz",
     description:

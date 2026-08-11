@@ -26,6 +26,7 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "./ui/button";
+import { copy } from "@/components/dashboard/copy";
 import { Separator } from "./ui/separator";
 import { CreditCard, Receipt } from "lucide-react";
 import { Badge } from "./ui/badge";
@@ -153,10 +154,12 @@ export function SubscriptionTab({
   };
 
   return (
-    <Card>
+    <Card className="rounded-2xl border-surface-line bg-surface-card">
       <CardHeader>
         <CardTitle>Plano e Assinatura</CardTitle>
-        <CardDescription>Gerencie seu plano atual e informações de pagamento.</CardDescription>
+        <CardDescription className="text-content-secondary">
+          Gerencie seu plano atual e informações de pagamento.
+        </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
@@ -166,7 +169,7 @@ export function SubscriptionTab({
               <h3 className="text-lg font-semibold">Plano {plan}</h3>
 
               {paymentDetails && (
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-content-secondary">
                   Próxima cobrança em {format(new Date(paymentDetails.start * 1000), "dd/MM/yyyy")}{" "}
                   • {amountFormatted(paymentDetails.amount, paymentDetails.currency)} /{" "}
                   {paymentDetails.recurring}
@@ -218,14 +221,14 @@ export function SubscriptionTab({
               })
               .map((invoice, index) => (
                 <div className="flex flex-col gap-1" key={index}>
-                  <p className="text-muted-foreground text-sm">
+                  <p className="text-sm text-content-secondary">
                     {format(new Date(invoice.created * 1000), "dd/MM/yyyy")} -{" "}
                     {amountFormatted(invoice.amount_paid, invoice.currency)}
                   </p>
 
                   <div className="flex items-center justify-between rounded-lg border p-3">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10 relative">
+                      <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-subtle relative">
                         <CreditCard className="h-5 w-5 text-primary" />
                       </div>
 
@@ -283,10 +286,12 @@ export function SecurityTab() {
   }, []);
 
   return (
-    <Card>
+    <Card className="rounded-2xl border-surface-line bg-surface-card">
       <CardHeader>
         <CardTitle>Segurança da Conta</CardTitle>
-        <CardDescription>Gerencie as configurações de segurança da sua conta.</CardDescription>
+        <CardDescription className="text-content-secondary">
+          Gerencie as configurações de segurança da sua conta.
+        </CardDescription>
       </CardHeader>
 
       <CardContent className="space-y-6">
@@ -303,7 +308,7 @@ export function SecurityTab() {
 
           <div className="space-y-4">
             <h4 className="text-base font-medium">Sessões ativas</h4>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-content-secondary">
               Dispositivos atualmente conectados à sua conta.
             </p>
 
@@ -319,7 +324,7 @@ export function SecurityTab() {
                   .map((session) => (
                     <div key={session.id} className="grid grid-cols-[25%_45%_25%_5%] items-center">
                       <div className="flex items-center gap-3">
-                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-primary/10">
+                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-subtle">
                           {session.latestActivity.isMobile ? (
                             <Smartphone className="h-5 w-5 text-primary" />
                           ) : (
@@ -335,7 +340,7 @@ export function SecurityTab() {
                               {session.id === currentSession?.id && (
                                 <Badge
                                   variant="outline"
-                                  className="border-green-500 text-2xs py-0.5 px-1"
+                                  className="border-success text-2xs py-0.5 px-1"
                                 >
                                   Atual
                                 </Badge>
@@ -350,12 +355,12 @@ export function SecurityTab() {
                         </div>
                       </div>
 
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-sm text-content-secondary">
                         {session.latestActivity.ipAddress} ({session.latestActivity.city},{" "}
                         {session.latestActivity.country})
                       </span>
 
-                      <span className="text-sm text-muted-foreground">
+                      <span className="text-sm text-content-secondary">
                         {formatRelative(session.lastActiveAt, new Date())}
                       </span>
 
@@ -368,10 +373,11 @@ export function SecurityTab() {
 
                         <PopoverContent align="end" className="p-1">
                           <Button
-                            className="h-5 w-full text-start px-2 py-0 justify-start bg-red-900/5 hover:bg-red-900/15 text-red-500"
+                            variant="ghost"
+                            className="h-7 w-full justify-start px-2 py-0 text-start text-destructive hover:text-destructive"
                             onClick={() => session.revoke()}
                           >
-                            Revoke device
+                            {copy.profile.revokeDevice}
                           </Button>
                         </PopoverContent>
                       </Popover>
@@ -549,11 +555,11 @@ export function PersonalTab() {
 
   return (
     <>
-      <Card>
+      <Card className="rounded-2xl border-surface-line bg-surface-card">
         <CardHeader>
-          <CardTitle>Personal Information</CardTitle>
-          <CardDescription>
-            Manage your personal information and how they are displayed.
+          <CardTitle>{copy.profile.personalTitle}</CardTitle>
+          <CardDescription className="text-content-secondary">
+            {copy.profile.personalDescription}
           </CardDescription>
         </CardHeader>
 
@@ -573,7 +579,7 @@ export function PersonalTab() {
               <h3 className="text-xl font-semibold">
                 {user?.firstName} {user?.lastName}
               </h3>
-              <p className="text-sm text-muted-foreground">@{user?.username}</p>
+              <p className="text-sm text-content-secondary">@{user?.username}</p>
             </div>
           </div>
 
@@ -650,15 +656,13 @@ export function PersonalTab() {
         <CardFooter className="flex justify-end">
           <Dialog>
             <DialogTrigger asChild>
-              <Button> Edit profile</Button>
+              <Button>{copy.profile.editProfile}</Button>
             </DialogTrigger>
 
             <DialogContent className="max-h-[calc(100%-2rem)] overflow-y-scroll scrollbar-floating">
               <DialogHeader className="">
-                <DialogTitle>User Profile</DialogTitle>
-                <DialogDescription>
-                  Update your profile information. Click save when you're done.
-                </DialogDescription>
+                <DialogTitle>{copy.profile.editTitle}</DialogTitle>
+                <DialogDescription>{copy.profile.editDescription}</DialogDescription>
               </DialogHeader>
 
               <form onSubmit={handleSubmit}>
@@ -695,7 +699,7 @@ export function PersonalTab() {
                     </div>
 
                     <div className="text-center">
-                      <p className="text-sm text-muted-foreground">
+                      <p className="text-sm text-content-secondary">
                         Click on the camera to change your profile picture
                       </p>
                     </div>
@@ -908,7 +912,7 @@ export function PersonalTab() {
                         disabled
                         className="bg-muted/50 text-muted-foreground"
                       />
-                      <p className="text-xs text-muted-foreground">Email can't be changed.</p>
+                      <p className="text-xs text-muted-foreground">{copy.profile.emailLocked}</p>
                     </div>
                   </div>
                 </div>
@@ -916,7 +920,7 @@ export function PersonalTab() {
                 <DialogFooter>
                   <DialogClose asChild>
                     <Button type="button" variant="outline" className="cursor-pointer">
-                      Cancel
+                      {copy.form.cancel}
                     </Button>
                   </DialogClose>
 
@@ -924,10 +928,10 @@ export function PersonalTab() {
                     {isLoading ? (
                       <>
                         <Loader2Icon className="animate-spin" />
-                        <span>Saving</span>
+                        <span>{copy.profile.saving}</span>
                       </>
                     ) : (
-                      <>Save</>
+                      copy.form.save
                     )}
                   </Button>
                 </DialogFooter>
@@ -1021,12 +1025,16 @@ export function PersonalTab() {
             <DialogFooter>
               <DialogClose>
                 <Button variant={"ghost"} type="button">
-                  Cancel
+                  {copy.form.cancel}
                 </Button>
               </DialogClose>
 
               <Button type="submit" disabled={isLoading}>
-                {isLoading ? <Loader2Icon className="animate-spin" /> : <>Add Phone</>}
+                {isLoading ? (
+                  <Loader2Icon className="animate-spin" />
+                ) : (
+                  <>{copy.profile.addPhone}</>
+                )}
               </Button>
             </DialogFooter>
           </form>

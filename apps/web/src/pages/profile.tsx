@@ -6,6 +6,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PersonalTab, SecurityTab, SubscriptionTab } from "@/components/profileTabs";
 import { useDailify } from "@/components/dailifyContext";
+import { copy } from "@/components/dashboard/copy";
 
 export default function ProfilePage() {
   const navigate = useNavigate();
@@ -22,15 +23,15 @@ export default function ProfilePage() {
 
   return (
     <main className="w-full h-full px-[clamp(1rem,5vw,6rem)] flex flex-col">
-      <AppHeader />
+      <AppHeader showViewToggle={false} />
 
       <div className="w-full flex flex-col justify-center py-6 space-y-6">
         <div className="flex items-center gap-2">
           <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
             <ChevronLeft className="h-4 w-4" />
-            <span className="sr-only">Back</span>
+            <span className="sr-only">{copy.profile.back}</span>
           </Button>
-          <h1 className="text-2xl font-bold">Profile</h1>
+          <h1 className="text-2xl font-semibold tracking-[-0.01em]">{copy.profile.pageTitle}</h1>
         </div>
 
         <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab}>
@@ -74,25 +75,19 @@ export default function ProfilePage() {
           </TabsContent>
 
           <TabsContent value="notifications">
-            <Card>
+            <Card className="rounded-2xl border-surface-line bg-surface-card">
               <CardHeader>
-                <CardTitle>Notification Preferences</CardTitle>
-                <CardDescription>
-                  Manage how you get notifications about your tasks.
+                <CardTitle>{copy.profile.notificationsTitle}</CardTitle>
+                <CardDescription className="text-content-secondary">
+                  {copy.profile.notificationsDescription}
                 </CardDescription>
               </CardHeader>
 
               <CardContent>
-                <p className="text-sm text-muted-foreground">
-                  Notification settings will be implemented soon.
-                </p>
+                <p className="text-sm text-content-secondary">{copy.profile.notificationsSoon}</p>
               </CardContent>
             </Card>
           </TabsContent>
-
-          <TabsContent value="security"></TabsContent>
-
-          <TabsContent value="security"></TabsContent>
         </Tabs>
       </div>
     </main>

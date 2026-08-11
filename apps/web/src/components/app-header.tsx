@@ -55,7 +55,13 @@ function ViewToggle(): JSX.Element {
   );
 }
 
-export function AppHeader({ className }: { className?: string }): JSX.Element {
+export function AppHeader({
+  className,
+  showViewToggle = true,
+}: {
+  className?: string;
+  showViewToggle?: boolean;
+}): JSX.Element {
   const { signOut } = useAuth();
   const { user } = useUser();
   const navigate = useNavigate();
@@ -70,7 +76,7 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
     >
       <Brand to="/dashboard" />
 
-      <ViewToggle />
+      {showViewToggle && <ViewToggle />}
 
       <div className="inline-flex items-center gap-3">
         <ModeToggle />
