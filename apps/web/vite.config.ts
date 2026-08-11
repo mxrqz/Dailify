@@ -8,12 +8,7 @@ import mkcert from 'vite-plugin-mkcert'
 
 const host = process.env.TAURI_DEV_HOST;
 
-/**
- * Alvo do proxy de API em dev. O dev server roda em HTTPS (mkcert) e o `apps/server` local roda em
- * HTTP (wrangler, :8787) — o navegador bloqueia essa chamada como mixed content e ela nunca sai.
- * Com o proxy, o browser só fala com o próprio dev server (mesma origem, mesmo esquema) e é o Vite,
- * server-side, que conversa com o worker. Ver bd Dailify-6aq.
- */
+// Proxy de API em dev: HTTPS (mkcert) -> HTTP (wrangler :8787) seria mixed content. bd Dailify-6aq
 const apiTarget = (mode: string) =>
   loadEnv(mode, path.resolve(__dirname), "VITE_").VITE_API_URL || "http://localhost:8787";
 
@@ -55,8 +50,6 @@ export default defineConfig(async ({ mode }) => ({
       ignored: ["**/src-tauri/**"],
     },
     proxy: {
-      // `apiURL` (consts) vira "/api" em dev justamente para cair aqui; em build ele volta a ser o
-      // VITE_API_URL absoluto e este proxy não existe.
       "/api": {
         target: apiTarget(mode),
         changeOrigin: true,

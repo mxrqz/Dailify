@@ -16,14 +16,14 @@ export function computeEntitlements(
   permissions: Permissions | undefined,
   tasksUsed: number,
 ): Entitlements {
-  const monthlyLimit = permissions?.taskLimits.monthly ?? -1;
-  const recurringLimit = permissions?.taskLimits.recurring ?? 0;
+  const monthlyLimit = permissions?.taskLimits?.monthly ?? -1;
+  const recurringLimit = permissions?.taskLimits?.recurring ?? 0;
   const unlimited = monthlyLimit < 0;
   const remaining = unlimited ? Infinity : Math.max(0, monthlyLimit - tasksUsed);
 
   return {
     loading: permissions === undefined,
-    voice: permissions?.features.voiceCreation ?? false,
+    voice: permissions?.features?.voiceCreation ?? false,
     recurrence: recurringLimit !== 0, // 0 = not allowed; -1 (unlimited) or >0 = allowed
     monthlyLimit,
     unlimited,
