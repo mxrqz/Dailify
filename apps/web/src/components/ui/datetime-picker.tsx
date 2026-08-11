@@ -64,8 +64,8 @@ const DatetimeGrid = forwardRef<
       <div
         className={cn(
           "flex items-center w-fit p-1 border-2",
-          className,
           "border-input rounded-md gap-1 selection:bg-transparent selection:text-foreground",
+          className,
         )}
         {...timescape.getRootProps()}
         ref={ref}

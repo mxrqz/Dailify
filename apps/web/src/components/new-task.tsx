@@ -2,8 +2,10 @@ import { Loader2, PlusIcon } from "lucide-react";
 import { useId, useState } from "react";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
@@ -19,6 +21,7 @@ import { useEntitlements } from "@/hooks/useEntitlements";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import type { TaskInput } from "@dailify/shared";
 
 export default function NewTask({ className }: { className: string }) {
@@ -51,17 +54,17 @@ export default function NewTask({ className }: { className: string }) {
 
     const { task, error } = await createTask(token, taskInput);
     if (error || !task) {
-      toast("An error occurred", {
+      toast(copy.form.createError, {
         description: error,
         action: {
-          label: "Get Premium",
+          label: copy.form.upgrade,
           onClick: () => navigate("/premium"),
         },
       });
     } else {
       setTasks(upsertTaskById(tasks ?? [], task));
-      toast.message("Event has been created", {
-        description: format(values.date, "cccc PPPpp"),
+      toast.message(copy.form.created, {
+        description: format(values.date, "cccc, d 'de' MMMM 'às' HH:mm", { locale: ptBR }),
       });
     }
 
@@ -77,32 +80,48 @@ export default function NewTask({ className }: { className: string }) {
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-h-[calc(100%-2rem)] overflow-hidden flex flex-col">
+      <DialogContent className="flex max-h-[calc(100%-2rem)] flex-col overflow-hidden rounded-2xl border-surface-line bg-surface-card">
         <DialogHeader className="text-start">
-          <DialogTitle>New Task</DialogTitle>
-          <DialogDescription>Create a new task</DialogDescription>
+          <DialogTitle className="text-lg font-semibold tracking-[-0.01em]">
+            {copy.form.newTitle}
+          </DialogTitle>
+          <DialogDescription className="text-sm text-content-secondary">
+            {copy.form.newDescription}
+          </DialogDescription>
         </DialogHeader>
 
-        <TaskForm id={formId} defaultDate={selectedDay} onSubmit={handleSubmit} />
+        <TaskForm
+          id={formId}
+          defaultDate={selectedDay}
+          className="min-h-0 flex-1 scrollbar-floating"
+          onSubmit={handleSubmit}
+        />
 
-        <Button
-          type="submit"
-          form={formId}
-          variant={"outline"}
-          className="w-full cursor-pointer"
-          disabled={loading}
-          onClick={(e) => {
-            if (!canCreateTask) {
-              e.preventDefault();
-              toast("Limite de tarefas atingido", {
-                description: "Você atingiu o limite do seu plano neste mês.",
-                action: { label: "Get Premium", onClick: () => navigate("/premium") },
-              });
-            }
-          }}
-        >
-          {loading ? <Loader2 className="animate-spin" /> : <PlusIcon />}
-        </Button>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="ghost" className="cursor-pointer">
+              {copy.form.cancel}
+            </Button>
+          </DialogClose>
+
+          <Button
+            type="submit"
+            form={formId}
+            className="cursor-pointer rounded-full bg-accent-primary px-5 text-primary-foreground hover:bg-accent-hover"
+            disabled={loading}
+            onClick={(e) => {
+              if (!canCreateTask) {
+                e.preventDefault();
+                toast(copy.form.limitReached, {
+                  description: copy.form.limitReachedHint,
+                  action: { label: copy.form.upgrade, onClick: () => navigate("/premium") },
+                });
+              }
+            }}
+          >
+            {loading ? <Loader2 className="animate-spin" /> : copy.form.create}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

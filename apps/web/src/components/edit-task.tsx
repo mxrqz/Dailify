@@ -19,6 +19,7 @@ import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { isTaskModified, upsertTaskById } from "@/functions/functions";
 import { TaskForm, TaskFormValues } from "@/components/dashboard/task-form";
+import { copy } from "@/components/dashboard/copy";
 
 type EditTaskProps = Record<string, never>;
 
@@ -64,7 +65,7 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
 
   const handleSubmit = async (values: TaskFormValues) => {
     if (!user) {
-      toast.warning("User not authenticated or invalid references.");
+      toast.warning(copy.form.authError);
       return;
     }
 
@@ -72,7 +73,7 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
 
     const token = await getToken();
     if (!token) {
-      toast.error("Authentication token is missing.");
+      toast.error(copy.form.authError);
       setLoading(false);
       return;
     }
@@ -91,7 +92,7 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
     };
 
     if (!isTaskModified(task, taskData)) {
-      toast.info("No changes made to the task.");
+      toast.info(copy.form.noChanges);
       setLoading(false);
       return;
     }
@@ -99,15 +100,15 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
     const { task: updated, error } = await updateTask(token, task.id, taskData);
 
     if (error || !updated) {
-      toast("An error occurred", {
+      toast(copy.form.createError, {
         description: error,
         action: {
-          label: "Get Premium",
+          label: copy.form.upgrade,
           onClick: () => navigate("/premium"),
         },
       });
     } else {
-      toast.success("Task updated successfully!");
+      toast.success(copy.form.updated);
       setTasks(upsertTaskById(tasks ?? [], updated));
     }
 
@@ -115,28 +116,37 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
   };
 
   return (
-    <SheetContent className="w-full overflow-hidden">
+    <SheetContent className="w-full overflow-hidden border-surface-line bg-surface-card">
       <SheetHeader>
-        <SheetTitle>Edit Task</SheetTitle>
-        <SheetDescription>Update your task details</SheetDescription>
+        <SheetTitle className="text-lg font-semibold tracking-[-0.01em]">
+          {copy.form.editTitle}
+        </SheetTitle>
+        <SheetDescription className="text-sm text-content-secondary">
+          {copy.form.editDescription}
+        </SheetDescription>
       </SheetHeader>
 
-      <TaskForm id={formId} task={task} onSubmit={handleSubmit} />
+      <TaskForm
+        id={formId}
+        task={task}
+        className="min-h-0 flex-1 scrollbar-floating px-4"
+        onSubmit={handleSubmit}
+      />
 
       <SheetFooter className="flex-row justify-end">
-        <SheetClose>
-          <Button variant={"outline"} className="cursor-pointer">
-            Cancel
+        <SheetClose asChild>
+          <Button variant="ghost" className="cursor-pointer">
+            {copy.form.cancel}
           </Button>
         </SheetClose>
 
         <Button
           type="submit"
           form={formId}
-          className="cursor-pointer bg-primary"
+          className="cursor-pointer rounded-full bg-accent-primary px-5 text-primary-foreground hover:bg-accent-hover"
           disabled={loading}
         >
-          {loading ? <Loader2 className="animate-spin" /> : <>Save</>}
+          {loading ? <Loader2 className="animate-spin" /> : copy.form.save}
         </Button>
       </SheetFooter>
     </SheetContent>
