@@ -10,6 +10,7 @@ import {
   unixToDate,
   groupTasksByTime,
   taskToCardData,
+  nowLineIndex,
 } from "./functions";
 import type { TaskProps } from "@/types/types";
 
@@ -207,5 +208,31 @@ describe("taskToCardData", () => {
 
   test("completed is false (never undefined) for an empty completed list", () => {
     expect(taskToCardData(makeTask({ completed: [] }), day).completed).toBe(false);
+  });
+});
+
+describe("nowLineIndex", () => {
+  const at = (h: number, m: number) => new Date(2026, 7, 10, h, m);
+  const groups = [{ time: "09:00" }, { time: "11:00" }, { time: "14:30" }];
+
+  test("0 when now is before every group — the line sits on top", () => {
+    expect(nowLineIndex(groups, at(7, 0))).toBe(0);
+  });
+
+  test("splits the list when now falls between two groups", () => {
+    expect(nowLineIndex(groups, at(10, 0))).toBe(1);
+    expect(nowLineIndex(groups, at(12, 0))).toBe(2);
+  });
+
+  test("groups.length when now is past every group — the line sits at the bottom", () => {
+    expect(nowLineIndex(groups, at(18, 0))).toBe(3);
+  });
+
+  test("a group starting exactly now is still ahead of the line", () => {
+    expect(nowLineIndex(groups, at(11, 0))).toBe(1);
+  });
+
+  test("0 for an empty list", () => {
+    expect(nowLineIndex([], at(12, 0))).toBe(0);
   });
 });
