@@ -214,7 +214,7 @@ export function TaskCard({ loading, ...data }: TaskCardProps): JSX.Element {
         animate={{ opacity: loading ? 0 : 1 }}
         transition={transition}
       >
-        <CardBody {...data} />
+        <CardBody {...data} onClick={loading ? undefined : data.onClick} />
       </motion.div>
     </div>
   );
