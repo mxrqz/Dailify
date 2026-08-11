@@ -82,6 +82,16 @@ export const copy = {
     upgrade: "Assinar",
   },
 
+  voice: {
+    title: "Criar tarefa por voz",
+    description:
+      "Grave sua voz dizendo o título, a data, o horário e os outros detalhes da tarefa.",
+    record: "Gravar",
+    stop: "Parar gravação",
+    send: "Criar tarefa",
+    sending: "Criando tarefa",
+  },
+
   task: {
     complete: "Concluir",
     delete: "Excluir",
