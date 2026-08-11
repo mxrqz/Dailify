@@ -30,12 +30,25 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
 
   useEffect(() => {
     (async () => {
-      const token = await getToken();
-      if (!token) return;
+      try {
+        const token = await getToken();
+        if (!token) return;
 
-      setPaymentDetails(await getPaymentDetails(token));
-      setPermissions(await getPermissions(token));
-      setInvoices(await getInvoices(token));
+        // Sequencial e sem catch, este bloco virava `Uncaught (in promise)` no console assim que a
+        // API estivesse fora do ar — e a primeira falha abortava as outras duas. Em paralelo, cada
+        // uma cai por si; `allSettled` nunca rejeita, então uma falha não derruba as vizinhas.
+        const [payment, permissions, invoices] = await Promise.allSettled([
+          getPaymentDetails(token),
+          getPermissions(token),
+          getInvoices(token),
+        ]);
+
+        if (payment.status === "fulfilled") setPaymentDetails(payment.value);
+        if (permissions.status === "fulfilled") setPermissions(permissions.value);
+        if (invoices.status === "fulfilled") setInvoices(invoices.value);
+      } catch {
+        // getToken() falhou — sem sessão utilizável. As telas já lidam com permissions ausente.
+      }
     })();
   }, []);
 
