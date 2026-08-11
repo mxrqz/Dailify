@@ -229,7 +229,7 @@ export function SubscriptionTab({
                   <div className="flex items-center justify-between rounded-lg border p-3">
                     <div className="flex items-center gap-3">
                       <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-subtle relative">
-                        <CreditCard className="h-5 w-5 text-primary" />
+                        <CreditCard className="h-5 w-5 text-foreground" />
                       </div>
 
                       <div className="flex justify-center flex-col">
@@ -326,9 +326,9 @@ export function SecurityTab() {
                       <div className="flex items-center gap-3">
                         <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-subtle">
                           {session.latestActivity.isMobile ? (
-                            <Smartphone className="h-5 w-5 text-primary" />
+                            <Smartphone className="h-5 w-5 text-foreground" />
                           ) : (
-                            <Laptop2Icon className="h-5 w-5 text-primary" />
+                            <Laptop2Icon className="h-5 w-5 text-foreground" />
                           )}
                         </div>
 
@@ -682,7 +682,7 @@ export function PersonalTab() {
 
                       <Label
                         htmlFor="avatar-upload"
-                        className="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground shadow-sm hover:bg-primary/90"
+                        className="absolute bottom-0 right-0 flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-accent-primary text-primary-foreground shadow-sm hover:bg-accent-hover"
                       >
                         <Camera className="h-4 w-4" />
                         <span className="sr-only">Change Profile Picture</span>

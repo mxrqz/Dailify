@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const timePickerInputBase =
   "p-1 inline tabular-nums h-fit border-none outline-none select-none content-box caret-transparent rounded-sm min-w-8 text-center focus:bg-foreground/20 focus-visible:ring-0 focus-visible:outline-none";
-const timePickerSeparatorBase = "text-xs text-gray-400";
+const timePickerSeparatorBase = "text-xs text-muted-foreground";
 
 type DateFormat = "days" | "months" | "years";
 type TimeFormat = "hours" | "minutes" | "seconds" | "am/pm";
