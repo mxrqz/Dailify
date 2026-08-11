@@ -33,7 +33,6 @@ export const copy = {
   aside: {
     nextTaskLabel: "PRÓXIMA TAREFA",
     noNextTask: "Nada pela frente neste mês.",
-    calendarLabel: "CALENDÁRIO",
     prevMonth: "Mês anterior",
     nextMonth: "Próximo mês",
     weekDayInitials: ["D", "S", "T", "Q", "Q", "S", "S"],
@@ -41,7 +40,6 @@ export const copy = {
 
   task: {
     complete: "Concluir",
-    edit: "Editar",
     delete: "Excluir",
     options: "Opções da tarefa",
     completed: "Concluída",

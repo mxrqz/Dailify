@@ -75,22 +75,6 @@ export const weekDays = [
   "Saturday",
 ];
 
-export const variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      duration: 1,
-      staggerChildren: 0.1,
-    },
-  },
-};
-
-export const childVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.1 } },
-};
-
 export const PLAN_ID = { free: "free", pro: "pro", proAi: "pro+ai" } as const;
 
 export const planMap: Record<string, "Free" | "Pro" | "Pro + AI"> = {

@@ -6,6 +6,7 @@ import { Fragment } from "react";
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { DayTaskRow } from "@/components/dashboard/day-task-row";
+import NewTask from "@/components/new-task";
 import { TaskCard } from "@/components/task-card";
 import {
   getTasksForDay,
@@ -117,6 +118,7 @@ export function DayView(): JSX.Element {
               {copy.day.emptyTitle}
             </p>
             <p className="max-w-xs text-sm text-content-secondary">{copy.day.emptyHint}</p>
+            <NewTask className="mt-2 h-10 rounded-full bg-accent-primary px-5 text-primary-foreground hover:bg-accent-hover" />
           </div>
         ) : (
           <motion.ul

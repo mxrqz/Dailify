@@ -3,7 +3,8 @@ import { motion, useReducedMotion } from "framer-motion";
 import { Check, Flag, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { priorityTextColor, tagsBgColors2 } from "@/consts/conts";
+import { copy } from "@/components/dashboard/copy";
+import { priorityText, priorityTextColor, tagsBgColors2 } from "@/consts/conts";
 import { cn } from "@/lib/utils";
 
 /**
@@ -162,13 +163,19 @@ function CardBody({
 
           <div className="pointer-events-none relative z-10 flex shrink-0 items-center gap-1.5">
             {!loading && completed && (
-              <Check className="size-3.5 shrink-0 text-success" aria-hidden="true" />
+              <>
+                <Check className="size-3.5 shrink-0 text-success" aria-hidden="true" />
+                <span className="sr-only">{copy.task.completed}</span>
+              </>
             )}
             {!loading && priority !== undefined && priority > 0 && (
-              <Flag
-                className={cn("size-3 shrink-0", priorityTextColor[priority])}
-                aria-hidden="true"
-              />
+              <>
+                <Flag
+                  className={cn("size-3 shrink-0", priorityTextColor[priority])}
+                  aria-hidden="true"
+                />
+                <span className="sr-only">{priorityText[priority]}</span>
+              </>
             )}
             <DurationBadge value={duration} loading={loading} />
             {!loading && actions && <span className="pointer-events-auto">{actions}</span>}
@@ -176,7 +183,7 @@ function CardBody({
         </div>
 
         {(shown.length > 0 || extra > 0) && (
-          <div className="relative z-10 mt-2 flex items-center gap-1.5 overflow-hidden">
+          <div className="pointer-events-none relative z-10 mt-2 flex items-center gap-1.5 overflow-hidden">
             {shown.map((tag, i) => (
               <TagBadge key={i} label={tag} loading={loading} />
             ))}
@@ -214,7 +221,11 @@ export function TaskCard({ loading, ...data }: TaskCardProps): JSX.Element {
         animate={{ opacity: loading ? 0 : 1 }}
         transition={transition}
       >
-        <CardBody {...data} onClick={loading ? undefined : data.onClick} />
+        <CardBody
+          {...data}
+          onClick={loading ? undefined : data.onClick}
+          actions={loading ? undefined : data.actions}
+        />
       </motion.div>
     </div>
   );
