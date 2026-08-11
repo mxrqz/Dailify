@@ -37,6 +37,16 @@ export const copy = {
     weekDayInitials: ["D", "S", "T", "Q", "Q", "S", "S"],
   },
 
+  month: {
+    today: "Hoje",
+    prevMonth: "Mês anterior",
+    nextMonth: "Próximo mês",
+    goToToday: "Ir para hoje",
+    moreTasks: "+{n}",
+    sheetTitle: "Tarefas do dia",
+    sheetEmpty: "Nenhuma tarefa neste dia.",
+  },
+
   loading: {
     tasks: "Carregando tarefas",
     tasksError: "Não foi possível carregar suas tarefas",
