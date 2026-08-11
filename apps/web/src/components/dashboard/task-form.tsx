@@ -1,4 +1,4 @@
-import { forwardRef, useEffect, useImperativeHandle, useRef, useState } from "react";
+import { FormEvent, useEffect, useRef, useState } from "react";
 import { TimeValue } from "react-aria-components";
 import { toast } from "sonner";
 import type { Repeat } from "@dailify/shared";
@@ -23,11 +23,8 @@ export interface TaskFormValues {
   repeat: Repeat;
 }
 
-export interface TaskFormHandle {
-  submit: () => void;
-}
-
 interface TaskFormProps {
+  id: string;
   task?: TaskProps;
   defaultDate?: Date;
   onSubmit: (values: TaskFormValues) => void;
@@ -45,10 +42,7 @@ const parseDuration = (duration: string): TimeValue => {
   } as TimeValue;
 };
 
-export const TaskForm = forwardRef<TaskFormHandle, TaskFormProps>(function TaskForm(
-  { task, defaultDate, onSubmit },
-  ref,
-) {
+export function TaskForm({ id, task, defaultDate, onSubmit }: TaskFormProps) {
   const titleRef = useRef<HTMLInputElement>(null);
   const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(() =>
@@ -70,11 +64,12 @@ export const TaskForm = forwardRef<TaskFormHandle, TaskFormProps>(function TaskF
     setSelectedDuration(finalMessage);
   };
 
-  const handleSubmit = () => {
+  const handleSubmit = (e: FormEvent) => {
+    e.preventDefault();
     if (!titleRef.current || !descriptionRef.current) return;
 
-    const title = titleRef.current.value;
-    const desc = descriptionRef.current.value;
+    const title = titleRef.current.value.trim();
+    const desc = descriptionRef.current.value.trim();
 
     if (!title) {
       toast.warning("Title is required");
@@ -98,10 +93,11 @@ export const TaskForm = forwardRef<TaskFormHandle, TaskFormProps>(function TaskF
     });
   };
 
-  useImperativeHandle(ref, () => ({ submit: handleSubmit }));
-
   return (
-    <div
+    <form
+      id={id}
+      onSubmit={handleSubmit}
+      noValidate
       className={
         task
           ? "flex flex-col gap-4 scrollbar-floating px-5"
@@ -193,6 +189,6 @@ export const TaskForm = forwardRef<TaskFormHandle, TaskFormProps>(function TaskF
         <Label htmlFor="repeat">Repeat</Label>
         <RepeatPicker onSelectedRepeat={setRepeat} task={task} />
       </div>
-    </div>
+    </form>
   );
-});
+}

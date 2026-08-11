@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, ReactNode, useRef } from "react";
+import { createContext, useContext, useId, useState, ReactNode } from "react";
 import {
   Sheet,
   SheetClose,
@@ -18,7 +18,7 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { Loader2 } from "lucide-react";
 import { isTaskModified, upsertTaskById } from "@/functions/functions";
-import { TaskForm, TaskFormHandle, TaskFormValues } from "@/components/dashboard/task-form";
+import { TaskForm, TaskFormValues } from "@/components/dashboard/task-form";
 
 type EditTaskProps = Record<string, never>;
 
@@ -59,7 +59,7 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
   const { getToken } = useAuth();
   const { user } = useUser();
   const navigate = useNavigate();
-  const formRef = useRef<TaskFormHandle>(null);
+  const formId = useId();
   const [loading, setLoading] = useState<boolean>(false);
 
   const handleSubmit = async (values: TaskFormValues) => {
@@ -121,7 +121,7 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
         <SheetDescription>Update your task details</SheetDescription>
       </SheetHeader>
 
-      <TaskForm ref={formRef} task={task} onSubmit={handleSubmit} />
+      <TaskForm id={formId} task={task} onSubmit={handleSubmit} />
 
       <SheetFooter className="flex-row justify-end">
         <SheetClose>
@@ -131,9 +131,10 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
         </SheetClose>
 
         <Button
+          type="submit"
+          form={formId}
           className="cursor-pointer bg-primary"
           disabled={loading}
-          onClick={() => formRef.current?.submit()}
         >
           {loading ? <Loader2 className="animate-spin" /> : <>Save</>}
         </Button>

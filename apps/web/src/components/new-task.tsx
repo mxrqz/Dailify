@@ -1,5 +1,5 @@
 import { Loader2, PlusIcon } from "lucide-react";
-import { useRef, useState } from "react";
+import { useId, useState } from "react";
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,7 @@ import { Button } from "./ui/button";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { useDailify } from "./dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { TaskForm, TaskFormHandle, TaskFormValues } from "@/components/dashboard/task-form";
+import { TaskForm, TaskFormValues } from "@/components/dashboard/task-form";
 import { createTask } from "@/functions/api";
 import { upsertTaskById } from "@/functions/functions";
 import { useEntitlements } from "@/hooks/useEntitlements";
@@ -27,19 +27,11 @@ export default function NewTask({ className }: { className: string }) {
   const { canCreateTask } = useEntitlements();
   const { user } = useUser();
   const navigate = useNavigate();
-  const formRef = useRef<TaskFormHandle>(null);
+  const formId = useId();
 
   const [loading, setLoading] = useState<boolean>(false);
 
   const handleSubmit = async (values: TaskFormValues) => {
-    if (!canCreateTask) {
-      toast("Limite de tarefas atingido", {
-        description: "Você atingiu o limite do seu plano neste mês.",
-        action: { label: "Get Premium", onClick: () => navigate("/premium") },
-      });
-      return;
-    }
-
     if (!user) return;
 
     const token = await getToken();
@@ -91,14 +83,23 @@ export default function NewTask({ className }: { className: string }) {
           <DialogDescription>Create a new task</DialogDescription>
         </DialogHeader>
 
-        <TaskForm ref={formRef} defaultDate={selectedDay} onSubmit={handleSubmit} />
+        <TaskForm id={formId} defaultDate={selectedDay} onSubmit={handleSubmit} />
 
         <Button
           type="submit"
+          form={formId}
           variant={"outline"}
           className="w-full cursor-pointer"
           disabled={loading}
-          onClick={() => formRef.current?.submit()}
+          onClick={(e) => {
+            if (!canCreateTask) {
+              e.preventDefault();
+              toast("Limite de tarefas atingido", {
+                description: "Você atingiu o limite do seu plano neste mês.",
+                action: { label: "Get Premium", onClick: () => navigate("/premium") },
+              });
+            }
+          }}
         >
           {loading ? <Loader2 className="animate-spin" /> : <PlusIcon />}
         </Button>
