@@ -66,6 +66,11 @@ export const copy = {
     priority: "Prioridade",
     tags: "Tags",
     repeat: "Repetição",
+    repeatOff: "Não repetir",
+    repeatDaily: "Diária",
+    repeatWeekly: "Semanal",
+    repeatMonthly: "Mensal",
+    repeatYearly: "Anual",
     cancel: "Cancelar",
     save: "Salvar",
     create: "Criar tarefa",
@@ -94,9 +99,11 @@ export const copy = {
 
   task: {
     complete: "Concluir",
+    edit: "Editar",
     delete: "Excluir",
     options: "Opções da tarefa",
     completed: "Concluída",
+    noDescription: "Sem descrição.",
     completeError: "Não foi possível concluir a tarefa",
     deleteError: "Não foi possível excluir a tarefa",
   },

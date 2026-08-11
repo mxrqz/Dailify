@@ -1,48 +1,19 @@
 import { useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
 import { CheckIcon, EllipsisVerticalIcon, Trash2Icon } from "lucide-react";
-import { toast } from "sonner";
 
-import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
+import { TaskDetailContent } from "@/components/dashboard/task-detail";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
 import { TaskCard } from "@/components/task-card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { completeTask, deleteTask } from "@/functions/api";
-import { taskToCardData, upsertTaskById } from "@/functions/functions";
+import { taskToCardData } from "@/functions/functions";
+import { useTaskActions } from "@/hooks/useTaskActions";
 import type { TaskProps } from "@/types/types";
 
-/**
- * Menu (⋮) da tarefa — concluir e excluir. Portado de `daily-tasks.tsx`, que ficou sem consumidor
- * quando o `home.tsx` passou a montar a `DayView`. As escritas são otimistas SÓ depois do servidor
- * responder, como manda o `components/CLAUDE.md`.
- */
+/** Menu (⋮) da tarefa — o atalho para concluir/excluir sem abrir a sheet. */
 function TaskActions({ task }: { task: TaskProps }): JSX.Element {
-  const { tasks, setTasks } = useDailify();
-  const { getToken } = useAuth();
-
-  const onComplete = async () => {
-    const token = await getToken();
-    if (!token) return;
-    const { error } = await completeTask(token, task.id);
-    if (error) {
-      toast.error(copy.task.completeError, { description: error });
-      return;
-    }
-    setTasks(upsertTaskById(tasks ?? [], { ...task, completed: [...task.completed, Date.now()] }));
-  };
-
-  const onDelete = async () => {
-    const token = await getToken();
-    if (!token) return;
-    try {
-      await deleteTask(token, task.id);
-      setTasks((tasks ?? []).filter((t) => t.id !== task.id));
-    } catch {
-      toast.error(copy.task.deleteError);
-    }
-  };
+  const { onComplete, onDelete } = useTaskActions(task);
 
   return (
     <Popover>
@@ -84,9 +55,10 @@ function TaskActions({ task }: { task: TaskProps }): JSX.Element {
 }
 
 /**
- * Uma linha da coluna do dia: o cartão + suas ações + a sheet de edição.
+ * Uma linha da coluna do dia: o cartão + suas ações + a sheet, que abre em leitura e só troca
+ * para o formulário quando o usuário pede Editar (volta a leitura ao fechar).
  *
- * O clique no cartão abre a edição por ESTADO (`open`), não por `SheetTrigger` — o TaskCard já tem
+ * O clique no cartão abre a sheet por ESTADO (`open`), não por `SheetTrigger` — o TaskCard já tem
  * seu próprio botão-overlay, e envolvê-lo num trigger `asChild` aninharia botão dentro de botão.
  * `selected={open}` é o que dá ao cartão aberto a borda crimson: é o quinto papel do acento
  * ("tarefa aberta") previsto no spec, que até aqui não tinha quem o usasse.
@@ -101,10 +73,16 @@ export function DayTaskRow({
   showTime: boolean;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
+  const [mode, setMode] = useState<"read" | "edit">("read");
   const data = taskToCardData(task, day);
 
+  const onOpenChange = (next: boolean) => {
+    setOpen(next);
+    if (!next) setMode("read");
+  };
+
   return (
-    <EditTask open={open} onOpenChange={setOpen}>
+    <EditTask open={open} onOpenChange={onOpenChange}>
       <TaskCard
         {...data}
         time={showTime ? data.time : ""}
@@ -112,7 +90,17 @@ export function DayTaskRow({
         onClick={() => setOpen(true)}
         actions={<TaskActions task={task} />}
       />
-      <EditTaskContent task={task} />
+
+      {mode === "read" ? (
+        <TaskDetailContent
+          task={task}
+          day={day}
+          onEdit={() => setMode("edit")}
+          onClose={() => onOpenChange(false)}
+        />
+      ) : (
+        <EditTaskContent task={task} />
+      )}
     </EditTask>
   );
 }

@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { ToggleGroup, ToggleGroupItem } from "./toggle-group";
 import { weekDays } from "@/consts/conts";
 import { useEntitlements } from "@/hooks/useEntitlements";
+import { copy } from "@/components/dashboard/copy";
 
 export default function RepeatPicker({ onSelectedRepeat, task }: RepeatPickerProps) {
   const [repeat, setRepeat] = useState<string>(
@@ -46,18 +47,22 @@ export default function RepeatPicker({ onSelectedRepeat, task }: RepeatPickerPro
         </SelectTrigger>
 
         <SelectContent>
-          <SelectItem value="Off">Não repetir</SelectItem>
+          <SelectItem value="Off">{copy.form.repeatOff}</SelectItem>
           <SelectItem value="Daily" disabled={!recurrence}>
-            Daily{pro}
+            {copy.form.repeatDaily}
+            {pro}
           </SelectItem>
           <SelectItem value="Weekly" disabled={!recurrence}>
-            Weekly{pro}
+            {copy.form.repeatWeekly}
+            {pro}
           </SelectItem>
           <SelectItem value="Monthly" disabled={!recurrence}>
-            Monthly{pro}
+            {copy.form.repeatMonthly}
+            {pro}
           </SelectItem>
           <SelectItem value="Yearly" disabled={!recurrence}>
-            Yearly{pro}
+            {copy.form.repeatYearly}
+            {pro}
           </SelectItem>
         </SelectContent>
       </Select>
