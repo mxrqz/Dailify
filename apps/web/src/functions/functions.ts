@@ -85,3 +85,33 @@ export function isTaskModified(task: TaskProps, updated: TaskProps): boolean {
 export function unixToDate(unix: number): Date {
   return new Date(unix * 1000);
 }
+
+export interface TimeGroup {
+  /** "HH:MM" zero-padded, o mesmo formato de `getTime(date, "HH:MM")`. */
+  time: string;
+  tasks: TaskProps[];
+}
+
+/**
+ * Agrupa as tarefas do dia por horário e ordena os grupos cronologicamente. Extraído de
+ * `daily-tasks.tsx` e `calendar-view.tsx`, que tinham este mesmo reduce+sort copiado.
+ * Não muta a entrada.
+ */
+export function groupTasksByTime(tasks: ReadonlyArray<TaskProps>): TimeGroup[] {
+  const byTime = new Map<string, TaskProps[]>();
+  for (const task of tasks) {
+    const time = getTime(task.date, "HH:MM");
+    const bucket = byTime.get(time);
+    if (bucket) bucket.push(task);
+    else byTime.set(time, [task]);
+  }
+  return [...byTime.entries()]
+    .map(([time, group]) => ({ time, tasks: group }))
+    .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+}
+
+/** "HH:MM" → minutos desde a meia-noite. Interno; `getTime` já garante o zero-padding. */
+function timeToMinutes(time: string): number {
+  const [hours, minutes] = time.split(":").map(Number);
+  return hours * 60 + minutes;
+}

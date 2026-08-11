@@ -8,6 +8,7 @@ import {
   getTime,
   returnFractedDate,
   unixToDate,
+  groupTasksByTime,
 } from "./functions";
 import type { TaskProps } from "@/types/types";
 
@@ -127,5 +128,45 @@ describe("upsertTaskById", () => {
     const out = upsertTaskById([a], makeTask({ id: "a", title: "new" }));
     expect(out).toHaveLength(1);
     expect(out[0].title).toBe("new");
+  });
+});
+
+describe("groupTasksByTime", () => {
+  test("groups tasks that share the same HH:MM", () => {
+    const a = makeTask({ id: "a", date: new Date(2026, 7, 10, 9, 0).getTime() });
+    const b = makeTask({ id: "b", date: new Date(2026, 7, 10, 9, 0).getTime() });
+    const groups = groupTasksByTime([a, b]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].time).toBe("09:00");
+    expect(groups[0].tasks.map((t) => t.id)).toEqual(["a", "b"]);
+  });
+
+  test("orders groups chronologically regardless of input order", () => {
+    const late = makeTask({ id: "late", date: new Date(2026, 7, 10, 14, 30).getTime() });
+    const early = makeTask({ id: "early", date: new Date(2026, 7, 10, 9, 5).getTime() });
+    const mid = makeTask({ id: "mid", date: new Date(2026, 7, 10, 11, 0).getTime() });
+    expect(groupTasksByTime([late, early, mid]).map((g) => g.time)).toEqual([
+      "09:05",
+      "11:00",
+      "14:30",
+    ]);
+  });
+
+  test("sorts by minutes too, not just by hour", () => {
+    const later = makeTask({ id: "later", date: new Date(2026, 7, 10, 9, 45).getTime() });
+    const sooner = makeTask({ id: "sooner", date: new Date(2026, 7, 10, 9, 5).getTime() });
+    expect(groupTasksByTime([later, sooner]).map((g) => g.time)).toEqual(["09:05", "09:45"]);
+  });
+
+  test("returns an empty array for no tasks", () => {
+    expect(groupTasksByTime([])).toEqual([]);
+  });
+
+  test("does not mutate the input array", () => {
+    const a = makeTask({ id: "a", date: new Date(2026, 7, 10, 14, 0).getTime() });
+    const b = makeTask({ id: "b", date: new Date(2026, 7, 10, 8, 0).getTime() });
+    const input = [a, b];
+    groupTasksByTime(input);
+    expect(input.map((t) => t.id)).toEqual(["a", "b"]);
   });
 });
