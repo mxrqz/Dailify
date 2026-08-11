@@ -37,6 +37,11 @@ export const copy = {
     weekDayInitials: ["D", "S", "T", "Q", "Q", "S", "S"],
   },
 
+  loading: {
+    tasks: "Carregando tarefas",
+    tasksError: "Não foi possível carregar suas tarefas",
+  },
+
   task: {
     complete: "Concluir",
     delete: "Excluir",

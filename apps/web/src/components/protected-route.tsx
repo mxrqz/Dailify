@@ -3,9 +3,11 @@ import { useAuth, useUser } from "@clerk/clerk-react";
 import { Navigate, useLocation } from "react-router-dom";
 import { Loader2Icon } from "lucide-react";
 import { useDailify } from "./dailifyContext";
+import { copy } from "@/components/dashboard/copy";
 import { getTasksForMonth, getPermissions, getPaymentDetails, getInvoices } from "@/functions/api";
 import { isSameMonth } from "date-fns";
 import { motion } from "framer-motion";
+import { toast } from "sonner";
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isSignedIn, isLoaded, user } = useUser();
@@ -54,21 +56,27 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const getTasks = useCallback(async () => {
     if (!userId || !user) return;
 
-    setIsLoading("Carregando tarefas");
-    const token = await getToken();
-    if (!token) {
+    setIsLoading(copy.loading.tasks);
+    try {
+      const token = await getToken();
+      if (!token) return;
+
+      const tasks = await getTasksForMonth(token, selectedDay);
+
+      if (isSameMonth(new Date(), selectedDay)) {
+        setCurrentMonthTasks(tasks);
+      }
+
+      setTasks(tasks);
+    } catch {
+      // Sem isto o app trava no spinner para sempre: a exceção pulava o `setIsLoading(null)` e o
+      // gate lá embaixo (`isLoading && !tasks`) nunca liberava. `setTasks([])` é o que destrava —
+      // a tela então mostra o estado vazio, que é honesto, em vez de um "carregando" eterno.
+      setTasks([]);
+      toast.error(copy.loading.tasksError);
+    } finally {
       setIsLoading(null);
-      return;
     }
-
-    const tasks = await getTasksForMonth(token, selectedDay);
-
-    if (isSameMonth(new Date(), selectedDay)) {
-      setCurrentMonthTasks(tasks);
-    }
-
-    setTasks(tasks);
-    setIsLoading(null);
   }, [userId, user, selectedDay]);
 
   // 🗓️ Atualizar tarefas se mudar de mês (também cobre a carga inicial, já que currentMonth começa undefined)
