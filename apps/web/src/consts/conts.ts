@@ -53,18 +53,6 @@ export const tagsBorderColors2 = [
   "border-tag-9",
 ];
 
-export const paletteColors = [
-  "bg-palette-1",
-  "bg-palette-2",
-  "bg-palette-3",
-  "bg-palette-4",
-  "bg-palette-5",
-  "bg-palette-6",
-  "bg-palette-7",
-  "bg-palette-8",
-  "bg-palette-9",
-];
-
 export const weekDays = [
   "Sunday",
   "Monday",

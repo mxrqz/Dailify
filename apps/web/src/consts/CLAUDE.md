@@ -14,8 +14,8 @@
 
 ## Colors are token class names, not hex
 
-`tagsBgColors2`, `tagsBorderColors2`, `paletteColors` are arrays of **Tailwind token classes**
-(`"bg-tag-1"`, `"border-tag-1"`, `"bg-palette-1"`, …). The actual colors are tokens in `global.css`.
+`tagsBgColors2`, `tagsBorderColors2` are arrays of **Tailwind token classes**
+(`"bg-tag-1"`, `"border-tag-1"`, …). The actual colors are tokens in `global.css`.
 Don't put hex here — add a token + `@theme inline` mapping instead.
 
 ## Priority scale

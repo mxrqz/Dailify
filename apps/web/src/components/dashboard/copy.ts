@@ -44,6 +44,7 @@ export const copy = {
     moreTasks: "+{n}",
     sheetTitle: "Tarefas do dia",
     sheetEmpty: "Nenhuma tarefa neste dia.",
+    dayLabelFormat: "d 'de' MMMM",
   },
 
   loading: {
