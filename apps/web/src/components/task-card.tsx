@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { motion } from "framer-motion";
+import { motion, useReducedMotion } from "framer-motion";
 import { Check, Flag, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
@@ -195,6 +195,8 @@ function CardBody({
  * fade no mount (a entrada em stagger é do pai); aqui anima só o resolve skeleton→conteúdo.
  */
 export function TaskCard({ loading, ...data }: TaskCardProps): JSX.Element {
+  const reduce = useReducedMotion();
+  const transition = { duration: reduce ? 0 : 0.45, ease: EXPO };
   return (
     <div className="grid">
       <motion.div
@@ -202,7 +204,7 @@ export function TaskCard({ loading, ...data }: TaskCardProps): JSX.Element {
         className="pointer-events-none col-start-1 row-start-1"
         initial={false}
         animate={{ opacity: loading ? 1 : 0 }}
-        transition={{ duration: 0.45, ease: EXPO }}
+        transition={transition}
       >
         <CardBody {...data} loading />
       </motion.div>
@@ -210,7 +212,7 @@ export function TaskCard({ loading, ...data }: TaskCardProps): JSX.Element {
         className="col-start-1 row-start-1"
         initial={false}
         animate={{ opacity: loading ? 0 : 1 }}
-        transition={{ duration: 0.45, ease: EXPO }}
+        transition={transition}
       >
         <CardBody {...data} />
       </motion.div>
