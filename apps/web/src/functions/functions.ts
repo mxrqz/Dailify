@@ -94,9 +94,9 @@ export interface TimeGroup {
 }
 
 /**
- * Agrupa as tarefas do dia por horário e ordena os grupos cronologicamente. Extraído de
- * `daily-tasks.tsx` e `calendar-view.tsx`, que tinham este mesmo reduce+sort copiado.
- * Não muta a entrada.
+ * Agrupa as tarefas do dia por horário e ordena os grupos cronologicamente. Historicamente
+ * extraído de `calendar-view.tsx` e do antigo `daily-tasks.tsx`, que tinham este mesmo
+ * reduce+sort copiado. Não muta a entrada.
  */
 export function groupTasksByTime(tasks: ReadonlyArray<TaskProps>): TimeGroup[] {
   const byTime = new Map<string, TaskProps[]>();
