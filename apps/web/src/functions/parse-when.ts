@@ -192,6 +192,16 @@ const MONTH_RE = alternation(Object.keys(MONTHS));
 
 const NEXT_RE = /\b(proxim[ao]|que\s+vem|next)\b/;
 
+const MINUTE_SUFFIX_RE = `(?:\\s+(?:e|and)\\s+(${MINUTE_WORD_RE}|\\d{1,2}))?`;
+
+/** Os minutos de um "… e meia" / "… e 15"; 0 quando o sufixo não veio. */
+function suffixMinutes(raw: string | undefined): number {
+  if (!raw) return 0;
+  const value = raw.replace(/\s+/g, " ");
+  const minutes = /^\d+$/.test(value) ? Number(value) : MINUTE_WORDS[value];
+  return minutes !== undefined && minutes < 60 ? minutes : 0;
+}
+
 interface Time {
   hour: number;
   minute: number;
@@ -264,8 +274,12 @@ function parseTime(text: string, now: Date, baseIsToday: boolean): Time | null {
     return { hour: target.getHours(), minute: target.getMinutes() };
   }
 
-  if (/\b(meio\s*dia|noon|midday)\b/.test(text)) return { hour: 12, minute: 0 };
-  if (/\b(meia\s*noite|midnight)\b/.test(text)) return { hour: 0, minute: 0 };
+  // "meio dia e meia" é 12:30 — o sufixo tem que entrar aqui, senão o atalho engole os minutos.
+  const noon = text.match(new RegExp(`\\b(?:meio\\s*dia|noon|midday)\\b${MINUTE_SUFFIX_RE}`));
+  if (noon) return { hour: 12, minute: suffixMinutes(noon[1]) };
+
+  const midnight = text.match(new RegExp(`\\b(?:meia\\s*noite|midnight)\\b${MINUTE_SUFFIX_RE}`));
+  if (midnight) return { hour: 0, minute: suffixMinutes(midnight[1]) };
 
   // 14:30 · 14h30 · 14.30 · 14,30
   const withMinutes = text.match(/\b(\d{1,2})\s*[:h.,]\s*(\d{2})\b/);

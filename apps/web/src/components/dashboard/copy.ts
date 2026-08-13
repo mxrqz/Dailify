@@ -24,7 +24,9 @@ export const copy = {
     today: "Hoje",
     tomorrow: "Amanhã",
     now: "agora",
+    openCalendar: "Abrir calendário",
     noTasks: "Nenhuma tarefa",
+    listEmpty: "Nada agendado até o fim do mês. Escreva acima pra criar a primeira.",
     oneTask: "1 tarefa",
     manyTasks: "{n} tarefas",
     newTask: "Nova tarefa",
@@ -108,6 +110,7 @@ export const copy = {
     text: "Tarefa",
     textPlaceholder: "o que precisa ser feito?",
     submit: "Criar tarefa",
+    notUnderstood: 'Não entendi a data — tente algo como "amanhã às 14h".',
   },
 
   voice: {

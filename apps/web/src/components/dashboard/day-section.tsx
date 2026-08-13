@@ -19,6 +19,9 @@ import { cn } from "@/lib/utils";
 const EXPO = [0.16, 1, 0.3, 1] as const; // ease-out-expo, espelha o token do global.css
 const SKELETON_ROWS = 3;
 
+/** Id da seção de um dia — a `WeekStrip` usa isto pra rolar até ele. */
+export const dayAnchorId = (day: Date) => `day-${format(day, "yyyy-MM-dd")}`;
+
 /** Linha do "agora": rótulo mono no gutter + régua crimson com glow. Só existe no dia de hoje. */
 function NowLine(): JSX.Element {
   return (
@@ -112,7 +115,7 @@ export function DaySection({ day }: { day: Date }): JSX.Element {
   };
 
   return (
-    <section className="flex flex-col">
+    <section id={dayAnchorId(day)} className="flex scroll-mt-14 flex-col">
       <header className="flex items-center gap-5 py-4">
         <div className="flex items-center gap-2.5">
           <span

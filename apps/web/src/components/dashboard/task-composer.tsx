@@ -5,13 +5,13 @@ import { ArrowUpIcon, Loader2Icon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
 import { Label } from "@/components/ui/label";
-import { parseWhen } from "@/functions/parse-when";
+import { parseWhen, type ParsedWhen } from "@/functions/parse-when";
 import { cn } from "@/lib/utils";
 
 export interface ComposerValues {
   when: string;
   /** O que o `parseWhen` entendeu do campo "quando" — `null` quando não reconheceu nada. */
-  date: Date | null;
+  parsed: ParsedWhen | null;
   text: string;
 }
 
@@ -42,7 +42,7 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
     e.preventDefault();
     const trimmed = text.trim();
     if (!trimmed || submitting) return;
-    onSubmit({ when: when.trim(), date: parsed?.date ?? null, text: trimmed });
+    onSubmit({ when: when.trim(), parsed, text: trimmed });
     setText("");
   };
 
