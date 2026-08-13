@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { motion, type Variants } from "framer-motion";
 
-import { TaskCard, type TaskCardData } from "../task-card";
+import { TaskCard, type TaskCardData } from "@/components/task-card";
 import { RESOLVE_STAGGER_MS, SKELETON_MS } from "./timing";
 
 /**

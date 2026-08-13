@@ -1,4 +1,6 @@
 import { defineConfig } from "vitest/config";
+// `loadEnv` só existe no "vite"; o "vitest/config" reexporta `defineConfig`, não ele.
+import { loadEnv } from "vite";
 import react from "@vitejs/plugin-react";
 import path from "path"
 import tailwindcss from "@tailwindcss/vite"
@@ -6,8 +8,12 @@ import mkcert from 'vite-plugin-mkcert'
 
 const host = process.env.TAURI_DEV_HOST;
 
+// Proxy de API em dev: HTTPS (mkcert) -> HTTP (wrangler :8787) seria mixed content. bd Dailify-6aq
+const apiTarget = (mode: string) =>
+  loadEnv(mode, path.resolve(__dirname), "VITE_").VITE_API_URL || "http://localhost:8787";
+
 // https://vitejs.dev/config/
-export default defineConfig(async () => ({
+export default defineConfig(async ({ mode }) => ({
   plugins: [
     react(),
     tailwindcss(),
@@ -42,6 +48,14 @@ export default defineConfig(async () => ({
       : undefined,
     watch: {
       ignored: ["**/src-tauri/**"],
+    },
+    proxy: {
+      "/api": {
+        target: apiTarget(mode),
+        changeOrigin: true,
+        secure: false,
+        rewrite: (p: string) => p.replace(/^\/api/, ""),
+      },
     },
   },
 }));

@@ -13,6 +13,17 @@ import VerifyingLink from "../components/verifying-link";
 import { isClerkAPIResponseError } from "@clerk/clerk-react/errors";
 import { useLocation } from "react-router-dom";
 import { dailifyURL } from "@/consts/conts";
+import { formString } from "@/lib/form";
+
+/** De onde o ProtectedRoute mandou o usuário — `location.state` é `unknown` por definição. */
+function redirectTarget(state: unknown): string {
+  if (state === null || typeof state !== "object" || !("from" in state)) return "/dashboard";
+  const { from } = state;
+  if (from === null || typeof from !== "object") return "/dashboard";
+  const pathname = "pathname" in from && typeof from.pathname === "string" ? from.pathname : "";
+  const search = "search" in from && typeof from.search === "string" ? from.search : "";
+  return pathname + search || "/dashboard";
+}
 
 export default function Login() {
   const { signOut: clerkSignOut } = useAuth();
@@ -21,8 +32,7 @@ export default function Login() {
   const { isSignedIn } = useUser();
 
   const location = useLocation();
-  const state = location.state as { from?: { pathname?: string; search?: string } } | null;
-  const from = (state?.from?.pathname ?? "") + (state?.from?.search ?? "") || "/dashboard";
+  const from = redirectTarget(location.state);
 
   const [verifying, setVerifying] = useState(false);
   const [email, setEmail] = useState<string>("");
@@ -48,7 +58,7 @@ export default function Login() {
     setVerifying(true);
 
     const formData = new FormData(e.currentTarget);
-    const emailAddress = formData.get("email") as string;
+    const emailAddress = formString(formData, "email");
     setEmail(emailAddress);
     const { startEmailLinkFlow } = signUp.createEmailLinkFlow();
 

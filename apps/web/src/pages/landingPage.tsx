@@ -1,4 +1,4 @@
-import Header from "@/components/header";
+import { SiteHeader } from "@/components/site-header";
 import { Hero } from "@/components/landing/hero";
 import { FeatureTabs } from "@/components/landing/feature-tabs";
 import { FeatureBento } from "@/components/landing/feature-bento";
@@ -14,7 +14,7 @@ export default function LandingPage() {
       {/* <Grain /> removido do QA — reintroduzir refatorado depois (componente em @/components/landing/grain) */}
 
       <div className="relative z-10 flex flex-col">
-        <Header className="px-gutter" />
+        <SiteHeader className="px-gutter" />
         <Hero />
 
         <div id="features">

@@ -11,13 +11,17 @@ Single source of truth via `useDailify()`: `tasks`, `currentMonthTasks`, `select
 - **`protected-route.tsx`** is where it all loads: gates on Clerk (`isLoaded`/`userId`), then
   `getTasks()` (→ `getTasksForMonth`, `@/functions/api`) for the selected month, plus
   permissions/invoices/payment (also `api.ts`). It refetches when the month changes.
-- **`daily-tasks.tsx`** derives `dayTasks` from `getTasksForDay(tasks, selectedDay)`. **`calendar-view.tsx`**
-  reads `tasks` per day. Both read from the shared array — so any write must update it.
+- **`dashboard/day-view.tsx`** derives `dayTasks` from `getTasksForDay(tasks, selectedDay)` then
+  `groupTasksByTime`. (The two-column day+aside layout lives one level up, in `pages/home.tsx`, which
+  mounts `DayView` beside `DayAside`.) **`dashboard/month-view.tsx`** (grid chrome) and
+  **`dashboard/month-day-cell.tsx`** (cell + day sheet, mounting `DayTaskRow`) read `tasks` per day
+  the same way. All three read from the shared array — so any write must update it.
 
 ## Writes are optimistic against the shared array
 
 On create/edit success: `setTasks(upsertTaskById(tasks ?? [], task))`. Complete/delete also update
 `tasks` (and toast on failure — apply the optimistic change only after the server call succeeds).
+The day view's write path is **`dashboard/day-task-row.tsx`** for complete/delete actions.
 There is **no** `newTask` mechanism anymore (it only mutated a local copy and desynced — removed in
 `pz9.3`). If you add a write, surface it into `tasks`, not a component-local list.
 

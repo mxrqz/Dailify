@@ -17,6 +17,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
 import { useUser } from "@clerk/clerk-react";
 import { useState } from "react";
 import { FormDataValues } from "@/types/types";
+import { formFile, formString } from "@/lib/form";
 
 export default function ProfileConfig() {
   const { user, isLoaded } = useUser();
@@ -28,7 +29,7 @@ export default function ProfileConfig() {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
+      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
       reader.onerror = (error) => reject(error);
     });
   };
@@ -53,10 +54,10 @@ export default function ProfileConfig() {
 
     const formData = new FormData(e.currentTarget);
 
-    const firstName = formData.get("name") as string;
-    const lastName = formData.get("surname") as string;
-    const username = formData.get("username") as string;
-    const file = (formData.get("avatar") as File) || null;
+    const firstName = formString(formData, "name");
+    const lastName = formString(formData, "surname");
+    const username = formString(formData, "username");
+    const file = formFile(formData, "avatar");
     // const imageUrl = file ? await fileToBase64(file) : undefined
 
     if (user?.firstName !== firstName || user.lastName !== lastName || user.username !== username) {

@@ -6,6 +6,7 @@ import RecordPlugin from "wavesurfer.js/dist/plugins/record.esm.js";
 import { useAuth } from "@clerk/clerk-react";
 import { TaskProps } from "@/types/types";
 import { createTaskVoice } from "@/functions/api";
+import { copy } from "@/components/dashboard/copy";
 
 export default function Waveform({ onResponse }: { onResponse: (response: TaskProps[]) => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -33,18 +34,6 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
     recordRef.current.stopRecording();
     setIsRecording(false);
   };
-
-  // const getResponse = async (token: string, formData: FormData) => {
-  //     const response = await fetch('http://localhost:3333/createTaskByVoice', {
-  //         method: "POST",
-  //         headers: {
-  //             Authorization: `Bearer ${token}`
-  //         },
-  //         body: formData
-  //     })
-
-  //     return response
-  // }
 
   const handleSendRequest = async () => {
     if (!record) return;
@@ -119,7 +108,6 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
     if (!wavesurferRef.current) return;
 
     wavesurferRef.current?.on("seeking", () => {
-      // setIsPlaying(true)
       wavesurferRef.current?.play();
     });
 
@@ -128,16 +116,24 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
     });
   }, []);
 
+  const actionLabel = loading
+    ? copy.voice.sending
+    : record
+      ? copy.voice.send
+      : isRecording
+        ? copy.voice.stop
+        : copy.voice.record;
+
   return (
-    <div className="w-full flex flex-col items-center gap-4">
-      <div className="w-full flex gap-3 justify-self-start self-start">
+    <div className="flex w-full flex-col items-center gap-4">
+      <div className="flex w-full gap-3 self-start justify-self-start">
         <div ref={containerRef} className="w-full" />
 
         <Button
           disabled={loading}
-          // onClick={isRecording ? stopRecording : startRecording}
           onClick={record ? handleSendRequest : isRecording ? stopRecording : startRecording}
-          className="bg-primary text-white py-2 px-4 size-12 rounded-full"
+          aria-label={actionLabel}
+          className="size-12 shrink-0 rounded-full bg-accent-primary text-primary-foreground hover:bg-accent-hover"
         >
           {record && !loading && <SendHorizontalIcon className="size-6" />}
 

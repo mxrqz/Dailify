@@ -16,6 +16,7 @@ import PrivacyPage from "./pages/privacy";
 import TermsPage from "./pages/terms";
 import { Toaster } from "@/components/ui/sonner";
 import { ErrorBoundary } from "./components/error-boundary";
+import { AppLayout } from "./components/app-layout";
 
 export default function App() {
   return (
@@ -27,31 +28,36 @@ export default function App() {
               <Routes>
                 <Route path="/" element={<LandingPage />} />
 
-                <Route
-                  path="/dashboard"
-                  element={
-                    <ProtectedRoute>
-                      <Helmet>
-                        <title>Dailify - Dashboard</title>
-                      </Helmet>
+                {/* Tudo que é "o app" divide a mesma top bar (components/app-layout.tsx). */}
+                <Route element={<AppLayout />}>
+                  <Route
+                    path="/dashboard"
+                    element={
+                      <ProtectedRoute>
+                        <Helmet>
+                          <title>Dailify - Dashboard</title>
+                        </Helmet>
 
-                      <Home />
-                    </ProtectedRoute>
-                  }
-                />
+                        <Home />
+                      </ProtectedRoute>
+                    }
+                  />
 
-                <Route
-                  path="/profile"
-                  element={
-                    <ProtectedRoute>
-                      <Helmet>
-                        <title>Dailify - Profile</title>
-                      </Helmet>
+                  <Route
+                    path="/profile"
+                    element={
+                      <ProtectedRoute>
+                        <Helmet>
+                          <title>Dailify - Profile</title>
+                        </Helmet>
 
-                      <ProfilePage />
-                    </ProtectedRoute>
-                  }
-                />
+                        <ProfilePage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route path="/premium" element={<PremiumPage />} />
+                </Route>
 
                 <Route
                   path="/login"
@@ -71,8 +77,6 @@ export default function App() {
                 <Route path="/sign-in/verify" element={<Verify />} />
 
                 <Route path="/task/:id" element={<TaskPreview />} />
-
-                <Route path="/premium" element={<PremiumPage />} />
 
                 <Route path="/privacidade" element={<PrivacyPage />} />
 

@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeAll } from "vitest";
 
-vi.mock("@hono/clerk-auth", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@hono/clerk-auth")>();
+vi.mock("@clerk/hono", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@clerk/hono")>();
   return { ...actual, getAuth: vi.fn(() => ({ userId: "u4" })) };
 });
 

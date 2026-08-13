@@ -1,8 +1,15 @@
-import { motion } from "framer-motion";
-import { Plus } from "lucide-react";
+import { type ReactNode } from "react";
+import { motion, useReducedMotion } from "framer-motion";
+import { Check, Flag, Plus } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
-import { tagsBgColors2 } from "@/consts/conts";
+/**
+ * Labels de acessibilidade (sr-only) pro `completed` e `priority` — estados que só existem no app.
+ * Mocks da landing passam só os 4 campos base e nunca atingem este código, então a dependência
+ * transativa do landing no dicionário do dashboard é segura e inevitável.
+ */
+import { copy } from "@/components/dashboard/copy";
+import { priorityText, priorityTextColor, tagsBgColors2 } from "@/consts/conts";
 import { cn } from "@/lib/utils";
 
 /**
@@ -86,6 +93,25 @@ export interface TaskCardData {
   tags: string[];
 }
 
+/**
+ * O cartão nasceu como mock da landing (só os 4 campos de `TaskCardData`). Tudo abaixo é
+ * capacidade do app e é OPCIONAL — a landing continua passando os 4 campos e não muda.
+ */
+export interface TaskCardProps extends TaskCardData {
+  /** Skeleton com crossfade pro conteúdo. */
+  loading?: boolean;
+  /** Borda crimson — a tarefa cuja sheet está aberta. */
+  selected?: boolean;
+  /** Concluída neste dia: título riscado + check verde. */
+  completed?: boolean;
+  /** 0–4; só aparece a partir de 1 (0 = "sem prioridade" não merece ícone). */
+  priority?: number;
+  /** Abre o detalhe. Vira um overlay clicável — ver nota de acessibilidade no corpo. */
+  onClick?: () => void;
+  /** Menu (⋮) do app, à direita da duração. Fica FORA do overlay clicável. */
+  actions?: ReactNode;
+}
+
 /** Corpo do card — mesma estrutura em loading/ready (alturas casam, sem jump no crossfade). */
 function CardBody({
   time,
@@ -94,7 +120,11 @@ function CardBody({
   duration,
   loading,
   selected,
-}: TaskCardData & { loading?: boolean; selected?: boolean }) {
+  completed,
+  priority,
+  onClick,
+  actions,
+}: TaskCardProps) {
   const shown = tags.slice(0, MAX_TAGS);
   const extra = tags.length - shown.length;
   return (
@@ -105,21 +135,60 @@ function CardBody({
 
       <div
         className={cn(
-          "min-w-0 flex-1 rounded-lg border bg-transparent px-3 py-2.5",
+          "relative min-w-0 flex-1 rounded-lg border bg-transparent px-3 py-2.5",
           selected && !loading ? "border-accent-primary" : "border-surface-line",
+          onClick && !loading && "transition-colors hover:bg-surface-hover",
         )}
       >
+        {/* Overlay clicável em vez de envolver tudo num <button>: `actions` também é um botão, e
+            botão dentro de botão é HTML inválido. O overlay dá teclado e foco de graça; `actions`
+            fica acima dele no z, então o clique no menu não abre o detalhe. */}
+        {onClick && !loading && (
+          <button
+            type="button"
+            onClick={onClick}
+            aria-label={title}
+            className="absolute inset-0 z-0 rounded-lg outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+          />
+        )}
+
         <div className="flex items-center justify-between gap-3">
           {loading ? (
             <span className="skeleton h-3.5 w-32 rounded" />
           ) : (
-            <span className="truncate text-sm font-medium text-foreground">{title}</span>
+            <span
+              className={cn(
+                "truncate text-sm font-medium",
+                completed ? "text-muted-foreground line-through" : "text-foreground",
+              )}
+            >
+              {title}
+            </span>
           )}
-          <DurationBadge value={duration} loading={loading} />
+
+          <div className="pointer-events-none relative z-10 flex shrink-0 items-center gap-1.5">
+            {!loading && completed && (
+              <>
+                <Check className="size-3.5 shrink-0 text-success" aria-hidden="true" />
+                <span className="sr-only">{copy.task.completed}</span>
+              </>
+            )}
+            {!loading && priority !== undefined && priority > 0 && (
+              <>
+                <Flag
+                  className={cn("size-3 shrink-0", priorityTextColor[priority])}
+                  aria-hidden="true"
+                />
+                <span className="sr-only">{priorityText[priority]}</span>
+              </>
+            )}
+            <DurationBadge value={duration} loading={loading} />
+            {!loading && actions && <span className="pointer-events-auto">{actions}</span>}
+          </div>
         </div>
 
         {(shown.length > 0 || extra > 0) && (
-          <div className="mt-2 flex items-center gap-1.5 overflow-hidden">
+          <div className="pointer-events-none relative z-10 mt-2 flex items-center gap-1.5 overflow-hidden">
             {shown.map((tag, i) => (
               <TagBadge key={i} label={tag} loading={loading} />
             ))}
@@ -137,11 +206,9 @@ function CardBody({
  * entra". Mesma estrutura dos dois lados, então a altura casa e não há jump. `initial={false}`: sem
  * fade no mount (a entrada em stagger é do pai); aqui anima só o resolve skeleton→conteúdo.
  */
-export function TaskCard({
-  loading,
-  selected,
-  ...data
-}: TaskCardData & { loading?: boolean; selected?: boolean }): JSX.Element {
+export function TaskCard({ loading, ...data }: TaskCardProps): JSX.Element {
+  const reduce = useReducedMotion();
+  const transition = { duration: reduce ? 0 : 0.45, ease: EXPO };
   return (
     <div className="grid">
       <motion.div
@@ -149,17 +216,21 @@ export function TaskCard({
         className="pointer-events-none col-start-1 row-start-1"
         initial={false}
         animate={{ opacity: loading ? 1 : 0 }}
-        transition={{ duration: 0.45, ease: EXPO }}
+        transition={transition}
       >
-        <CardBody {...data} loading selected={selected} />
+        <CardBody {...data} loading />
       </motion.div>
       <motion.div
         className="col-start-1 row-start-1"
         initial={false}
         animate={{ opacity: loading ? 0 : 1 }}
-        transition={{ duration: 0.45, ease: EXPO }}
+        transition={transition}
       >
-        <CardBody {...data} selected={selected} />
+        <CardBody
+          {...data}
+          onClick={loading ? undefined : data.onClick}
+          actions={loading ? undefined : data.actions}
+        />
       </motion.div>
     </div>
   );

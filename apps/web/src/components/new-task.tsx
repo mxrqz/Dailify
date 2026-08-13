@@ -1,236 +1,127 @@
 import { Loader2, PlusIcon } from "lucide-react";
+import { useId, useState } from "react";
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogDescription,
+  DialogFooter,
   DialogHeader,
   DialogTitle,
   DialogTrigger,
 } from "./ui/dialog";
-import { Input } from "./ui/input";
-import { Label } from "./ui/label";
-import { Textarea } from "./ui/textarea";
-import { FormEvent, useEffect, useRef, useState } from "react";
-import PriorityPicker from "./ui/priority-picker";
-import TagsPicker from "./ui/tags-picker";
-import RepeatPicker from "./ui/repeat-picker";
 import { Button } from "./ui/button";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { useDailify } from "./dailifyContext";
-import { DatetimePicker } from "./ui/datetime-picker";
-import { DateInput, TimeField } from "@/components/ui/timefield";
-import { TimeValue } from "react-aria-components";
+import { copy } from "@/components/dashboard/copy";
+import { TaskForm, TaskFormValues } from "@/components/dashboard/task-form";
 import { createTask } from "@/functions/api";
 import { upsertTaskById } from "@/functions/functions";
 import { useEntitlements } from "@/hooks/useEntitlements";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { format } from "date-fns";
-import type { Repeat, TaskInput } from "@dailify/shared";
+import { ptBR } from "date-fns/locale";
+import type { TaskInput } from "@dailify/shared";
 
 export default function NewTask({ className }: { className: string }) {
   const { getToken } = useAuth();
   const { selectedDay, tasks, setTasks } = useDailify();
   const { canCreateTask } = useEntitlements();
-
-  const navigate = useNavigate();
-
-  const titleRef = useRef<HTMLInputElement>(null);
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
-  const [selectedDate, setSelectedDate] = useState<Date>(selectedDay);
-  const [selectedDuration, setSelectedDuration] = useState<string>("10m");
-  const [priority, setPriority] = useState<number>(0);
-  const [tags, setTags] = useState<string[]>();
-  const [repeat, setRepeat] = useState<Repeat>();
   const { user } = useUser();
+  const navigate = useNavigate();
+  const formId = useId();
 
   const [loading, setLoading] = useState<boolean>(false);
 
-  const handleDurationChange = (e: TimeValue) => {
-    const { hour, minute } = e;
-    const finalMessage = `${hour && hour !== 0 ? hour + "h" : ""}${minute && minute !== 0 ? minute + "m" : ""}`;
-    setSelectedDuration(finalMessage);
-  };
-
-  const addNewTask = async (e: FormEvent) => {
-    e.preventDefault();
-
-    if (!canCreateTask) {
-      toast("Limite de tarefas atingido", {
-        description: "Você atingiu o limite do seu plano neste mês.",
-        action: { label: "Get Premium", onClick: () => navigate("/premium") },
-      });
-      return;
-    }
-
-    if (
-      !user ||
-      !titleRef.current ||
-      !descriptionRef.current ||
-      !selectedDate ||
-      !selectedDuration ||
-      priority === null ||
-      !repeat
-    )
-      return;
+  const handleSubmit = async (values: TaskFormValues) => {
+    if (!user) return;
 
     const token = await getToken();
     if (!token) return;
 
-    const title = titleRef.current.value;
-    const desc = descriptionRef.current.value;
-
-    if (!title) {
-      toast.warning("Title is required");
-      return;
-    } else if (!desc) {
-      toast.warning("Description is required");
-      return;
-    } else if (!selectedDate || !selectedDuration || priority === null || !repeat) {
-      toast.warning("All fields are required");
-      return;
-    }
-
     const taskInput: TaskInput = {
-      date: selectedDate.getTime(),
-      title,
-      description: desc,
-      duration: selectedDuration,
-      tags,
-      priority,
-      repeat,
+      date: values.date.getTime(),
+      title: values.title,
+      description: values.description,
+      duration: values.duration,
+      tags: values.tags,
+      priority: values.priority,
+      repeat: values.repeat,
     };
 
     setLoading(true);
 
     const { task, error } = await createTask(token, taskInput);
     if (error || !task) {
-      toast("An error occurred", {
+      toast(copy.form.createError, {
         description: error,
         action: {
-          label: "Get Premium",
+          label: copy.form.upgrade,
           onClick: () => navigate("/premium"),
         },
       });
     } else {
       setTasks(upsertTaskById(tasks ?? [], task));
-      toast.message("Event has been created", {
-        description: format(selectedDate, "cccc PPPpp"),
+      toast.message(copy.form.created, {
+        description: format(values.date, "cccc, d 'de' MMMM 'às' HH:mm", { locale: ptBR }),
       });
     }
 
     setLoading(false);
   };
 
-  useEffect(() => {
-    setSelectedDate(selectedDay);
-  }, [selectedDay]);
-
   return (
     <Dialog>
       <DialogTrigger asChild>
-        <Button size={"icon"} className={className}>
+        <Button size={"default"} className={className}>
           <PlusIcon />
+          {copy.day.newTask}
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="max-h-[calc(100%-2rem)] overflow-hidden flex flex-col">
+      <DialogContent className="flex max-h-[calc(100%-2rem)] flex-col overflow-hidden rounded-2xl border-surface-line bg-surface-card">
         <DialogHeader className="text-start">
-          <DialogTitle>New Task</DialogTitle>
-          <DialogDescription>Create a new task</DialogDescription>
+          <DialogTitle className="text-lg font-semibold tracking-[-0.01em]">
+            {copy.form.newTitle}
+          </DialogTitle>
+          <DialogDescription className="text-sm text-content-secondary">
+            {copy.form.newDescription}
+          </DialogDescription>
         </DialogHeader>
 
-        {/* <form onSubmit={addNewTask} className="flex flex-col gap-4"> */}
-        <div className="flex flex-col gap-4 scrollbar-floating">
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="title">Title</Label>
-            <Input
-              ref={titleRef}
-              id="title"
-              type="text"
-              placeholder="Task title"
-              className="focus-visible:ring-0"
-              required
-            />
-          </div>
+        <TaskForm
+          id={formId}
+          defaultDate={selectedDay}
+          className="min-h-0 flex-1 scrollbar-floating"
+          onSubmit={handleSubmit}
+        />
 
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="description">Description</Label>
-            <Textarea
-              ref={descriptionRef}
-              id="description"
-              className="resize-none focus-visible:ring-0"
-              rows={3}
-              maxLength={250}
-              placeholder="Task description"
-              required
-            />
-          </div>
+        <DialogFooter>
+          <DialogClose asChild>
+            <Button variant="ghost" className="cursor-pointer">
+              {copy.form.cancel}
+            </Button>
+          </DialogClose>
 
-          <div className="flex gap-3">
-            <div className="flex flex-col gap-1">
-              <Label htmlFor="date">Date</Label>
-
-              <DatetimePicker
-                className="border-1"
-                onChange={(e) => e && setSelectedDate(e)}
-                format={[
-                  ["months", "days", "years"],
-                  ["hours", "minutes", "am/pm"],
-                ]}
-              />
-            </div>
-
-            <div className="w-full">
-              <TimeField
-                aria-label="Duration"
-                id="duration"
-                defaultValue={{ hour: 0, millisecond: 0, minute: 10, second: 0 } as TimeValue}
-                onChange={(e) => e && handleDurationChange(e)}
-                className="flex flex-col gap-1 w-full rounded-md"
-              >
-                <Label htmlFor="duration">Duration</Label>
-
-                <div className="flex gap-1 border rounded-md items-center px-2 focus-within:border-primary">
-                  <DateInput
-                    className={
-                      "border-0 h-9 data-[focus-within]:ring-0 data-[focus-within]:ring-offset-0 p-0"
-                    }
-                  />
-                  <span>{selectedDuration}</span>
-                </div>
-              </TimeField>
-            </div>
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="priority">Priority</Label>
-            <PriorityPicker onSelectedPriority={setPriority} />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="tags">Tags</Label>
-            <TagsPicker onSelectedTags={setTags} />
-          </div>
-
-          <div className="flex flex-col gap-1">
-            <Label htmlFor="repeat">Repeat</Label>
-            <RepeatPicker onSelectedRepeat={setRepeat} />
-          </div>
-        </div>
-
-        {/* <DialogClose asChild> */}
-        <Button
-          type="submit"
-          variant={"outline"}
-          className="w-full cursor-pointer"
-          disabled={loading}
-          onClick={addNewTask}
-        >
-          {loading ? <Loader2 className="animate-spin" /> : <PlusIcon />}
-        </Button>
-        {/* </form> */}
-        {/* </DialogClose> */}
+          <Button
+            type="submit"
+            form={formId}
+            className="cursor-pointer rounded-full bg-accent-primary px-5 text-primary-foreground hover:bg-accent-hover"
+            disabled={loading}
+            onClick={(e) => {
+              if (!canCreateTask) {
+                e.preventDefault();
+                toast(copy.form.limitReached, {
+                  description: copy.form.limitReachedHint,
+                  action: { label: copy.form.upgrade, onClick: () => navigate("/premium") },
+                });
+              }
+            }}
+          >
+            {loading ? <Loader2 className="animate-spin" /> : copy.form.create}
+          </Button>
+        </DialogFooter>
       </DialogContent>
     </Dialog>
   );

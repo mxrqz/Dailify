@@ -15,9 +15,11 @@ import { useEffect, useState } from "react";
 import { TaskProps } from "@/types/types";
 import { TaskDetailView } from "./task-preview";
 import { useDailify } from "./dailifyContext";
+import { copy } from "@/components/dashboard/copy";
 import { useEntitlements } from "@/hooks/useEntitlements";
 import { toast } from "sonner";
 import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 
 export default function NewTaskVoice() {
   const [response, setResponse] = useState<TaskProps[]>();
@@ -31,8 +33,8 @@ export default function NewTaskVoice() {
     setTasks([...(tasks ?? []), ...response]);
 
     response.forEach((task) => {
-      toast.message("Event has been created", {
-        description: format(new Date(task.date), "cccc PPPpp"),
+      toast.message(copy.form.created, {
+        description: format(new Date(task.date), "cccc, d 'de' MMMM 'às' HH:mm", { locale: ptBR }),
       });
     });
   }, [response]);
@@ -45,22 +47,21 @@ export default function NewTaskVoice() {
       <DialogTrigger asChild>
         <Button
           size={"icon"}
-          className={
-            "w-full aspect-square shrink md:h-full border cursor-pointer bg-foreground text-background hover:bg-foreground/90"
-          }
+          className="size-10 shrink-0 rounded-full border border-surface-line bg-surface-card text-foreground hover:bg-surface-hover"
         >
           <MicIcon />
-          <span className="sr-only">Create task by voice</span>
+          <span className="sr-only">{copy.day.voiceTask}</span>
         </Button>
       </DialogTrigger>
 
-      <DialogContent className="bg-background">
-        <DialogHeader>
-          <DialogTitle>Create task by voice</DialogTitle>
+      <DialogContent className="rounded-2xl border-surface-line bg-surface-card">
+        <DialogHeader className="text-start">
+          <DialogTitle className="text-lg font-semibold tracking-[-0.01em]">
+            {copy.voice.title}
+          </DialogTitle>
 
-          <DialogDescription>
-            Record your voice to create a new task. Clearly speak the title, date, time and other
-            details of the task.
+          <DialogDescription className="text-sm text-content-secondary">
+            {copy.voice.description}
           </DialogDescription>
         </DialogHeader>
 

@@ -23,6 +23,7 @@ billing.get("/permissions", requireAuth, async (c) =>
 );
 
 billing.post("/billing/checkout", requireAuth, async (c) => {
+  if (!c.env.STRIPE_SECRET_KEY) return fail(c, 503, "Billing não configurado");
   const { productName } = await c.req.json<{ productName?: string }>();
   if (!productName || !isProductName(c.env, productName)) return fail(c, 400, "Unknown productName");
 
@@ -60,6 +61,7 @@ billing.post("/billing/checkout", requireAuth, async (c) => {
 });
 
 billing.get("/billing/portal", requireAuth, async (c) => {
+  if (!c.env.STRIPE_SECRET_KEY) return fail(c, 503, "Billing não configurado");
   const user = await clerk(c.env).users.getUser(c.get("userId"));
   const stripeCustomerId = readStripeCustomerId(user);
   if (!stripeCustomerId) return fail(c, 400, "No Stripe customer");
@@ -72,6 +74,7 @@ billing.get("/billing/portal", requireAuth, async (c) => {
 });
 
 billing.get("/billing/payment-details", requireAuth, async (c) => {
+  if (!c.env.STRIPE_SECRET_KEY) return c.json(null);
   const user = await clerk(c.env).users.getUser(c.get("userId"));
   const stripeCustomerId = readStripeCustomerId(user);
   if (!stripeCustomerId) return fail(c, 400, "No Stripe customer");
@@ -81,6 +84,7 @@ billing.get("/billing/payment-details", requireAuth, async (c) => {
 });
 
 billing.get("/billing/invoices", requireAuth, async (c) => {
+  if (!c.env.STRIPE_SECRET_KEY) return c.json([]);
   const user = await clerk(c.env).users.getUser(c.get("userId"));
   const stripeCustomerId = readStripeCustomerId(user);
   if (!stripeCustomerId) return fail(c, 400, "No Stripe customer");

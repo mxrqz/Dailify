@@ -14,18 +14,19 @@
 
 ## Colors are token class names, not hex
 
-`tagsBgColors2`, `tagsBorderColors2`, `paletteColors` are arrays of **Tailwind token classes**
-(`"bg-tag-1"`, `"border-tag-1"`, `"bg-palette-1"`, …). The actual colors are tokens in `global.css`.
+`tagsBgColors2`, `tagsBorderColors2` are arrays of **Tailwind token classes**
+(`"bg-tag-1"`, `"border-tag-1"`, …). The actual colors are tokens in `global.css`.
 Don't put hex here — add a token + `@theme inline` mapping instead.
 
 ## Priority scale
 
 `priorityTextColor` / `priorityBorderColor` / `priorityBgColor` / `prioritySelectedBgColor` are indexed
-by priority level **0–4**. They still use named Tailwind colors (gray→green→yellow→orange→red);
-tokenizing them is bd task `emm`.
+by priority level **0–4**. They hold `text-priority-N` / `border-priority-N` / `bg-priority-bg-N`
+token classes, defined in `global.css` (bd task `emm`, closed). `prioritySelectedBgColor` marks the
+selected level with border+text, not a solid fill — a saturated fill would clash with `text-foreground`
+inherited from `ToggleGroupItem` at low contrast; see the comment above it in `conts.ts`.
 
 ## Other
 
 - **`weekDays`** — index `0=Sunday … 6=Saturday`, aligned with `Date.getDay()`; recurrence Weekly
   matching depends on this order.
-- `variants` / `childVariants` — framer-motion presets.

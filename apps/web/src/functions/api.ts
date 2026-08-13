@@ -61,8 +61,10 @@ export async function createTaskVoice(token: string, formData: FormData): Promis
   });
 }
 
-export async function getPermissions(token: string): Promise<Permissions> {
-  return (await fetch(`${apiURL}/permissions`, authed(token))).json();
+export async function getPermissions(token: string): Promise<Permissions | undefined> {
+  const res = await fetch(`${apiURL}/permissions`, authed(token));
+  if (!res.ok) return undefined;
+  return res.json();
 }
 
 export async function getPaymentDetails(token: string): Promise<PaymentDetails | null> {

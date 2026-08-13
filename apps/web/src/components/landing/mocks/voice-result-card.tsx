@@ -1,7 +1,7 @@
 import { Check } from "lucide-react";
 
 import { cn } from "@/lib/utils";
-import { TaskCard } from "../task-card";
+import { TaskCard } from "@/components/task-card";
 
 /** Um slot da agenda (a nova tarefa em accent). */
 function Slot({

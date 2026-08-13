@@ -1,31 +1,34 @@
-export const priorityText = ["Not Important", "Low", "Medium", "High", "Very Important"];
+export const priorityText = ["Sem prioridade", "Baixa", "Média", "Alta", "Urgente"];
 export const priorityTextColor = [
-  "text-gray-500",
-  "text-green-500",
-  "text-yellow-500",
-  "text-orange-500",
-  "text-red-500",
+  "text-priority-0",
+  "text-priority-1",
+  "text-priority-2",
+  "text-priority-3",
+  "text-priority-4",
 ];
 export const priorityBorderColor = [
-  "border-gray-500",
-  "border-green-500",
-  "border-yellow-500",
-  "border-orange-500",
-  "border-red-500",
+  "border-priority-0",
+  "border-priority-1",
+  "border-priority-2",
+  "border-priority-3",
+  "border-priority-4",
 ];
 export const priorityBgColor = [
-  "bg-gray-500/10",
-  "bg-green-500/10",
-  "bg-yellow-500/10",
-  "bg-orange-500/10",
-  "bg-red-500/10",
+  "bg-priority-bg-0",
+  "bg-priority-bg-1",
+  "bg-priority-bg-2",
+  "bg-priority-bg-3",
+  "bg-priority-bg-4",
 ];
+// Selecionado = contorno + texto na cor, NÃO fill sólido. Um fill saturado poria o `text-foreground`
+// herdado do ToggleGroupItem sobre priority-4 (70% L no dark) — contraste ruim, e um bloco de cor
+// chapado destoa do sistema, que trata cartão e chip como contorno. O `/70` antigo saiu junto (k00).
 export const prioritySelectedBgColor = [
-  "data-[state=on]:bg-gray-500/70",
-  "data-[state=on]:bg-green-500/70",
-  "data-[state=on]:bg-yellow-500/70",
-  "data-[state=on]:bg-orange-500/70",
-  "data-[state=on]:bg-red-500/70",
+  "data-[state=on]:border-priority-0 data-[state=on]:text-priority-0",
+  "data-[state=on]:border-priority-1 data-[state=on]:text-priority-1",
+  "data-[state=on]:border-priority-2 data-[state=on]:text-priority-2",
+  "data-[state=on]:border-priority-3 data-[state=on]:text-priority-3",
+  "data-[state=on]:border-priority-4 data-[state=on]:text-priority-4",
 ];
 export const tagsBgColors2 = [
   "bg-tag-1",
@@ -50,18 +53,6 @@ export const tagsBorderColors2 = [
   "border-tag-9",
 ];
 
-export const paletteColors = [
-  "bg-palette-1",
-  "bg-palette-2",
-  "bg-palette-3",
-  "bg-palette-4",
-  "bg-palette-5",
-  "bg-palette-6",
-  "bg-palette-7",
-  "bg-palette-8",
-  "bg-palette-9",
-];
-
 export const weekDays = [
   "Sunday",
   "Monday",
@@ -72,22 +63,6 @@ export const weekDays = [
   "Saturday",
 ];
 
-export const variants = {
-  hidden: { opacity: 0 },
-  visible: {
-    opacity: 1,
-    transition: {
-      duration: 1,
-      staggerChildren: 0.1,
-    },
-  },
-};
-
-export const childVariants = {
-  hidden: { opacity: 0 },
-  visible: { opacity: 1, transition: { duration: 0.1 } },
-};
-
 export const PLAN_ID = { free: "free", pro: "pro", proAi: "pro+ai" } as const;
 
 export const planMap: Record<string, "Free" | "Pro" | "Pro + AI"> = {
@@ -96,5 +71,6 @@ export const planMap: Record<string, "Free" | "Pro" | "Pro + AI"> = {
   [PLAN_ID.proAi]: "Pro + AI",
 };
 
-export const apiURL = import.meta.env.VITE_API_URL;
+// Dev usa o proxy do vite.config (dev server é HTTPS, worker é HTTP = mixed content). bd Dailify-6aq
+export const apiURL = import.meta.env.DEV ? "/api" : import.meta.env.VITE_API_URL;
 export const dailifyURL = "https://dailify.mxrqz.com/";

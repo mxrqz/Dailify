@@ -8,6 +8,9 @@ import {
   getTime,
   returnFractedDate,
   unixToDate,
+  groupTasksByTime,
+  taskToCardData,
+  nowLineIndex,
 } from "./functions";
 import type { TaskProps } from "@/types/types";
 
@@ -127,5 +130,109 @@ describe("upsertTaskById", () => {
     const out = upsertTaskById([a], makeTask({ id: "a", title: "new" }));
     expect(out).toHaveLength(1);
     expect(out[0].title).toBe("new");
+  });
+});
+
+describe("groupTasksByTime", () => {
+  test("groups tasks that share the same HH:MM", () => {
+    const a = makeTask({ id: "a", date: new Date(2026, 7, 10, 9, 0).getTime() });
+    const b = makeTask({ id: "b", date: new Date(2026, 7, 10, 9, 0).getTime() });
+    const groups = groupTasksByTime([a, b]);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].time).toBe("09:00");
+    expect(groups[0].tasks.map((t) => t.id)).toEqual(["a", "b"]);
+  });
+
+  test("orders groups chronologically regardless of input order", () => {
+    const late = makeTask({ id: "late", date: new Date(2026, 7, 10, 14, 30).getTime() });
+    const early = makeTask({ id: "early", date: new Date(2026, 7, 10, 9, 5).getTime() });
+    const mid = makeTask({ id: "mid", date: new Date(2026, 7, 10, 11, 0).getTime() });
+    expect(groupTasksByTime([late, early, mid]).map((g) => g.time)).toEqual([
+      "09:05",
+      "11:00",
+      "14:30",
+    ]);
+  });
+
+  test("sorts by minutes too, not just by hour", () => {
+    const later = makeTask({ id: "later", date: new Date(2026, 7, 10, 9, 45).getTime() });
+    const sooner = makeTask({ id: "sooner", date: new Date(2026, 7, 10, 9, 5).getTime() });
+    expect(groupTasksByTime([later, sooner]).map((g) => g.time)).toEqual(["09:05", "09:45"]);
+  });
+
+  test("returns an empty array for no tasks", () => {
+    expect(groupTasksByTime([])).toEqual([]);
+  });
+
+  test("does not mutate the input array", () => {
+    const a = makeTask({ id: "a", date: new Date(2026, 7, 10, 14, 0).getTime() });
+    const b = makeTask({ id: "b", date: new Date(2026, 7, 10, 8, 0).getTime() });
+    const input = [a, b];
+    groupTasksByTime(input);
+    expect(input.map((t) => t.id)).toEqual(["a", "b"]);
+  });
+});
+
+describe("taskToCardData", () => {
+  const day = new Date(2026, 7, 10);
+
+  test("maps the card fields off the task", () => {
+    const task = makeTask({
+      title: "Revisar PRs",
+      duration: "45min",
+      priority: 3,
+      tags: ["dev", "review"],
+      date: new Date(2026, 7, 10, 8, 30).getTime(),
+    });
+    expect(taskToCardData(task, day)).toEqual({
+      time: "08:30",
+      title: "Revisar PRs",
+      duration: "45min",
+      tags: ["dev", "review"],
+      priority: 3,
+      completed: false,
+    });
+  });
+
+  test("missing tags become an empty array, never undefined", () => {
+    const task = makeTask({ tags: undefined });
+    expect(taskToCardData(task, day).tags).toEqual([]);
+  });
+
+  test("completed is true only when the task was completed on THAT day", () => {
+    const onDay = makeTask({ completed: [new Date(2026, 7, 10, 18, 0).getTime()] });
+    const otherDay = makeTask({ completed: [new Date(2026, 7, 9, 18, 0).getTime()] });
+    expect(taskToCardData(onDay, day).completed).toBe(true);
+    expect(taskToCardData(otherDay, day).completed).toBe(false);
+  });
+
+  test("completed is false (never undefined) for an empty completed list", () => {
+    expect(taskToCardData(makeTask({ completed: [] }), day).completed).toBe(false);
+  });
+});
+
+describe("nowLineIndex", () => {
+  const at = (h: number, m: number) => new Date(2026, 7, 10, h, m);
+  const groups = [{ time: "09:00" }, { time: "11:00" }, { time: "14:30" }];
+
+  test("0 when now is before every group — the line sits on top", () => {
+    expect(nowLineIndex(groups, at(7, 0))).toBe(0);
+  });
+
+  test("splits the list when now falls between two groups", () => {
+    expect(nowLineIndex(groups, at(10, 0))).toBe(1);
+    expect(nowLineIndex(groups, at(12, 0))).toBe(2);
+  });
+
+  test("groups.length when now is past every group — the line sits at the bottom", () => {
+    expect(nowLineIndex(groups, at(18, 0))).toBe(3);
+  });
+
+  test("a group starting exactly now is still ahead of the line", () => {
+    expect(nowLineIndex(groups, at(11, 0))).toBe(1);
+  });
+
+  test("0 for an empty list", () => {
+    expect(nowLineIndex([], at(12, 0))).toBe(0);
   });
 });

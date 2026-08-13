@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 const timePickerInputBase =
   "p-1 inline tabular-nums h-fit border-none outline-none select-none content-box caret-transparent rounded-sm min-w-8 text-center focus:bg-foreground/20 focus-visible:ring-0 focus-visible:outline-none";
-const timePickerSeparatorBase = "text-xs text-gray-400";
+const timePickerSeparatorBase = "text-xs text-muted-foreground";
 
 type DateFormat = "days" | "months" | "years";
 type TimeFormat = "hours" | "minutes" | "seconds" | "am/pm";
@@ -16,10 +16,10 @@ type TimeFormat = "hours" | "minutes" | "seconds" | "am/pm";
 type DateTimeArray<T extends DateFormat | TimeFormat> = T[];
 type DateTimeFormatDefaults = [DateTimeArray<DateFormat>, DateTimeArray<TimeFormat>];
 
-const DEFAULTS = [
+const DEFAULTS: DateTimeFormatDefaults = [
   ["months", "days", "years"],
   ["hours", "minutes", "am/pm"],
-] as DateTimeFormatDefaults;
+];
 
 type TimescapeReturn = ReturnType<typeof useTimescape>;
 type InputPlaceholders = Record<DateFormat | TimeFormat, string>;
@@ -64,8 +64,8 @@ const DatetimeGrid = forwardRef<
       <div
         className={cn(
           "flex items-center w-fit p-1 border-2",
-          className,
           "border-input rounded-md gap-1 selection:bg-transparent selection:text-foreground",
+          className,
         )}
         {...timescape.getRootProps()}
         ref={ref}

@@ -3,7 +3,7 @@ import { type ReactNode } from "react";
 
 import { priorityTextColor } from "@/consts/conts";
 import { cn } from "@/lib/utils";
-import { TagBadge } from "../task-card";
+import { TagBadge } from "@/components/task-card";
 
 /** Metadado compacto (ícone + label) — pill neutro. Decorativo. */
 function Meta({
