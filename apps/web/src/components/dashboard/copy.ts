@@ -9,6 +9,8 @@
  */
 export const copy = {
   header: {
+    back: "Voltar",
+    forward: "Avançar",
     upgrade: "Assinar",
     profile: "Perfil",
     accountMenu: "Menu da conta",
@@ -80,6 +82,12 @@ export const copy = {
   profile: {
     pageTitle: "Perfil",
     back: "Voltar",
+    navLabel: "Navegação",
+    navDashboard: "Tarefas",
+    navPersonal: "Perfil",
+    navSecurity: "Segurança",
+    navPremium: "Premium",
+    navSettings: "Configurações",
     personalTitle: "Informações pessoais",
     personalDescription: "Gerencie seus dados e como eles aparecem.",
     editProfile: "Editar perfil",

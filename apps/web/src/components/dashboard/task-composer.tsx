@@ -55,7 +55,7 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
         className,
       )}
     >
-      <div className="flex flex-col gap-2 rounded-2xl border border-surface-line bg-surface-card p-3">
+      <div className="flex flex-col gap-2 rounded-2xl bg-surface-card p-3">
         <div className="flex items-center gap-3">
           <Label htmlFor="composer-when" className="sr-only">
             {copy.composer.when}

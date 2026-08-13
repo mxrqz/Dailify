@@ -1,5 +1,7 @@
 import { Link } from "react-router-dom";
 
+import { cn } from "@/lib/utils";
+
 /**
  * Logo + wordmark, compartilhado pelo SiteHeader e pelo AppHeader. `to` difere: na landing aponta
  * pra "/", no app pro "/dashboard".
@@ -10,15 +12,25 @@ import { Link } from "react-router-dom";
  * `alt=""`: o logo é decorativo aqui — o wordmark "Dailify" ao lado já anuncia o nome. Um `alt`
  * repetindo o texto faria o leitor de tela dizer "Dailify Dailify".
  */
-export function Brand({ to }: { to: string }): JSX.Element {
+export function Brand({ to, compact }: { to: string; compact?: boolean }): JSX.Element {
   return (
-    <Link to={to} className="inline-flex items-center gap-2">
+    <Link to={to} className={cn("inline-flex items-center", compact ? "gap-1.5" : "gap-2")}>
       <img
         src="/dailify_logo_2.png"
         alt=""
-        className="size-7 shrink-0 object-contain invert dark:invert-0"
+        className={cn(
+          "shrink-0 object-contain invert dark:invert-0",
+          compact ? "size-4" : "size-7",
+        )}
       />
-      <span className="text-lg font-semibold tracking-[-0.01em] text-foreground">Dailify</span>
+      <span
+        className={cn(
+          "font-semibold tracking-[-0.01em] text-foreground",
+          compact ? "text-sm" : "text-lg",
+        )}
+      >
+        Dailify
+      </span>
     </Link>
   );
 }

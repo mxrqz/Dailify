@@ -1,94 +1,63 @@
 import { ChevronLeft } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
-import { AppHeader } from "@/components/app-header";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { PersonalTab, SecurityTab, SubscriptionTab } from "@/components/profileTabs";
+
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
+import { PersonalTab, SecurityTab, SubscriptionTab } from "@/components/profileTabs";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+
+type Section = "personal" | "security" | "premium" | "settings";
+
+const SECTIONS: readonly string[] = ["personal", "security", "premium", "settings"];
+const isSection = (value: string | null): value is Section =>
+  value !== null && SECTIONS.includes(value);
 
 export default function ProfilePage() {
   const navigate = useNavigate();
   const { invoices, permissions, paymentDetails } = useDailify();
 
-  const [searchParams, setSearchParams] = useSearchParams();
-  const activeTab = searchParams.get("tab") || "personal";
-
-  const setActiveTab = (value: string) => {
-    const newParams = new URLSearchParams(searchParams);
-    newParams.set("tab", value);
-    setSearchParams(newParams);
-  };
+  const [searchParams] = useSearchParams();
+  const tab = searchParams.get("tab");
+  const active: Section = isSection(tab) ? tab : "personal";
 
   return (
-    <main className="w-full h-full px-[clamp(1rem,5vw,6rem)] flex flex-col">
-      <AppHeader />
+    <main className="flex w-full flex-col gap-6 py-6">
+      <div className="flex items-center gap-2">
+        <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
+          <ChevronLeft className="h-4 w-4" />
+          <span className="sr-only">{copy.profile.back}</span>
+        </Button>
+        <h1 className="text-2xl font-semibold tracking-[-0.01em]">{copy.profile.pageTitle}</h1>
+      </div>
 
-      <div className="w-full flex flex-col justify-center py-6 space-y-6">
-        <div className="flex items-center gap-2">
-          <Button variant="ghost" size="icon" onClick={() => navigate("/dashboard")}>
-            <ChevronLeft className="h-4 w-4" />
-            <span className="sr-only">{copy.profile.back}</span>
-          </Button>
-          <h1 className="text-2xl font-semibold tracking-[-0.01em]">{copy.profile.pageTitle}</h1>
-        </div>
+      <div className="flex flex-col gap-6">
+        {active === "personal" && <PersonalTab />}
 
-        <Tabs defaultValue={activeTab} value={activeTab} onValueChange={setActiveTab}>
-          <TabsList className="grid grid-cols-4 md:grid-cols-6 lg:grid-cols-6 w-full bg-background">
-            <TabsTrigger value="personal" className="border-0 cursor-pointer">
-              Pessoal
-            </TabsTrigger>
-            <TabsTrigger value="security" className="border-0 cursor-pointer">
-              Segurança
-            </TabsTrigger>
-            <TabsTrigger value="subscription" className="border-0 cursor-pointer">
-              Assinatura
-            </TabsTrigger>
-            <TabsTrigger value="notifications" className="border-0 cursor-pointer">
-              Notificações
-            </TabsTrigger>
-            <TabsTrigger value="devices" className="hidden md:block border-0 cursor-pointer">
-              Dispositivos
-            </TabsTrigger>
-            <TabsTrigger value="activity" className="hidden md:block border-0 cursor-pointer">
-              Atividade
-            </TabsTrigger>
-          </TabsList>
+        {active === "security" && <SecurityTab />}
 
-          <TabsContent value="personal">
-            <PersonalTab />
-          </TabsContent>
+        {active === "premium" && permissions && paymentDetails && invoices && (
+          <SubscriptionTab
+            invoices={invoices}
+            paymentDetails={paymentDetails}
+            permissions={permissions}
+          />
+        )}
 
-          <TabsContent value="security">
-            <SecurityTab />
-          </TabsContent>
+        {active === "settings" && (
+          <Card className="rounded-2xl border-surface-line bg-surface-card">
+            <CardHeader>
+              <CardTitle>{copy.profile.notificationsTitle}</CardTitle>
+              <CardDescription className="text-content-secondary">
+                {copy.profile.notificationsDescription}
+              </CardDescription>
+            </CardHeader>
 
-          <TabsContent value="subscription" className="space-y-6">
-            {permissions && paymentDetails && invoices && (
-              <SubscriptionTab
-                invoices={invoices}
-                paymentDetails={paymentDetails}
-                permissions={permissions}
-              />
-            )}
-          </TabsContent>
-
-          <TabsContent value="notifications">
-            <Card className="rounded-2xl border-surface-line bg-surface-card">
-              <CardHeader>
-                <CardTitle>{copy.profile.notificationsTitle}</CardTitle>
-                <CardDescription className="text-content-secondary">
-                  {copy.profile.notificationsDescription}
-                </CardDescription>
-              </CardHeader>
-
-              <CardContent>
-                <p className="text-sm text-content-secondary">{copy.profile.notificationsSoon}</p>
-              </CardContent>
-            </Card>
-          </TabsContent>
-        </Tabs>
+            <CardContent>
+              <p className="text-sm text-content-secondary">{copy.profile.notificationsSoon}</p>
+            </CardContent>
+          </Card>
+        )}
       </div>
     </main>
   );
