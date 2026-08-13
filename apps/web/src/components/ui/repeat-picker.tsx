@@ -22,7 +22,7 @@ export default function RepeatPicker({ onSelectedRepeat, task }: RepeatPickerPro
   const pro = recurrence ? "" : " (Pro)";
 
   const isValidRepeat = (value: unknown): value is TaskProps["repeat"] =>
-    ["Off", "Daily", "Monthly", "Yearly"].includes(value as string);
+    typeof value === "string" && ["Off", "Daily", "Monthly", "Yearly"].includes(value);
 
   useEffect(() => {
     if (!repeat) return;

@@ -39,6 +39,8 @@ const boxClass =
   "flex h-9 items-center rounded-md border border-surface-line px-2 focus-within:border-accent-primary";
 
 // "10m" and a real task.duration ("1h30m") share the same "Xh Ym" shape, so one parser covers both.
+// ponytail: o `as` sobrevive aqui porque TimeValue é uma união de CLASSES do @internationalized/date,
+// que não está nas nossas deps (só transitivo). Some no dia em que valer a pena adicioná-lo.
 const parseDuration = (duration: string): TimeValue => {
   const hourMatch = duration.match(/(\d+)h/);
   const minuteMatch = duration.match(/(\d+)m/);

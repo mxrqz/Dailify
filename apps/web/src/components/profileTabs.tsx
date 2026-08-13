@@ -30,6 +30,7 @@ import { copy } from "@/components/dashboard/copy";
 import { Separator } from "./ui/separator";
 import { CreditCard, Receipt } from "lucide-react";
 import { Badge } from "./ui/badge";
+import { formFile, formString } from "@/lib/form";
 
 import { EllipsisVerticalIcon, Laptop2Icon, Smartphone } from "lucide-react";
 import { PhoneNumberResource, SessionWithActivitiesResource } from "@clerk/types";
@@ -59,7 +60,6 @@ import {
 } from "@/components/ui/select";
 
 import {
-  E164Number,
   getCountries,
   getCountryCallingCode,
   parsePhoneNumberWithError,
@@ -87,7 +87,7 @@ import {
   CommandList,
   CommandGroup,
 } from "../components/ui/command";
-import { cn } from "@/lib/utils";
+import { cn, toText } from "@/lib/utils";
 import {
   InputOTP,
   InputOTPGroup,
@@ -122,7 +122,7 @@ export function SubscriptionTab({
   const { user } = useUser();
   const { getToken } = useAuth();
   const { tasks } = useDailify();
-  const plan = planMap[user?.publicMetadata.plan as string];
+  const plan = planMap[toText(user?.publicMetadata.plan)];
   // Quota from the single entitlements source (counts distinct base tasks, not expanded instances).
   const tasksUsed = tasks ? new Set(tasks.map((t) => t.id)).size : 0;
   const entitlements = computeEntitlements(permissions, tasksUsed);
@@ -234,11 +234,11 @@ export function SubscriptionTab({
 
                       <div className="flex justify-center flex-col">
                         <div className="w-fit">
-                          {walletIcons[invoice?.walletType as string] ?? null}
+                          {walletIcons[toText(invoice?.walletType)] ?? null}
                         </div>
 
                         <div className="flex gap-2">
-                          {brandIcons[invoice?.brandName as string]}
+                          {brandIcons[toText(invoice?.brandName)]}
 
                           <p className="font-medium">••••</p>
 
@@ -253,7 +253,7 @@ export function SubscriptionTab({
                           {invoice.status === "paid" ? "Pago" : invoice.status}
                         </Badge>
 
-                        <Link to={invoice.hosted_invoice_url as string}>
+                        <Link to={invoice.hosted_invoice_url ?? "#"}>
                           <Button variant="ghost" size="icon" className="h-8 w-8">
                             <Receipt className="h-4 w-4" />
                             <span className="sr-only">Ver fatura</span>
@@ -409,11 +409,9 @@ export function PersonalTab() {
   const [isVerifyingPhone, setIsVerifyingPhone] = useState<boolean>(false);
   const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
   const [code, setCode] = useState<string>();
-  const [timezone, setTimezone] = useState<string>(() =>
-    user?.unsafeMetadata.timezone ? (user?.unsafeMetadata.timezone as string) : "",
-  );
+  const [timezone, setTimezone] = useState<string>(() => toText(user?.unsafeMetadata.timezone));
   const [language, setLanguage] = useState<string>(() =>
-    user?.unsafeMetadata.language ? (user?.unsafeMetadata.language as string) : "en",
+    toText(user?.unsafeMetadata.language, "en"),
   );
   const [phoneObj, setPhoneObj] = useState<PhoneNumberResource>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -423,7 +421,7 @@ export function PersonalTab() {
     return new Promise((resolve, reject) => {
       const reader = new FileReader();
       reader.readAsDataURL(file);
-      reader.onload = () => resolve(reader.result as string);
+      reader.onload = () => resolve(typeof reader.result === "string" ? reader.result : "");
       reader.onerror = (error) => reject(error);
     });
   };
@@ -484,12 +482,12 @@ export function PersonalTab() {
 
     const formData = new FormData(e.currentTarget);
 
-    const firstName = formData.get("name") as string;
-    const lastName = formData.get("surname") as string;
-    const username = formData.get("username") as string;
-    const phone = formData.get("phone") as string;
+    const firstName = formString(formData, "name");
+    const lastName = formString(formData, "surname");
+    const username = formString(formData, "username");
+    const phone = formString(formData, "phone");
     const phoneNumber = `${countries.find((country) => country.name === phoneValue)?.dialCode?.replace("+", "")}${phone}`;
-    const file = (formData.get("avatar") as File) || null;
+    const file = formFile(formData, "avatar");
 
     if (
       (firstName !== null || lastName !== null || username !== null) &&
@@ -548,7 +546,7 @@ export function PersonalTab() {
         ? `+${original.countryCallingCode}${national.slice(0, 2)}9${national.slice(2)}`
         : original.number;
 
-    const parsed = parsePhoneNumberWithError(correctedNumber as unknown as E164Number);
+    const parsed = parsePhoneNumberWithError(correctedNumber);
     setPhoneFromUrl(parsed);
     setPhoneDialogOpen(true);
   }, [searchParams]);

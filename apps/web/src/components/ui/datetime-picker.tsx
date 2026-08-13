@@ -16,10 +16,10 @@ type TimeFormat = "hours" | "minutes" | "seconds" | "am/pm";
 type DateTimeArray<T extends DateFormat | TimeFormat> = T[];
 type DateTimeFormatDefaults = [DateTimeArray<DateFormat>, DateTimeArray<TimeFormat>];
 
-const DEFAULTS = [
+const DEFAULTS: DateTimeFormatDefaults = [
   ["months", "days", "years"],
   ["hours", "minutes", "am/pm"],
-] as DateTimeFormatDefaults;
+];
 
 type TimescapeReturn = ReturnType<typeof useTimescape>;
 type InputPlaceholders = Record<DateFormat | TimeFormat, string>;
