@@ -4,36 +4,43 @@ import { ptBR } from "date-fns/locale";
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { MiniCalendar } from "@/components/dashboard/mini-calendar";
-import NewTask from "@/components/new-task";
-import NewTaskVoice from "@/components/new-task-voice";
 import { getNextTask } from "@/functions/functions";
+import { cn } from "@/lib/utils";
 
-/** Bloco do aside: cartão `surface-card` com hairline, o degrau acima do shell. */
-function AsideCard({ children }: { children: React.ReactNode }): JSX.Element {
+/** Bloco do resumo: cartão `surface-card` com hairline, o degrau acima do shell. */
+function SummaryCard({
+  className,
+  children,
+}: {
+  className?: string;
+  children: React.ReactNode;
+}): JSX.Element {
   return (
-    <div className="rounded-2xl border border-surface-line bg-surface-card p-5">{children}</div>
+    <div className={cn("rounded-2xl border border-surface-line bg-surface-card p-5", className)}>
+      {children}
+    </div>
   );
 }
 
 /**
- * Coluna direita da view do dia: navegação por data, o que vem a seguir, e as ações de criação.
- * Substitui o `select-day.tsx`, que empilhava calendário, dois botões quadrados e um card
- * "Upcoming Task" numa grid de duas linhas.
+ * Faixa do topo: calendário à esquerda e o que vem a seguir logo ao lado. Os dois cartões têm
+ * largura própria e ficam encostados um no outro — nada de `justify-between` jogando um pra
+ * cada ponta.
  *
  * "Próxima tarefa" olha o MÊS inteiro (`currentMonthTasks`), não o dia selecionado — é o que dá
  * utilidade ao bloco justamente quando o dia aberto está vazio.
  */
-export function DayAside(): JSX.Element {
+export function DaySummary(): JSX.Element {
   const { currentMonthTasks } = useDailify();
   const nextTask = currentMonthTasks ? getNextTask(currentMonthTasks) : undefined;
 
   return (
-    <aside className="flex flex-col gap-4 self-start">
-      <AsideCard>
+    <aside className="flex flex-wrap items-start gap-4">
+      <SummaryCard className="w-[19rem] shrink-0">
         <MiniCalendar />
-      </AsideCard>
+      </SummaryCard>
 
-      <AsideCard>
+      <SummaryCard className="w-[20rem] shrink-0">
         <div className="flex flex-col gap-3">
           <h2 className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
             {copy.aside.nextTaskLabel}
@@ -50,12 +57,7 @@ export function DayAside(): JSX.Element {
             <p className="text-sm text-content-secondary">{copy.aside.noNextTask}</p>
           )}
         </div>
-      </AsideCard>
-
-      <div className="flex items-center gap-2">
-        <NewTask className="h-10 w-full rounded-full bg-accent-primary text-primary-foreground hover:bg-accent-hover" />
-        <NewTaskVoice />
-      </div>
+      </SummaryCard>
     </aside>
   );
 }

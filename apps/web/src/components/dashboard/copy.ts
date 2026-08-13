@@ -9,8 +9,6 @@
  */
 export const copy = {
   header: {
-    viewDay: "Hoje",
-    viewMonth: "Mês",
     upgrade: "Assinar",
     profile: "Perfil",
     accountMenu: "Menu da conta",
@@ -22,9 +20,11 @@ export const copy = {
 
   day: {
     today: "Hoje",
+    tomorrow: "Amanhã",
     now: "agora",
-    emptyTitle: "SEM TAREFAS PARA ESTE DIA",
-    emptyHint: "Crie a primeira e ela aparece aqui, encaixada no horário.",
+    noTasks: "Nenhuma tarefa",
+    oneTask: "1 tarefa",
+    manyTasks: "{n} tarefas",
     newTask: "Nova tarefa",
     voiceTask: "Criar por voz",
   },
@@ -35,16 +35,6 @@ export const copy = {
     prevMonth: "Mês anterior",
     nextMonth: "Próximo mês",
     weekDayInitials: ["D", "S", "T", "Q", "Q", "S", "S"],
-  },
-
-  month: {
-    today: "Hoje",
-    prevMonth: "Mês anterior",
-    nextMonth: "Próximo mês",
-    moreTasks: "+{n}",
-    sheetTitle: "Tarefas do dia",
-    sheetEmpty: "Nenhuma tarefa neste dia.",
-    dayLabelFormat: "d 'de' MMMM",
   },
 
   loading: {
@@ -102,6 +92,14 @@ export const copy = {
     saving: "Salvando",
     addPhone: "Adicionar telefone",
     revokeDevice: "Encerrar sessão",
+  },
+
+  composer: {
+    when: "Quando",
+    whenPlaceholder: "Hoje às 14 horas",
+    text: "Tarefa",
+    textPlaceholder: "o que precisa ser feito?",
+    submit: "Criar tarefa",
   },
 
   voice: {

@@ -23,7 +23,7 @@ export default function ProfilePage() {
 
   return (
     <main className="w-full h-full px-[clamp(1rem,5vw,6rem)] flex flex-col">
-      <AppHeader showViewToggle={false} />
+      <AppHeader />
 
       <div className="w-full flex flex-col justify-center py-6 space-y-6">
         <div className="flex items-center gap-2">

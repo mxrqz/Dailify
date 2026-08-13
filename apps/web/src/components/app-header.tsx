@@ -3,7 +3,6 @@ import { LogOutIcon, SettingsIcon, UserIcon } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { Brand } from "@/components/brand";
-import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -17,51 +16,7 @@ import {
 import { PLAN_ID } from "@/consts/conts";
 import { cn } from "@/lib/utils";
 
-/**
- * Header do app autenticado. Carrega o toggle Hoje/Mês — que antes era um botão de ícone sem rótulo
- * solto no meio do conteúdo (`select-day.tsx`). As pills seguem o toggle Mensal/Anual do pricing:
- * a ativa é crimson sólida (papel "view ativa"), a inativa é texto muted.
- */
-function ViewToggle(): JSX.Element {
-  const { isCalendar, setIsCalendar } = useDailify();
-  const views = [
-    { key: "day", label: copy.header.viewDay, active: !isCalendar },
-    { key: "month", label: copy.header.viewMonth, active: isCalendar },
-  ] as const;
-
-  return (
-    <div
-      role="group"
-      aria-label={`${copy.header.viewDay} / ${copy.header.viewMonth}`}
-      className="inline-flex items-center gap-1 rounded-full border border-surface-line bg-surface-card p-1"
-    >
-      {views.map((view) => (
-        <button
-          key={view.key}
-          type="button"
-          aria-pressed={view.active}
-          onClick={() => setIsCalendar(view.key === "month")}
-          className={cn(
-            "rounded-full px-4 py-1.5 font-mono text-2xs uppercase tracking-[0.04em] transition-colors",
-            view.active
-              ? "bg-accent-primary text-primary-foreground"
-              : "text-muted-foreground hover:text-foreground",
-          )}
-        >
-          {view.label}
-        </button>
-      ))}
-    </div>
-  );
-}
-
-export function AppHeader({
-  className,
-  showViewToggle = true,
-}: {
-  className?: string;
-  showViewToggle?: boolean;
-}): JSX.Element {
+export function AppHeader({ className }: { className?: string }): JSX.Element {
   const { signOut } = useAuth();
   const { user } = useUser();
   const navigate = useNavigate();
@@ -75,8 +30,6 @@ export function AppHeader({
       )}
     >
       <Brand to="/dashboard" />
-
-      {showViewToggle && <ViewToggle />}
 
       <div className="inline-flex items-center gap-3">
         <ModeToggle />
