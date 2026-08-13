@@ -3,7 +3,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "dev": "wrangler dev",
+    "dev": "CI=1 wrangler d1 migrations apply dailify --local && wrangler dev",
     "deploy": "wrangler deploy",
     "test": "vitest run",
     "check": "tsc --noEmit && vitest run"

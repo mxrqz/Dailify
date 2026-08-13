@@ -38,7 +38,9 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
 
 `Env` fields beyond `DB`/`ALLOWED_ORIGIN` are secrets (`wrangler secret put`, or `.dev.vars` /
 `.env` locally — see `.env.example`, 9 secrets). `wrangler.toml` holds the D1 `database_id` and
-`[vars] ALLOWED_ORIGIN`. Clerk + Stripe keys are **paired per instance**: a `pk_live` front end
+`[vars] ALLOWED_ORIGIN` — which is the **prod** origin, so `.env` must override it locally
+(`https://localhost:1420`; vite uses mkcert + `strictPort`). Wrangler doesn't hot-reload `.env`.
+`bun run dev` applies pending D1 migrations locally (`CI=1` skips the prompt) before `wrangler dev`. Clerk + Stripe keys are **paired per instance**: a `pk_live` front end
 must match an `sk_live` worker or all auth 401s.
 
 ## Tests
