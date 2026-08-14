@@ -654,6 +654,20 @@ git commit -m "feat(web): casca visual compartilhada das telas de auth"
 - Consumes: `authReducer`, `initialAuthState`, `classifyClerkError`, `redirectTarget`, `AuthMode`, `AuthState` (Task 1)
 - Produces: `useEmailLinkAuth(mode): { state, submit(email), resend(), reset(), signInWithGoogle(), isLoaded }`
 
+> **O código abaixo tem dois defeitos, corrigidos em `96de436`. Não copie deste bloco.**
+>
+> 1. Ele trata só `expired` e `complete`. Mas `startEmailLinkFlow` **resolve** com `status: "failed"`
+>    no client mismatch — o usuário abre o link do e-mail no celular com o formulário no notebook.
+>    Nada é lançado, o `catch` não pega, e a aba fica em `awaitingLink` pra sempre dizendo "confira
+>    seu e-mail". Correção: depois de cada await, qualquer resolução não-`complete` despacha `failed`.
+> 2. Ele descarta o `cancelEmailLinkFlow`. Sem cleanup, o reenvio empilha um poller sobre o anterior,
+>    e o `expired` do antigo derruba um link novo ainda válido. Correção: guardar o canceller num
+>    ref, chamá-lo antes de iniciar um fluxo novo e no unmount — que é exatamente o que o
+>    `useEmailLink` do próprio Clerk faz.
+>
+> Fica aqui como estava porque o ledger do SDD argumenta contra este texto. O arquivo real é a
+> fonte de verdade.
+
 - [ ] **Step 1: Implementar o hook**
 
 Crie `apps/web/src/components/auth/use-email-link-auth.ts`:
