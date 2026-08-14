@@ -65,6 +65,7 @@ export const copy = {
     blockedEmail: "E-mails temporários não são aceitos. Use seu e-mail de sempre.",
     captcha: "A verificação de segurança falhou. Recarregue a página e tente de novo.",
     tooManyRequests: "Muitas tentativas. Espere um minuto e tente de novo.",
+    expiredLink: "Seu link expirou. Peça um novo.",
     generic: "Algo deu errado. Tente de novo.",
     offerSignUp: "Não achei uma conta com esse e-mail.",
     offerSignUpAction: "Criar conta",

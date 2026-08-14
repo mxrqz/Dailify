@@ -19,6 +19,7 @@ describe("auth copy", () => {
       "blockedEmail",
       "captcha",
       "tooManyRequests",
+      "expiredLink",
       "generic",
     ] as const) {
       expect(copy.errors[key]).toBeTruthy();

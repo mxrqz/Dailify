@@ -31,6 +31,12 @@ export function useEmailLinkAuth(mode: AuthMode) {
   // Guardado num ref porque o `resend` precisa do último e-mail sem virar dependência do callback.
   const lastEmail = useRef("");
 
+  // Cada `start` (e cada `reset`) ganha um número. Um run que resolve depois de outro começar é
+  // fóssil e não pode mais despachar: sem isso, um `create` lento que o usuário abandonou pelo
+  // "usar outro e-mail" volta atrasado e sequestra a tela do envio novo — a caixa de entrada
+  // passaria a mostrar o e-mail ANTIGO enquanto o poller vivo é o do novo.
+  const runId = useRef(0);
+
   // Cancela o poller do link anterior antes de iniciar outro — senão o antigo resolve por conta
   // própria mais tarde (unmount, ou um resend que gerou um novo link) e despacha em cima da
   // máquina atual, incluindo um `verified` roubado que navegaria a partir de qualquer estado.
@@ -49,6 +55,8 @@ export function useEmailLinkAuth(mode: AuthMode) {
       if (!isLoaded || !signIn || !signUp) return;
 
       lastEmail.current = email;
+      const run = ++runId.current;
+      const stale = () => run !== runId.current;
       dispatch({ type: "submit" });
 
       const redirectUrl = `${window.location.origin}/verify`;
@@ -59,6 +67,8 @@ export function useEmailLinkAuth(mode: AuthMode) {
             emailAddress: email,
             unsafeMetadata: { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
           });
+          // Antes do `cancelRef`, não só do dispatch: um fóssil aqui mataria o poller do run vivo.
+          if (stale()) return;
 
           cancelRef.current?.();
           const { startEmailLinkFlow, cancelEmailLinkFlow } = signUp.createEmailLinkFlow();
@@ -66,6 +76,7 @@ export function useEmailLinkAuth(mode: AuthMode) {
           dispatch({ type: "linkSent", email, at: Date.now() });
 
           const attempt = await startEmailLinkFlow({ redirectUrl });
+          if (stale()) return;
           const verification = attempt.verifications.emailAddress;
 
           if (verification.status === "expired") return dispatch({ type: "expired" });
@@ -80,6 +91,8 @@ export function useEmailLinkAuth(mode: AuthMode) {
         }
 
         const { supportedFirstFactors } = await signIn.create({ identifier: email });
+        if (stale()) return;
+
         const factor = supportedFirstFactors?.find(
           (f): f is EmailLinkFactor => f.strategy === "email_link",
         );
@@ -95,6 +108,7 @@ export function useEmailLinkAuth(mode: AuthMode) {
           emailAddressId: factor.emailAddressId,
           redirectUrl,
         });
+        if (stale()) return;
 
         if (attempt.firstFactorVerification.status === "expired") {
           return dispatch({ type: "expired" });
@@ -107,6 +121,7 @@ export function useEmailLinkAuth(mode: AuthMode) {
         dispatch({ type: "verified" });
         navigate(from, { replace: true });
       } catch (err) {
+        if (stale()) return;
         fail(err);
       }
     },
@@ -120,9 +135,14 @@ export function useEmailLinkAuth(mode: AuthMode) {
   return {
     state,
     isLoaded,
+    from,
     submit: start,
     resend: useCallback(() => start(lastEmail.current), [start]),
-    reset: useCallback(() => dispatch({ type: "reset" }), []),
+    // Incrementa a geração: sair da tela abandona o run em voo, mesmo que nenhum outro comece.
+    reset: useCallback(() => {
+      runId.current++;
+      dispatch({ type: "reset" });
+    }, []),
     signInWithGoogle: useCallback(() => {
       if (!signIn) return;
       const strategy: OAuthStrategy = "oauth_google";

@@ -28,11 +28,14 @@ export function EmailForm({
   disabled,
   submitLabel,
   failure,
+  defaultEmail,
 }: {
   onSubmit: (email: string) => void;
   disabled: boolean;
   submitLabel: string;
   failure?: AuthFailure;
+  /** Preenchido quando já sabemos o e-mail (link vencido): o retry vira um clique só. */
+  defaultEmail?: string;
 }): JSX.Element {
   return (
     <form
@@ -55,6 +58,7 @@ export function EmailForm({
           type="email"
           required
           autoComplete="email"
+          defaultValue={defaultEmail}
           placeholder={copy.shell.emailPlaceholder}
           aria-invalid={failure?.kind === "message"}
           aria-describedby={failure?.kind === "message" ? "email-error" : undefined}

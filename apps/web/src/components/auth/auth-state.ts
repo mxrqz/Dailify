@@ -7,7 +7,7 @@
 export type AuthMode = "signIn" | "signUp";
 
 export type AuthErrorKey =
-  "invalidEmail" | "blockedEmail" | "captcha" | "tooManyRequests" | "generic";
+  "invalidEmail" | "blockedEmail" | "captcha" | "tooManyRequests" | "expiredLink" | "generic";
 
 /** Um erro vira uma mensagem, ou um convite pra ir pra outra tela. */
 export type AuthFailure =

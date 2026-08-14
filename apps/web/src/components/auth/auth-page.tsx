@@ -1,7 +1,7 @@
 import { useUser } from "@clerk/clerk-react";
 import { Navigate } from "react-router-dom";
 
-import type { AuthMode } from "@/components/auth/auth-state";
+import type { AuthFailure, AuthMode } from "@/components/auth/auth-state";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { CheckInbox } from "@/components/auth/check-inbox";
 import { copy } from "@/components/auth/copy";
@@ -15,7 +15,7 @@ import { useEmailLinkAuth } from "@/components/auth/use-email-link-auth";
  */
 export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
   const { isSignedIn } = useUser();
-  const { state, isLoaded, submit, resend, reset, signInWithGoogle } = useEmailLinkAuth(mode);
+  const { state, isLoaded, from, submit, resend, reset, signInWithGoogle } = useEmailLinkAuth(mode);
   const text = mode === "signUp" ? copy.signUp : copy.signIn;
 
   // O reenvio volta pra `sending` antes de virar `awaitingLink` de novo. Sem o `resendOf`, esse
@@ -27,8 +27,18 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
         ? state.resendOf
         : undefined;
 
-  // Quem já está logado não tem o que fazer aqui.
-  if (isSignedIn) return <Navigate to="/dashboard" replace />;
+  // `expired` também cai no formulário, mas com o motivo e o e-mail já preenchido — sem isso o
+  // link que vence larga o usuário num formulário em branco, sem nada explicando o que houve.
+  const failure: AuthFailure | undefined =
+    state.status === "error"
+      ? state.failure
+      : state.status === "expired"
+        ? { kind: "message", key: "expiredLink" }
+        : undefined;
+
+  // Quem já está logado não tem o que fazer aqui — e vai pro mesmo destino que o fluxo de e-mail
+  // usaria, senão o deep link que o ProtectedRoute guardou some só porque a sessão já existia.
+  if (isSignedIn) return <Navigate to={from} replace />;
 
   return (
     <AuthShell
@@ -52,7 +62,8 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
             onSubmit={submit}
             disabled={!isLoaded || state.status === "sending"}
             submitLabel={text.submit}
-            failure={state.status === "error" ? state.failure : undefined}
+            failure={failure}
+            defaultEmail={state.status === "expired" ? state.email : undefined}
           />
           <OAuthButtons onGoogle={signInWithGoogle} disabled={!isLoaded} />
         </>
