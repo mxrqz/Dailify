@@ -53,9 +53,12 @@ Fechadas no brainstorm, com o racional de cada uma:
 
 **Duas rotas, mesmo motor.** No mundo passwordless, entrar e criar conta são mecanicamente a mesma
 ação — digita e-mail, recebe link. A separação é de *enquadramento*, não de mecânica: `/login` é
-portão de retorno, `/signup` carrega a promessa do produto. O Clerk continua resolvendo sozinho quem
-já tem conta; o fallback `signIn → signUp` permanece, só que agora dizendo ao usuário o que
-aconteceu.
+portão de retorno, `/signup` carrega a promessa do produto.
+
+**O fallback silencioso `signIn → signUp` acaba.** Era ele o problema: hoje o `/login` cria a conta
+sem avisar quando o e-mail não existe, e o usuário nunca sabe o que aconteceu. Cada tela passa a
+fazer uma coisa só, e quando o e-mail está na tela errada o app **oferece** a outra em vez de decidir
+sozinho — ver o mapa de erros em §4.
 
 **Segue o tema, no vocabulário do app.** Não uma tela sempre-escura. Quem usa tema claro sairia de
 um preto e cairia num dashboard branco — um flash de tema errado no exato momento em que o app
@@ -349,3 +352,9 @@ Baseline atual da worktree: **191 testes** (151 web + 40 server), todos verdes.
 - **Nome e sobrenome.** Discutido e descartado: não são consumidos em lugar nenhum do app (só o
   avatar de 24px em `app-header.tsx:91`, que vem do OAuth), e o Stripe Checkout coleta o nome do
   cartão sozinho.
+- **O shell Tauri.** `src-tauri/tauri.conf.json` aponta `frontendDist` pro build local, então num
+  bundle desktop o `window.location.origin` vira `tauri://localhost` e o link do e-mail nasce
+  inabrível. Não é regressão: o fluxo antigo já não funcionava ali por outro motivo — a URL de prod
+  hardcoded abria o navegador, que é outro client do Clerk, e o poller do desktop nunca completava.
+  O shell é vestigial (nenhuma API nativa é usada); se alguém revivê-lo, auth por magic link precisa
+  de um deep link registrado, e aí isto vira um projeto próprio.
