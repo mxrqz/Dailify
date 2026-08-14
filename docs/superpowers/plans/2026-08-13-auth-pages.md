@@ -494,11 +494,17 @@ Layout puro, sem lógica de auth. Verificável a olho antes de qualquer fluxo ex
 **Files:**
 - Create: `apps/web/src/components/auth/auth-shell.tsx`
 - Create: `apps/web/src/components/auth/oauth-buttons.tsx`
-- Modify: `apps/web/src/components/logos.tsx` (remove `AppleLogo`)
 
 **Interfaces:**
 - Consumes: `copy` (Task 2), `Brand` (`@/components/brand`), `Button`, `Separator` (shadcn)
-- Produces: `<AuthShell title legalPrefix crossLinkPrefix crossLinkAction crossLinkTo>{children}</AuthShell>`, `<OAuthButtons onGoogle disabled />`
+- Produces: `<AuthShell>{children}</AuthShell>` com `title`, `legalPrefix`, `crossLinkPrefix`, `crossLinkAction`, `crossLinkTo` **todos opcionais**; `<OAuthButtons onGoogle disabled />`
+
+> As props do `AuthShell` são opcionais porque a Task 7 monta a `/verify` com a mesma casca, e essa
+> tela não tem cross-link nem rodapé legal. Sem isso a Task 7 duplicaria o chrome inteiro.
+>
+> A remoção do `AppleLogo` NÃO acontece aqui — ela vive na Task 6, junto da reescrita do
+> `pages/login.tsx` que hoje o importa. Removê-lo antes deixaria a branch sem compilar por três
+> commits, contra a Global Constraint de `bun run check` verde em todo commit.
 
 - [ ] **Step 1: Criar o `AuthShell`**
 
@@ -525,11 +531,12 @@ export function AuthShell({
   crossLinkTo,
   children,
 }: {
-  title: string;
-  legalPrefix: string;
-  crossLinkPrefix: string;
-  crossLinkAction: string;
-  crossLinkTo: string;
+  /** Ausentes na /verify, que usa a mesma casca sem título, cross-link ou rodapé legal. */
+  title?: string;
+  legalPrefix?: string;
+  crossLinkPrefix?: string;
+  crossLinkAction?: string;
+  crossLinkTo?: string;
   children: React.ReactNode;
 }): JSX.Element {
   return (
@@ -539,32 +546,38 @@ export function AuthShell({
           <Brand to="/" />
         </div>
 
-        <h1 className="mb-6 text-center text-2xl font-semibold tracking-[-0.01em] text-foreground">
-          {title}
-        </h1>
+        {title && (
+          <h1 className="mb-6 text-center text-2xl font-semibold tracking-[-0.01em] text-foreground">
+            {title}
+          </h1>
+        )}
 
         <div className="flex flex-col gap-4 rounded-panel border border-surface-line bg-surface-card p-6 shadow-panel">
           {children}
 
-          <p className="text-center text-sm text-muted-foreground">
-            {crossLinkPrefix}{" "}
-            <Link to={crossLinkTo} className="text-primary underline-offset-4 hover:underline">
-              {crossLinkAction}
-            </Link>
-          </p>
+          {crossLinkTo && (
+            <p className="text-center text-sm text-muted-foreground">
+              {crossLinkPrefix}{" "}
+              <Link to={crossLinkTo} className="text-primary underline-offset-4 hover:underline">
+                {crossLinkAction}
+              </Link>
+            </p>
+          )}
         </div>
       </div>
 
-      <p className="absolute inset-x-0 bottom-5 px-4 text-center text-xs text-muted-foreground">
-        {legalPrefix}
-        <Link to="/termos" className="underline underline-offset-4 hover:text-foreground">
-          {copy.shell.terms}
-        </Link>
-        {copy.shell.legalAnd}
-        <Link to="/privacidade" className="underline underline-offset-4 hover:text-foreground">
-          {copy.shell.privacy}
-        </Link>
-      </p>
+      {legalPrefix && (
+        <p className="absolute inset-x-0 bottom-5 px-4 text-center text-xs text-muted-foreground">
+          {legalPrefix}
+          <Link to="/termos" className="underline underline-offset-4 hover:text-foreground">
+            {copy.shell.terms}
+          </Link>
+          {copy.shell.legalAnd}
+          <Link to="/privacidade" className="underline underline-offset-4 hover:text-foreground">
+            {copy.shell.privacy}
+          </Link>
+        </p>
+      )}
 
       {/* Obrigatório: a proteção anti-bot do Clerk é ligada por padrão no sign-up. */}
       <div id="clerk-captcha" />
@@ -609,26 +622,19 @@ export function OAuthButtons({
 }
 ```
 
-- [ ] **Step 3: Remover o `AppleLogo`**
-
-Em `apps/web/src/components/logos.tsx`, apague a função `AppleLogo` inteira (linhas 22-36), deixando só `LogoProps` e `GoogleLogo`.
-
-- [ ] **Step 4: Confirmar que o tipo fecha**
+- [ ] **Step 3: Rodar o gate**
 
 ```bash
-bun --filter @dailify/web run typecheck 2>/dev/null || bun --filter @dailify/web exec tsc --noEmit
+bun run format && bun run check
 ```
 
-Esperado: um erro em `pages/login.tsx`, que ainda importa `AppleLogo`. É esperado — a Task 6 reescreve esse arquivo. Se aparecer erro em qualquer outro arquivo, pare e investigue.
+Esperado: PASS. Os dois arquivos são novos e ninguém os importa ainda, então nada quebra. Se o `tsc` reclamar de `AppleLogo`, você removeu o logo por engano — ele sai na Task 6, não aqui.
 
-- [ ] **Step 5: Commit**
-
-O gate completo ainda não passa (o `login.tsx` antigo quebrou). Commit mesmo assim, porque a Task 6 fecha:
+- [ ] **Step 4: Commit**
 
 ```bash
-bun run format
-git add apps/web/src/components/auth/auth-shell.tsx apps/web/src/components/auth/oauth-buttons.tsx apps/web/src/components/logos.tsx
-git commit -m "feat(web): casca visual das telas de auth, sem Apple"
+git add apps/web/src/components/auth/auth-shell.tsx apps/web/src/components/auth/oauth-buttons.tsx
+git commit -m "feat(web): casca visual compartilhada das telas de auth"
 ```
 
 ---
@@ -769,18 +775,17 @@ export function useEmailLinkAuth(mode: AuthMode) {
 }
 ```
 
-- [ ] **Step 2: Confirmar que o tipo fecha**
+- [ ] **Step 2: Rodar o gate**
 
 ```bash
-bun --filter @dailify/web exec tsc --noEmit
+bun run format && bun run check
 ```
 
-Esperado: só o erro pré-existente do `AppleLogo` em `pages/login.tsx`. Nenhum erro novo em `use-email-link-auth.ts`.
+Esperado: PASS. O hook ainda não é importado por ninguém, então nada quebra.
 
 - [ ] **Step 3: Commit**
 
 ```bash
-bun run format
 git add apps/web/src/components/auth/use-email-link-auth.ts
 git commit -m "feat(web): hook que liga o Clerk a maquina de estados de auth"
 ```
@@ -955,18 +960,17 @@ export function CheckInbox({
 }
 ```
 
-- [ ] **Step 3: Confirmar que o tipo fecha**
+- [ ] **Step 3: Rodar o gate**
 
 ```bash
-bun --filter @dailify/web exec tsc --noEmit
+bun run format && bun run check
 ```
 
-Esperado: só o erro pré-existente do `AppleLogo`.
+Esperado: PASS.
 
 - [ ] **Step 4: Commit**
 
 ```bash
-bun run format
 git add apps/web/src/components/auth/email-form.tsx apps/web/src/components/auth/check-inbox.tsx
 git commit -m "feat(web): formulario de e-mail e tela de caixa de entrada"
 ```
@@ -978,9 +982,11 @@ git commit -m "feat(web): formulario de e-mail e tela de caixa de entrada"
 Aqui o gate volta a passar — o `login.tsx` antigo some.
 
 **Files:**
+- Create: `apps/web/src/components/auth/auth-page.tsx`
 - Rewrite: `apps/web/src/pages/login.tsx`
 - Create: `apps/web/src/pages/signup.tsx`
 - Modify: `apps/web/src/App.tsx`
+- Modify: `apps/web/src/components/logos.tsx` (remove `AppleLogo`)
 - Delete: `apps/web/src/components/verifying-link.tsx`, `apps/web/src/components/sso-callback.tsx`
 
 **Interfaces:**
@@ -1111,10 +1117,18 @@ Em `apps/web/src/App.tsx`:
 
 5. Adicione `import { copy } from "@/components/auth/copy";` no topo.
 
-- [ ] **Step 4: Apagar os arquivos absorvidos**
+- [ ] **Step 4: Apagar os arquivos absorvidos e o `AppleLogo`**
 
 ```bash
 git rm apps/web/src/components/verifying-link.tsx apps/web/src/components/sso-callback.tsx
+```
+
+Em `apps/web/src/components/logos.tsx`, apague a função `AppleLogo` inteira (linhas 22-36), deixando só `LogoProps` e `GoogleLogo`. É aqui e não na Task 3 porque o `pages/login.tsx` antigo importava `AppleLogo` — removê-lo antes deixaria a branch sem compilar. Este é o commit em que as duas pontas fecham.
+
+Confirme que ninguém mais o referencia:
+
+```bash
+grep -rn "AppleLogo" apps/web/src && echo "AINDA REFERENCIADO — apague os usos" || echo "limpo"
 ```
 
 - [ ] **Step 5: Rodar o gate completo**
@@ -1148,7 +1162,7 @@ git commit -m "feat(web): /login e /signup como rotas separadas com o mesmo moto
 - Rewrite: `apps/web/src/pages/verify.tsx`
 
 **Interfaces:**
-- Consumes: `copy.verify` (Task 2), `AuthShell` (Task 3)
+- Consumes: `copy.verify` (Task 2), `AuthShell` (Task 3) — montado **sem props**, só com children
 - Produces: nada (folha)
 
 - [ ] **Step 1: Reescrever**
@@ -1162,8 +1176,8 @@ import { Loader2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
+import { AuthShell } from "@/components/auth/auth-shell";
 import { copy } from "@/components/auth/copy";
-import { Brand } from "@/components/brand";
 import { Button } from "@/components/ui/button";
 
 type Status = "loading" | "verified" | "verified_switch_tab" | "expired" | "client_mismatch" | "failed";
@@ -1208,26 +1222,21 @@ export default function Verify() {
 
   const canRestart = status === "expired" || status === "failed";
 
+  // Mesma casca de /login e /signup, sem título, cross-link ou rodapé legal — todos opcionais.
   return (
-    <main className="relative grid min-h-dvh place-items-center bg-surface-page px-4 py-24">
-      <div className="relative w-full max-w-[380px]">
-        <div className="absolute bottom-full left-1/2 mb-10 -translate-x-1/2">
-          <Brand to="/" />
-        </div>
+    <AuthShell>
+      <div className="flex flex-col items-center gap-4 text-center">
+        {status === "loading" && <Loader2Icon className="size-6 animate-spin text-primary" />}
 
-        <div className="flex flex-col items-center gap-4 rounded-panel border border-surface-line bg-surface-card p-6 text-center shadow-panel">
-          {status === "loading" && <Loader2Icon className="size-6 animate-spin text-primary" />}
+        <p className="text-sm text-foreground">{message}</p>
 
-          <p className="text-sm text-foreground">{message}</p>
-
-          {canRestart && (
-            <Button asChild variant="outline" className="w-full">
-              <Link to="/login">{copy.verify.restart}</Link>
-            </Button>
-          )}
-        </div>
+        {canRestart && (
+          <Button asChild variant="outline" className="w-full">
+            <Link to="/login">{copy.verify.restart}</Link>
+          </Button>
+        )}
       </div>
-    </main>
+    </AuthShell>
   );
 }
 ```
@@ -1325,7 +1334,7 @@ git commit -m "fix(web): CTAs do hero passam a navegar, e a conversao vai pro /s
 Quatro correções independentes no mesmo território.
 
 **Files:**
-- Modify: `apps/web/src/App.tsx:26`
+- Modify: `apps/web/src/App.tsx` (a linha do `<ThemeProvider …>` — **não confie no número**, a Task 6 já editou este arquivo e deslocou as linhas)
 - Modify: `apps/web/src/components/theme-provider.tsx:38-53`
 - Modify: `apps/web/index.html`
 - Modify: `apps/web/src/components/mode-toggle.tsx:28-34`
@@ -1337,7 +1346,7 @@ Quatro correções independentes no mesmo território.
 
 - [ ] **Step 1: Fazer `system` ser o padrão de verdade**
 
-Em `apps/web/src/App.tsx:26`, troque `<ThemeProvider defaultTheme="dark">` por `<ThemeProvider>`. O provider já declara `defaultTheme = "system"`.
+Em `apps/web/src/App.tsx`, troque `<ThemeProvider defaultTheme="dark">` por `<ThemeProvider>`. O provider já declara `defaultTheme = "system"`. Ancore pelo conteúdo, não pelo número da linha — a Task 6 editou este arquivo.
 
 - [ ] **Step 2: Reagir à troca de tema no SO**
 
