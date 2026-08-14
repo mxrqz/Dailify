@@ -38,11 +38,13 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
     ? format(parsed.date, parsed.hasTime ? "EEE · d MMM · HH:mm" : "EEE · d MMM", { locale: ptBR })
     : null;
 
+  const canSubmit = Boolean(when.trim() && text.trim()) && !submitting;
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    const trimmed = text.trim();
-    if (!trimmed || submitting) return;
-    onSubmit({ when: when.trim(), parsed, text: trimmed });
+    if (!canSubmit) return;
+    onSubmit({ when: when.trim(), parsed, text: text.trim() });
+    setWhen("");
     setText("");
   };
 
@@ -66,6 +68,7 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
             onChange={(e) => setWhen(e.target.value)}
             placeholder={copy.composer.whenPlaceholder}
             autoComplete="off"
+            required
             className={cn(fieldClass, "w-1/3 rounded-2xl rounded-bl-lg bg-surface-page px-3 py-2")}
           />
 
@@ -100,7 +103,7 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
           <button
             type="submit"
             aria-label={copy.composer.submit}
-            disabled={!text.trim() || submitting}
+            disabled={!canSubmit}
             className="flex size-10 shrink-0 items-center justify-center rounded-full bg-accent-primary text-primary-foreground transition-colors hover:bg-accent-hover disabled:bg-surface-hover disabled:text-muted-foreground"
           >
             {submitting ? (
