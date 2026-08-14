@@ -19,7 +19,7 @@
 - **Nenhuma string visível dentro do JSX.** Tudo em `components/auth/copy.ts`. Único arquivo de copy, em pt-BR.
 - **Prettier `printWidth: 100`.** Rode `bun run format` antes de cada commit.
 - **Gate completo:** `bun run check` = prettier + eslint + tsc + vitest. Precisa passar antes de todo commit.
-- **Baseline:** 191 testes verdes (151 web + 40 server). Nenhum commit pode reduzir esse número.
+- **Baseline:** 213 testes verdes — 151 web + 40 server + 22 `packages/shared` (`pricing.test.ts`, `recurrence.test.ts`). Nenhum commit pode reduzir esse número.
 - **`@/` resolve pra `apps/web/src/`.** Todos os comandos rodam da raiz da worktree.
 - **Não adicionar dependências.** Especialmente não `@testing-library/react`, `jsdom` ou `@clerk/localizations`.
 - **Radius:** `rounded-panel` (1.375rem) para o card. Botões e input ficam no `rounded-md` do shadcn.
@@ -1457,7 +1457,7 @@ git commit -m "fix(web): tema do sistema vira o padrao real e passa a reagir ao 
 bun run check
 ```
 
-Esperado: PASS, com pelo menos 215 testes (191 da baseline + ~24 novos).
+Esperado: PASS, com pelo menos 234 testes (213 da baseline + ~21 novos das Tasks 1 e 2).
 
 - [ ] **Atualizar a documentação de rotas**
 
