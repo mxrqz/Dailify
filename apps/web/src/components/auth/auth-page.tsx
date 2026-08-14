@@ -63,7 +63,9 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
             disabled={!isLoaded || state.status === "sending"}
             submitLabel={text.submit}
             failure={failure}
-            defaultEmail={state.status === "expired" ? state.email : undefined}
+            defaultEmail={
+              state.status === "expired" || state.status === "error" ? state.email : undefined
+            }
           />
           <OAuthButtons onGoogle={signInWithGoogle} disabled={!isLoaded} />
         </>

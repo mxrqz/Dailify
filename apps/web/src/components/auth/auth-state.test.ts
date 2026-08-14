@@ -91,6 +91,53 @@ describe("authReducer", () => {
     ).toEqual({ status: "error", failure: { kind: "offer", mode: "signUp" } });
   });
 
+  it("failed vindo de awaitingLink preserva o e-mail (reenvio não zera o formulário)", () => {
+    const awaiting = authReducer(authReducer(initialAuthState, { type: "submit" }), {
+      type: "linkSent",
+      email: "a@b.com",
+      at: 1000,
+    });
+    expect(
+      authReducer(awaiting, {
+        type: "failed",
+        failure: { kind: "message", key: "tooManyRequests" },
+      }),
+    ).toEqual({
+      status: "error",
+      failure: { kind: "message", key: "tooManyRequests" },
+      email: "a@b.com",
+    });
+  });
+
+  it("failed com o reenvio em voo (sending.resendOf) também preserva o e-mail", () => {
+    const resending = authReducer(
+      authReducer(authReducer(initialAuthState, { type: "submit" }), {
+        type: "linkSent",
+        email: "a@b.com",
+        at: 1000,
+      }),
+      { type: "submit" },
+    );
+    expect(
+      authReducer(resending, {
+        type: "failed",
+        failure: { kind: "message", key: "tooManyRequests" },
+      }),
+    ).toEqual({
+      status: "error",
+      failure: { kind: "message", key: "tooManyRequests" },
+      email: "a@b.com",
+    });
+  });
+
+  it("failed no primeiro envio não inventa e-mail nenhum", () => {
+    const sending = authReducer(initialAuthState, { type: "submit" });
+    // `toEqual` ignora chave com valor `undefined`, então isto falha se um e-mail aparecer.
+    expect(
+      authReducer(sending, { type: "failed", failure: { kind: "message", key: "invalidEmail" } }),
+    ).toEqual({ status: "error", failure: { kind: "message", key: "invalidEmail" } });
+  });
+
   it("verified é terminal e alcançável de qualquer estado", () => {
     expect(authReducer(initialAuthState, { type: "verified" })).toEqual({ status: "verified" });
   });

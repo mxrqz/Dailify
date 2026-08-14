@@ -1,4 +1,4 @@
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { Brand } from "@/components/brand";
 import { copy } from "@/components/auth/copy";
@@ -26,6 +26,10 @@ export function AuthShell({
   crossLinkTo?: string;
   children: React.ReactNode;
 }): JSX.Element {
+  // O cross-link repassa o `state` que o ProtectedRoute deixou: sem isso, pular de /login pra
+  // /signup perde o deep link e o usuário cai no /dashboard em vez da página que ele pediu.
+  const location = useLocation();
+
   return (
     <main className="relative grid min-h-dvh place-items-center bg-surface-page px-4 py-24">
       <div className="relative w-full max-w-[380px]">
@@ -45,7 +49,11 @@ export function AuthShell({
           {crossLinkTo && (
             <p className="text-center text-sm text-muted-foreground">
               {crossLinkPrefix}{" "}
-              <Link to={crossLinkTo} className="text-primary underline-offset-4 hover:underline">
+              <Link
+                to={crossLinkTo}
+                state={location.state}
+                className="text-primary underline-offset-4 hover:underline"
+              >
                 {crossLinkAction}
               </Link>
             </p>

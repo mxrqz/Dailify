@@ -23,7 +23,8 @@ export type AuthState =
   | { status: "sending"; resendOf?: SentLink }
   | ({ status: "awaitingLink" } & SentLink)
   | { status: "expired"; email: string }
-  | { status: "error"; failure: AuthFailure }
+  // `email` só existe quando a falha veio depois de um link já enviado (reenvio).
+  | { status: "error"; failure: AuthFailure; email?: string }
   | { status: "verified" };
 
 export type AuthAction =
@@ -52,8 +53,17 @@ export function authReducer(state: AuthState, action: AuthAction): AuthState {
         : state;
     case "expired":
       return state.status === "awaitingLink" ? { status: "expired", email: state.email } : state;
-    case "failed":
-      return { status: "error", failure: action.failure };
+    case "failed": {
+      // Um reenvio que falha desmonta a CheckInbox e devolve o formulário: sem carregar o e-mail,
+      // ele volta em branco e o usuário perde o endereço — e o link válido que ainda está na caixa.
+      const email =
+        state.status === "awaitingLink"
+          ? state.email
+          : state.status === "sending"
+            ? state.resendOf?.email
+            : undefined;
+      return { status: "error", failure: action.failure, email };
+    }
     case "verified":
       return { status: "verified" };
     case "reset":

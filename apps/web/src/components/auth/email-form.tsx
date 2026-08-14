@@ -1,5 +1,5 @@
 import { ArrowRightIcon, Loader2Icon } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import type { AuthFailure } from "@/components/auth/auth-state";
 import { copy } from "@/components/auth/copy";
@@ -10,11 +10,15 @@ import { formString } from "@/lib/form";
 /** A oferta é um erro que vira convite: o e-mail existe (ou não) na tela errada. */
 function Offer({ mode }: { mode: "signIn" | "signUp" }): JSX.Element {
   const isSignUp = mode === "signUp";
+  // Este é o redirect mais comum do fluxo (o `form_identifier_not_found` cai aqui), então é onde
+  // mais dói perder o `state` do ProtectedRoute — sem ele o deep link vira /dashboard.
+  const location = useLocation();
   return (
     <p className="text-sm text-muted-foreground">
       {isSignUp ? copy.errors.offerSignUp : copy.errors.offerSignIn}{" "}
       <Link
         to={isSignUp ? "/signup" : "/login"}
+        state={location.state}
         className="text-primary underline-offset-4 hover:underline"
       >
         {isSignUp ? copy.errors.offerSignUpAction : copy.errors.offerSignInAction}
