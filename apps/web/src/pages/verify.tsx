@@ -1,7 +1,7 @@
 import { useClerk } from "@clerk/clerk-react";
 import { EmailLinkErrorCodeStatus, isEmailLinkError } from "@clerk/clerk-react/errors";
 import { Loader2Icon } from "lucide-react";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 
 import { AuthShell } from "@/components/auth/auth-shell";
@@ -21,18 +21,23 @@ type Status =
 export default function Verify() {
   const { handleEmailLinkVerification, loaded } = useClerk();
   const [status, setStatus] = useState<Status>("loading");
+  // StrictMode (main.tsx) double-invokes effects with no cleanup. Sem essa trava, o ticket de
+  // verificação (uso único) seria consumido duas vezes em paralelo em dev, e um `catch` tardio da
+  // segunda chamada podia sobrescrever um `verified` real com `failed`.
+  const startedRef = useRef(false);
 
   useEffect(() => {
-    if (!loaded) return;
+    if (!loaded || startedRef.current) return;
+    startedRef.current = true;
 
     handleEmailLinkVerification({
       onVerifiedOnOtherDevice: () => setStatus("verified_switch_tab"),
     })
       .then(() => setStatus((prev) => (prev === "loading" ? "verified" : prev)))
-      // `Promise.catch`'s reason is `any`, não `unknown` — anotar como `Error` (sem `as`) é o que
-      // `isEmailLinkError` exige na 5.61.3.
-      .catch((err: Error) => {
-        if (isEmailLinkError(err)) {
+      .catch((err: unknown) => {
+        // `isEmailLinkError` faz `err.name` sem guarda — uma rejeição que não é `Error` (string,
+        // `undefined`, objeto solto) a derrubaria. `instanceof Error` filtra antes do acesso.
+        if (err instanceof Error && isEmailLinkError(err)) {
           if (err.code === EmailLinkErrorCodeStatus.Expired) return setStatus("expired");
           if (err.code === EmailLinkErrorCodeStatus.ClientMismatch) {
             return setStatus("client_mismatch");
