@@ -144,9 +144,15 @@ por estar em `absolute` não empurra nada: tirar ou trocar o logo não move o ca
 `min-h-dvh` em vez de `h-dvh`: numa viewport curta (paisagem no celular, janela baixa no desktop) a
 marca em absoluto sairia por cima do topo. Com `min-h`, a página rola em vez de cortar.
 
-A label mono uppercase é o que amarra a tela com o resto do app — é o mesmo tratamento de "dado de
-máquina" que a landing e o dashboard usam. Fora isso, o layout é o padrão de mercado: e-mail
-primeiro, OAuth abaixo do divisor, cross-link no pé do card.
+**Referência:** `auth-kit.mastra.ai/sign-up` — que é a UI hospedada do WorkOS AuthKit com a marca da
+mastra por cima (a rota redireciona pra `api.workos.com/user_management/authorize`). A ordem dos
+elementos é copiada de lá: logo, título, label + input, botão de e-mail primário, divisor, OAuth,
+cross-link, rodapé legal. Não é originalidade desperdiçada — é a ordem que todo usuário já sabe ler,
+e uma tela de login não é lugar pra ensinar um padrão novo.
+
+A única divergência deliberada é a label do campo: `font-mono text-2xs uppercase tracking-[0.04em]`
+em vez do label neutro do AuthKit. É o mesmo tratamento de "dado de máquina" que a landing e o
+dashboard usam, e é o que impede a tela de parecer a auth de qualquer outro produto.
 
 ### 3. Arquivos
 
