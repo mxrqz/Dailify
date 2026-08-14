@@ -57,11 +57,12 @@ export function EmailForm({
           autoComplete="email"
           placeholder={copy.shell.emailPlaceholder}
           aria-invalid={failure?.kind === "message"}
+          aria-describedby={failure?.kind === "message" ? "email-error" : undefined}
         />
       </div>
 
       {failure?.kind === "message" && (
-        <p className="text-sm text-destructive">
+        <p id="email-error" className="text-sm text-destructive">
           {copy.errors[failure.key]}
           {failure.code && (
             <span className="ml-1 font-mono text-2xs uppercase tracking-[0.04em] opacity-70">

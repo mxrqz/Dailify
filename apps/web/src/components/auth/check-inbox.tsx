@@ -11,7 +11,13 @@ function useCooldown(sentAt: number): number {
 
   useEffect(() => {
     if (canResend(sentAt, Date.now())) return;
-    const id = setInterval(() => setNow(Date.now()), 1000);
+    const id = setInterval(() => {
+      const t = Date.now();
+      setNow(t);
+      // O guard de início só roda no mount/troca de sentAt — sem isso o interval
+      // continua batendo pra sempre depois que o cooldown já liberou.
+      if (canResend(sentAt, t)) clearInterval(id);
+    }, 1000);
     return () => clearInterval(id);
   }, [sentAt]);
 
