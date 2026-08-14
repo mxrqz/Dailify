@@ -27,11 +27,19 @@ function useCooldown(sentAt: number): number {
 export function CheckInbox({
   email,
   sentAt,
+  busy,
   onResend,
   onBack,
 }: {
   email: string;
   sentAt: number;
+  /**
+   * Um reenvio em voo. Sem isso o botão fica clicável durante o round-trip (o cooldown do link
+   * anterior já venceu) e cada clique manda mais um e-mail — o usuário acaba com vários links e
+   * sem saber qual vale. O "usar outro e-mail" segue liberado de propósito: é a saída de
+   * emergência se a rede travar, e um `linkSent` atrasado é ignorado fora de `sending`.
+   */
+  busy?: boolean;
   onResend: () => void;
   onBack: () => void;
 }): JSX.Element {
@@ -51,8 +59,13 @@ export function CheckInbox({
 
       <p className="text-sm text-muted-foreground">{copy.inbox.hint}</p>
 
-      <Button variant="outline" className="w-full" onClick={onResend} disabled={remaining > 0}>
-        <RotateCwIcon />
+      <Button
+        variant="outline"
+        className="w-full"
+        onClick={onResend}
+        disabled={remaining > 0 || busy}
+      >
+        <RotateCwIcon className={busy ? "animate-spin" : undefined} />
         {remaining > 0
           ? `${copy.inbox.resendIn} ${remaining}${copy.inbox.seconds}`
           : copy.inbox.resend}

@@ -39,7 +39,13 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
       crossLinkTo={mode === "signUp" ? "/login" : "/signup"}
     >
       {inbox ? (
-        <CheckInbox email={inbox.email} sentAt={inbox.sentAt} onResend={resend} onBack={reset} />
+        <CheckInbox
+          email={inbox.email}
+          sentAt={inbox.sentAt}
+          busy={state.status === "sending"}
+          onResend={resend}
+          onBack={reset}
+        />
       ) : (
         <>
           <EmailForm

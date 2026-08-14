@@ -25,6 +25,19 @@ The day view's write path is **`dashboard/day-task-row.tsx`** for complete/delet
 There is **no** `newTask` mechanism anymore (it only mutated a local copy and desynced — removed in
 `pz9.3`). If you add a write, surface it into `tasks`, not a component-local list.
 
+## Auth — `auth/`
+
+`/login` and `/signup` are the same machine, differing only in copy: both mount `auth-page.tsx`
+with a `mode` ("signIn" | "signUp").
+
+- **`auth-state.ts` is the only place logic goes**, and the only tested file of the folder
+  (`auth-state.test.ts`) — the repo has no jsdom or `@testing-library/react`, so anything worth a
+  test has to be a pure function. `use-email-link-auth.ts` is just the wire to Clerk: if you're
+  writing an `if` that isn't about Clerk's API, it belongs in the reducer.
+- Every visible string comes from `auth/copy.ts` (pt-BR) — no literals in JSX.
+- `auth-shell.tsx` owns the whole layout; the body components are `email-form.tsx` and
+  `check-inbox.tsx`. `/verify` reuses the shell with all its props omitted.
+
 ## Dark mode & colors
 
 - Dark mode is **class-based** (`.dark`) via `theme-provider.tsx` (custom `useTheme`, not
