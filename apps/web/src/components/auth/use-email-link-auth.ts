@@ -1,7 +1,7 @@
 import { useSignIn, useSignUp } from "@clerk/clerk-react";
 import { isClerkAPIResponseError } from "@clerk/clerk-react/errors";
 import type { EmailLinkFactor, OAuthStrategy } from "@clerk/types";
-import { useCallback, useReducer, useRef } from "react";
+import { useCallback, useEffect, useReducer, useRef } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 
 import {
@@ -31,6 +31,11 @@ export function useEmailLinkAuth(mode: AuthMode) {
   // Guardado num ref porque o `resend` precisa do último e-mail sem virar dependência do callback.
   const lastEmail = useRef("");
 
+  // Cancela o poller do link anterior antes de iniciar outro — senão o antigo resolve por conta
+  // própria mais tarde (unmount, ou um resend que gerou um novo link) e despacha em cima da
+  // máquina atual, incluindo um `verified` roubado que navegaria a partir de qualquer estado.
+  const cancelRef = useRef<(() => void) | null>(null);
+
   const fail = useCallback(
     (err: unknown) => {
       const code = isClerkAPIResponseError(err) ? err.errors[0]?.code : undefined;
@@ -55,18 +60,22 @@ export function useEmailLinkAuth(mode: AuthMode) {
             unsafeMetadata: { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
           });
 
-          const { startEmailLinkFlow } = signUp.createEmailLinkFlow();
+          cancelRef.current?.();
+          const { startEmailLinkFlow, cancelEmailLinkFlow } = signUp.createEmailLinkFlow();
+          cancelRef.current = cancelEmailLinkFlow;
           dispatch({ type: "linkSent", email, at: Date.now() });
 
           const attempt = await startEmailLinkFlow({ redirectUrl });
           const verification = attempt.verifications.emailAddress;
 
           if (verification.status === "expired") return dispatch({ type: "expired" });
-          if (attempt.status === "complete" && attempt.createdSessionId) {
-            await setActive?.({ session: attempt.createdSessionId });
-            dispatch({ type: "verified" });
-            navigate(from, { replace: true });
+          if (attempt.status !== "complete" || !attempt.createdSessionId) {
+            return dispatch({ type: "failed", failure: classifyClerkError("unknown", mode) });
           }
+
+          await setActive?.({ session: attempt.createdSessionId });
+          dispatch({ type: "verified" });
+          navigate(from, { replace: true });
           return;
         }
 
@@ -77,7 +86,9 @@ export function useEmailLinkAuth(mode: AuthMode) {
         if (!factor)
           return dispatch({ type: "failed", failure: { kind: "message", key: "generic" } });
 
-        const { startEmailLinkFlow } = signIn.createEmailLinkFlow();
+        cancelRef.current?.();
+        const { startEmailLinkFlow, cancelEmailLinkFlow } = signIn.createEmailLinkFlow();
+        cancelRef.current = cancelEmailLinkFlow;
         dispatch({ type: "linkSent", email, at: Date.now() });
 
         const attempt = await startEmailLinkFlow({
@@ -88,17 +99,23 @@ export function useEmailLinkAuth(mode: AuthMode) {
         if (attempt.firstFactorVerification.status === "expired") {
           return dispatch({ type: "expired" });
         }
-        if (attempt.status === "complete" && attempt.createdSessionId) {
-          await setActive?.({ session: attempt.createdSessionId });
-          dispatch({ type: "verified" });
-          navigate(from, { replace: true });
+        if (attempt.status !== "complete" || !attempt.createdSessionId) {
+          return dispatch({ type: "failed", failure: classifyClerkError("unknown", mode) });
         }
+
+        await setActive?.({ session: attempt.createdSessionId });
+        dispatch({ type: "verified" });
+        navigate(from, { replace: true });
       } catch (err) {
         fail(err);
       }
     },
     [isLoaded, signIn, signUp, mode, setActive, navigate, from, fail],
   );
+
+  // Cancela o poller pendente ao desmontar — senão ele segue rodando até o TTL do link e
+  // despacha (ou navega) numa árvore que já saiu de cena.
+  useEffect(() => () => cancelRef.current?.(), []);
 
   return {
     state,
