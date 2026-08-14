@@ -1,4 +1,5 @@
 import { useReducedMotion } from "framer-motion";
+import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
@@ -56,18 +57,20 @@ export function Hero(): JSX.Element {
 
         <div className="flex flex-wrap items-center gap-4">
           <Button
+            asChild
             size="lg"
             className="rounded-full bg-accent-primary text-primary-foreground hover:bg-accent-hover"
           >
-            {copy.hero.ctaPrimary}
+            <Link to="/signup">{copy.hero.ctaPrimary}</Link>
           </Button>
 
           <Button
+            asChild
             size="lg"
             variant="ghost"
             className="rounded-full border-t border-t-surface-line bg-surface-card hover:bg-surface-hover"
           >
-            {copy.hero.ctaSecondary}
+            <a href="#features">{copy.hero.ctaSecondary}</a>
           </Button>
         </div>
       </div>

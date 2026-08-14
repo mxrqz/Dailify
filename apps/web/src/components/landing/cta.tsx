@@ -42,7 +42,7 @@ export function CtaBand(): JSX.Element {
           <BreakableLine chunks={copy.cta.subtitle} />
         </p>
         <Button asChild size="lg">
-          <Link to="/login">{copy.cta.button}</Link>
+          <Link to="/signup">{copy.cta.button}</Link>
         </Button>
       </div>
     </section>
