@@ -383,7 +383,13 @@ describe("auth copy", () => {
 bun --filter @dailify/web test -- auth/copy
 ```
 
-Esperado: FAIL com "Failed to resolve import ./copy".
+Esperado: FAIL com `Error: Cannot find module './copy' imported from …/copy.test.ts`, `(0 test)`,
+`Failed Suites 1`, saída com código 1.
+
+Essa é a mensagem do resolver do **Node**, não a do vite. O `Failed to resolve import` do vite fica
+atrás de um `if (ssr)` em `dep-Dm0c1Wj2.js:40620`, e como `vite.config.ts:31` declara
+`test.environment: "node"`, aquele caminho é pulado. Verificado com execução real na Task 1 — não
+troque por outra mensagem achando que esta está errada.
 
 - [ ] **Step 3: Implementar**
 
