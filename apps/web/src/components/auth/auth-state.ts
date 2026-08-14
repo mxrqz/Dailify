@@ -13,10 +13,15 @@ export type AuthErrorKey =
 export type AuthFailure =
   { kind: "message"; key: AuthErrorKey; code?: string } | { kind: "offer"; mode: AuthMode };
 
+/** Um link já enviado, que a tela continua mostrando enquanto o reenvio não volta. */
+export type SentLink = { email: string; sentAt: number };
+
 export type AuthState =
   | { status: "idle" }
-  | { status: "sending" }
-  | { status: "awaitingLink"; email: string; sentAt: number }
+  // `resendOf` só existe quando este envio é um reenvio: a tela usa ele pra seguir na caixa de
+  // entrada durante o round-trip, em vez de piscar de volta pro formulário.
+  | { status: "sending"; resendOf?: SentLink }
+  | ({ status: "awaitingLink" } & SentLink)
   | { status: "expired"; email: string }
   | { status: "error"; failure: AuthFailure }
   | { status: "verified" };
@@ -37,7 +42,10 @@ export function authReducer(state: AuthState, action: AuthAction): AuthState {
   switch (action.type) {
     case "submit":
       // Retornar o mesmo objeto (e não um novo igual) faz o React pular o re-render.
-      return state.status === "sending" ? state : { status: "sending" };
+      if (state.status === "sending") return state;
+      return state.status === "awaitingLink"
+        ? { status: "sending", resendOf: { email: state.email, sentAt: state.sentAt } }
+        : { status: "sending" };
     case "linkSent":
       return state.status === "sending"
         ? { status: "awaitingLink", email: action.email, sentAt: action.at }

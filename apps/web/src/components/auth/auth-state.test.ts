@@ -19,6 +19,38 @@ describe("authReducer", () => {
     expect(authReducer(sending, { type: "submit" })).toBe(sending);
   });
 
+  it("submit vindo de awaitingLink carrega o link já enviado (reenvio não pisca)", () => {
+    const awaiting = authReducer(authReducer(initialAuthState, { type: "submit" }), {
+      type: "linkSent",
+      email: "a@b.com",
+      at: 1000,
+    });
+    expect(authReducer(awaiting, { type: "submit" })).toEqual({
+      status: "sending",
+      resendOf: { email: "a@b.com", sentAt: 1000 },
+    });
+  });
+
+  it("submit vindo de idle não carrega link nenhum (primeiro envio mostra o formulário)", () => {
+    expect(authReducer(initialAuthState, { type: "submit" })).not.toHaveProperty("resendOf");
+  });
+
+  it("linkSent depois de um reenvio troca o link carregado pelo novo", () => {
+    const resending = authReducer(
+      authReducer(authReducer(initialAuthState, { type: "submit" }), {
+        type: "linkSent",
+        email: "a@b.com",
+        at: 1000,
+      }),
+      { type: "submit" },
+    );
+    expect(authReducer(resending, { type: "linkSent", email: "a@b.com", at: 90_000 })).toEqual({
+      status: "awaitingLink",
+      email: "a@b.com",
+      sentAt: 90_000,
+    });
+  });
+
   it("linkSent só vale vindo de sending", () => {
     const sending = authReducer(initialAuthState, { type: "submit" });
     expect(authReducer(sending, { type: "linkSent", email: "a@b.com", at: 1000 })).toEqual({

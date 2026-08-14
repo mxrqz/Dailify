@@ -1,0 +1,56 @@
+import { useUser } from "@clerk/clerk-react";
+import { Navigate } from "react-router-dom";
+
+import type { AuthMode } from "@/components/auth/auth-state";
+import { AuthShell } from "@/components/auth/auth-shell";
+import { CheckInbox } from "@/components/auth/check-inbox";
+import { copy } from "@/components/auth/copy";
+import { EmailForm } from "@/components/auth/email-form";
+import { OAuthButtons } from "@/components/auth/oauth-buttons";
+import { useEmailLinkAuth } from "@/components/auth/use-email-link-auth";
+
+/**
+ * Corpo comum de /login e /signup. As duas rotas são a MESMA mecânica — a separação é de
+ * enquadramento, então o que muda é só a copy e o destino do cross-link.
+ */
+export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
+  const { isSignedIn } = useUser();
+  const { state, isLoaded, submit, resend, reset, signInWithGoogle } = useEmailLinkAuth(mode);
+  const text = mode === "signUp" ? copy.signUp : copy.signIn;
+
+  // O reenvio volta pra `sending` antes de virar `awaitingLink` de novo. Sem o `resendOf`, esse
+  // intervalo renderizaria o formulário e a tela piscaria a cada clique em "reenviar".
+  const inbox =
+    state.status === "awaitingLink"
+      ? state
+      : state.status === "sending"
+        ? state.resendOf
+        : undefined;
+
+  // Quem já está logado não tem o que fazer aqui.
+  if (isSignedIn) return <Navigate to="/dashboard" replace />;
+
+  return (
+    <AuthShell
+      title={text.title}
+      legalPrefix={text.legalPrefix}
+      crossLinkPrefix={text.crossLinkPrefix}
+      crossLinkAction={text.crossLinkAction}
+      crossLinkTo={mode === "signUp" ? "/login" : "/signup"}
+    >
+      {inbox ? (
+        <CheckInbox email={inbox.email} sentAt={inbox.sentAt} onResend={resend} onBack={reset} />
+      ) : (
+        <>
+          <EmailForm
+            onSubmit={submit}
+            disabled={!isLoaded || state.status === "sending"}
+            submitLabel={text.submit}
+            failure={state.status === "error" ? state.failure : undefined}
+          />
+          <OAuthButtons onGoogle={signInWithGoogle} disabled={!isLoaded} />
+        </>
+      )}
+    </AuthShell>
+  );
+}

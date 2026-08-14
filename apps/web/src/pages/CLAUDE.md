@@ -3,15 +3,17 @@
 Routes are declared in `src/App.tsx` (react-router). Provider nesting (from `main.tsx`):
 `ClerkProvider → HelmetProvider → DailifyProvider → Router → ThemeProvider`.
 
-| Path                               | Page                          | Notes                                                                  |
-| ---------------------------------- | ----------------------------- | ---------------------------------------------------------------------- |
-| `/`                                | `landingPage.tsx`             | public marketing page                                                  |
-| `/dashboard`                       | `home.tsx`                    | **protected**; the app (task list + calendar, toggled by `isCalendar`) |
-| `/profile`                         | `profile.tsx` → `profileTabs` | **protected**; account, plan/usage, sessions                           |
-| `/login` (+ `/login/sso-callback`) | `login.tsx`                   | Clerk sign-in/up (OAuth + OTP)                                         |
-| `/sign-in/verify`                  | `verify.tsx`                  | Clerk email/OTP verification                                           |
-| `/task/:id`                        | `[id]/taskPreview.tsx`        | public, shareable task rendered as an image (`html-to-image`)          |
-| `/premium`                         | `premium.tsx`                 | pricing + Stripe checkout                                              |
+| Path            | Page                          | Notes                                                                  |
+| --------------- | ----------------------------- | ---------------------------------------------------------------------- |
+| `/`             | `landingPage.tsx`             | public marketing page                                                  |
+| `/dashboard`    | `home.tsx`                    | **protected**; the app (task list + calendar, toggled by `isCalendar`) |
+| `/profile`      | `profile.tsx` → `profileTabs` | **protected**; account, plan/usage, sessions                           |
+| `/login`        | `login.tsx`                   | Clerk sign-in — `AuthPage mode="signIn"` (`components/auth/`)          |
+| `/signup`       | `signup.tsx`                  | same machinery, `mode="signUp"` — only the copy differs                |
+| `/sso-callback` | Clerk                         | `AuthenticateWithRedirectCallback`, declared inline in `App.tsx`       |
+| `/verify`       | `verify.tsx`                  | where the emailed magic link lands                                     |
+| `/task/:id`     | `[id]/taskPreview.tsx`        | public, shareable task rendered as an image (`html-to-image`)          |
+| `/premium`      | `premium.tsx`                 | pricing + Stripe checkout                                              |
 
 **There is no catch-all route** — a link to a non-existent path lands on a blank page. Only navigate
 to paths listed above (this caused the `/prices` vs `/premium` bug).

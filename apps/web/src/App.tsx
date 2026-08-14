@@ -1,11 +1,13 @@
+import { AuthenticateWithRedirectCallback } from "@clerk/clerk-react";
 import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "./components/theme-provider";
 import "./global.css";
 import Home from "./pages/home";
 import Login from "./pages/login";
+import SignUp from "./pages/signup";
 import ProtectedRoute from "./components/protected-route";
-import SSOCallback from "./components/sso-callback";
 import Verify from "./pages/verify";
+import { copy } from "@/components/auth/copy";
 import { DailifyProvider } from "./components/dailifyContext";
 import ProfilePage from "./pages/profile";
 import { Helmet, HelmetProvider } from "react-helmet-async";
@@ -64,7 +66,7 @@ export default function App() {
                   element={
                     <>
                       <Helmet>
-                        <title>Dailify - Login</title>
+                        <title>{copy.signIn.pageTitle}</title>
                       </Helmet>
 
                       <Login />
@@ -72,9 +74,22 @@ export default function App() {
                   }
                 />
 
-                <Route path="/login/sso-callback" element={<SSOCallback />} />
+                <Route
+                  path="/signup"
+                  element={
+                    <>
+                      <Helmet>
+                        <title>{copy.signUp.pageTitle}</title>
+                      </Helmet>
 
-                <Route path="/sign-in/verify" element={<Verify />} />
+                      <SignUp />
+                    </>
+                  }
+                />
+
+                <Route path="/sso-callback" element={<AuthenticateWithRedirectCallback />} />
+
+                <Route path="/verify" element={<Verify />} />
 
                 <Route path="/task/:id" element={<TaskPreview />} />
 
