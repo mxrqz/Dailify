@@ -13,7 +13,6 @@ export const copy = {
     dividerOr: "ou",
     emailLabel: "E-mail",
     emailPlaceholder: "voce@exemplo.com",
-    continueWithEmail: "Continuar com e-mail",
     continueWithGoogle: "Continuar com Google",
     terms: "Termos de Serviço",
     privacy: "Política de Privacidade",

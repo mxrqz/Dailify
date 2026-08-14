@@ -18,7 +18,9 @@ if (!rootElement) {
 
 ReactDOM.createRoot(rootElement).render(
   <React.StrictMode>
-    <ClerkProvider publishableKey={PUBLISHABLE_KEY}>
+    {/* Sem estas duas, o clerk-js navega sozinho pros defaults /sign-in e /sign-up — rotas que não
+        existem aqui, e o app não tem catch-all: seria uma página branca. */}
+    <ClerkProvider publishableKey={PUBLISHABLE_KEY} signInUrl="/login" signUpUrl="/signup">
       <App />
     </ClerkProvider>
   </React.StrictMode>,
