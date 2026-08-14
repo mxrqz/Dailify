@@ -1,11 +1,21 @@
 <!doctype html>
-<html lang="en">
+<html lang="pt-BR">
 
 <head>
   <meta charset="UTF-8" />
   <link rel="icon" type="image/png" href="/dailify_logo_2.png" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Dailify</title>
+  <script>
+    // Aplica o tema antes do primeiro paint. A chave e a lógica precisam ficar idênticas às do
+    // theme-provider.tsx — divergir aqui produz um flash pior que o de não ter script nenhum.
+    (function () {
+      var stored = localStorage.getItem("vite-ui-theme");
+      var theme = stored === "light" || stored === "dark" ? stored
+        : window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light";
+      document.documentElement.classList.add(theme);
+    })();
+  </script>
 </head>
 
 <body>

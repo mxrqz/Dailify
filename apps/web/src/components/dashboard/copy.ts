@@ -18,6 +18,10 @@ export const copy = {
     signOut: "Sair",
     signIn: "Entrar",
     dashboard: "Dashboard",
+    themeToggle: "Alternar tema",
+    themeLight: "Claro",
+    themeDark: "Escuro",
+    themeSystem: "Sistema",
   },
 
   day: {

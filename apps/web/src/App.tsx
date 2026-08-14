@@ -25,7 +25,7 @@ export default function App() {
     <HelmetProvider>
       <DailifyProvider>
         <Router>
-          <ThemeProvider defaultTheme="dark">
+          <ThemeProvider>
             <ErrorBoundary>
               <Routes>
                 <Route path="/" element={<LandingPage />} />

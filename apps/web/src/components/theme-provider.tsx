@@ -3,7 +3,7 @@ import { createContext, useContext, useEffect, useState } from "react";
 type Theme = "dark" | "light" | "system";
 
 const THEMES: readonly string[] = ["dark", "light", "system"];
-const isTheme = (value: unknown): value is Theme =>
+export const isTheme = (value: unknown): value is Theme =>
   typeof value === "string" && THEMES.includes(value);
 
 type ThemeProviderProps = {
@@ -38,18 +38,26 @@ export function ThemeProvider({
   useEffect(() => {
     const root = window.document.documentElement;
 
-    root.classList.remove("light", "dark");
+    const apply = (value: Theme) => {
+      root.classList.remove("light", "dark");
+      root.classList.add(
+        value === "system"
+          ? window.matchMedia("(prefers-color-scheme: dark)").matches
+            ? "dark"
+            : "light"
+          : value,
+      );
+    };
 
-    if (theme === "system") {
-      const systemTheme = window.matchMedia("(prefers-color-scheme: dark)").matches
-        ? "dark"
-        : "light";
+    apply(theme);
 
-      root.classList.add(systemTheme);
-      return;
-    }
+    if (theme !== "system") return;
 
-    root.classList.add(theme);
+    // Sem este listener, quem está em "system" só acompanha o modo noturno do SO após um reload.
+    const media = window.matchMedia("(prefers-color-scheme: dark)");
+    const onChange = () => apply("system");
+    media.addEventListener("change", onChange);
+    return () => media.removeEventListener("change", onChange);
   }, [theme]);
 
   const value = {
