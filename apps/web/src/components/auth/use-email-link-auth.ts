@@ -45,7 +45,13 @@ export function useEmailLinkAuth(mode: AuthMode) {
   const fail = useCallback(
     (err: unknown) => {
       const code = isClerkAPIResponseError(err) ? err.errors[0]?.code : undefined;
-      dispatch({ type: "failed", failure: classifyClerkError(code ?? "unknown", mode) });
+      // Sem código do Clerk (queda de rede, por exemplo) o genérico vai SEM `code`: a tela mostra
+      // o code em mono pra virar relato de bug, e um "UNKNOWN" inventado só faz o relato apontar
+      // pra um código que o Clerk não tem.
+      dispatch({
+        type: "failed",
+        failure: code ? classifyClerkError(code, mode) : { kind: "message", key: "generic" },
+      });
     },
     [mode],
   );
@@ -80,8 +86,10 @@ export function useEmailLinkAuth(mode: AuthMode) {
           const verification = attempt.verifications.emailAddress;
 
           if (verification.status === "expired") return dispatch({ type: "expired" });
+          // Genérico SEM `code`: não veio código nenhum do Clerk, e inventar um "UNKNOWN" na tela
+          // só faz o relato de bug apontar pra um código que não existe.
           if (attempt.status !== "complete" || !attempt.createdSessionId) {
-            return dispatch({ type: "failed", failure: classifyClerkError("unknown", mode) });
+            return dispatch({ type: "failed", failure: { kind: "message", key: "generic" } });
           }
 
           await setActive?.({ session: attempt.createdSessionId });
@@ -114,7 +122,7 @@ export function useEmailLinkAuth(mode: AuthMode) {
           return dispatch({ type: "expired" });
         }
         if (attempt.status !== "complete" || !attempt.createdSessionId) {
-          return dispatch({ type: "failed", failure: classifyClerkError("unknown", mode) });
+          return dispatch({ type: "failed", failure: { kind: "message", key: "generic" } });
         }
 
         await setActive?.({ session: attempt.createdSessionId });
@@ -138,9 +146,13 @@ export function useEmailLinkAuth(mode: AuthMode) {
     from,
     submit: start,
     resend: useCallback(() => start(lastEmail.current), [start]),
-    // Incrementa a geração: sair da tela abandona o run em voo, mesmo que nenhum outro comece.
+    // Incrementa a geração E mata o poller: sem o cancel, "usar outro e-mail" deixaria o
+    // startEmailLinkFlow anterior batendo no Clerk até o TTL do link se o usuário parar no
+    // formulário. O runId sozinho só protege o estado, não o tráfego.
     reset: useCallback(() => {
       runId.current++;
+      cancelRef.current?.();
+      cancelRef.current = null;
       dispatch({ type: "reset" });
     }, []),
     signInWithGoogle: useCallback(() => {

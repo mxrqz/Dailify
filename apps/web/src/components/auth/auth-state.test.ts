@@ -223,6 +223,11 @@ describe("redirectTarget", () => {
     expect(redirectTarget({ from: "x" })).toBe("/dashboard");
     expect(redirectTarget({ from: {} })).toBe("/dashboard");
     expect(redirectTarget({ from: { pathname: 42 } })).toBe("/dashboard");
+    // Nada que saia do site: protocol-relative, com barra invertida, ou sem barra nenhuma.
+    expect(redirectTarget({ from: { pathname: "//evil.com" } })).toBe("/dashboard");
+    expect(redirectTarget({ from: { pathname: "//evil.com", search: "?x=1" } })).toBe("/dashboard");
+    expect(redirectTarget({ from: { pathname: "/\\evil.com" } })).toBe("/dashboard");
+    expect(redirectTarget({ from: { pathname: "https://evil.com" } })).toBe("/dashboard");
   });
 });
 

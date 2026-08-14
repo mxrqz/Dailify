@@ -41,6 +41,13 @@ export function EmailForm({
   /** Preenchido quando já sabemos o e-mail (link vencido): o retry vira um clique só. */
   defaultEmail?: string;
 }): JSX.Element {
+  // Só erro sobre o VALOR marca o campo como inválido. `expiredLink`, `tooManyRequests`, `captcha`
+  // e `generic` não são problema do que foi digitado — o link vencido, aliás, chega com o e-mail
+  // certo já preenchido. Descrever o erro (aria-describedby) segue valendo pra todos.
+  const invalidValue =
+    failure?.kind === "message" &&
+    (failure.key === "invalidEmail" || failure.key === "blockedEmail");
+
   return (
     <form
       className="flex flex-col gap-3"
@@ -64,7 +71,7 @@ export function EmailForm({
           autoComplete="email"
           defaultValue={defaultEmail}
           placeholder={copy.shell.emailPlaceholder}
-          aria-invalid={failure?.kind === "message"}
+          aria-invalid={invalidValue}
           aria-describedby={failure?.kind === "message" ? "email-error" : undefined}
         />
       </div>

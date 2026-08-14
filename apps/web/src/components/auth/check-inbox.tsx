@@ -46,7 +46,9 @@ export function CheckInbox({
   const remaining = useCooldown(sentAt);
 
   return (
-    <div className="flex flex-col items-center gap-4 text-center">
+    // `status` aqui e não em volta do ternário do auth-page: a troca formulário↔caixa de entrada é
+    // o que precisa ser anunciada, e um wrapper lá quebraria o flex do card.
+    <div role="status" className="flex flex-col items-center gap-4 text-center">
       <div className="rounded-full bg-accent-subtle p-4">
         <MailIcon className="size-6 text-primary" />
       </div>

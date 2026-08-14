@@ -64,7 +64,11 @@ export default function Verify() {
       <div className="flex flex-col items-center gap-4 text-center">
         {status === "loading" && <Loader2Icon className="size-6 animate-spin text-primary" />}
 
-        <p className="text-sm text-foreground">{message}</p>
+        {/* `status`: o desfecho substitui o spinner sem nenhuma navegação, então sem live region
+            o leitor de tela não anuncia nada depois do carregamento inicial. */}
+        <p role="status" className="text-sm text-foreground">
+          {message}
+        </p>
 
         {canRestart && (
           <Button asChild variant="outline" className="w-full">
