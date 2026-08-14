@@ -1,44 +1,72 @@
-import { CheckIcon } from "lucide-react";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
+import { useClerk } from "@clerk/clerk-react";
+import { EmailLinkErrorCodeStatus, isEmailLinkError } from "@clerk/clerk-react/errors";
+import { Loader2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 
+import { AuthShell } from "@/components/auth/auth-shell";
+import { copy } from "@/components/auth/copy";
+import { Button } from "@/components/ui/button";
+
+type Status =
+  "loading" | "verified" | "verified_switch_tab" | "expired" | "client_mismatch" | "failed";
+
+/**
+ * A aba que o link do e-mail abre.
+ *
+ * A versão anterior era estática: dizia "Authentication Successful" sempre, inclusive com o link
+ * expirado ou aberto em outro dispositivo, e chamava `window.close()` — que o navegador ignora em
+ * abas que o script não abriu. Agora ela chama de fato o Clerk e mostra o que aconteceu.
+ */
 export default function Verify() {
-  const [closeCountDown, setCloseCountDown] = useState<number>(5);
+  const { handleEmailLinkVerification, loaded } = useClerk();
+  const [status, setStatus] = useState<Status>("loading");
 
   useEffect(() => {
-    if (closeCountDown <= 0) {
-      window.close();
-      return;
-    }
+    if (!loaded) return;
 
-    const interval = setInterval(() => {
-      setCloseCountDown((prev) => prev - 1);
-    }, 1000);
+    handleEmailLinkVerification({
+      onVerifiedOnOtherDevice: () => setStatus("verified_switch_tab"),
+    })
+      .then(() => setStatus((prev) => (prev === "loading" ? "verified" : prev)))
+      // `Promise.catch`'s reason is `any`, não `unknown` — anotar como `Error` (sem `as`) é o que
+      // `isEmailLinkError` exige na 5.61.3.
+      .catch((err: Error) => {
+        if (isEmailLinkError(err)) {
+          if (err.code === EmailLinkErrorCodeStatus.Expired) return setStatus("expired");
+          if (err.code === EmailLinkErrorCodeStatus.ClientMismatch) {
+            return setStatus("client_mismatch");
+          }
+        }
+        setStatus("failed");
+      });
+  }, [handleEmailLinkVerification, loaded]);
 
-    return () => clearInterval(interval);
-  }, [closeCountDown]);
+  const message = {
+    loading: copy.verify.loading,
+    verified: copy.verify.verified,
+    verified_switch_tab: copy.verify.switchTab,
+    expired: copy.verify.expired,
+    client_mismatch: copy.verify.clientMismatch,
+    failed: copy.verify.failed,
+  }[status];
 
+  const canRestart = status === "expired" || status === "failed";
+
+  // Mesma casca de /login e /signup, sem título, cross-link ou rodapé legal — todos opcionais.
   return (
-    <div className="w-full h-dvh flex flex-col justify-center items-center py-5 px-[clamp(1rem,5vw,6rem)]">
-      <Card className="w-full md:max-w-1/2 text-center">
-        <CardHeader>
-          <div className="flex justify-center mb-4">
-            <div className="rounded-full bg-primary/10 p-6">
-              <CheckIcon className="h-12 w-12 text-primary" />
-            </div>
-          </div>
-          <CardTitle className="text-2xl">Authentication Successful</CardTitle>
-          <CardDescription className="text-center">
-            You have been successfully logged in
-          </CardDescription>
-        </CardHeader>
+    <AuthShell>
+      <div className="flex flex-col items-center gap-4 text-center">
+        {status === "loading" && <Loader2Icon className="size-6 animate-spin text-primary" />}
 
-        <CardContent className="space-y-4 text-center">
-          <p className="text-sm text-muted-foreground">
-            You can now close this tab and return to the application.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+        <p className="text-sm text-foreground">{message}</p>
+
+        {canRestart && (
+          <Button asChild variant="outline" className="w-full">
+            <Link to="/login">{copy.verify.restart}</Link>
+          </Button>
+        )}
+      </div>
+    </AuthShell>
   );
 }
