@@ -91,10 +91,16 @@ intenção:
 | Origem | Hoje | Depois | Por quê |
 | --- | --- | --- | --- |
 | `landing/cta.tsx:45` | `/login` | `/signup` | é o CTA de conversão |
-| `landing/hero.tsx` ("Começar — é grátis") | `/login` | `/signup` | idem |
+| `landing/hero.tsx:58` (`ctaPrimary`) | **não navega** | `/signup` | idem — ver abaixo |
+| `landing/hero.tsx:65` (`ctaSecondary`) | **não navega** | `#features` | é o "ver como funciona" |
 | `site-header.tsx:29` ("Entrar") | `/login` | `/login` | é retorno |
 | `app-header.tsx:86` | `/login` | `/login` | idem |
 | `premium.tsx:340` | `/login` | `/login` | idem |
+
+**O CTA principal da landing é um botão morto.** `hero.tsx:58-72` são dois `<Button>` sem `asChild`,
+sem `Link` e sem `onClick` — clicar em "Começar — é grátis" não faz nada. Passou despercebido no
+passe visual da landing porque a tela estava certa; só o comportamento não existia. Cai junto aqui
+porque é exatamente o link que este spec cria o destino.
 
 ### 2. Anatomia da tela
 
@@ -162,10 +168,11 @@ components/auth/
   oauth-buttons.tsx       só Google
   email-form.tsx          input + erro inline + submit com loading
   check-inbox.tsx         "veja seu e-mail" + reenviar com cooldown
-  use-email-link-auth.ts  a máquina de estados inteira
-  copy.ts                 pt + en, escolha por navigator.language
+  auth-state.ts           LÓGICA PURA: reducer, mapa de erros, redirectTarget, cooldown
+  auth-state.test.ts
+  use-email-link-auth.ts  a casca React: chama o Clerk e despacha no reducer
+  copy.ts                 pt-BR + export type AuthCopy
   copy.test.ts
-  use-email-link-auth.test.ts
 
 pages/
   login.tsx               ~40 linhas: <AuthShell> + copy.signIn
@@ -177,8 +184,14 @@ Apagados, absorvidos pelos acima: `components/verifying-link.tsx` (51 linhas),
 `components/sso-callback.tsx` (5 linhas). `components/logos.tsx` perde o `AppleLogo`.
 
 A divisão espelha como `landing/` e `dashboard/` já são organizados no repo: componentes pequenos e
-focados, mais um `copy.ts` como fonte única do texto. O ganho concreto é o hook — `use-email-link-auth`
-é a única peça com lógica de verdade, e isolado dela dá pra testar sem renderizar nada.
+focados, mais um `copy.ts` como fonte única do texto.
+
+**Por que `auth-state.ts` é separado do hook.** O repo não tem `@testing-library/react` nem jsdom —
+os 8 arquivos de teste são `.test.ts` de lógica pura e o vitest roda em node. Testar um hook com o
+Clerk mockado custaria duas dependências novas de dev. Em vez disso, tudo que merece teste sai do
+React: o reducer, o mapa de erros, o `redirectTarget` e a regra de cooldown viram funções puras em
+`auth-state.ts`, e `use-email-link-auth.ts` fica sendo só o fio que liga o Clerk ao reducer. É a
+mesma postura que o repo já tem — nenhum componente é testado, só lógica.
 
 ### 4. A máquina de estados
 
@@ -285,8 +298,13 @@ deixar de usá-lo pra montar `redirectUrl`.
 
 Pedido à parte, mas pequeno e do mesmo território (a tela de auth acabou de virar theme-aware).
 
-`system` **já é o padrão** (`theme-provider.tsx:29`) e o toggle já tem a opção
-(`mode-toggle.tsx:33`). Faltam três coisas:
+**`system` não é o padrão, apesar das aparências.** `theme-provider.tsx:29` declara
+`defaultTheme = "system"`, mas `App.tsx:26` monta o provider como `<ThemeProvider defaultTheme="dark">`
+e sobrescreve. Quem abre o app pela primeira vez recebe dark, independente do SO. A correção é a
+linha do `App.tsx`, não a do provider — o default do provider já estava certo.
+
+Feita essa troca, o toggle já tem a opção `system` (`mode-toggle.tsx:33`), mas ela não funciona
+direito. Faltam três coisas:
 
 **Não reage ao SO em tempo real.** `theme-provider.tsx:44` lê `matchMedia` uma vez, dentro do efeito
 que depende de `[theme]`. Se o usuário está em `system` e o SO alterna sozinho (modo noturno
@@ -305,12 +323,13 @@ divergir aqui produz um flash pior que o atual.
 
 ## Testes
 
-`use-email-link-auth.test.ts` — o Clerk mockado (`vi.mock`), cobrindo:
+`auth-state.test.ts` — funções puras, sem mock e sem renderizar:
 
-- as transições da máquina (`idle → sending → awaitingLink → verificado`)
-- o fallback `signIn → signUp` quando o e-mail não existe, e o inverso no `/signup`
-- o mapa de erros: cada `code` produz a mensagem esperada
-- o cooldown do reenvio: bloqueia dentro dos 30s, libera depois
+- `authReducer`: cada transição da máquina, e que ações inválidas pro estado atual não mudam nada
+- `authErrorMessage`: cada `code` do Clerk produz a mensagem esperada, em cada modo (`signIn`/`signUp`)
+- `redirectTarget`: extrai `pathname + search` do `location.state`, e cai em `/dashboard` pra todo
+  formato inesperado (hoje isso existe em `login.tsx:19-26` e nunca foi testado)
+- `canResend`: bloqueia dentro dos 30s, libera depois
 
 `copy.test.ts` — segue `landing/copy.test.ts`: todas as seções presentes e nenhuma string vazia (o
 tipo garante a forma, mas não pega `""`).
