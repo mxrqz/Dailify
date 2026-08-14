@@ -46,14 +46,14 @@ export function CheckInbox({
   const remaining = useCooldown(sentAt);
 
   return (
-    // `status` aqui e não em volta do ternário do auth-page: a troca formulário↔caixa de entrada é
-    // o que precisa ser anunciada, e um wrapper lá quebraria o flex do card.
-    <div role="status" className="flex flex-col items-center gap-4 text-center">
+    <div className="flex flex-col items-center gap-4 text-center">
       <div className="rounded-full bg-accent-subtle p-4">
         <MailIcon className="size-6 text-primary" />
       </div>
 
-      <div className="flex flex-col gap-1">
+      {/* `status` só neste bloco, que é estático: englobar o botão faria o `aria-atomic` implícito
+          re-anunciar a tela inteira a cada segundo do contador do reenvio. */}
+      <div role="status" className="flex flex-col gap-1">
         <h2 className="text-lg font-semibold text-foreground">{copy.inbox.title}</h2>
         <p className="text-sm text-muted-foreground">{copy.inbox.sentTo}</p>
         <p className="font-mono text-sm text-foreground">{email}</p>
