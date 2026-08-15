@@ -13,6 +13,7 @@ interface Row {
   repeat_kind: string;
   repeat_days: string | null;
   tags: string | null;
+  links: string | null;
   completed: string;
 }
 
@@ -38,6 +39,7 @@ export function rowToTask(r: Row): Task {
     priority: r.priority,
     repeat: colsToRepeat(r.repeat_kind, r.repeat_days),
     tags: r.tags ? JSON.parse(r.tags) : undefined,
+    links: r.links ? JSON.parse(r.links) : undefined,
     completed: JSON.parse(r.completed),
   };
 }
@@ -46,8 +48,8 @@ export async function insertTask(db: D1Database, userId: string, task: Task): Pr
   const { kind, days } = repeatToCols(task.repeat);
   await db
     .prepare(
-      `INSERT INTO tasks (id,user_id,title,description,date,alert,duration,priority,repeat_kind,repeat_days,tags,completed)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
+      `INSERT INTO tasks (id,user_id,title,description,date,alert,duration,priority,repeat_kind,repeat_days,tags,links,completed)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
     )
     .bind(
       task.id,
@@ -61,6 +63,7 @@ export async function insertTask(db: D1Database, userId: string, task: Task): Pr
       kind,
       days,
       task.tags ? JSON.stringify(task.tags) : null,
+      task.links ? JSON.stringify(task.links) : null,
       JSON.stringify(task.completed),
     )
     .run();
@@ -143,7 +146,7 @@ export async function updateTask(
   const { kind, days } = repeatToCols(next.repeat);
   await db
     .prepare(
-      `UPDATE tasks SET title=?,description=?,date=?,alert=?,duration=?,priority=?,repeat_kind=?,repeat_days=?,tags=? WHERE user_id=? AND id=?`,
+      `UPDATE tasks SET title=?,description=?,date=?,alert=?,duration=?,priority=?,repeat_kind=?,repeat_days=?,tags=?,links=? WHERE user_id=? AND id=?`,
     )
     .bind(
       next.title,
@@ -155,6 +158,7 @@ export async function updateTask(
       kind,
       days,
       next.tags ? JSON.stringify(next.tags) : null,
+      next.links ? JSON.stringify(next.links) : null,
       userId,
       id,
     )

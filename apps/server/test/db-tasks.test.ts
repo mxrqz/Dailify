@@ -48,3 +48,40 @@ describe("db/tasks", () => {
     expect(saved).toMatchObject({ title: "renamed", completed: [completedAt] });
   });
 });
+
+describe("links", () => {
+  it("sobrevive a insert → read", async () => {
+    const task: Task = {
+      id: "lk1",
+      title: "Reunião",
+      description: "",
+      date: new Date(2026, 7, 14, 15).getTime(),
+      duration: "1h",
+      priority: 0,
+      repeat: "Off",
+      links: ["https://meet.google.com/abc"],
+      completed: [],
+    };
+    await insertTask(env.DB, "u1", task);
+    expect((await getTask(env.DB, "u1", "lk1"))?.links).toEqual(["https://meet.google.com/abc"]);
+  });
+
+  it("sem links volta undefined, não array vazio", async () => {
+    await insertTask(env.DB, "u1", {
+      id: "lk2",
+      title: "Sem link",
+      description: "",
+      date: Date.now(),
+      duration: "10m",
+      priority: 0,
+      repeat: "Off",
+      completed: [],
+    });
+    expect((await getTask(env.DB, "u1", "lk2"))?.links).toBeUndefined();
+  });
+
+  it("update troca a lista", async () => {
+    await updateTask(env.DB, "u1", "lk1", { links: ["https://youtu.be/xyz"] });
+    expect((await getTask(env.DB, "u1", "lk1"))?.links).toEqual(["https://youtu.be/xyz"]);
+  });
+});
