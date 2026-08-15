@@ -102,6 +102,15 @@ describe("URLs coladas por virgula", () => {
   });
 });
 
+describe("URL repetida", () => {
+  it("sai uma vez só (chip duplicado / linha duplicada no D1), mas com os dois spans", () => {
+    const input = "ver youtube.com/abc e youtube.com/abc";
+    const parsed = parseLinks(input);
+    expect(parsed.urls).toEqual(["https://youtube.com/abc"]);
+    expect(parsed.spans).toHaveLength(2);
+  });
+});
+
 describe("spans", () => {
   it("aponta pro trecho exato do original", () => {
     const input = "reunião meet.google.com/abc hoje";

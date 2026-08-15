@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalize, parseDuration, parseTaskText, parseWhen } from "./parse-task";
+import { cut, normalize, parseDuration, parseTaskText, parseWhen } from "./parse-task";
 
 // Quarta-feira, 12 de agosto de 2026, 09:00.
 const NOW = new Date(2026, 7, 12, 9, 0);
@@ -229,15 +229,14 @@ describe("normalize — preserva comprimento", () => {
   });
 });
 
-/** O que sobra do input depois de tirar os spans — é o que o título vai virar. */
+/**
+ * O que sobra do input depois de tirar os spans — é o que o título vai virar. Usa o `cut()` de
+ * produção de propósito: um recorte próprio aqui validaria os spans contra um algoritmo que
+ * ninguém roda, e foi assim que defeito de span passou despercebido.
+ */
 const rest = (input: string) => {
   const parsed = parseWhen(input, NOW);
-  if (!parsed) return input;
-  let out = input;
-  for (const [start, end] of [...parsed.spans].sort((a, b) => b[0] - a[0])) {
-    out = out.slice(0, start) + out.slice(end);
-  }
-  return out.replace(/\s+/g, " ").trim();
+  return parsed ? cut(input, parsed.spans) : input;
 };
 
 describe("spans — o que sobra depois do recorte", () => {
@@ -264,6 +263,17 @@ describe("spans — o que sobra depois do recorte", () => {
     ["call at 9 tonight then buy milk", "call then buy milk"],
     ["reuniao as 9 da noite depois trazer cafe", "reuniao depois trazer cafe"],
   ])("nao duplica span sobreposto: %j → %j", (input, expected) => {
+    expect(rest(input)).toBe(expected);
+  });
+
+  // "at 9" e "9 pm" se sobrepõem só em parte: descartar o menor deixava o pedaço exclusivo dele
+  // ("pm", "at") no título. Unir os dois corta a frase inteira.
+  it.each([
+    ["call at 9 pm tomorrow", "call"],
+    ["call as 9 pm hoje", "call"],
+    ["call at 9am tomorrow", "call"],
+    ["reunião às 9pm hoje", "reunião"],
+  ])("une span sobreposto em parte: %j → %j", (input, expected) => {
     expect(rest(input)).toBe(expected);
   });
 
@@ -302,6 +312,18 @@ describe("intervalo — início e duração no mesmo achado", () => {
     ["reunião das 9 às 10:30", "1h30m", 9, 0],
     ["reunião 15h-16h", "1h", 15, 0],
     ["reunião das 14:15 às 14:45", "30m", 14, 15],
+  ])("%j → %s começando %d:%d", (input, duration, hour, minute) => {
+    const parsed = parseDuration(normalize(input));
+    expect(parsed?.duration).toBe(duration);
+    expect(parsed?.start).toEqual({ hour, minute });
+  });
+
+  // "das 14h às 15h" é tão comum quanto "das 14 às 16"; sem unidade opcional no CLOCK o "as"
+  // casava em cima do "h" e "de 14h até 15h" virava uma tarefa de 14 horas.
+  it.each([
+    ["call das 14h às 15h", "1h", 14, 0],
+    ["call das 14h às 15h30", "1h30m", 14, 0],
+    ["call de 14h até 15h", "1h", 14, 0],
   ])("%j → %s começando %d:%d", (input, duration, hour, minute) => {
     const parsed = parseDuration(normalize(input));
     expect(parsed?.duration).toBe(duration);
@@ -415,5 +437,46 @@ describe("parseTaskText — o pacote inteiro", () => {
 
   it("intervalo: hasTime true, o início veio do próprio intervalo", () => {
     expect(parse("reunião das 15 às 16").hasTime).toBe(true);
+  });
+
+  // O "1h" da duração era relido como horário e, por ter span maior, ganhava do horário de verdade.
+  it.each([
+    ["call de 1h hoje às 16h", "call", 16, "1h"],
+    ["reunião de 2 horas amanhã às 10h", "reunião", 10, "2h"],
+    ["estudar por 2 horas hoje à noite", "estudar", 20, "2h"],
+  ])("duração não vira horário: %j", (input, text, hour, duration) => {
+    const r = parse(input);
+    expect(r.text).toBe(text);
+    expect(r.date?.getHours()).toBe(hour);
+    expect(r.duration).toBe(duration);
+  });
+
+  it("duração sem hora nenhuma: só o dia, hasTime false", () => {
+    const r = parse("call de 1h amanhã");
+    expect(r.text).toBe("call");
+    expect(r.duration).toBe("1h");
+    expect(r.hasTime).toBe(false);
+    expect(r.date?.getDate()).toBe(13);
+    expect(r.date?.getHours()).toBe(0);
+  });
+
+  // O outro lado do mesmo fix: com a duração mascarada, o intervalo é a única fonte de data.
+  it("intervalo sem dia: data sai do início do próprio intervalo", () => {
+    const r = parse("call das 15 às 16");
+    expect(r.date?.getDate()).toBe(12);
+    expect(r.date?.getHours()).toBe(15);
+  });
+
+  it("intervalo com dia: dia do parseWhen, hora do intervalo", () => {
+    const r = parse("reunião das 15 às 16 amanhã");
+    expect(r.text).toBe("reunião");
+    expect(r.date?.getDate()).toBe(13);
+    expect(r.date?.getHours()).toBe(15);
+  });
+
+  it("dedupe de link: mesma URL duas vezes vira um chip só, mas some do título duas vezes", () => {
+    const r = parse("ver youtube.com/abc e youtube.com/abc");
+    expect(r.links).toEqual(["https://youtube.com/abc"]);
+    expect(r.text).toBe("ver e");
   });
 });

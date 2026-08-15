@@ -1,12 +1,14 @@
 import { parseLinks } from "./parse-links";
 
 /**
- * Interpreta o campo "quando" do composer — "hoje às 14 horas", "amanhã 2h30", "next friday at
- * 2pm", "daqui a 3 dias" — sem LLM: normalização + tabelas + regex. Aceita pt-BR e inglês,
- * inclusive misturados na mesma frase, porque cada pedaço (dia, hora, período) é procurado
- * independentemente dos outros.
+ * `parseTaskText` é a porta de entrada: recebe a frase inteira do composer ("reunião com o time
+ * das 15 às 16 meet.google.com/abc") e devolve título, data, duração e links — sem LLM:
+ * normalização + tabelas + regex. Cada detector (link, duração, dia, hora) procura o seu pedaço
+ * independentemente dos outros, então pt-BR e inglês podem vir misturados na mesma frase, e o que
+ * cada um consumiu é recortado do título pelos spans que devolve.
  *
- * Devolve `null` quando não reconhece nada; `hasTime: false` quando só achou o dia, pra quem
+ * `parseWhen`/`parseDuration` são os detectores por baixo, exportados pro teste. `parseWhen`
+ * devolve `null` quando não reconhece nada e `hasTime: false` quando só achou o dia, pra quem
  * chama decidir o horário padrão.
  */
 
@@ -36,17 +38,20 @@ function hit<T>(match: RegExpMatchArray, value: T, extra: Span[] = []): Hit<T> {
   return { value, spans: [spanOf(match), ...extra] };
 }
 
-// pm/tonight etc. podem bater em mais de um detector ao mesmo tempo (applyMeridiem x periodHour,
-// parseDay x parseTime) e produzir o mesmo span repetido; sem colapsar isso aqui, o rest() de quem
-// consome remove o trecho duas vezes e come texto real depois dele. Contrato de saída do parseWhen.
-function dedupeSpans(spans: Span[]): Span[] {
-  const sorted = [...spans].sort((a, b) => a[0] - b[0] || b[1] - a[1]);
-  const kept: Span[] = [];
-  for (const span of sorted) {
-    const containedInKept = kept.some(([start, end]) => span[0] >= start && span[1] <= end);
-    if (!containedInKept) kept.push(span);
+/**
+ * Une spans que se sobrepõem ou se encostam — "at 9" e "9 pm" batem em detectores diferentes e
+ * dividem o "9"; escolher um deixaria o pedaço exclusivo do outro ("pm") no título.
+ * A saída **disjunta e ordenada** é contrato: `cut()` anda `pos` só pra frente e duplicaria texto
+ * com spans sobrepostos.
+ */
+function mergeSpans(spans: Span[]): Span[] {
+  const merged: Span[] = [];
+  for (const [start, end] of [...spans].sort((a, b) => a[0] - b[0])) {
+    const last = merged.at(-1);
+    if (last && start <= last[1]) last[1] = Math.max(last[1], end);
+    else merged.push([start, end]);
   }
-  return kept;
+  return merged;
 }
 
 /** Horas assumidas quando o texto dá só o período ("amanhã de manhã", "tonight"). */
@@ -396,11 +401,11 @@ function parseTime(text: string, now: Date, baseIsToday: boolean): Hit<Time> | n
   }
 
   // 14h · 14 hs · 14 horas · às 14h · at 14 · 9 pm · 9 da noite · 9 o clock
-  // O 1º ramo precisa do CONNECTOR_RE como os outros: sem ele, "às 14h" só casa "14h" e o "às"
-  // sobra no recorte do texto (o span não cobre o conector).
+  // 1º e 3º ramo precisam do CONNECTOR_RE: sem ele, "às 14h"/"at 9am" só casa a hora e o conector
+  // sobra no título — e no ramo am/pm o ramo "as|at" nem ajuda, porque "9a" não tem \b no meio.
   const wholeHour = text.match(
     new RegExp(
-      `${CONNECTOR_RE}\\b(\\d{1,2})\\s*(?:h\\b|hs\\b|horas?\\b|o\\s*clock\\b)|\\b(?:as|at)\\s+(\\d{1,2})\\b|\\b(\\d{1,2})\\s*(?:am|pm)\\b|\\b(\\d{1,2})\\s+(?:da|de|at|in|this)\\s+(?:manha|tarde|noite|madrugada|morning|afternoon|evening|night)\\b`,
+      `${CONNECTOR_RE}\\b(\\d{1,2})\\s*(?:h\\b|hs\\b|horas?\\b|o\\s*clock\\b)|\\b(?:as|at)\\s+(\\d{1,2})\\b|${CONNECTOR_RE}\\b(\\d{1,2})\\s*(?:am|pm)\\b|\\b(\\d{1,2})\\s+(?:da|de|at|in|this)\\s+(?:manha|tarde|noite|madrugada|morning|afternoon|evening|night)\\b`,
     ),
   );
   if (wholeHour) {
@@ -529,7 +534,9 @@ function formatDuration(totalMinutes: number): string {
   return `${hours ? `${hours}h` : ""}${minutes ? `${minutes}m` : ""}` || "0m";
 }
 
-const CLOCK = String.raw`(\d{1,2})(?:\s*[:h.,]\s*(\d{2}))?`;
+// A unidade solta ("14h", sem minutos) faz parte do relógio: sem ela o `\s*(as|ate)` do intervalo
+// casa em cima do próprio "h" e "das 14h às 15h" deixa de ser intervalo.
+const CLOCK = String.raw`(\d{1,2})(?:\s*[:h.,]\s*(\d{2})|\s*h\b)?`;
 
 /**
  * Intervalo primeiro, duração explícita depois. A ordem é a regra de precedência do spec: em
@@ -614,7 +621,7 @@ export function parseWhen(input: string, now: Date = new Date()): ParsedWhen | n
     date,
     hasDay: day !== null,
     hasTime: time !== null,
-    spans: dedupeSpans([...(day?.spans ?? []), ...(time?.spans ?? [])]),
+    spans: mergeSpans([...(day?.spans ?? []), ...(time?.spans ?? [])]),
   };
 }
 
@@ -673,7 +680,8 @@ function joinAcrossCut(left: string, right: string, isLast: boolean): string {
   return `${leftTrimmed} ${rightTrimmed}`;
 }
 
-function cut(input: string, spans: Span[]): string {
+/** Exportada pro teste medir spans com o mesmo recorte da produção, não com um recorte paralelo. */
+export function cut(input: string, spans: Span[]): string {
   const ordered = [...spans].sort((a, b) => a[0] - b[0]);
   const segments: string[] = [];
   let pos = 0;
@@ -690,51 +698,42 @@ function cut(input: string, spans: Span[]): string {
   return acc.replace(/\s+/g, " ").trim();
 }
 
-/** Descarta spans engolidos por outro: em "das 15 às 16" o intervalo cobre o horário simples. */
-function dropOverlapping(spans: Span[]): Span[] {
-  const byLength = [...spans].sort((a, b) => b[1] - b[0] - (a[1] - a[0]));
-  const kept: Span[] = [];
-  for (const span of byLength) {
-    const overlaps = kept.some(([start, end]) => span[0] < end && span[1] > start);
-    if (!overlaps) kept.push(span);
-  }
-  return kept;
-}
+/** Troca os trechos por espaço em vez de apagá-los: remover deslocaria todos os índices seguintes. */
+const mask = (text: string, spans: Span[]) =>
+  text
+    .split("")
+    .map((char, i) => (spans.some(([s, e]) => i >= s && i < e) ? " " : char))
+    .join("");
 
 export function parseTaskText(input: string, now: Date = new Date()): ParsedTask {
   const normalized = normalize(input);
   const links = parseLinks(input);
 
-  // O link é **mascarado** com espaço, não removido: "youtu.be/15h30" não pode virar horário, mas
-  // apagar o trecho deslocaria todos os índices seguintes.
-  const forTime = normalized
-    .split("")
-    .map((char, i) => (links.spans.some(([s, e]) => i >= s && i < e) ? " " : char))
-    .join("");
+  // "youtu.be/15h30" não pode virar horário nem duração.
+  const forDuration = mask(normalized, links.spans);
+  const duration = parseDuration(forDuration);
 
-  const duration = parseDuration(forTime);
-  const when = parseWhen(forTime, now);
+  // A duração também sai da vista do parseWhen: o "1h" de "call de 1h hoje às 16h" casa como hora
+  // e, por ter o span maior, ganhava do horário de verdade.
+  const when = parseWhen(mask(forDuration, duration?.spans ?? []), now);
 
-  const spans = dropOverlapping([
-    ...links.spans,
-    ...(duration?.spans ?? []),
-    ...(when?.spans ?? []),
-  ]);
+  const spans = mergeSpans([...links.spans, ...(duration?.spans ?? []), ...(when?.spans ?? [])]);
 
-  // O intervalo manda no horário: "das 15 às 16" começa 15:00 mesmo que o parseWhen ache outra coisa.
-  const date =
-    when && duration?.start
-      ? new Date(
-          when.date.getFullYear(),
-          when.date.getMonth(),
-          when.date.getDate(),
-          duration.start.hour,
-          duration.start.minute,
-        )
-      : (when?.date ?? null);
+  // O intervalo manda no horário: "das 15 às 16" começa 15:00 — e é a única fonte de hora agora que
+  // o parseWhen não enxerga mais o trecho da duração.
+  const base = when?.date ?? startOfDay(now);
+  const date = duration?.start
+    ? new Date(
+        base.getFullYear(),
+        base.getMonth(),
+        base.getDate(),
+        duration.start.hour,
+        duration.start.minute,
+      )
+    : (when?.date ?? null);
 
-  // Intervalo também conta como hora explícita mesmo se, por algum motivo, o parseWhen não achasse
-  // uma pista de horário por conta própria — o início do intervalo já É uma hora.
+  // Intervalo conta como hora explícita: o parseWhen nem vê esse trecho, e o início do intervalo já
+  // É uma hora — sem isso o home.tsx sobrescreveria 15:00 com o DEFAULT_HOUR.
   const hasTime = Boolean(duration?.start) || (when?.hasTime ?? false);
 
   return {

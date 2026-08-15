@@ -77,5 +77,7 @@ export function parseLinks(input: string): { urls: string[]; spans: Span[] } {
     spans.push([start + offset, start + offset + trimmed.length]);
   }
 
-  return { urls, spans };
+  // URL repetida vira um chip só (e uma linha só no D1); os spans ficam todos, senão a segunda
+  // ocorrência sobra no título.
+  return { urls: [...new Set(urls)], spans };
 }

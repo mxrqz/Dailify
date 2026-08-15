@@ -43,6 +43,13 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
 `bun run dev` applies pending D1 migrations locally (`CI=1` skips the prompt) before `wrangler dev`. Clerk + Stripe keys are **paired per instance**: a `pk_live` front end
 must match an `sk_live` worker or all auth 401s.
 
+## Deploy & migrations
+
+`bun run deploy` é **só** `wrangler deploy` — não aplica migration nenhuma. Com migration pendente,
+rode `wrangler d1 migrations apply dailify --remote` **antes** de publicar. Coluna nova só passa a
+existir em D1 depois disso, e worker novo sobre schema velho derruba todo `POST`/`PATCH` de tarefa
+com `no such column` — o `SELECT` sobrevive, então o app parece saudável até alguém salvar.
+
 ## Tests
 
 `bun run test` (or `bun --filter @dailify/server test`) — `@cloudflare/vitest-pool-workers` runs
