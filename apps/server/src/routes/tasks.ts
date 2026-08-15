@@ -19,21 +19,17 @@ tasks.use("*", requireAuth);
 
 const MONTH_RE = /^\d{4}-\d{2}$/;
 const MAX_LINKS = 10;
+const MAX_URL_LEN = 2048; // limite historico de navegador/proxy; nenhum link legitimo chega perto
 
-/**
- * `undefined` = campo nao veio (ou veio null); "invalid" = veio e nao presta. O painel renderiza
- * esses links como <a href>, entao protocolo fora de http(s) aqui vira XSS refletido na propria
- * tela. Credencial embutida (https://user:pass@host) tambem cai fora: e o padrao classico de
- * spoofing (https://paypal.com@evil.com aparenta paypal.com mas o host real e evil.com) e o
- * detector do cliente (parse-links.ts) explicitamente deixa essa checagem pro servidor.
- */
+// `undefined` = campo nao veio (ou veio null); "invalid" = veio e nao presta pra nada.
 function sanitizeLinks(value: unknown): string[] | undefined | "invalid" {
   if (value === undefined || value === null) return undefined;
   if (!Array.isArray(value) || value.length > MAX_LINKS) return "invalid";
 
   const urls: string[] = [];
   for (const item of value) {
-    if (typeof item !== "string" || !URL.canParse(item)) return "invalid";
+    if (typeof item !== "string" || item.length > MAX_URL_LEN || !URL.canParse(item))
+      return "invalid";
     const { protocol, username, password } = new URL(item);
     if (protocol !== "http:" && protocol !== "https:") return "invalid";
     if (username || password) return "invalid";

@@ -103,7 +103,11 @@ describe("POST /tasks — links", () => {
   const post = (body: Record<string, unknown>) =>
     app.request(
       "/tasks",
-      { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      },
       env,
     );
 
@@ -136,6 +140,24 @@ describe("POST /tasks — links", () => {
     role = "pro";
     const links = Array.from({ length: 11 }, (_, i) => `https://x.com/${i}`);
     expect((await post({ ...taskInput(), links })).status).toBe(400);
+  });
+
+  const urlOfLength = (len: number) => "https://x.com/" + "a".repeat(len - "https://x.com/".length);
+
+  it("aceita URL com exatamente 2048 caracteres", async () => {
+    role = "pro";
+    const url = urlOfLength(2048);
+    const res = await post({ ...taskInput(), links: [url] });
+    expect(res.status).toBe(200);
+  });
+
+  it.each([
+    ["2049 caracteres", 2049],
+    ["100KB", 100_000],
+  ])("rejeita URL com %s", async (_label, len) => {
+    role = "pro";
+    const res = await post({ ...taskInput(), links: [urlOfLength(len)] });
+    expect(res.status).toBe(400);
   });
 
   it("sem links continua criando", async () => {
