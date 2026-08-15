@@ -511,6 +511,76 @@ function parseDay(text: string, now: Date): Hit<Date> | null {
   return null;
 }
 
+export interface ParsedDuration {
+  duration: string;
+  start: { hour: number; minute: number } | null;
+}
+
+/** minutos → "1h30m" / "45m" / "2h", o formato que `Task.duration` já usa. */
+function formatDuration(totalMinutes: number): string {
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  return `${hours ? `${hours}h` : ""}${minutes ? `${minutes}m` : ""}` || "0m";
+}
+
+const CLOCK = String.raw`(\d{1,2})(?:\s*[:h.,]\s*(\d{2}))?`;
+
+/**
+ * Intervalo primeiro, duração explícita depois. A ordem é a regra de precedência do spec: em
+ * "das 15 às 16" o detector de horário simples também casaria o "15", e os dois spans brigariam.
+ */
+export function parseDuration(text: string): (ParsedDuration & { spans: Span[] }) | null {
+  // "-"/"—" nunca aparecem aqui: normalize() ja trocou hifen e travessao por espaco antes do texto
+  // chegar. O conector textual (as/ate/a) e quem carrega o sinal de intervalo nesses casos.
+  const range = text.match(
+    new RegExp(String.raw`\b(?:das?\s+)?${CLOCK}\s*(?:as?|ate|a)\s*${CLOCK}\b`),
+  );
+  if (range) {
+    const startMinutes = Number(range[1]) * 60 + Number(range[2] ?? 0);
+    const endMinutes = Number(range[3]) * 60 + Number(range[4] ?? 0);
+    // Intervalo que "volta no tempo" é outra coisa (data numérica, placar, o que for) — não é nosso.
+    if (endMinutes > startMinutes && Number(range[1]) <= 24 && Number(range[3]) <= 24) {
+      return {
+        spans: [spanOf(range)],
+        duration: formatDuration(endMinutes - startMinutes),
+        start: { hour: Number(range[1]), minute: Number(range[2] ?? 0) },
+      };
+    }
+  }
+
+  // "15h-16h" virou "15h 16h" (hifen sumiu no normalize) — sem palavra de conexao, o "h" repetido
+  // dos dois lados e o unico sinal de intervalo que sobrou.
+  const hourRange = text.match(/\b(\d{1,2})h\s+(\d{1,2})h\b/);
+  if (hourRange) {
+    const startHour = Number(hourRange[1]);
+    const endHour = Number(hourRange[2]);
+    if (endHour > startHour && startHour <= 24 && endHour <= 24) {
+      return {
+        spans: [spanOf(hourRange)],
+        duration: formatDuration((endHour - startHour) * 60),
+        start: { hour: startHour, minute: 0 },
+      };
+    }
+  }
+
+  const half = text.match(/\b(?:de\s+)?meia\s+hora\b/);
+  if (half) return { spans: [spanOf(half)], duration: "30m", start: null };
+
+  const explicit = text.match(
+    /\b(?:de\s+|por\s+)?(\d{1,3})\s*(h|hs|horas?|hours?)\s*(\d{1,2})?\b|\b(?:de\s+|por\s+)?(\d{1,3})\s*(min|minutos?|minutes?|m)\b/,
+  );
+  if (explicit) {
+    const minutes = explicit[1]
+      ? Number(explicit[1]) * 60 + Number(explicit[3] ?? 0)
+      : Number(explicit[4]);
+    if (minutes > 0) {
+      return { spans: [spanOf(explicit)], duration: formatDuration(minutes), start: null };
+    }
+  }
+
+  return null;
+}
+
 export function parseWhen(input: string, now: Date = new Date()): ParsedWhen | null {
   const text = normalize(input);
   if (!text.trim()) return null;

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalize, parseWhen } from "./parse-when";
+import { normalize, parseDuration, parseWhen } from "./parse-when";
 
 // Quarta-feira, 12 de agosto de 2026, 09:00.
 const NOW = new Date(2026, 7, 12, 9, 0);
@@ -276,5 +276,39 @@ describe("spans — o que sobra depois do recorte", () => {
     ["call at midnight", "call"],
   ])("conector consumido junto no formato: %j → %j", (input, expected) => {
     expect(rest(input)).toBe(expected);
+  });
+});
+
+describe("duração explícita", () => {
+  it.each([
+    ["call de 1h", "1h"],
+    ["call de 30min", "30m"],
+    ["call de 45 minutos", "45m"],
+    ["call de 1h30", "1h30m"],
+    ["call de meia hora", "30m"],
+    ["call de 2 horas", "2h"],
+  ])("%j → %s", (input, expected) => {
+    expect(parseDuration(normalize(input))?.duration).toBe(expected);
+  });
+
+  it("não inventa duração onde não tem", () => {
+    expect(parseDuration(normalize("reunião com o time"))).toBeNull();
+  });
+});
+
+describe("intervalo — início e duração no mesmo achado", () => {
+  it.each([
+    ["reunião das 15 às 16", "1h", 15, 0],
+    ["reunião das 9 às 10:30", "1h30m", 9, 0],
+    ["reunião 15h-16h", "1h", 15, 0],
+    ["reunião das 14:15 às 14:45", "30m", 14, 15],
+  ])("%j → %s começando %d:%d", (input, duration, hour, minute) => {
+    const parsed = parseDuration(normalize(input));
+    expect(parsed?.duration).toBe(duration);
+    expect(parsed?.start).toEqual({ hour, minute });
+  });
+
+  it("intervalo que vira o dia seguinte não é intervalo", () => {
+    expect(parseDuration(normalize("plantão das 22 às 6"))).toBeNull();
   });
 });
