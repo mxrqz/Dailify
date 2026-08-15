@@ -392,7 +392,16 @@ describe("parseTaskText — o pacote inteiro", () => {
   it.each([
     ["comprar leite, pão e ovos", "comprar leite, pão e ovos"],
     ["reunião (sala 3) amanhã", "reunião (sala 3)"],
+    ["uau!! preciso comprar leite hoje", "uau!! preciso comprar leite"],
+    ["socorro?! preciso de ajuda hoje", "socorro?! preciso de ajuda"],
+    ["tarefa!!! hoje", "tarefa!!!"],
   ])("não mexe em pontuação legítima: %j → %j", (input, expected) => {
     expect(parse(input).text).toBe(expected);
+  });
+
+  it("separador de lista pendurado no fim, sem nada depois pra separar", () => {
+    expect(parse("ligar pro cliente: urgente, hoje às 14h").text).toBe(
+      "ligar pro cliente: urgente",
+    );
   });
 });

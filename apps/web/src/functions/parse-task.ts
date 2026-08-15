@@ -626,18 +626,66 @@ export interface ParsedTask {
 }
 
 /** Tira os spans do texto, do fim pro começo — cortar de frente invalidaria os índices seguintes. */
+const ORPHAN_PUNCT = /[,;.!?]/;
+
+/**
+ * Reconcilia só o que ficou colado nas duas pontas de UM corte — nunca varre o título inteiro.
+ * É por isso que "uau!!" longe de qualquer span sai intocado: sem seam ali, a função nem olha
+ * pra ele. `isLast` distingue "sobrou separador de lista sem nada depois" (corte foi até o fim
+ * da frase) de "ainda vem mais texto" (onde o mesmo string vazio à direita é só o gap entre dois
+ * spans, não o fim de verdade).
+ */
+function joinAcrossCut(left: string, right: string, isLast: boolean): string {
+  const leftTrimmed = left.replace(/\s+$/, "");
+  const rightTrimmed = right.replace(/^\s+/, "");
+  const leftLast = leftTrimmed.at(-1);
+  const rightFirst = rightTrimmed[0];
+
+  // nada sobrou a esquerda: pontuacao orfa no comeco da frase nao tem o que separar
+  if (!leftTrimmed && rightFirst && ORPHAN_PUNCT.test(rightFirst)) {
+    return joinAcrossCut("", rightTrimmed.slice(1), isLast);
+  }
+
+  // parenteses/colchetes que ficaram vazios na fronteira do corte
+  if ((leftLast === "(" && rightFirst === ")") || (leftLast === "[" && rightFirst === "]")) {
+    return joinAcrossCut(leftTrimmed.slice(0, -1), rightTrimmed.slice(1), isLast);
+  }
+
+  // pontuacao dos dois lados da MESMA fronteira (ex.: "reuniao, [corte], com o time"): fica so a da esquerda
+  if (leftLast && ORPHAN_PUNCT.test(leftLast) && rightFirst && ORPHAN_PUNCT.test(rightFirst)) {
+    return leftTrimmed + rightTrimmed.slice(1);
+  }
+
+  // corte foi ate o fim da frase e deixou separador de lista pendurado, sem nada depois pra separar
+  if (isLast && !rightTrimmed && leftLast && /[,;]/.test(leftLast)) {
+    return leftTrimmed.slice(0, -1);
+  }
+
+  // pontuacao colada logo depois do corte: sem espaco antes dela
+  if (rightFirst && ORPHAN_PUNCT.test(rightFirst)) {
+    return leftTrimmed + rightTrimmed;
+  }
+
+  if (!leftTrimmed) return rightTrimmed;
+  if (!rightTrimmed) return leftTrimmed;
+  return `${leftTrimmed} ${rightTrimmed}`;
+}
+
 function cut(input: string, spans: Span[]): string {
-  const ordered = [...spans].sort((a, b) => b[0] - a[0]);
-  let out = input;
-  for (const [start, end] of ordered) out = out.slice(0, start) + out.slice(end);
-  return out
-    .replace(/\s+/g, " ")
-    .replace(/\(\s*\)|\[\s*\]/g, "") // parenteses/colchetes que o corte esvaziou
-    .replace(/([,;.!?])\s*([,;.!?])/g, "$1") // pontuacao que sobrou dos dois lados do trecho cortado
-    .replace(/\s+([,;.!?])/g, "$1") // espaco que sobrou entre a palavra e a pontuacao
-    .replace(/^[,;.!?]+\s*/, "") // pontuacao orfa quando o corte comeu o inicio da frase
-    .replace(/\s+/g, " ")
-    .trim();
+  const ordered = [...spans].sort((a, b) => a[0] - b[0]);
+  const segments: string[] = [];
+  let pos = 0;
+  for (const [start, end] of ordered) {
+    segments.push(input.slice(pos, start));
+    pos = end;
+  }
+  segments.push(input.slice(pos));
+
+  let acc = segments[0];
+  for (let i = 1; i < segments.length; i++) {
+    acc = joinAcrossCut(acc, segments[i], i === segments.length - 1);
+  }
+  return acc.replace(/\s+/g, " ").trim();
 }
 
 /** Descarta spans engolidos por outro: em "das 15 às 16" o intervalo cobre o horário simples. */
