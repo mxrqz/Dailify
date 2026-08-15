@@ -530,26 +530,29 @@ const CLOCK = String.raw`(\d{1,2})(?:\s*[:h.,]\s*(\d{2}))?`;
  * "das 15 às 16" o detector de horário simples também casaria o "15", e os dois spans brigariam.
  */
 export function parseDuration(text: string): (ParsedDuration & { spans: Span[] }) | null {
-  // "-"/"—" nunca aparecem aqui: normalize() ja trocou hifen e travessao por espaco antes do texto
-  // chegar. O conector textual (as/ate/a) e quem carrega o sinal de intervalo nesses casos.
+  // "-"/"—" nunca aparecem aqui: normalize() já trocou hífen e travessão por espaço antes do texto
+  // chegar. Prefixo e conector agora são obrigatórios E pareados ("das"/"da"+"as", "de"+"até") —
+  // um "a" pelado entre dois números (data, placar, contagem) não vira intervalo por acidente.
   const range = text.match(
-    new RegExp(String.raw`\b(?:das?\s+)?${CLOCK}\s*(?:as?|ate|a)\s*${CLOCK}\b`),
+    new RegExp(String.raw`\b(das|da|de)\s+${CLOCK}\s*(as|ate)\s*${CLOCK}\b`),
   );
   if (range) {
-    const startMinutes = Number(range[1]) * 60 + Number(range[2] ?? 0);
-    const endMinutes = Number(range[3]) * 60 + Number(range[4] ?? 0);
+    const [, prefix, hour1, minute1, connector, hour2, minute2] = range;
+    const pairValid = prefix === "de" ? connector === "ate" : connector === "as";
+    const startMinutes = Number(hour1) * 60 + Number(minute1 ?? 0);
+    const endMinutes = Number(hour2) * 60 + Number(minute2 ?? 0);
     // Intervalo que "volta no tempo" é outra coisa (data numérica, placar, o que for) — não é nosso.
-    if (endMinutes > startMinutes && Number(range[1]) <= 24 && Number(range[3]) <= 24) {
+    if (pairValid && endMinutes > startMinutes && Number(hour1) <= 24 && Number(hour2) <= 24) {
       return {
         spans: [spanOf(range)],
         duration: formatDuration(endMinutes - startMinutes),
-        start: { hour: Number(range[1]), minute: Number(range[2] ?? 0) },
+        start: { hour: Number(hour1), minute: Number(minute1 ?? 0) },
       };
     }
   }
 
-  // "15h-16h" virou "15h 16h" (hifen sumiu no normalize) — sem palavra de conexao, o "h" repetido
-  // dos dois lados e o unico sinal de intervalo que sobrou.
+  // "15h-16h" virou "15h 16h" (hífen sumiu no normalize) — sem palavra de conexão, o "h" repetido
+  // dos dois lados é o único sinal de intervalo que sobrou.
   const hourRange = text.match(/\b(\d{1,2})h\s+(\d{1,2})h\b/);
   if (hourRange) {
     const startHour = Number(hourRange[1]);
@@ -563,11 +566,13 @@ export function parseDuration(text: string): (ParsedDuration & { spans: Span[] }
     }
   }
 
-  const half = text.match(/\b(?:de\s+)?meia\s+hora\b/);
+  // Prefixo obrigatório ("de"/"por"/"durante"): sem ele, "14h"/"9h30" é horário, não duração — é
+  // assim que boa parte dos títulos reais escreve horário em pt-BR sem essa palavra na frente.
+  const half = text.match(/\b(?:de|por|durante)\s+meia\s+hora\b/);
   if (half) return { spans: [spanOf(half)], duration: "30m", start: null };
 
   const explicit = text.match(
-    /\b(?:de\s+|por\s+)?(\d{1,3})\s*(h|hs|horas?|hours?)\s*(\d{1,2})?\b|\b(?:de\s+|por\s+)?(\d{1,3})\s*(min|minutos?|minutes?|m)\b/,
+    /\b(?:de|por|durante)\s+(\d{1,3})\s*(h|hs|horas?|hours?)\s*(\d{1,2})?\b|\b(?:de|por|durante)\s+(\d{1,3})\s*(min|minutos?|minutes?|m)\b/,
   );
   if (explicit) {
     const minutes = explicit[1]

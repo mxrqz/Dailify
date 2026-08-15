@@ -312,3 +312,31 @@ describe("intervalo — início e duração no mesmo achado", () => {
     expect(parseDuration(normalize("plantão das 22 às 6"))).toBeNull();
   });
 });
+
+describe("duração — rejeita falso positivo", () => {
+  it.each([
+    // Critical 1: "Nh"/"NhNNm" solto é horário em pt-BR, não duração — precisa de "de/por/durante".
+    "reunião 14h",
+    "reunião 9h30",
+    // Critical 2: sem conector textual, "22h-6h" cai no fallback de duração explícita sem guarda.
+    "plantão 22h-6h",
+    // Important 4: conector "a" pelado entre dois números não é intervalo de horário.
+    "15/08 a 16/08",
+    "partida 1 a 7",
+    // Important 5 + 6: sem prefixo obrigatório, número seguido de unidade em outro contexto.
+    "comprar 5m de cabo",
+    "reunião sala 3h andar",
+    "comprar 2 metros de corda",
+    "pagar conta de 100 reais",
+    "ligar 3 vezes",
+    "reunião sala 3 andar",
+  ])("%j → null", (input) => {
+    expect(parseDuration(normalize(input))).toBeNull();
+  });
+
+  // Limitação conhecida e aceita (ver relatório): "das X as Y" é a forma completa e correta de um
+  // intervalo — o parser não tem como saber que aqui "Y" conta pessoas, não horas, sem semântica.
+  it("'das N as M <substantivo>' ainda é lido como intervalo — limitação documentada", () => {
+    expect(parseDuration(normalize("das 3 as 5 pessoas"))?.duration).toBe("2h");
+  });
+});
