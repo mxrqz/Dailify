@@ -257,4 +257,24 @@ describe("spans — o que sobra depois do recorte", () => {
     const [start, end] = parsed!.spans[0];
     expect("reunião hoje".slice(start, end)).toBe("hoje");
   });
+
+  // pm/tonight batendo em applyMeridiem E em periodHour (ou em parseDay e parseTime) duplicava o
+  // mesmo span; sem dedupe, o rest() consumia esse trecho duas vezes e comia texto real depois dele.
+  it.each([
+    ["call at 9 tonight then buy milk", "call then buy milk"],
+    ["reuniao as 9 da noite depois trazer cafe", "reuniao depois trazer cafe"],
+  ])("nao duplica span sobreposto: %j → %j", (input, expected) => {
+    expect(rest(input)).toBe(expected);
+  });
+
+  // withMinutes já tinha teste de conector; os formatos irmãos (mesmo CONNECTOR_RE) não tinham.
+  it.each([
+    ["reuniao as 14 e 30", "reuniao"],
+    ["call at half past two", "call"],
+    ["reuniao as duas", "reuniao"],
+    ["call at noon", "call"],
+    ["call at midnight", "call"],
+  ])("conector consumido junto no formato: %j → %j", (input, expected) => {
+    expect(rest(input)).toBe(expected);
+  });
 });

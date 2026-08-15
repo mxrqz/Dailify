@@ -34,6 +34,19 @@ function hit<T>(match: RegExpMatchArray, value: T, extra: Span[] = []): Hit<T> {
   return { value, spans: [spanOf(match), ...extra] };
 }
 
+// pm/tonight etc. podem bater em mais de um detector ao mesmo tempo (applyMeridiem x periodHour,
+// parseDay x parseTime) e produzir o mesmo span repetido; sem colapsar isso aqui, o rest() de quem
+// consome remove o trecho duas vezes e come texto real depois dele. Contrato de saída do parseWhen.
+function dedupeSpans(spans: Span[]): Span[] {
+  const sorted = [...spans].sort((a, b) => a[0] - b[0] || b[1] - a[1]);
+  const kept: Span[] = [];
+  for (const span of sorted) {
+    const containedInKept = kept.some(([start, end]) => span[0] >= start && span[1] <= end);
+    if (!containedInKept) kept.push(span);
+  }
+  return kept;
+}
+
 /** Horas assumidas quando o texto dá só o período ("amanhã de manhã", "tonight"). */
 const PERIOD_HOURS = { morning: 9, afternoon: 14, evening: 20, dawn: 6 } as const;
 
@@ -520,6 +533,6 @@ export function parseWhen(input: string, now: Date = new Date()): ParsedWhen | n
     date,
     hasDay: day !== null,
     hasTime: time !== null,
-    spans: [...(day?.spans ?? []), ...(time?.spans ?? [])],
+    spans: dedupeSpans([...(day?.spans ?? []), ...(time?.spans ?? [])]),
   };
 }
