@@ -59,9 +59,10 @@ export function parseLinks(input: string): { urls: string[]; spans: Span[] } {
   const urls: string[] = [];
   const spans: Span[] = [];
 
-  // Vírgula também separa token: "a.com,b.com" sem espaço são dois links colados, não um path com
-  // vírgula. Custo aceito: uma URL real com vírgula no path/query (rara) perde o pedaço depois dela.
-  for (const match of input.matchAll(/[^\s,]+/g)) {
+  // Vírgula só é ambígua em domínio nu ("a.com,b.com" colados = dois links). Com esquema explícito
+  // o token já é link inequívoco — cortar na vírgula perderia dado real (coordenada "?q=lat,lng",
+  // path "a,b/c"), então esse caso casa inteiro antes da vírgula entrar como separador.
+  for (const match of input.matchAll(/https?:\/\/\S+|[^\s,]+/gi)) {
     const raw = match[0];
     const start = match.index ?? 0;
 

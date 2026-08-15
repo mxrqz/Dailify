@@ -67,10 +67,37 @@ describe("TLD ambiguo com extensao de arquivo (so)", () => {
 });
 
 describe("URLs coladas por virgula", () => {
-  it("separa em dois links", () => {
+  it("separa em dois links (dominio nu)", () => {
     expect(urls("ver youtube.com/a,youtube.com/b")).toEqual([
       "https://youtube.com/a",
       "https://youtube.com/b",
+    ]);
+  });
+
+  it("nao corta virgula dentro de link com esquema explicito", () => {
+    expect(urls("ver https://exemplo.com/a,b/c")).toEqual(["https://exemplo.com/a,b/c"]);
+  });
+
+  it("preserva coordenada de mapa (virgula na query)", () => {
+    expect(urls("ver https://maps.google.com/?q=-23.5,-46.6")).toEqual([
+      "https://maps.google.com/?q=-23.5,-46.6",
+    ]);
+  });
+
+  // Duas URLs com esquema coladas sem espaço nao tem separador nenhum pro tokenizador: vira um so
+  // token malformado e a segunda URL some. Limitacao que ja existia antes dos dois fixes de
+  // virgula (tokenizacao por espaco em branco nunca resolveu isso); com espaco depois da virgula
+  // (o caso comum de colar dois links numa tarefa) separa certo, como o segundo caso mostra.
+  it("colada sem espaco engole a segunda URL (limitacao conhecida)", () => {
+    expect(urls("ver https://a.com/x,https://b.com/y")).toEqual([
+      "https://a.com/x,https://b.com/y",
+    ]);
+  });
+
+  it("colada com espaco depois da virgula separa normalmente", () => {
+    expect(urls("ver https://a.com/x, https://b.com/y")).toEqual([
+      "https://a.com/x",
+      "https://b.com/y",
     ]);
   });
 });
