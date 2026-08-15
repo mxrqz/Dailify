@@ -3,8 +3,7 @@ import type { Span } from "./parse-when";
 // Curta de propósito: `ts`, `sh`, `py`, `rs`, `go` e `md` são TLDs reais E extensões de arquivo.
 // Num app usado por quem escreve "main.ts" numa tarefa, a lista completa da IANA transformaria
 // nome de arquivo em link. Errar pro lado de "não é link" é o certo aqui — não troque pela IANA.
-// `so` e `be` entraram por notion.so/youtu.be (produtos reais, comuns em tarefa); `so` também é
-// extensão de biblioteca (`libfoo.so`), mas é raro escrever isso numa tarefa do dia a dia.
+// `so` e `be` entraram por notion.so/youtu.be (produtos reais, comuns em tarefa).
 const TLDS = [
   "com",
   "br",
@@ -22,6 +21,10 @@ const TLDS = [
   "be",
 ];
 
+// Dentro da allowlist acima, `so` também é extensão de lib compilada (`libfoo.so`) — path ou
+// query depois do host é o que distingue "notion.so/xyz" (link) de "libfoo.so" (arquivo).
+const AMBIGUOUS_FILE_TLDS = ["so"];
+
 const SCHEME_RE = /^https?:\/\//i;
 const TRAILING_RE = /[.,;:!?)\]}'"]+$/;
 
@@ -29,7 +32,7 @@ function toAbsolute(candidate: string): string | null {
   const withScheme = SCHEME_RE.test(candidate) ? candidate : `https://${candidate}`;
   if (!URL.canParse(withScheme)) return null;
 
-  const { protocol, hostname } = new URL(withScheme);
+  const { protocol, hostname, pathname, search } = new URL(withScheme);
   if (protocol !== "http:" && protocol !== "https:") return null;
 
   // Sem esquema e sem "www.", só passa com TLD da allowlist — é o que separa "youtube.com/x"
@@ -37,6 +40,7 @@ function toAbsolute(candidate: string): string | null {
   if (!SCHEME_RE.test(candidate) && !/^www\./i.test(candidate)) {
     const tld = hostname.split(".").pop()?.toLowerCase();
     if (!tld || !TLDS.includes(tld)) return null;
+    if (AMBIGUOUS_FILE_TLDS.includes(tld) && pathname === "/" && !search) return null;
   }
 
   return withScheme;

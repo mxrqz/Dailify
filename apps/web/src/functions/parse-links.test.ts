@@ -49,6 +49,20 @@ describe("pontuação", () => {
   });
 });
 
+describe("TLD ambiguo com extensao de arquivo (so)", () => {
+  it("host pelado nao vira link", () => {
+    expect(urls("compilar libfoo.so")).toEqual([]);
+  });
+
+  it("com path vira link", () => {
+    expect(urls("revisar notion.so/xyz")).toEqual(["https://notion.so/xyz"]);
+  });
+
+  it("com query mas sem path vira link", () => {
+    expect(urls("entrar em notion.so?ref=abc")).toEqual(["https://notion.so?ref=abc"]);
+  });
+});
+
 describe("spans", () => {
   it("aponta pro trecho exato do original", () => {
     const input = "reunião meet.google.com/abc hoje";
