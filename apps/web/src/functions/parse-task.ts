@@ -621,6 +621,8 @@ export function parseWhen(input: string, now: Date = new Date()): ParsedWhen | n
 export interface ParsedTask {
   text: string;
   date: Date | null;
+  /** Falso quando `date` só tem dia (hora ficou 00:00 por padrão) — quem consome decide o default. */
+  hasTime: boolean;
   duration: string | null;
   links: string[];
 }
@@ -731,9 +733,14 @@ export function parseTaskText(input: string, now: Date = new Date()): ParsedTask
         )
       : (when?.date ?? null);
 
+  // Intervalo também conta como hora explícita mesmo se, por algum motivo, o parseWhen não achasse
+  // uma pista de horário por conta própria — o início do intervalo já É uma hora.
+  const hasTime = Boolean(duration?.start) || (when?.hasTime ?? false);
+
   return {
     text: cut(input, spans),
     date,
+    hasTime,
     duration: duration?.duration ?? null,
     links: links.urls,
   };

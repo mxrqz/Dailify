@@ -404,4 +404,16 @@ describe("parseTaskText — o pacote inteiro", () => {
       "ligar pro cliente: urgente",
     );
   });
+
+  it("hora explícita: hasTime true", () => {
+    expect(parse("dentista hoje às 14h").hasTime).toBe(true);
+  });
+
+  it("só o dia, sem hora: hasTime false — não pode virar meia-noite no chip", () => {
+    expect(parse("comprar leite amanhã").hasTime).toBe(false);
+  });
+
+  it("intervalo: hasTime true, o início veio do próprio intervalo", () => {
+    expect(parse("reunião das 15 às 16").hasTime).toBe(true);
+  });
 });
