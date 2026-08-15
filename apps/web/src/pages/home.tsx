@@ -11,7 +11,7 @@ import { WeekStrip } from "@/components/dashboard/week-strip";
 import { TaskComposer, type ComposerValues } from "@/components/dashboard/task-composer";
 import { createTask } from "@/functions/api";
 import { upsertTaskById } from "@/functions/functions";
-import type { ParsedWhen } from "@/functions/parse-task";
+import type { ParsedTask } from "@/functions/parse-task";
 import { useEntitlements } from "@/hooks/useEntitlements";
 
 /** Altura viva de um elemento: CSS não enxerga a altura do irmão, e aqui duas posições dependem. */
@@ -36,22 +36,23 @@ function useHeight(ref: RefObject<HTMLElement>): number {
 const STRIP_TOP = 24; // top-6
 const STRIP_GAP = 24; // respiro entre a faixa e o composer
 
-const DEFAULT_HOUR = 9; // "amanhã" sem horário cai no começo do dia útil
+const DEFAULT_HOUR = 9; // data sem hora ("amanhã" puro) cai no começo do dia útil, não em 00:00
 const DEFAULT_DURATION = "10m";
 
-/** O composer só pergunta quando e o quê; o resto do `TaskInput` vem daqui. */
-function composerTaskInput(text: string, parsed: ParsedWhen | null): TaskInput {
-  // Cópia: `parsed.date` é do estado do composer, e mutar aqui mexeria no eco que ele mostra.
-  const date = parsed ? new Date(parsed.date) : new Date();
-  if (parsed && !parsed.hasTime) date.setHours(DEFAULT_HOUR, 0, 0, 0);
+/** O composer entrega tudo já extraído; aqui só viram os campos que o `TaskInput` exige. */
+function composerTaskInput(parsed: ParsedTask): TaskInput {
+  // Cópia: `parsed.date` é o mesmo objeto que o composer usa pros chips — mutar mexeria no eco.
+  const date = parsed.date ? new Date(parsed.date) : new Date();
+  if (parsed.date && !parsed.hasTime) date.setHours(DEFAULT_HOUR, 0, 0, 0);
 
   return {
-    title: text,
+    title: parsed.text,
     description: "",
     date: date.getTime(),
-    duration: DEFAULT_DURATION,
+    duration: parsed.duration ?? DEFAULT_DURATION,
     priority: 0,
     repeat: "Off",
+    links: parsed.links.length ? parsed.links : undefined,
   };
 }
 
@@ -78,19 +79,12 @@ export default function Home() {
   const centered = `calc(50dvh - 2.5rem - ${composerHeight / 2}px)`;
   const belowStrip = `${STRIP_TOP + stripHeight + STRIP_GAP}px`;
 
-  const handleCompose = async ({ when, parsed, text }: ComposerValues) => {
+  const handleCompose = async ({ parsed }: ComposerValues) => {
     if (!canCreateTask) {
       toast(copy.form.limitReached, {
         description: copy.form.limitReachedHint,
         action: { label: copy.form.upgrade, onClick: () => navigate("/premium") },
       });
-      return;
-    }
-
-    // Campo vazio vira "agora"; campo escrito que o parser não entendeu é erro — criar numa data
-    // adivinhada seria pior do que não criar.
-    if (when && !parsed) {
-      toast.warning(copy.composer.notUnderstood);
       return;
     }
 
@@ -101,7 +95,7 @@ export default function Home() {
       return;
     }
 
-    const { task, error } = await createTask(token, composerTaskInput(text, parsed));
+    const { task, error } = await createTask(token, composerTaskInput(parsed));
     if (error || !task) {
       toast(copy.form.createError, {
         description: error,
