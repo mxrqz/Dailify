@@ -109,12 +109,11 @@ export const copy = {
   },
 
   composer: {
-    when: "Quando",
-    whenPlaceholder: "Hoje às 14 horas",
     text: "Tarefa",
-    textPlaceholder: "o que precisa ser feito?",
+    textPlaceholder: "Reunião com o time hoje às 16:30",
     submit: "Criar tarefa",
-    notUnderstood: 'Não entendi a data — tente algo como "amanhã às 14h".',
+    missingWhen: "quando?",
+    missingText: "o que é a tarefa?",
   },
 
   voice: {
