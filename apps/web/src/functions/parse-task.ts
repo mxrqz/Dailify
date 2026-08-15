@@ -630,7 +630,14 @@ function cut(input: string, spans: Span[]): string {
   const ordered = [...spans].sort((a, b) => b[0] - a[0]);
   let out = input;
   for (const [start, end] of ordered) out = out.slice(0, start) + out.slice(end);
-  return out.replace(/\s+/g, " ").trim();
+  return out
+    .replace(/\s+/g, " ")
+    .replace(/\(\s*\)|\[\s*\]/g, "") // parenteses/colchetes que o corte esvaziou
+    .replace(/([,;.!?])\s*([,;.!?])/g, "$1") // pontuacao que sobrou dos dois lados do trecho cortado
+    .replace(/\s+([,;.!?])/g, "$1") // espaco que sobrou entre a palavra e a pontuacao
+    .replace(/^[,;.!?]+\s*/, "") // pontuacao orfa quando o corte comeu o inicio da frase
+    .replace(/\s+/g, " ")
+    .trim();
 }
 
 /** Descarta spans engolidos por outro: em "das 15 às 16" o intervalo cobre o horário simples. */

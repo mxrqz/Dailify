@@ -378,4 +378,21 @@ describe("parseTaskText — o pacote inteiro", () => {
   it("não deixa espaço duplo onde recortou", () => {
     expect(parse("reunião hoje às 16:30 com o time").text).toBe("reunião com o time");
   });
+
+  it.each([
+    ["reunião, hoje às 16h, com o time", "reunião, com o time"],
+    ["reunião (hoje às 16h) com o time", "reunião com o time"],
+    ["call de 30min. hoje às 14h com cliente", "call. com cliente"],
+    ["reunião hoje às 16h.", "reunião."],
+    ["reunião hoje às 16h!", "reunião!"],
+  ])("não deixa pontuação órfã: %j → %j", (input, expected) => {
+    expect(parse(input).text).toBe(expected);
+  });
+
+  it.each([
+    ["comprar leite, pão e ovos", "comprar leite, pão e ovos"],
+    ["reunião (sala 3) amanhã", "reunião (sala 3)"],
+  ])("não mexe em pontuação legítima: %j → %j", (input, expected) => {
+    expect(parse(input).text).toBe(expected);
+  });
 });
