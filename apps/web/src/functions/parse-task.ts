@@ -1,3 +1,5 @@
+import { parseLinks } from "./parse-links";
+
 /**
  * Interpreta o campo "quando" do composer — "hoje às 14 horas", "amanhã 2h30", "next friday at
  * 2pm", "daqui a 3 dias" — sem LLM: normalização + tabelas + regex. Aceita pt-BR e inglês,
@@ -393,9 +395,13 @@ function parseTime(text: string, now: Date, baseIsToday: boolean): Hit<Time> | n
     }
   }
 
-  // 14h · 14 hs · 14 horas · às 14 · at 14 · 9 pm · 9 da noite · 9 o clock
+  // 14h · 14 hs · 14 horas · às 14h · at 14 · 9 pm · 9 da noite · 9 o clock
+  // O 1º ramo precisa do CONNECTOR_RE como os outros: sem ele, "às 14h" só casa "14h" e o "às"
+  // sobra no recorte do texto (o span não cobre o conector).
   const wholeHour = text.match(
-    /\b(\d{1,2})\s*(?:h\b|hs\b|horas?\b|o\s*clock\b)|\b(?:as|at)\s+(\d{1,2})\b|\b(\d{1,2})\s*(?:am|pm)\b|\b(\d{1,2})\s+(?:da|de|at|in|this)\s+(?:manha|tarde|noite|madrugada|morning|afternoon|evening|night)\b/,
+    new RegExp(
+      `${CONNECTOR_RE}\\b(\\d{1,2})\\s*(?:h\\b|hs\\b|horas?\\b|o\\s*clock\\b)|\\b(?:as|at)\\s+(\\d{1,2})\\b|\\b(\\d{1,2})\\s*(?:am|pm)\\b|\\b(\\d{1,2})\\s+(?:da|de|at|in|this)\\s+(?:manha|tarde|noite|madrugada|morning|afternoon|evening|night)\\b`,
+    ),
   );
   if (wholeHour) {
     const digits = wholeHour.slice(1).find((group) => group !== undefined);
@@ -609,5 +615,71 @@ export function parseWhen(input: string, now: Date = new Date()): ParsedWhen | n
     hasDay: day !== null,
     hasTime: time !== null,
     spans: dedupeSpans([...(day?.spans ?? []), ...(time?.spans ?? [])]),
+  };
+}
+
+export interface ParsedTask {
+  text: string;
+  date: Date | null;
+  duration: string | null;
+  links: string[];
+}
+
+/** Tira os spans do texto, do fim pro começo — cortar de frente invalidaria os índices seguintes. */
+function cut(input: string, spans: Span[]): string {
+  const ordered = [...spans].sort((a, b) => b[0] - a[0]);
+  let out = input;
+  for (const [start, end] of ordered) out = out.slice(0, start) + out.slice(end);
+  return out.replace(/\s+/g, " ").trim();
+}
+
+/** Descarta spans engolidos por outro: em "das 15 às 16" o intervalo cobre o horário simples. */
+function dropOverlapping(spans: Span[]): Span[] {
+  const byLength = [...spans].sort((a, b) => b[1] - b[0] - (a[1] - a[0]));
+  const kept: Span[] = [];
+  for (const span of byLength) {
+    const overlaps = kept.some(([start, end]) => span[0] < end && span[1] > start);
+    if (!overlaps) kept.push(span);
+  }
+  return kept;
+}
+
+export function parseTaskText(input: string, now: Date = new Date()): ParsedTask {
+  const normalized = normalize(input);
+  const links = parseLinks(input);
+
+  // O link é **mascarado** com espaço, não removido: "youtu.be/15h30" não pode virar horário, mas
+  // apagar o trecho deslocaria todos os índices seguintes.
+  const forTime = normalized
+    .split("")
+    .map((char, i) => (links.spans.some(([s, e]) => i >= s && i < e) ? " " : char))
+    .join("");
+
+  const duration = parseDuration(forTime);
+  const when = parseWhen(forTime, now);
+
+  const spans = dropOverlapping([
+    ...links.spans,
+    ...(duration?.spans ?? []),
+    ...(when?.spans ?? []),
+  ]);
+
+  // O intervalo manda no horário: "das 15 às 16" começa 15:00 mesmo que o parseWhen ache outra coisa.
+  const date =
+    when && duration?.start
+      ? new Date(
+          when.date.getFullYear(),
+          when.date.getMonth(),
+          when.date.getDate(),
+          duration.start.hour,
+          duration.start.minute,
+        )
+      : (when?.date ?? null);
+
+  return {
+    text: cut(input, spans),
+    date,
+    duration: duration?.duration ?? null,
+    links: links.urls,
   };
 }

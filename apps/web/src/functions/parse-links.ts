@@ -1,4 +1,4 @@
-import type { Span } from "./parse-when";
+import type { Span } from "./parse-task";
 
 // Curta de propósito: `ts`, `sh`, `py`, `rs`, `go` e `md` são TLDs reais E extensões de arquivo.
 // Num app usado por quem escreve "main.ts" numa tarefa, a lista completa da IANA transformaria

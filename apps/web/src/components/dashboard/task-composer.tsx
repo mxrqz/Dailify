@@ -5,7 +5,7 @@ import { ArrowUpIcon, Loader2Icon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
 import { Label } from "@/components/ui/label";
-import { parseWhen, type ParsedWhen } from "@/functions/parse-when";
+import { parseWhen, type ParsedWhen } from "@/functions/parse-task";
 import { cn } from "@/lib/utils";
 
 export interface ComposerValues {

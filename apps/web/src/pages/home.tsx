@@ -11,7 +11,7 @@ import { WeekStrip } from "@/components/dashboard/week-strip";
 import { TaskComposer, type ComposerValues } from "@/components/dashboard/task-composer";
 import { createTask } from "@/functions/api";
 import { upsertTaskById } from "@/functions/functions";
-import type { ParsedWhen } from "@/functions/parse-when";
+import type { ParsedWhen } from "@/functions/parse-task";
 import { useEntitlements } from "@/hooks/useEntitlements";
 
 /** Altura viva de um elemento: CSS não enxerga a altura do irmão, e aqui duas posições dependem. */

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalize, parseDuration, parseWhen } from "./parse-when";
+import { normalize, parseDuration, parseTaskText, parseWhen } from "./parse-task";
 
 // Quarta-feira, 12 de agosto de 2026, 09:00.
 const NOW = new Date(2026, 7, 12, 9, 0);
@@ -338,5 +338,44 @@ describe("duração — rejeita falso positivo", () => {
   // intervalo — o parser não tem como saber que aqui "Y" conta pessoas, não horas, sem semântica.
   it("'das N as M <substantivo>' ainda é lido como intervalo — limitação documentada", () => {
     expect(parseDuration(normalize("das 3 as 5 pessoas"))?.duration).toBe("2h");
+  });
+});
+
+describe("parseTaskText — o pacote inteiro", () => {
+  const parse = (input: string) => parseTaskText(input, NOW);
+
+  it("frase completa: texto limpo e três campos", () => {
+    const r = parse("Reunião com o time das 15 às 16 meet.google.com/abc-defg");
+    expect(r.text).toBe("Reunião com o time");
+    expect(r.duration).toBe("1h");
+    expect(r.date?.getHours()).toBe(15);
+    expect(r.links).toEqual(["https://meet.google.com/abc-defg"]);
+  });
+
+  it("intervalo ganha do horário simples", () => {
+    const r = parse("call das 15 às 16");
+    expect(r.text).toBe("call");
+    expect(r.date?.getHours()).toBe(15);
+    expect(r.duration).toBe("1h");
+  });
+
+  it("sem duração no texto, duration é null", () => {
+    const r = parse("dentista hoje às 14h");
+    expect(r.text).toBe("dentista");
+    expect(r.duration).toBeNull();
+  });
+
+  it("frase sem tempo nenhum", () => {
+    const r = parse("comprar leite");
+    expect(r.text).toBe("comprar leite");
+    expect(r.date).toBeNull();
+  });
+
+  it("frase que é só tempo deixa o texto vazio", () => {
+    expect(parse("hoje às 16h").text).toBe("");
+  });
+
+  it("não deixa espaço duplo onde recortou", () => {
+    expect(parse("reunião hoje às 16:30 com o time").text).toBe("reunião com o time");
   });
 });
