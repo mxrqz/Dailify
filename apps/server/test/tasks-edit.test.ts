@@ -95,3 +95,73 @@ describe("PATCH /tasks/:id", () => {
     expect(saved?.completed).toEqual([111]);
   });
 });
+
+describe("PATCH /tasks/:id — links", () => {
+  it("aceita links validos", async () => {
+    await insertTask(env.DB, "u3", {
+      id: "edit-links-set",
+      title: "Set links",
+      description: "",
+      date: new Date(2026, 7, 5, 9).getTime(),
+      duration: "10m",
+      priority: 0,
+      repeat: "Off",
+      completed: [],
+    });
+    const res = await patch("edit-links-set", { links: ["https://meet.google.com/a"] });
+    expect(res.status).toBe(200);
+    const body = await res.json<{ task: Task }>();
+    expect(body.task.links).toEqual(["https://meet.google.com/a"]);
+  });
+
+  it("rejeita link invalido", async () => {
+    await insertTask(env.DB, "u3", {
+      id: "edit-links-invalid",
+      title: "Bad link",
+      description: "",
+      date: new Date(2026, 7, 5, 9).getTime(),
+      duration: "10m",
+      priority: 0,
+      repeat: "Off",
+      completed: [],
+    });
+    const res = await patch("edit-links-invalid", { links: ["javascript:alert(1)"] });
+    expect(res.status).toBe(400);
+  });
+
+  it("campo ausente nao apaga links existentes", async () => {
+    await insertTask(env.DB, "u3", {
+      id: "edit-links-untouched",
+      title: "Keeps links",
+      description: "",
+      date: new Date(2026, 7, 5, 9).getTime(),
+      duration: "10m",
+      priority: 0,
+      repeat: "Off",
+      completed: [],
+      links: ["https://x.com"],
+    });
+    const res = await patch("edit-links-untouched", { title: "Renamed" });
+    expect(res.status).toBe(200);
+    const body = await res.json<{ task: Task }>();
+    expect(body.task.links).toEqual(["https://x.com"]);
+  });
+
+  it("array vazio explicito limpa os links", async () => {
+    await insertTask(env.DB, "u3", {
+      id: "edit-links-clear",
+      title: "Clears links",
+      description: "",
+      date: new Date(2026, 7, 5, 9).getTime(),
+      duration: "10m",
+      priority: 0,
+      repeat: "Off",
+      completed: [],
+      links: ["https://x.com"],
+    });
+    const res = await patch("edit-links-clear", { links: [] });
+    expect(res.status).toBe(200);
+    const body = await res.json<{ task: Task }>();
+    expect(body.task.links).toBeUndefined();
+  });
+});

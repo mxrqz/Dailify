@@ -96,3 +96,50 @@ describe("POST /tasks", () => {
     expect(body.error).toBe("Monthly Tasks Limit Reached");
   });
 });
+
+describe("POST /tasks — links", () => {
+  // Record<string, unknown> em vez de TaskInput: os casos de payload invalido (links: 42,
+  // links: "string") nao tipam contra TaskInput de proposito — o ponto do teste e mandar lixo.
+  const post = (body: Record<string, unknown>) =>
+    app.request(
+      "/tasks",
+      { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
+      env,
+    );
+
+  it("aceita http e https", async () => {
+    role = "pro";
+    const res = await post({
+      ...taskInput(),
+      links: ["https://meet.google.com/a", "http://x.com"],
+    });
+    expect(res.status).toBe(200);
+    const { task } = await res.json<{ task: Task }>();
+    expect(task.links).toEqual(["https://meet.google.com/a", "http://x.com"]);
+  });
+
+  it.each([
+    ["javascript:", ["javascript:alert(1)"]],
+    ["data:", ["data:text/html,<script>alert(1)</script>"]],
+    ["string solta", ["nao e url"]],
+    ["nao-array", "https://x.com"],
+    ["item nao-string", [42]],
+    ["credencial embutida", ["https://user:pass@evil.com"]],
+    ["spoof tipo paypal.com@evil.com", ["https://paypal.com@evil.com"]],
+  ])("rejeita %s", async (_label, links) => {
+    role = "pro";
+    const res = await post({ ...taskInput(), links });
+    expect(res.status).toBe(400);
+  });
+
+  it("rejeita mais de 10 links", async () => {
+    role = "pro";
+    const links = Array.from({ length: 11 }, (_, i) => `https://x.com/${i}`);
+    expect((await post({ ...taskInput(), links })).status).toBe(400);
+  });
+
+  it("sem links continua criando", async () => {
+    role = "pro";
+    expect((await post(taskInput())).status).toBe(200);
+  });
+});
