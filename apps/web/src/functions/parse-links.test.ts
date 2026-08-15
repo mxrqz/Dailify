@@ -34,6 +34,9 @@ describe("ignora", () => {
     "comprar 2.5kg de arroz",
     "reunião com o time",
     "custou R$ 19.90",
+    "e-mail do fulano@empresa.com",
+    "manda um email pra fulano@empresa.com sobre X",
+    "contato joao.silva@gmail.com",
   ])("%j", (input) => {
     expect(urls(input)).toEqual([]);
   });
@@ -60,6 +63,15 @@ describe("TLD ambiguo com extensao de arquivo (so)", () => {
 
   it("com query mas sem path vira link", () => {
     expect(urls("entrar em notion.so?ref=abc")).toEqual(["https://notion.so?ref=abc"]);
+  });
+});
+
+describe("URLs coladas por virgula", () => {
+  it("separa em dois links", () => {
+    expect(urls("ver youtube.com/a,youtube.com/b")).toEqual([
+      "https://youtube.com/a",
+      "https://youtube.com/b",
+    ]);
   });
 });
 

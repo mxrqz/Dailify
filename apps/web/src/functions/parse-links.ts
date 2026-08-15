@@ -32,8 +32,13 @@ function toAbsolute(candidate: string): string | null {
   const withScheme = SCHEME_RE.test(candidate) ? candidate : `https://${candidate}`;
   if (!URL.canParse(withScheme)) return null;
 
-  const { protocol, hostname, pathname, search } = new URL(withScheme);
+  const { protocol, hostname, pathname, search, username } = new URL(withScheme);
   if (protocol !== "http:" && protocol !== "https:") return null;
+
+  // Sem esquema, "@" é e-mail (fulano@empresa.com), não link — a URL WHATWG lê como userinfo e
+  // deixaria passar. Credencial em URL com esquema explícito (https://user:pass@host) fica pra
+  // validação do servidor, não é problema deste detector.
+  if (!SCHEME_RE.test(candidate) && username) return null;
 
   // Sem esquema e sem "www.", só passa com TLD da allowlist — é o que separa "youtube.com/x"
   // (link) de "main.ts" (nome de arquivo).
@@ -54,7 +59,9 @@ export function parseLinks(input: string): { urls: string[]; spans: Span[] } {
   const urls: string[] = [];
   const spans: Span[] = [];
 
-  for (const match of input.matchAll(/\S+/g)) {
+  // Vírgula também separa token: "a.com,b.com" sem espaço são dois links colados, não um path com
+  // vírgula. Custo aceito: uma URL real com vírgula no path/query (rara) perde o pedaço depois dela.
+  for (const match of input.matchAll(/[^\s,]+/g)) {
     const raw = match[0];
     const start = match.index ?? 0;
 
