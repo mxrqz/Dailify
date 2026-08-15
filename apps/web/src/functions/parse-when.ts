@@ -171,11 +171,13 @@ const MONTHS: Record<string, number> = {
  */
 export function normalize(input: string): string {
   return input
-    .toLowerCase()
     .split("")
     .map((char) => {
-      const stripped = char.normalize("NFD").replace(/[̀-ͯ]/g, "");
-      // "ﬁ" e afins expandem em NFD; só aceita a troca quando continua sendo um char.
+      // toLowerCase() na string inteira expandiria "İ" pra 2 chars antes do guard entrar em
+      // jogo; lowercasing por char mantém o guard abaixo como única porta de saída.
+      const lower = char.toLowerCase();
+      const stripped = lower.normalize("NFD").replace(/[̀-ͯ]/g, "");
+      // "ﬁ" e afins podem expandir em NFD/lowercase; só aceita a troca quando volta a 1 char.
       const base = stripped.length === 1 ? stripped : char;
       return /[-–—'’]/.test(base) ? " " : base;
     })

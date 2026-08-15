@@ -206,12 +206,20 @@ describe("normalize — preserva comprimento", () => {
     "reunião  com   espaço  duplo",
     "  espaço nas pontas  ",
     "hífen-no-meio e apóstrofo'aqui",
+    "İ",
+    "İstanbul amanhã",
+    "café 😀 depois de amanhã",
+    "ﬁnal de semana",
   ])("mantém o comprimento de %j", (input) => {
     expect(normalize(input)).toHaveLength(input.length);
   });
 
   it("continua tirando acento, caixa e hífen", () => {
     expect(normalize("Reunião-Geral")).toBe("reuniao geral");
+  });
+
+  it("İ (I maiusculo turco com ponto) vira i sem expandir pra 2 chars", () => {
+    expect(normalize("İstanbul")).toBe("istanbul");
   });
 
   it("o índice de um match no normalizado vale no original", () => {
