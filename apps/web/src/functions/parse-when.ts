@@ -164,15 +164,22 @@ const MONTHS: Record<string, number> = {
   dec: 11,
 };
 
-/** minúsculas, sem acento, hífens e apóstrofos viram espaço, espaços colapsados. */
+/**
+ * minúsculas, sem acento, hífens e apóstrofos viram espaço — **1 char entra, 1 char sai**.
+ * O comprimento é contrato: os detectores medem spans no texto normalizado e o recorte acontece
+ * no original. Colapsar espaço ou dar trim aqui desalinharia os dois.
+ */
 export function normalize(input: string): string {
   return input
     .toLowerCase()
-    .normalize("NFD")
-    .replace(/[̀-ͯ]/g, "")
-    .replace(/[-–—'’]/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
+    .split("")
+    .map((char) => {
+      const stripped = char.normalize("NFD").replace(/[̀-ͯ]/g, "");
+      // "ﬁ" e afins expandem em NFD; só aceita a troca quando continua sendo um char.
+      const base = stripped.length === 1 ? stripped : char;
+      return /[-–—'’]/.test(base) ? " " : base;
+    })
+    .join("");
 }
 
 const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());

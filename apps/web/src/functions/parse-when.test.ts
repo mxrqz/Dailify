@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { parseWhen } from "./parse-when";
+import { normalize, parseWhen } from "./parse-when";
 
 // Quarta-feira, 12 de agosto de 2026, 09:00.
 const NOW = new Date(2026, 7, 12, 9, 0);
@@ -195,5 +195,28 @@ describe("limites", () => {
   it("ignora data impossível", () => {
     expect(parseWhen("32/08", NOW)).toBeNull();
     expect(parseWhen("dia 45", NOW)).toBeNull();
+  });
+});
+
+describe("normalize — preserva comprimento", () => {
+  it.each([
+    "reunião com o time hoje às 16:30",
+    "café da manhã amanhã",
+    "ação urgentíssima",
+    "reunião  com   espaço  duplo",
+    "  espaço nas pontas  ",
+    "hífen-no-meio e apóstrofo'aqui",
+  ])("mantém o comprimento de %j", (input) => {
+    expect(normalize(input)).toHaveLength(input.length);
+  });
+
+  it("continua tirando acento, caixa e hífen", () => {
+    expect(normalize("Reunião-Geral")).toBe("reuniao geral");
+  });
+
+  it("o índice de um match no normalizado vale no original", () => {
+    const original = "reunião hoje às 16:30";
+    const index = normalize(original).indexOf("hoje");
+    expect(original.slice(index, index + 4)).toBe("hoje");
   });
 });
