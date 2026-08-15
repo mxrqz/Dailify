@@ -228,3 +228,33 @@ describe("normalize — preserva comprimento", () => {
     expect(original.slice(index, index + 4)).toBe("hoje");
   });
 });
+
+/** O que sobra do input depois de tirar os spans — é o que o título vai virar. */
+const rest = (input: string) => {
+  const parsed = parseWhen(input, NOW);
+  if (!parsed) return input;
+  let out = input;
+  for (const [start, end] of [...parsed.spans].sort((a, b) => b[0] - a[0])) {
+    out = out.slice(0, start) + out.slice(end);
+  }
+  return out.replace(/\s+/g, " ").trim();
+};
+
+describe("spans — o que sobra depois do recorte", () => {
+  it.each([
+    ["reunião hoje", "reunião"],
+    ["reunião hoje às 16:30", "reunião"],
+    ["dentista amanhã de manhã", "dentista"],
+    ["call amanhã às 9 da noite", "call"],
+    ["comprar pão dia 15", "comprar pão"],
+    ["retro sexta que vem", "retro"],
+  ])("%j → %j", (input, expected) => {
+    expect(rest(input)).toBe(expected);
+  });
+
+  it("span aponta pro trecho certo do input original, com acento antes", () => {
+    const parsed = parseWhen("reunião hoje", NOW);
+    const [start, end] = parsed!.spans[0];
+    expect("reunião hoje".slice(start, end)).toBe("hoje");
+  });
+});

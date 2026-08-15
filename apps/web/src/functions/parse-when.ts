@@ -12,6 +12,26 @@ export interface ParsedWhen {
   date: Date;
   hasDay: boolean;
   hasTime: boolean;
+  spans: Span[];
+}
+
+export type Span = [number, number];
+
+/** Valor + os trechos do texto que o produziram. `spans` vazio = veio de lugar nenhum. */
+interface Hit<T> {
+  value: T;
+  spans: Span[];
+}
+
+/** O span de um `String.match`. */
+function spanOf(match: RegExpMatchArray): Span {
+  const start = match.index ?? 0;
+  return [start, start + match[0].length];
+}
+
+/** Embrulha o resultado de um `String.match` com o span dele. */
+function hit<T>(match: RegExpMatchArray, value: T, extra: Span[] = []): Hit<T> {
+  return { value, spans: [spanOf(match), ...extra] };
 }
 
 /** Horas assumidas quando o texto dá só o período ("amanhã de manhã", "tonight"). */
@@ -203,6 +223,9 @@ const NEXT_RE = /\b(proxim[ao]|que\s+vem|next)\b/;
 
 const MINUTE_SUFFIX_RE = `(?:\\s+(?:e|and)\\s+(${MINUTE_WORD_RE}|\\d{1,2}))?`;
 
+// "às"/"at" logo antes da hora: sem isso no span, "hoje às 16:30" recorta só "16:30" e deixa "às" no título.
+const CONNECTOR_RE = "(?:\\b(?:as|at)\\s+)?";
+
 /** Os minutos de um "… e meia" / "… e 15"; 0 quando o sufixo não veio. */
 function suffixMinutes(raw: string | undefined): number {
   if (!raw) return 0;
@@ -225,14 +248,17 @@ interface Time {
  * - **Outro dia**: leitura literal, que é o que "amanhã às 9" quer dizer (9h da manhã) — exceto
  *   1h–7h, que viram tarde/noite, porque tarefa de madrugada é rara.
  */
-function applyMeridiem(time: Time, text: string, now: Date, baseIsToday: boolean): Time {
-  const isPM =
-    /\b(da|de|a|na|at|in|this)\s+(tarde|noite|afternoon|evening|night)\b|\d\s*pm\b|\bpm\b|\btonight\b/.test(
-      text,
-    );
-  const isAM = /\b(da|de|a|na|at|in|this)\s+(manha|madrugada|morning|dawn)\b|\d\s*am\b|\bam\b/.test(
-    text,
+function applyMeridiem(time: Time, text: string, now: Date, baseIsToday: boolean): Hit<Time> {
+  const pm = text.match(
+    /\b(da|de|a|na|at|in|this)\s+(tarde|noite|afternoon|evening|night)\b|\d\s*pm\b|\bpm\b|\btonight\b/,
   );
+  const am = text.match(
+    /\b(da|de|a|na|at|in|this)\s+(manha|madrugada|morning|dawn)\b|\d\s*am\b|\bam\b/,
+  );
+  const period = periodHour(text);
+
+  const isPM = pm !== null;
+  const isAM = am !== null;
 
   let { hour } = time;
   const { minute } = time;
@@ -259,19 +285,33 @@ function applyMeridiem(time: Time, text: string, now: Date, baseIsToday: boolean
     }
   }
 
-  return { hour: hour === 24 ? 0 : hour, minute };
+  // A regra de conversão em si não muda — só passa a carregar de onde a pista veio.
+  const spans: Span[] = [];
+  if (pm) spans.push(spanOf(pm));
+  if (am) spans.push(spanOf(am));
+  if (period) spans.push(...period.spans);
+
+  return { value: { hour: hour === 24 ? 0 : hour, minute }, spans };
 }
 
-function periodHour(text: string): number | null {
-  if (/\b(tonight|esta\s+noite|a\s+noite|da\s+noite|de\s+noite|evening|at\s+night)\b/.test(text))
-    return PERIOD_HOURS.evening;
-  if (/\b(de\s+manha|da\s+manha|pela\s+manha|morning)\b/.test(text)) return PERIOD_HOURS.morning;
-  if (/\b(a\s+tarde|de\s+tarde|da\s+tarde|afternoon)\b/.test(text)) return PERIOD_HOURS.afternoon;
-  if (/\b(de\s+madrugada|da\s+madrugada|dawn)\b/.test(text)) return PERIOD_HOURS.dawn;
+function periodHour(text: string): Hit<number> | null {
+  const patterns: [RegExp, number][] = [
+    [
+      /\b(tonight|esta\s+noite|a\s+noite|da\s+noite|de\s+noite|evening|at\s+night)\b/,
+      PERIOD_HOURS.evening,
+    ],
+    [/\b(de\s+manha|da\s+manha|pela\s+manha|morning)\b/, PERIOD_HOURS.morning],
+    [/\b(a\s+tarde|de\s+tarde|da\s+tarde|afternoon)\b/, PERIOD_HOURS.afternoon],
+    [/\b(de\s+madrugada|da\s+madrugada|dawn)\b/, PERIOD_HOURS.dawn],
+  ];
+  for (const [re, hour] of patterns) {
+    const match = text.match(re);
+    if (match) return hit(match, hour);
+  }
   return null;
 }
 
-function parseTime(text: string, now: Date, baseIsToday: boolean): Time | null {
+function parseTime(text: string, now: Date, baseIsToday: boolean): Hit<Time> | null {
   // daqui a 2 horas · in 90 minutes
   const relative = text.match(
     /\b(?:daqui\s+a|em|in)\s+(\d{1,3})\s*(h|hs|horas?|hours?|min|minutos?|minutes?)\b/,
@@ -280,48 +320,63 @@ function parseTime(text: string, now: Date, baseIsToday: boolean): Time | null {
     const amount = Number(relative[1]);
     const isMinutes = /^min/.test(relative[2]);
     const target = new Date(now.getTime() + amount * (isMinutes ? 60_000 : 3_600_000));
-    return { hour: target.getHours(), minute: target.getMinutes() };
+    return hit(relative, { hour: target.getHours(), minute: target.getMinutes() });
   }
 
   // "meio dia e meia" é 12:30 — o sufixo tem que entrar aqui, senão o atalho engole os minutos.
-  const noon = text.match(new RegExp(`\\b(?:meio\\s*dia|noon|midday)\\b${MINUTE_SUFFIX_RE}`));
-  if (noon) return { hour: 12, minute: suffixMinutes(noon[1]) };
+  const noon = text.match(
+    new RegExp(`${CONNECTOR_RE}\\b(?:meio\\s*dia|noon|midday)\\b${MINUTE_SUFFIX_RE}`),
+  );
+  if (noon) return hit(noon, { hour: 12, minute: suffixMinutes(noon[1]) });
 
-  const midnight = text.match(new RegExp(`\\b(?:meia\\s*noite|midnight)\\b${MINUTE_SUFFIX_RE}`));
-  if (midnight) return { hour: 0, minute: suffixMinutes(midnight[1]) };
+  const midnight = text.match(
+    new RegExp(`${CONNECTOR_RE}\\b(?:meia\\s*noite|midnight)\\b${MINUTE_SUFFIX_RE}`),
+  );
+  if (midnight) return hit(midnight, { hour: 0, minute: suffixMinutes(midnight[1]) });
 
   // 14:30 · 14h30 · 14.30 · 14,30
-  const withMinutes = text.match(/\b(\d{1,2})\s*[:h.,]\s*(\d{2})\b/);
+  const withMinutes = text.match(
+    new RegExp(`${CONNECTOR_RE}\\b(\\d{1,2})\\s*[:h.,]\\s*(\\d{2})\\b`),
+  );
   if (withMinutes) {
     const hour = Number(withMinutes[1]);
     const minute = Number(withMinutes[2]);
-    if (hour <= 24 && minute < 60) return applyMeridiem({ hour, minute }, text, now, baseIsToday);
+    if (hour <= 24 && minute < 60) {
+      const meridiem = applyMeridiem({ hour, minute }, text, now, baseIsToday);
+      return hit(withMinutes, meridiem.value, meridiem.spans);
+    }
   }
 
   // 14 e 30 · 2 e meia
   const withSpelledMinutes = text.match(
-    new RegExp(`\\b(\\d{1,2})\\s+e\\s+(\\d{1,2}|${MINUTE_WORD_RE})\\b`),
+    new RegExp(`${CONNECTOR_RE}\\b(\\d{1,2})\\s+e\\s+(\\d{1,2}|${MINUTE_WORD_RE})\\b`),
   );
   if (withSpelledMinutes) {
     const hour = Number(withSpelledMinutes[1]);
     const raw = withSpelledMinutes[2].replace(/\s+/g, " ");
     const minute = /^\d+$/.test(raw) ? Number(raw) : MINUTE_WORDS[raw];
-    if (hour <= 24 && minute !== undefined && minute < 60)
-      return applyMeridiem({ hour, minute }, text, now, baseIsToday);
+    if (hour <= 24 && minute !== undefined && minute < 60) {
+      const meridiem = applyMeridiem({ hour, minute }, text, now, baseIsToday);
+      return hit(withSpelledMinutes, meridiem.value, meridiem.spans);
+    }
   }
 
   // half past two · quarter past two · quarter to three
   const past = text.match(
-    new RegExp(`\\b(${MINUTE_WORD_RE})\\s+(past|to)\\s+(${HOUR_WORD_RE}|\\d{1,2})\\b`),
+    new RegExp(
+      `${CONNECTOR_RE}\\b(${MINUTE_WORD_RE})\\s+(past|to)\\s+(${HOUR_WORD_RE}|\\d{1,2})\\b`,
+    ),
   );
   if (past) {
     const offset = MINUTE_WORDS[past[1].replace(/\s+/g, " ")];
     const rawHour = past[3].replace(/\s+/g, " ");
     const hour = /^\d+$/.test(rawHour) ? Number(rawHour) : HOUR_WORDS[rawHour];
     if (offset !== undefined && hour !== undefined) {
-      return past[2] === "past"
-        ? applyMeridiem({ hour, minute: offset }, text, now, baseIsToday)
-        : applyMeridiem({ hour: (hour + 23) % 24, minute: 60 - offset }, text, now, baseIsToday);
+      const meridiem =
+        past[2] === "past"
+          ? applyMeridiem({ hour, minute: offset }, text, now, baseIsToday)
+          : applyMeridiem({ hour: (hour + 23) % 24, minute: 60 - offset }, text, now, baseIsToday);
+      return hit(past, meridiem.value, meridiem.spans);
     }
   }
 
@@ -332,31 +387,48 @@ function parseTime(text: string, now: Date, baseIsToday: boolean): Time | null {
   if (wholeHour) {
     const digits = wholeHour.slice(1).find((group) => group !== undefined);
     const hour = Number(digits);
-    if (hour <= 24) return applyMeridiem({ hour, minute: 0 }, text, now, baseIsToday);
+    if (hour <= 24) {
+      const meridiem = applyMeridiem({ hour, minute: 0 }, text, now, baseIsToday);
+      return hit(wholeHour, meridiem.value, meridiem.spans);
+    }
   }
 
   // duas · duas e meia · two thirty · two o clock
   const spelled = text.match(
-    new RegExp(`\\b(${HOUR_WORD_RE})\\b(?:\\s+(?:e\\s+)?(${MINUTE_WORD_RE})\\b)?`),
+    new RegExp(`${CONNECTOR_RE}\\b(${HOUR_WORD_RE})\\b(?:\\s+(?:e\\s+)?(${MINUTE_WORD_RE})\\b)?`),
   );
   if (spelled) {
     const hour = HOUR_WORDS[spelled[1].replace(/\s+/g, " ")];
     const minute = spelled[2] ? MINUTE_WORDS[spelled[2].replace(/\s+/g, " ")] : 0;
-    if (hour !== undefined) return applyMeridiem({ hour, minute }, text, now, baseIsToday);
+    if (hour !== undefined) {
+      const meridiem = applyMeridiem({ hour, minute }, text, now, baseIsToday);
+      return hit(spelled, meridiem.value, meridiem.spans);
+    }
   }
 
   // "amanhã de manhã": o período é a única pista de horário
   const period = periodHour(text);
-  return period === null ? null : { hour: period, minute: 0 };
+  return period === null ? null : { value: { hour: period.value, minute: 0 }, spans: period.spans };
 }
 
-function parseDay(text: string, now: Date): Date | null {
-  if (/\b(hoje|hj|today)\b/.test(text)) return startOfDay(now);
-  if (/\b(depois\s+de\s+amanha|day\s+after\s+tomorrow)\b/.test(text)) return addDays(now, 2);
-  if (/\b(amanha|amanhã|tomorrow|tmr)\b/.test(text)) return addDays(now, 1);
-  if (/\b(anteontem|day\s+before\s+yesterday)\b/.test(text)) return addDays(now, -2);
-  if (/\b(ontem|yesterday)\b/.test(text)) return addDays(now, -1);
-  if (/\btonight\b|\besta\s+noite\b/.test(text)) return startOfDay(now);
+function parseDay(text: string, now: Date): Hit<Date> | null {
+  const today = text.match(/\b(hoje|hj|today)\b/);
+  if (today) return hit(today, startOfDay(now));
+
+  const dayAfterTomorrow = text.match(/\b(depois\s+de\s+amanha|day\s+after\s+tomorrow)\b/);
+  if (dayAfterTomorrow) return hit(dayAfterTomorrow, addDays(now, 2));
+
+  const tomorrow = text.match(/\b(amanha|amanhã|tomorrow|tmr)\b/);
+  if (tomorrow) return hit(tomorrow, addDays(now, 1));
+
+  const dayBeforeYesterday = text.match(/\b(anteontem|day\s+before\s+yesterday)\b/);
+  if (dayBeforeYesterday) return hit(dayBeforeYesterday, addDays(now, -2));
+
+  const yesterday = text.match(/\b(ontem|yesterday)\b/);
+  if (yesterday) return hit(yesterday, addDays(now, -1));
+
+  const tonight = text.match(/\btonight\b|\besta\s+noite\b/);
+  if (tonight) return hit(tonight, startOfDay(now));
 
   // daqui a 3 dias · in 2 weeks
   const relative = text.match(
@@ -364,7 +436,8 @@ function parseDay(text: string, now: Date): Date | null {
   );
   if (relative) {
     const amount = Number(relative[1]);
-    return addDays(now, /^(semana|week)/.test(relative[2]) ? amount * 7 : amount);
+    const days = /^(semana|week)/.test(relative[2]) ? amount * 7 : amount;
+    return hit(relative, addDays(now, days));
   }
 
   // 15/08 · 15/08/2026 · 15/8
@@ -375,20 +448,21 @@ function parseDay(text: string, now: Date): Date | null {
     const rawYear = numeric[3] ? Number(numeric[3]) : now.getFullYear();
     const year = rawYear < 100 ? 2000 + rawYear : rawYear;
     const date = new Date(year, month, day);
-    if (date.getDate() === day && date.getMonth() === month) return date;
+    if (date.getDate() === day && date.getMonth() === month) return hit(numeric, date);
   }
 
   // 15 de agosto · 15 ago · august 15
   const dayFirst = text.match(new RegExp(`\\b(\\d{1,2})\\s+(?:de\\s+)?(${MONTH_RE})\\b`));
   const monthFirst = text.match(new RegExp(`\\b(${MONTH_RE})\\s+(\\d{1,2})\\b`));
+  const namedMatch = dayFirst ?? monthFirst;
   const named = dayFirst
     ? { day: Number(dayFirst[1]), month: MONTHS[dayFirst[2]] }
     : monthFirst
       ? { day: Number(monthFirst[2]), month: MONTHS[monthFirst[1]] }
       : null;
-  if (named) {
+  if (named && namedMatch) {
     const date = new Date(now.getFullYear(), named.month, named.day);
-    if (date.getDate() === named.day) return date;
+    if (date.getDate() === named.day) return hit(namedMatch, date);
   }
 
   // segunda · terça-feira · next friday — a próxima ocorrência (hoje conta como ela mesma)
@@ -396,13 +470,17 @@ function parseDay(text: string, now: Date): Date | null {
   if (weekday) {
     const target = WEEKDAYS[weekday[1]];
     const delta = (target - now.getDay() + 7) % 7;
-    // "próxima terça" pula pra semana seguinte; "terça" seca é a mais próxima.
-    const isNext = NEXT_RE.test(text);
-    return addDays(now, isNext ? delta + 7 : delta);
+    // "próxima terça" pula pra semana seguinte; "terça" seca é a mais próxima — mas o span
+    // sempre inclui a pista de "próxima"/"que vem" quando ela apareceu, senão sobra no título.
+    const next = text.match(NEXT_RE);
+    const date = addDays(now, next ? delta + 7 : delta);
+    return hit(weekday, date, next ? [spanOf(next)] : []);
   }
 
   // semana que vem · next week, sem dia da semana junto
-  if (NEXT_RE.test(text) && /\b(semana|week)\b/.test(text)) return addDays(now, 7);
+  const nextWord = text.match(NEXT_RE);
+  const weekWord = text.match(/\b(semana|week)\b/);
+  if (nextWord && weekWord) return hit(nextWord, addDays(now, 7), [spanOf(weekWord)]);
 
   // dia 15 — este mês se ainda não passou, senão o mês que vem
   const monthDay = text.match(/\b(?:dia|day)\s+(\d{1,2})\b/);
@@ -410,9 +488,11 @@ function parseDay(text: string, now: Date): Date | null {
     const day = Number(monthDay[1]);
     const thisMonth = new Date(now.getFullYear(), now.getMonth(), day);
     if (thisMonth.getDate() !== day) return null;
-    return thisMonth >= startOfDay(now)
-      ? thisMonth
-      : new Date(now.getFullYear(), now.getMonth() + 1, day);
+    const date =
+      thisMonth >= startOfDay(now)
+        ? thisMonth
+        : new Date(now.getFullYear(), now.getMonth() + 1, day);
+    return hit(monthDay, date);
   }
 
   return null;
@@ -420,10 +500,10 @@ function parseDay(text: string, now: Date): Date | null {
 
 export function parseWhen(input: string, now: Date = new Date()): ParsedWhen | null {
   const text = normalize(input);
-  if (!text) return null;
+  if (!text.trim()) return null;
 
   const day = parseDay(text, now);
-  const base = day ?? startOfDay(now);
+  const base = day?.value ?? startOfDay(now);
   const baseIsToday = base.getTime() === startOfDay(now).getTime();
 
   const time = parseTime(text, now, baseIsToday);
@@ -432,9 +512,14 @@ export function parseWhen(input: string, now: Date = new Date()): ParsedWhen | n
     base.getFullYear(),
     base.getMonth(),
     base.getDate(),
-    time?.hour ?? 0,
-    time?.minute ?? 0,
+    time?.value.hour ?? 0,
+    time?.value.minute ?? 0,
   );
 
-  return { date, hasDay: day !== null, hasTime: time !== null };
+  return {
+    date,
+    hasDay: day !== null,
+    hasTime: time !== null,
+    spans: [...(day?.spans ?? []), ...(time?.spans ?? [])],
+  };
 }
