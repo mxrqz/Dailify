@@ -33,8 +33,8 @@ export function AuthShell({
   return (
     <main className="relative grid min-h-dvh place-items-center bg-surface-page px-4 py-24">
       <div className="relative w-full max-w-[380px]">
-        <div className="absolute bottom-full left-1/2 mb-10 -translate-x-1/2">
-          <Brand to="/" />
+        <div className="absolute bottom-full left-1/2 mb-6 -translate-x-1/2">
+          <Brand to="/" iconOnly />
         </div>
 
         {title && (
