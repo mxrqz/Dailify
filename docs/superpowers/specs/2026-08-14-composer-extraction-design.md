@@ -83,8 +83,12 @@ export function parseTaskText(input: string, now?: Date): ParsedTask;
 ```
 
 Por dentro são **três detectores independentes** — tempo, duração/intervalo, link. Cada um devolve
-`{ value, span: [início, fim] }` em vez de mexer no texto, e um passo final recorta todos os spans
-de uma vez.
+`{ value, spans: [[início, fim], …] }` em vez de mexer no texto, e um passo final recorta todos os
+spans de uma vez.
+
+São *vários* spans por detector, não um, porque um achado nem sempre é contíguo: o meridiano é
+casado separado do horário (`applyMeridiem`, `parse-when.ts:219`), então "amanhã às 9 da noite"
+produz um span pra "às 9" e outro pra "da noite". Com um span só, "da noite" sobraria no título.
 
 A razão é operacional: se cada detector recortasse na sua vez, o segundo receberia uma frase
 mutilada pelo primeiro e os índices do terceiro apontariam pro lugar errado. Com spans, os três
