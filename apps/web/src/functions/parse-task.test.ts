@@ -352,6 +352,11 @@ describe("intervalo — prefixo e conector misturados", () => {
     "páginas de 15 a 20",
     "de 15/08 a 16/08",
     "férias de 10 a 20 de agosto",
+    // "ate" e generico ("de 10 ate 20 paginas") — sem marca de hora (h ou :mm) de nenhum lado,
+    // soltar o pareamento prefixo/conector nao pode reabrir esse falso positivo.
+    "resolver questões das 5 até 10",
+    "corrigir provas das 5 até 10",
+    "revisar questões das 2 até 8",
   ])("%j continua não sendo intervalo", (input) => {
     expect(parseDuration(normalize(input))).toBeNull();
   });
@@ -518,6 +523,10 @@ describe("preposição órfã na fronteira do corte", () => {
     ["call na meet.google.com/abc amanhã", "call"],
     ["daily em meet.google.com/abc hoje", "daily"],
     ["assistir pelo youtube.com/watch?v=1 hoje", "assistir"],
+    // "meet.google.com/abc" e um token so pro parseLinks — o link inteiro sai, "meet" nao sobrevive
+    // separado. O "no" perde o referente aqui tanto quanto no fim de frase: sobra "com o time"
+    // depois, mas isso nao e o que "no" apontava — a regra nao pode depender de ser o ultimo corte.
+    ["reunião no meet.google.com/abc com o time hoje", "reunião com o time"],
   ])("%j → %j", (input, expected) => {
     expect(parseTaskText(input, NOW).text).toBe(expected);
   });
@@ -526,10 +535,6 @@ describe("preposição órfã na fronteira do corte", () => {
     ["comprar pão no mercado hoje", "comprar pão no mercado"],
     ["reunião na sala 3 amanhã", "reunião na sala 3"],
     ["deixar com o porteiro hoje", "deixar com o porteiro"],
-    // "meet.google.com/abc" e um token so pro parseLinks (sem espaco) — o link inteiro sai, "meet"
-    // nao sobrevive separado. O que este caso prova e o "no": ele fica, porque apos o corte do link
-    // ainda sobra "com o time" na mesma juncao, isLast e falso e a regra de preposicao orfa nem roda.
-    ["reunião no meet.google.com/abc com o time hoje", "reunião no com o time"],
   ])("%j → %j (não mexe no que não foi recortado)", (input, expected) => {
     expect(parseTaskText(input, NOW).text).toBe(expected);
   });

@@ -535,8 +535,9 @@ function formatDuration(totalMinutes: number): string {
 }
 
 // A unidade solta ("14h", sem minutos) faz parte do relógio: sem ela o `\s*(as|ate)` do intervalo
-// casa em cima do próprio "h" e "das 14h às 15h" deixa de ser intervalo.
-const CLOCK = String.raw`(\d{1,2})(?:\s*[:h.,]\s*(\d{2})|\s*h\b)?`;
+// casa em cima do próprio "h" e "das 14h às 15h" deixa de ser intervalo. O grupo em torno do "h"
+// solto (3º grupo) existe só pra dar pra saber, depois do match, se essa marca apareceu.
+const CLOCK = String.raw`(\d{1,2})(?:\s*[:h.,]\s*(\d{2})|\s*(h)\b)?`;
 
 /**
  * Intervalo primeiro, duração explícita depois. A ordem é a regra de precedência do spec: em
@@ -550,11 +551,15 @@ export function parseDuration(text: string): (ParsedDuration & { spans: Span[] }
     new RegExp(String.raw`\b(das|da|de)\s+${CLOCK}\s*(as|ate)\s*${CLOCK}\b`),
   );
   if (range) {
-    const [, , hour1, minute1, , hour2, minute2] = range;
+    const [, , hour1, minute1, hMark1, connector, hour2, minute2, hMark2] = range;
     const startMinutes = Number(hour1) * 60 + Number(minute1 ?? 0);
     const endMinutes = Number(hour2) * 60 + Number(minute2 ?? 0);
+    // "às" só existe em português pra horário; "até" é genérico ("de 10 até 20 páginas") e exige
+    // marca de hora ("h" ou ":mm") de algum lado pra não confundir contagem com intervalo.
+    const hasClockMark = Boolean(minute1 || hMark1 || minute2 || hMark2);
+    const connectorOk = connector === "as" || hasClockMark;
     // Intervalo que "volta no tempo" é outra coisa (data numérica, placar, o que for) — não é nosso.
-    if (endMinutes > startMinutes && Number(hour1) <= 24 && Number(hour2) <= 24) {
+    if (connectorOk && endMinutes > startMinutes && Number(hour1) <= 24 && Number(hour2) <= 24) {
       return {
         spans: [spanOf(range)],
         duration: formatDuration(endMinutes - startMinutes),
@@ -637,7 +642,7 @@ export interface ParsedTask {
 const ORPHAN_PUNCT = /[,;.!?]/;
 
 // Preposição que só existia pra apontar pro trecho recortado ("reunião NO meet…"). Sem o trecho,
-// ela aponta pro nada. Só some quando nada sobra depois dela — senão é texto do usuário.
+// ela aponta pro nada — perde o referente no fim ou no meio da frase, não importa o que vem depois.
 const ORPHAN_PREP = /(?:^|\s)(no|na|nos|nas|em|pelo|pela|pelos|pelas|via|pro|pra|com|de|do|da)$/i;
 
 /**
@@ -673,11 +678,10 @@ function joinAcrossCut(left: string, right: string, isLast: boolean): string {
     return leftTrimmed.slice(0, -1);
   }
 
-  // mesma pre-condicao: corte ate o fim, nada a direita — a preposicao final perdeu o referente
-  if (isLast && !rightTrimmed) {
-    const withoutPrep = leftTrimmed.replace(ORPHAN_PREP, "");
-    if (withoutPrep !== leftTrimmed) return joinAcrossCut(withoutPrep, "", isLast);
-  }
+  // a preposicao logo antes do corte apontava pro trecho removido, nao pro que vem depois — perde
+  // o referente esteja o corte no fim da frase ou no meio, entao nao depende de isLast/rightTrimmed
+  const withoutPrep = leftTrimmed.replace(ORPHAN_PREP, "");
+  if (withoutPrep !== leftTrimmed) return joinAcrossCut(withoutPrep, rightTrimmed, isLast);
 
   // pontuacao colada logo depois do corte: sem espaco antes dela
   if (rightFirst && ORPHAN_PUNCT.test(rightFirst)) {
