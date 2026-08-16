@@ -335,6 +335,28 @@ describe("intervalo — início e duração no mesmo achado", () => {
   });
 });
 
+describe("intervalo — prefixo e conector misturados", () => {
+  it.each([
+    ["call de 14h às 15h", "1h", 14, 0],
+    ["call das 14h até 15h", "1h", 14, 0],
+    ["call de 14 às 15", "1h", 14, 0],
+    ["call das 9 até 10:30", "1h30m", 9, 0],
+  ])("%j → %s começando %d:%d", (input, duration, hour, minute) => {
+    const parsed = parseDuration(normalize(input));
+    expect(parsed?.duration).toBe(duration);
+    expect(parsed?.start).toEqual({ hour, minute });
+  });
+
+  it.each([
+    "jogo de 2 a 3",
+    "páginas de 15 a 20",
+    "de 15/08 a 16/08",
+    "férias de 10 a 20 de agosto",
+  ])("%j continua não sendo intervalo", (input) => {
+    expect(parseDuration(normalize(input))).toBeNull();
+  });
+});
+
 describe("duração — rejeita falso positivo", () => {
   it.each([
     // Critical 1: "Nh"/"NhNNm" solto é horário em pt-BR, não duração — precisa de "de/por/durante".
@@ -478,5 +500,14 @@ describe("parseTaskText — o pacote inteiro", () => {
     const r = parse("ver youtube.com/abc e youtube.com/abc");
     expect(r.links).toEqual(["https://youtube.com/abc"]);
     expect(r.text).toBe("ver e");
+  });
+});
+
+describe("intervalo misturado — título limpo", () => {
+  it.each([
+    ["call de 14h às 15h", "call"],
+    ["call das 14h até 15h", "call"],
+  ])("%j → %j", (input, expected) => {
+    expect(parseTaskText(input, NOW).text).toBe(expected);
   });
 });

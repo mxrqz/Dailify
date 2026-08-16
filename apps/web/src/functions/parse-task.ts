@@ -544,18 +544,17 @@ const CLOCK = String.raw`(\d{1,2})(?:\s*[:h.,]\s*(\d{2})|\s*h\b)?`;
  */
 export function parseDuration(text: string): (ParsedDuration & { spans: Span[] }) | null {
   // "-"/"—" nunca aparecem aqui: normalize() já trocou hífen e travessão por espaço antes do texto
-  // chegar. Prefixo e conector agora são obrigatórios E pareados ("das"/"da"+"as", "de"+"até") —
-  // um "a" pelado entre dois números (data, placar, contagem) não vira intervalo por acidente.
+  // chegar. Prefixo E conector são obrigatórios — é o conector que barra "jogo de 2 a 3"; exigir
+  // que combinem entre si só recusava "de 14h às 15h", que é português normal.
   const range = text.match(
     new RegExp(String.raw`\b(das|da|de)\s+${CLOCK}\s*(as|ate)\s*${CLOCK}\b`),
   );
   if (range) {
-    const [, prefix, hour1, minute1, connector, hour2, minute2] = range;
-    const pairValid = prefix === "de" ? connector === "ate" : connector === "as";
+    const [, , hour1, minute1, , hour2, minute2] = range;
     const startMinutes = Number(hour1) * 60 + Number(minute1 ?? 0);
     const endMinutes = Number(hour2) * 60 + Number(minute2 ?? 0);
     // Intervalo que "volta no tempo" é outra coisa (data numérica, placar, o que for) — não é nosso.
-    if (pairValid && endMinutes > startMinutes && Number(hour1) <= 24 && Number(hour2) <= 24) {
+    if (endMinutes > startMinutes && Number(hour1) <= 24 && Number(hour2) <= 24) {
       return {
         spans: [spanOf(range)],
         duration: formatDuration(endMinutes - startMinutes),
