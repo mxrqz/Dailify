@@ -5,6 +5,7 @@ import type { Repeat } from "@dailify/shared";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { LinksField } from "@/components/dashboard/links-field";
 import PriorityPicker from "@/components/ui/priority-picker";
 import TagsPicker from "@/components/ui/tags-picker";
 import RepeatPicker from "@/components/ui/repeat-picker";
@@ -21,6 +22,7 @@ export interface TaskFormValues {
   priority: number;
   tags?: string[];
   repeat: Repeat;
+  links?: string[];
 }
 
 interface TaskFormProps {
@@ -59,6 +61,10 @@ export function TaskForm({ id, task, defaultDate, className, onSubmit }: TaskFor
   const [priority, setPriority] = useState<number>(0);
   const [tags, setTags] = useState<string[]>();
   const [repeat, setRepeat] = useState<Repeat>();
+  // undefined (nao []) enquanto intocado, pra casar com task.links undefined: [] explicito so
+  // depois que o usuario mexe, e o servidor so limpa o campo quando recebe a chave "links" (ate
+  // que seja []) — mandar `undefined` no envio vira ausencia de chave no JSON e o PATCH ignora.
+  const [links, setLinks] = useState<string[] | undefined>(task?.links);
 
   useEffect(() => {
     if (task || !defaultDate) return;
@@ -92,6 +98,7 @@ export function TaskForm({ id, task, defaultDate, className, onSubmit }: TaskFor
       priority,
       tags,
       repeat,
+      links,
     });
   };
 
@@ -155,6 +162,13 @@ export function TaskForm({ id, task, defaultDate, className, onSubmit }: TaskFor
             </div>
           </TimeField>
         </div>
+      </div>
+
+      <div className="flex flex-col gap-1.5">
+        <Label htmlFor="links" className={labelClass}>
+          {copy.form.links}
+        </Label>
+        <LinksField value={links ?? []} onChange={setLinks} />
       </div>
 
       <div className="flex flex-col gap-1.5">

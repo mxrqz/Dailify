@@ -47,6 +47,7 @@ export default function NewTask({ className }: { className: string }) {
       tags: values.tags,
       priority: values.priority,
       repeat: values.repeat,
+      links: values.links,
     };
 
     setLoading(true);

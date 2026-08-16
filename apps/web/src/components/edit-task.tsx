@@ -99,6 +99,7 @@ export function EditTaskContent({
       priority: values.priority,
       repeat: values.repeat,
       alert: task.alert ?? values.date.getTime(),
+      links: values.links,
     };
 
     if (!isTaskModified(task, taskData)) {
