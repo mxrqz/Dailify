@@ -72,6 +72,7 @@ export function isTaskModified(task: TaskProps, updated: TaskProps): boolean {
   if (task.duration !== updated.duration) return true;
   if (task.priority !== updated.priority) return true;
   if (JSON.stringify(task.tags) !== JSON.stringify(updated.tags)) return true;
+  if (JSON.stringify(task.links) !== JSON.stringify(updated.links)) return true;
 
   if (task.date !== updated.date) return true;
   // alert falls back to date on both sides so a task without an alert isn't flagged as changed

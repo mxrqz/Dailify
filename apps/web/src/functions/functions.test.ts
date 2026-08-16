@@ -73,6 +73,31 @@ describe("isTaskModified", () => {
     const t = makeTask({ alert: new Date(2026, 7, 1, 9, 0).getTime() });
     expect(() => isTaskModified(t, { ...t, alert: undefined })).not.toThrow();
   });
+
+  test("adicionar link conta como alteração", () => {
+    const t = makeTask();
+    expect(isTaskModified(t, { ...t, links: ["https://x.com"] })).toBe(true);
+  });
+
+  test("remover link conta como alteração", () => {
+    const withLink = makeTask({ links: ["https://x.com"] });
+    expect(isTaskModified(withLink, { ...withLink, links: undefined })).toBe(true);
+  });
+
+  test("trocar a URL conta como alteração", () => {
+    const t = makeTask({ links: ["https://x.com"] });
+    expect(isTaskModified(t, { ...t, links: ["https://y.com"] })).toBe(true);
+  });
+
+  test("mesma lista não conta como alteração", () => {
+    const t = makeTask({ links: ["https://x.com", "https://y.com"] });
+    expect(isTaskModified(t, { ...t })).toBe(false);
+  });
+
+  test("sem links dos dois lados não conta como alteração", () => {
+    const t = makeTask();
+    expect(isTaskModified(t, { ...t })).toBe(false);
+  });
 });
 
 describe("getCompletionDate", () => {
