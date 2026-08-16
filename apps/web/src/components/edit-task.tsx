@@ -16,10 +16,11 @@ import { Button } from "./ui/button";
 import { updateTask } from "@/functions/api";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { Loader2 } from "lucide-react";
-import { isTaskModified, upsertTaskById } from "@/functions/functions";
+import { CheckIcon, Loader2, Trash2Icon } from "lucide-react";
+import { getCompletionDate, isTaskModified, upsertTaskById } from "@/functions/functions";
 import { TaskForm, TaskFormValues } from "@/components/dashboard/task-form";
 import { copy } from "@/components/dashboard/copy";
+import { useTaskActions } from "@/hooks/useTaskActions";
 
 type EditTaskProps = Record<string, never>;
 
@@ -55,13 +56,23 @@ export function EditTaskTrigger({ children }: { children: ReactNode }) {
   return <SheetTrigger asChild>{children}</SheetTrigger>;
 }
 
-export function EditTaskContent({ task }: { task: TaskProps }) {
+export function EditTaskContent({
+  task,
+  day,
+  onClose,
+}: {
+  task: TaskProps;
+  day: Date;
+  onClose: () => void;
+}) {
   const { tasks, setTasks } = useDailify();
   const { getToken } = useAuth();
   const { user } = useUser();
   const navigate = useNavigate();
   const formId = useId();
   const [loading, setLoading] = useState<boolean>(false);
+  const { onComplete, onDelete } = useTaskActions(task);
+  const completed = getCompletionDate(task, day) === true;
 
   const handleSubmit = async (values: TaskFormValues) => {
     if (!user) {
@@ -132,21 +143,48 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
         onSubmit={handleSubmit}
       />
 
-      <SheetFooter className="flex-row justify-end">
-        <SheetClose asChild>
-          <Button variant="ghost" className="cursor-pointer">
-            {copy.form.cancel}
-          </Button>
-        </SheetClose>
-
+      <SheetFooter className="flex-row items-center justify-between gap-2">
         <Button
-          type="submit"
-          form={formId}
-          className="cursor-pointer rounded-full bg-accent-primary px-5 text-primary-foreground hover:bg-accent-hover"
-          disabled={loading}
+          variant="ghost"
+          className="cursor-pointer gap-2 text-destructive hover:text-destructive"
+          onClick={() => {
+            void onDelete();
+            onClose();
+          }}
         >
-          {loading ? <Loader2 className="animate-spin" /> : copy.form.save}
+          <Trash2Icon className="size-4" />
+          {copy.task.delete}
         </Button>
+
+        <div className="flex items-center gap-2">
+          <SheetClose asChild>
+            <Button variant="ghost" className="cursor-pointer">
+              {copy.form.cancel}
+            </Button>
+          </SheetClose>
+
+          <Button
+            variant="ghost"
+            disabled={completed}
+            className="cursor-pointer gap-2"
+            onClick={() => {
+              void onComplete();
+              onClose();
+            }}
+          >
+            <CheckIcon className="size-4" />
+            {completed ? copy.task.completed : copy.task.complete}
+          </Button>
+
+          <Button
+            type="submit"
+            form={formId}
+            className="cursor-pointer rounded-full bg-accent-primary px-5 text-primary-foreground hover:bg-accent-hover"
+            disabled={loading}
+          >
+            {loading ? <Loader2 className="animate-spin" /> : copy.form.save}
+          </Button>
+        </div>
       </SheetFooter>
     </SheetContent>
   );

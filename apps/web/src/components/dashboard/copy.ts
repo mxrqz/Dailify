@@ -53,8 +53,8 @@ export const copy = {
   form: {
     newTitle: "Nova tarefa",
     newDescription: "Descreva o que precisa ser feito e quando.",
-    editTitle: "Editar tarefa",
-    editDescription: "Ajuste os detalhes e salve.",
+    editTitle: "Tarefa",
+    editDescription: "Edite e salve, ou conclua direto.",
     title: "Tarefa",
     titlePlaceholder: "O que precisa ser feito?",
     date: "Data",
@@ -124,11 +124,9 @@ export const copy = {
 
   task: {
     complete: "Concluir",
-    edit: "Editar",
     delete: "Excluir",
     options: "Opções da tarefa",
     completed: "Concluída",
-    noDescription: "Sem descrição.",
     completeError: "Não foi possível concluir a tarefa",
     deleteError: "Não foi possível excluir a tarefa",
   },

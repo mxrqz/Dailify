@@ -1,3 +1,4 @@
+import { useState } from "react";
 import { format, formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -29,6 +30,8 @@ interface TaskDetailViewProps {
 export function TaskDetailView({ task, className }: TaskDetailViewProps) {
   const { getToken } = useAuth();
   // const [isExpanded, setIsExpanded] = useState(false)
+  // Sheet controlada localmente: EditTaskContent agora exige onClose pra fechar após concluir/excluir.
+  const [editOpen, setEditOpen] = useState(false);
 
   const taskDate = new Date(task.date);
   const formattedDate = format(taskDate, "PPP", { locale: ptBR });
@@ -164,7 +167,7 @@ export function TaskDetailView({ task, className }: TaskDetailViewProps) {
       </CardContent>
 
       <CardFooter className="flex justify-between p-4 pt-0 w-full">
-        <EditTask>
+        <EditTask open={editOpen} onOpenChange={setEditOpen}>
           <EditTaskTrigger>
             <Button size="sm" className="w-full shrink">
               <Edit className="mr-2 h-4 w-4" />
@@ -172,7 +175,11 @@ export function TaskDetailView({ task, className }: TaskDetailViewProps) {
             </Button>
           </EditTaskTrigger>
 
-          <EditTaskContent task={task} />
+          <EditTaskContent
+            task={task}
+            day={new Date(task.date)}
+            onClose={() => setEditOpen(false)}
+          />
         </EditTask>
 
         <Button

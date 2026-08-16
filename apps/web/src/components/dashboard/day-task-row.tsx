@@ -2,7 +2,6 @@ import { useState } from "react";
 import { CheckIcon, EllipsisVerticalIcon, Trash2Icon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
-import { TaskDetailContent } from "@/components/dashboard/task-detail";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
 import { TaskCard } from "@/components/task-card";
 import { Button } from "@/components/ui/button";
@@ -55,8 +54,8 @@ function TaskActions({ task }: { task: TaskProps }): JSX.Element {
 }
 
 /**
- * Uma linha da coluna do dia: o cartão + suas ações + a sheet, que abre em leitura e só troca
- * para o formulário quando o usuário pede Editar (volta a leitura ao fechar).
+ * Uma linha da coluna do dia: o cartão + suas ações + a sheet, que abre direto no formulário de
+ * edição — concluir e excluir moram no rodapé dele, sem modo leitura intermediário.
  *
  * O clique no cartão abre a sheet por ESTADO (`open`), não por `SheetTrigger` — o TaskCard já tem
  * seu próprio botão-overlay, e envolvê-lo num trigger `asChild` aninharia botão dentro de botão.
@@ -73,13 +72,9 @@ export function DayTaskRow({
   showTime: boolean;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
-  const [mode, setMode] = useState<"read" | "edit">("read");
   const data = taskToCardData(task, day);
 
-  const onOpenChange = (next: boolean) => {
-    setOpen(next);
-    if (!next) setMode("read");
-  };
+  const onOpenChange = (next: boolean) => setOpen(next);
 
   return (
     <EditTask open={open} onOpenChange={onOpenChange}>
@@ -91,16 +86,7 @@ export function DayTaskRow({
         actions={<TaskActions task={task} />}
       />
 
-      {mode === "read" ? (
-        <TaskDetailContent
-          task={task}
-          day={day}
-          onEdit={() => setMode("edit")}
-          onClose={() => onOpenChange(false)}
-        />
-      ) : (
-        <EditTaskContent task={task} />
-      )}
+      <EditTaskContent task={task} day={day} onClose={() => setOpen(false)} />
     </EditTask>
   );
 }
