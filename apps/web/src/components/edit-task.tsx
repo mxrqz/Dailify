@@ -127,7 +127,7 @@ export function EditTaskContent({
   };
 
   return (
-    <SheetContent className="w-full overflow-hidden border-surface-line bg-surface-card">
+    <SheetContent className="w-full overflow-hidden rounded-panel border-surface-line bg-surface-card shadow-panel">
       <SheetHeader>
         <SheetTitle className="text-lg font-semibold tracking-[-0.01em]">
           {copy.form.editTitle}
