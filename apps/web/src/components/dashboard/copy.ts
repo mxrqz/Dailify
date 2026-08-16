@@ -55,10 +55,8 @@ export const copy = {
     newDescription: "Descreva o que precisa ser feito e quando.",
     editTitle: "Editar tarefa",
     editDescription: "Ajuste os detalhes e salve.",
-    title: "Título",
+    title: "Tarefa",
     titlePlaceholder: "O que precisa ser feito?",
-    description: "Descrição",
-    descriptionPlaceholder: "Detalhes da tarefa",
     date: "Data",
     duration: "Duração",
     priority: "Prioridade",
@@ -73,7 +71,6 @@ export const copy = {
     save: "Salvar",
     create: "Criar tarefa",
     titleRequired: "O título é obrigatório",
-    descriptionRequired: "A descrição é obrigatória",
     fieldsRequired: "Preencha todos os campos",
     created: "Tarefa criada",
     updated: "Tarefa atualizada",
@@ -118,8 +115,7 @@ export const copy = {
 
   voice: {
     title: "Criar tarefa por voz",
-    description:
-      "Grave sua voz dizendo o título, a data, o horário e os outros detalhes da tarefa.",
+    description: "Grave sua voz dizendo a tarefa, a data, o horário e a duração.",
     record: "Gravar",
     stop: "Parar gravação",
     send: "Criar tarefa",

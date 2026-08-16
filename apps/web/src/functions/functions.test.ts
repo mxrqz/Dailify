@@ -18,7 +18,6 @@ function makeTask(over: Partial<TaskProps> = {}): TaskProps {
   return {
     id: "1",
     title: "t",
-    description: "d",
     completed: [],
     duration: "30",
     priority: 0,

@@ -5,7 +5,6 @@ import type { Repeat } from "@dailify/shared";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import PriorityPicker from "@/components/ui/priority-picker";
 import TagsPicker from "@/components/ui/tags-picker";
 import RepeatPicker from "@/components/ui/repeat-picker";
@@ -17,7 +16,6 @@ import type { TaskProps } from "@/types/types";
 
 export interface TaskFormValues {
   title: string;
-  description: string;
   date: Date;
   duration: string;
   priority: number;
@@ -54,7 +52,6 @@ const parseDuration = (duration: string): TimeValue => {
 
 export function TaskForm({ id, task, defaultDate, className, onSubmit }: TaskFormProps) {
   const titleRef = useRef<HTMLInputElement>(null);
-  const descriptionRef = useRef<HTMLTextAreaElement>(null);
   const [selectedDate, setSelectedDate] = useState<Date>(() =>
     task ? new Date(task.date) : (defaultDate ?? new Date()),
   );
@@ -76,16 +73,12 @@ export function TaskForm({ id, task, defaultDate, className, onSubmit }: TaskFor
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
-    if (!titleRef.current || !descriptionRef.current) return;
+    if (!titleRef.current) return;
 
     const title = titleRef.current.value.trim();
-    const desc = descriptionRef.current.value.trim();
 
     if (!title) {
       toast.warning(copy.form.titleRequired);
-      return;
-    } else if (!desc) {
-      toast.warning(copy.form.descriptionRequired);
       return;
     } else if (!selectedDate || !selectedDuration || priority === null || !repeat) {
       toast.warning(copy.form.fieldsRequired);
@@ -94,7 +87,6 @@ export function TaskForm({ id, task, defaultDate, className, onSubmit }: TaskFor
 
     onSubmit({
       title,
-      description: desc,
       date: selectedDate,
       duration: selectedDuration,
       priority,
@@ -121,22 +113,6 @@ export function TaskForm({ id, task, defaultDate, className, onSubmit }: TaskFor
           type="text"
           placeholder={copy.form.titlePlaceholder}
           className={fieldClass}
-          required
-        />
-      </div>
-
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="description" className={labelClass}>
-          {copy.form.description}
-        </Label>
-        <Textarea
-          ref={descriptionRef}
-          id="description"
-          defaultValue={task?.description}
-          className={cn(fieldClass, "resize-none")}
-          rows={3}
-          maxLength={250}
-          placeholder={copy.form.descriptionPlaceholder}
           required
         />
       </div>

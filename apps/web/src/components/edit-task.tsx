@@ -82,7 +82,6 @@ export function EditTaskContent({ task }: { task: TaskProps }) {
       date: values.date.getTime(),
       id: task.id,
       title: values.title,
-      description: values.description,
       completed: task.completed,
       duration: values.duration,
       tags: values.tags,

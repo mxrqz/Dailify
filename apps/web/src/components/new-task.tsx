@@ -43,7 +43,6 @@ export default function NewTask({ className }: { className: string }) {
     const taskInput: TaskInput = {
       date: values.date.getTime(),
       title: values.title,
-      description: values.description,
       duration: values.duration,
       tags: values.tags,
       priority: values.priority,

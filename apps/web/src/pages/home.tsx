@@ -47,7 +47,6 @@ function composerTaskInput(parsed: ParsedTask): TaskInput {
 
   return {
     title: parsed.text,
-    description: "",
     date: date.getTime(),
     duration: parsed.duration ?? DEFAULT_DURATION,
     priority: 0,

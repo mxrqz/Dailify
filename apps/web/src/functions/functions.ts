@@ -68,7 +68,6 @@ export function getNextTask(currentMonthTasks: TaskProps[]) {
 
 export function isTaskModified(task: TaskProps, updated: TaskProps): boolean {
   if (task.title !== updated.title) return true;
-  if (task.description !== updated.description) return true;
   if (task.duration !== updated.duration) return true;
   if (task.priority !== updated.priority) return true;
   if (JSON.stringify(task.tags) !== JSON.stringify(updated.tags)) return true;

@@ -79,10 +79,6 @@ export function TaskDetailContent({
       </SheetHeader>
 
       <div className="flex min-h-0 flex-1 flex-col gap-4 overflow-y-auto px-4 scrollbar-floating">
-        <p className="text-sm leading-relaxed text-content-secondary">
-          {task.description || copy.task.noDescription}
-        </p>
-
         <div className="flex flex-wrap gap-2">
           <Meta icon={FlagIcon} iconClassName={priorityTextColor[task.priority]}>
             {priorityText[task.priority]}
