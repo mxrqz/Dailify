@@ -34,7 +34,7 @@ interface TaskFormProps {
 }
 
 const labelClass = "font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground";
-const fieldClass = "border-surface-line focus-visible:border-accent-primary";
+const fieldClass = "border-surface-line focus-visible:border-accent-primary focus-visible:ring-0";
 const boxClass =
   "flex h-9 items-center rounded-md border border-surface-line px-2 focus-within:border-accent-primary";
 
