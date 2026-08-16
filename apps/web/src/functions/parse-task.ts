@@ -554,8 +554,9 @@ export function parseDuration(text: string): (ParsedDuration & { spans: Span[] }
     const [, , hour1, minute1, hMark1, connector, hour2, minute2, hMark2] = range;
     const startMinutes = Number(hour1) * 60 + Number(minute1 ?? 0);
     const endMinutes = Number(hour2) * 60 + Number(minute2 ?? 0);
-    // "às" só existe em português pra horário; "até" é genérico ("de 10 até 20 páginas") e exige
-    // marca de hora ("h" ou ":mm") de algum lado pra não confundir contagem com intervalo.
+    // "ate" exige marca de hora pra nao confundir contagem com intervalo; "as" fica sem essa
+    // exigencia de proposito — sofre do mesmo falso positivo, mas apertar quebraria "das 15 as 16"
+    // sem marca, o caso canonico do produto (limitacao documentada no teste logo abaixo).
     const hasClockMark = Boolean(minute1 || hMark1 || minute2 || hMark2);
     const connectorOk = connector === "as" || hasClockMark;
     // Intervalo que "volta no tempo" é outra coisa (data numérica, placar, o que for) — não é nosso.

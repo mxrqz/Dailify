@@ -388,6 +388,14 @@ describe("duração — rejeita falso positivo", () => {
   it("'das N as M <substantivo>' ainda é lido como intervalo — limitação documentada", () => {
     expect(parseDuration(normalize("das 3 as 5 pessoas"))?.duration).toBe("2h");
   });
+
+  // Limitação irmã da acima (ver relatório, fix round 2): "as" não exige marca de hora porque
+  // "das 15 as 16" (o caso canônico do produto, sem marca) precisa continuar funcionando — apertar
+  // "as" do jeito que "ate" foi apertado quebraria esse caso. Isso reabre "5 as 10" como falso
+  // positivo pro mesmo tipo de frase que "ate" já rejeita; comportamento atual, não desejado.
+  it("'das N as M <substantivo>' também é lido como intervalo com 'as' — limitação irmã", () => {
+    expect(parseDuration(normalize("resolver questões das 5 às 10"))?.duration).toBe("5h");
+  });
 });
 
 describe("parseTaskText — o pacote inteiro", () => {
