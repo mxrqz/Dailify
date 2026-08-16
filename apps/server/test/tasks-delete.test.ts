@@ -20,7 +20,6 @@ describe("DELETE /tasks/:id", () => {
     await insertTask(env.DB, "u5", {
       id: "del1",
       title: "Gone soon",
-      description: "",
       date: new Date(2026, 7, 10, 9).getTime(),
       duration: "10m",
       priority: 0,

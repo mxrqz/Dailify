@@ -30,7 +30,6 @@ describe("GET /tasks", () => {
     const task: Task = {
       id: "daily1",
       title: "Standup",
-      description: "",
       date: new Date(2026, 0, 15, 9).getTime(),
       duration: "10m",
       priority: 0,

@@ -20,7 +20,6 @@ describe("POST /tasks/:id/complete", () => {
     await insertTask(env.DB, "u4", {
       id: "comp1",
       title: "Task",
-      description: "",
       date: new Date(2026, 6, 1, 9).getTime(),
       duration: "10m",
       priority: 0,

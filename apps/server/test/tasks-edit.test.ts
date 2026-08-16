@@ -36,7 +36,6 @@ describe("PATCH /tasks/:id", () => {
     await insertTask(env.DB, "u3", {
       id: "edit1",
       title: "Old title",
-      description: "",
       date: new Date(2026, 4, 5, 9).getTime(),
       duration: "10m",
       priority: 0,
@@ -60,7 +59,6 @@ describe("PATCH /tasks/:id", () => {
       await insertTask(env.DB, "u3", {
         id: `edit-cap-${i}`,
         title: `T${i}`,
-        description: "",
         date: month,
         duration: "10m",
         priority: 0,
@@ -78,7 +76,6 @@ describe("PATCH /tasks/:id", () => {
     await insertTask(env.DB, "u3", {
       id: "edit-completed",
       title: "Has history",
-      description: "",
       date: new Date(2026, 6, 5, 9).getTime(),
       duration: "10m",
       priority: 0,
@@ -101,7 +98,6 @@ describe("PATCH /tasks/:id — links", () => {
     await insertTask(env.DB, "u3", {
       id: "edit-links-set",
       title: "Set links",
-      description: "",
       date: new Date(2026, 7, 5, 9).getTime(),
       duration: "10m",
       priority: 0,
@@ -118,7 +114,6 @@ describe("PATCH /tasks/:id — links", () => {
     await insertTask(env.DB, "u3", {
       id: "edit-links-invalid",
       title: "Bad link",
-      description: "",
       date: new Date(2026, 7, 5, 9).getTime(),
       duration: "10m",
       priority: 0,
@@ -133,7 +128,6 @@ describe("PATCH /tasks/:id — links", () => {
     await insertTask(env.DB, "u3", {
       id: "edit-links-untouched",
       title: "Keeps links",
-      description: "",
       date: new Date(2026, 7, 5, 9).getTime(),
       duration: "10m",
       priority: 0,
@@ -151,7 +145,6 @@ describe("PATCH /tasks/:id — links", () => {
     await insertTask(env.DB, "u3", {
       id: "edit-links-clear",
       title: "Clears links",
-      description: "",
       date: new Date(2026, 7, 5, 9).getTime(),
       duration: "10m",
       priority: 0,

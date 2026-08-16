@@ -16,7 +16,6 @@ export async function transcribe(env: Env, file: File): Promise<string> {
 
 export interface GPTTask {
   title: string;
-  description?: string;
   duration?: string;
   priority?: number;
   repeat?: unknown;
@@ -43,7 +42,6 @@ function isStringArray(v: unknown): v is string[] {
 function isGPTTask(v: unknown): v is GPTTask {
   if (!isRecord(v)) return false;
   if (typeof v.title !== "string" || typeof v.date !== "string") return false;
-  if (v.description !== undefined && typeof v.description !== "string") return false;
   if (v.duration !== undefined && typeof v.duration !== "string") return false;
   if (v.priority !== undefined && typeof v.priority !== "number") return false;
   if (v.alert !== undefined && typeof v.alert !== "string") return false;
@@ -90,7 +88,6 @@ const PROMPT = (now: string) => `
                 "tasks": [
                     {
                         "title": string,
-                        "description": string,
                         "completed": [],
                         "duration": string (ex: "30min", "1h", "1h30min"),
                         "priority": number (0 a 4, sendo 0 nada importante e 4 mto importante),

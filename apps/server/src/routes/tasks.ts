@@ -65,7 +65,6 @@ tasks.post("/", async (c) => {
   const task: Task = {
     id: body.id ?? nanoid(6),
     title: body.title,
-    description: body.description ?? "",
     date: body.date,
     alert: body.alert,
     duration: body.duration,

@@ -3,7 +3,6 @@ export type Repeat = "Off" | "Daily" | "Monthly" | "Yearly" | { Weekly: string[]
 export interface Task {
   id: string;
   title: string;
-  description: string;
   date: number; // epoch ms
   alert?: number; // epoch ms
   duration: string; // "10m", "1h30m"

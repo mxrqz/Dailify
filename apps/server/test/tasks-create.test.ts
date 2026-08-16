@@ -24,7 +24,6 @@ beforeAll(async () => {
 
 const taskInput = (over: Partial<TaskInput> = {}): TaskInput => ({
   title: "New task",
-  description: "",
   date: new Date(2026, 2, 10, 9).getTime(),
   duration: "10m",
   priority: 0,
@@ -74,7 +73,6 @@ describe("POST /tasks", () => {
       await insertTask(env.DB, "u2", {
         id: `cap-${i}`,
         title: `T${i}`,
-        description: "",
         date: month,
         duration: "10m",
         priority: 0,

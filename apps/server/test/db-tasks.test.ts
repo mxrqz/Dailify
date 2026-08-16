@@ -17,7 +17,6 @@ beforeAll(async () => {
 const t = (over: Partial<Task> = {}): Task => ({
   id: "a1",
   title: "T",
-  description: "d",
   date: new Date(2026, 0, 15, 9).getTime(),
   duration: "10m",
   priority: 0,
@@ -54,7 +53,6 @@ describe("links", () => {
     const task: Task = {
       id: "lk1",
       title: "Reunião",
-      description: "",
       date: new Date(2026, 7, 14, 15).getTime(),
       duration: "1h",
       priority: 0,
@@ -70,7 +68,6 @@ describe("links", () => {
     await insertTask(env.DB, "u1", {
       id: "lk2",
       title: "Sem link",
-      description: "",
       date: Date.now(),
       duration: "10m",
       priority: 0,

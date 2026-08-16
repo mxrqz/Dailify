@@ -5,7 +5,6 @@ interface Row {
   id: string;
   user_id: string;
   title: string;
-  description: string;
   date: number;
   alert: number | null;
   duration: string;
@@ -32,7 +31,6 @@ export function rowToTask(r: Row): Task {
   return {
     id: r.id,
     title: r.title,
-    description: r.description,
     date: r.date,
     alert: r.alert ?? undefined,
     duration: r.duration,
@@ -48,14 +46,13 @@ export async function insertTask(db: D1Database, userId: string, task: Task): Pr
   const { kind, days } = repeatToCols(task.repeat);
   await db
     .prepare(
-      `INSERT INTO tasks (id,user_id,title,description,date,alert,duration,priority,repeat_kind,repeat_days,tags,links,completed)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)`,
+      `INSERT INTO tasks (id,user_id,title,date,alert,duration,priority,repeat_kind,repeat_days,tags,links,completed)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?)`,
     )
     .bind(
       task.id,
       userId,
       task.title,
-      task.description,
       task.date,
       task.alert ?? null,
       task.duration,
@@ -146,11 +143,10 @@ export async function updateTask(
   const { kind, days } = repeatToCols(next.repeat);
   await db
     .prepare(
-      `UPDATE tasks SET title=?,description=?,date=?,alert=?,duration=?,priority=?,repeat_kind=?,repeat_days=?,tags=?,links=? WHERE user_id=? AND id=?`,
+      `UPDATE tasks SET title=?,date=?,alert=?,duration=?,priority=?,repeat_kind=?,repeat_days=?,tags=?,links=? WHERE user_id=? AND id=?`,
     )
     .bind(
       next.title,
-      next.description,
       next.date,
       next.alert ?? null,
       next.duration,

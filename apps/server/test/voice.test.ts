@@ -74,7 +74,6 @@ describe("POST /tasks/voice", () => {
         tasks: [
           {
             title: "Reunião com o time",
-            description: "",
             duration: "30min",
             priority: 2,
             repeat: "Off",
@@ -84,7 +83,6 @@ describe("POST /tasks/voice", () => {
           },
           {
             title: "Almoço",
-            description: "",
             duration: "1h",
             priority: 0,
             repeat: "Off",
@@ -127,7 +125,6 @@ describe("POST /tasks/voice", () => {
         tasks: [
           {
             title: "Reunião",
-            description: "",
             duration: "30min",
             priority: 2,
             repeat: "Off",

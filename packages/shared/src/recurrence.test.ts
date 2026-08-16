@@ -5,7 +5,6 @@ import type { Task } from "./types";
 const base: Task = {
   id: "t1",
   title: "x",
-  description: "",
   duration: "10m",
   priority: 0,
   completed: [],
@@ -17,7 +16,6 @@ function makeTask(over: Partial<Task> = {}): Task {
   return {
     id: "1",
     title: "t",
-    description: "d",
     completed: [],
     duration: "30",
     priority: 0,

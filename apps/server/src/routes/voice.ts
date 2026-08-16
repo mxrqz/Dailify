@@ -69,7 +69,6 @@ voice.post("/voice", requireAuth, async (c) => {
     const task: Task = {
       id: nanoid(6),
       title: t.title,
-      description: t.description ?? "",
       date,
       alert: alert ?? undefined,
       duration: t.duration ?? "",
