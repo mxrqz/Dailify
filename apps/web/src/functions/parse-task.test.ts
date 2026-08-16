@@ -511,3 +511,26 @@ describe("intervalo misturado — título limpo", () => {
     expect(parseTaskText(input, NOW).text).toBe(expected);
   });
 });
+
+describe("preposição órfã na fronteira do corte", () => {
+  it.each([
+    ["reunião no meet.google.com/abc hoje às 16h", "reunião"],
+    ["call na meet.google.com/abc amanhã", "call"],
+    ["daily em meet.google.com/abc hoje", "daily"],
+    ["assistir pelo youtube.com/watch?v=1 hoje", "assistir"],
+  ])("%j → %j", (input, expected) => {
+    expect(parseTaskText(input, NOW).text).toBe(expected);
+  });
+
+  it.each([
+    ["comprar pão no mercado hoje", "comprar pão no mercado"],
+    ["reunião na sala 3 amanhã", "reunião na sala 3"],
+    ["deixar com o porteiro hoje", "deixar com o porteiro"],
+    // "meet.google.com/abc" e um token so pro parseLinks (sem espaco) — o link inteiro sai, "meet"
+    // nao sobrevive separado. O que este caso prova e o "no": ele fica, porque apos o corte do link
+    // ainda sobra "com o time" na mesma juncao, isLast e falso e a regra de preposicao orfa nem roda.
+    ["reunião no meet.google.com/abc com o time hoje", "reunião no com o time"],
+  ])("%j → %j (não mexe no que não foi recortado)", (input, expected) => {
+    expect(parseTaskText(input, NOW).text).toBe(expected);
+  });
+});

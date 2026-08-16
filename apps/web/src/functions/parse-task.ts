@@ -636,6 +636,10 @@ export interface ParsedTask {
 /** Tira os spans do texto, do fim pro começo — cortar de frente invalidaria os índices seguintes. */
 const ORPHAN_PUNCT = /[,;.!?]/;
 
+// Preposição que só existia pra apontar pro trecho recortado ("reunião NO meet…"). Sem o trecho,
+// ela aponta pro nada. Só some quando nada sobra depois dela — senão é texto do usuário.
+const ORPHAN_PREP = /(?:^|\s)(no|na|nos|nas|em|pelo|pela|pelos|pelas|via|pro|pra|com|de|do|da)$/i;
+
 /**
  * Reconcilia só o que ficou colado nas duas pontas de UM corte — nunca varre o título inteiro.
  * É por isso que "uau!!" longe de qualquer span sai intocado: sem seam ali, a função nem olha
@@ -667,6 +671,12 @@ function joinAcrossCut(left: string, right: string, isLast: boolean): string {
   // corte foi ate o fim da frase e deixou separador de lista pendurado, sem nada depois pra separar
   if (isLast && !rightTrimmed && leftLast && /[,;]/.test(leftLast)) {
     return leftTrimmed.slice(0, -1);
+  }
+
+  // mesma pre-condicao: corte ate o fim, nada a direita — a preposicao final perdeu o referente
+  if (isLast && !rightTrimmed) {
+    const withoutPrep = leftTrimmed.replace(ORPHAN_PREP, "");
+    if (withoutPrep !== leftTrimmed) return joinAcrossCut(withoutPrep, "", isLast);
   }
 
   // pontuacao colada logo depois do corte: sem espaco antes dela
