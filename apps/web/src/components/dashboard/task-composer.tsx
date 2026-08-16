@@ -1,18 +1,16 @@
 import { FormEvent, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowUpIcon, Loader2Icon } from "lucide-react";
+import { ArrowUpIcon, LinkIcon, Loader2Icon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
 import { Label } from "@/components/ui/label";
-import { parseWhen, type ParsedWhen } from "@/functions/parse-when";
+import { parseTaskText, type ParsedTask } from "@/functions/parse-task";
+import { linkLabel } from "@/functions/link-label";
 import { cn } from "@/lib/utils";
 
 export interface ComposerValues {
-  when: string;
-  /** O que o `parseWhen` entendeu do campo "quando" — `null` quando não reconheceu nada. */
-  parsed: ParsedWhen | null;
-  text: string;
+  parsed: ParsedTask;
 }
 
 interface TaskComposerProps {
@@ -21,35 +19,28 @@ interface TaskComposerProps {
   onSubmit: (values: ComposerValues) => void;
 }
 
-const fieldClass =
-  "bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none";
+const chipClass =
+  "inline-flex items-center gap-1.5 rounded-md border border-surface-line px-2 py-1 " +
+  "font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground";
 
 /**
- * Barra de captura rápida: "quando" em linguagem natural + a tarefa em texto corrido, com Tab
- * entre os campos. O que o parser entendeu aparece em mono ao lado — sem esse eco o usuário
- * digita no escuro.
+ * Barra de captura rápida: uma frase só. O que o parser tirou dela aparece em chips embaixo — sem
+ * esse eco o usuário digita no escuro e só descobre no envio que a data não foi entendida.
  */
 export function TaskComposer({ submitting, className, onSubmit }: TaskComposerProps): JSX.Element {
-  const [when, setWhen] = useState("");
-  const [text, setText] = useState("");
+  const [input, setInput] = useState("");
 
-  const parsed = useMemo(() => parseWhen(when), [when]);
-  const echo = parsed
-    ? format(parsed.date, parsed.hasTime ? "EEE · d MMM · HH:mm" : "EEE · d MMM", { locale: ptBR })
-    : null;
-
-  const canSubmit = Boolean(when.trim() && text.trim()) && !submitting;
+  const parsed = useMemo(() => parseTaskText(input), [input]);
+  const canSubmit = Boolean(parsed.text && parsed.date) && !submitting;
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-    onSubmit({ when: when.trim(), parsed, text: text.trim() });
-    setWhen("");
-    setText("");
+    onSubmit({ parsed });
+    setInput("");
   };
 
   return (
-    // Raio concêntrico: o de fora é o de dentro + os 5px de padding, senão os cantos brigam.
     <form
       onSubmit={handleSubmit}
       className={cn(
@@ -58,46 +49,22 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
       )}
     >
       <div className="flex flex-col gap-2 rounded-2xl bg-surface-card p-3">
-        <div className="flex items-center gap-3">
-          <Label htmlFor="composer-when" className="sr-only">
-            {copy.composer.when}
-          </Label>
-          <input
-            id="composer-when"
-            value={when}
-            onChange={(e) => setWhen(e.target.value)}
-            placeholder={copy.composer.whenPlaceholder}
-            autoComplete="off"
-            required
-            className={cn(fieldClass, "w-1/3 rounded-2xl rounded-bl-lg bg-surface-page px-3 py-2")}
-          />
-
-          {echo && (
-            <span
-              aria-live="polite"
-              className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground"
-            >
-              {echo}
-            </span>
-          )}
-        </div>
-
-        <div className="flex items-center gap-2 rounded-2xl rounded-tl-lg bg-surface-page px-3 py-2">
+        <div className="flex items-center gap-2 rounded-2xl bg-surface-page px-3 py-2">
           <Label htmlFor="composer-text" className="sr-only">
             {copy.composer.text}
           </Label>
           {/* Enter envia, Shift+Enter quebra linha — senão duas linhas custariam o atalho. */}
           <textarea
             id="composer-text"
-            value={text}
+            value={input}
             rows={2}
-            onChange={(e) => setText(e.target.value)}
+            onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) handleSubmit(e);
             }}
             placeholder={copy.composer.textPlaceholder}
             autoComplete="off"
-            className={cn(fieldClass, "min-w-0 flex-1 resize-none")}
+            className="min-w-0 flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
           />
 
           <button
@@ -113,6 +80,33 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
             )}
           </button>
         </div>
+
+        {input.trim() && (
+          <div aria-live="polite" className="flex flex-wrap items-center gap-1.5 px-1">
+            <span className={cn(chipClass, !parsed.date && "text-accent-primary")}>
+              {parsed.date
+                ? format(parsed.date, parsed.hasTime ? "EEE · d MMM · HH:mm" : "EEE · d MMM", {
+                    locale: ptBR,
+                  })
+                : copy.composer.missingWhen}
+            </span>
+
+            {parsed.duration && <span className={chipClass}>{parsed.duration}</span>}
+
+            {!parsed.text && (
+              <span className={cn(chipClass, "text-accent-primary")}>
+                {copy.composer.missingText}
+              </span>
+            )}
+
+            {parsed.links.map((url) => (
+              <span key={url} className={chipClass}>
+                <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
+                {linkLabel(url)}
+              </span>
+            ))}
+          </div>
+        )}
       </div>
     </form>
   );

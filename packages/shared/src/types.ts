@@ -10,6 +10,7 @@ export interface Task {
   priority: number; // 0-4
   repeat: Repeat;
   tags?: string[];
+  links?: string[]; // URLs absolutas http(s), validadas na rota
   completed: number[]; // epoch ms
 }
 

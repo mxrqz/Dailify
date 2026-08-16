@@ -1,0 +1,120 @@
+import { describe, expect, it } from "vitest";
+import { parseLinks } from "./parse-links";
+
+const urls = (input: string) => parseLinks(input).urls;
+
+describe("aceita", () => {
+  it.each([
+    ["reunião https://meet.google.com/abc-defg", "https://meet.google.com/abc-defg"],
+    ["ver http://exemplo.com", "http://exemplo.com"],
+    ["ver www.youtube.com", "https://www.youtube.com"],
+    ["assistir youtube.com/watch?v=aBc123", "https://youtube.com/watch?v=aBc123"],
+    ["abrir dailify.mxrqz.com", "https://dailify.mxrqz.com"],
+  ])("%j", (input, expected) => {
+    expect(urls(input)).toEqual([expected]);
+  });
+
+  it("acha mais de um", () => {
+    expect(urls("call meet.google.com/abc pauta em notion.so/xyz")).toEqual([
+      "https://meet.google.com/abc",
+      "https://notion.so/xyz",
+    ]);
+  });
+
+  it("preserva a caixa do path", () => {
+    expect(urls("ver youtu.be/AbC123")).toEqual(["https://youtu.be/AbC123"]);
+  });
+});
+
+describe("ignora", () => {
+  it.each([
+    "editar o main.ts",
+    "rodar o deploy.sh",
+    "abrir index.html",
+    "comprar 2.5kg de arroz",
+    "reunião com o time",
+    "custou R$ 19.90",
+    "e-mail do fulano@empresa.com",
+    "manda um email pra fulano@empresa.com sobre X",
+    "contato joao.silva@gmail.com",
+  ])("%j", (input) => {
+    expect(urls(input)).toEqual([]);
+  });
+});
+
+describe("pontuação", () => {
+  it.each([
+    ["veja youtube.com/abc.", "https://youtube.com/abc"],
+    ["veja youtube.com/abc,", "https://youtube.com/abc"],
+    ["veja (youtube.com/abc)", "https://youtube.com/abc"],
+  ])("%j apara o final", (input, expected) => {
+    expect(urls(input)).toEqual([expected]);
+  });
+});
+
+describe("TLD ambiguo com extensao de arquivo (so)", () => {
+  it("host pelado nao vira link", () => {
+    expect(urls("compilar libfoo.so")).toEqual([]);
+  });
+
+  it("com path vira link", () => {
+    expect(urls("revisar notion.so/xyz")).toEqual(["https://notion.so/xyz"]);
+  });
+
+  it("com query mas sem path vira link", () => {
+    expect(urls("entrar em notion.so?ref=abc")).toEqual(["https://notion.so?ref=abc"]);
+  });
+});
+
+describe("URLs coladas por virgula", () => {
+  it("separa em dois links (dominio nu)", () => {
+    expect(urls("ver youtube.com/a,youtube.com/b")).toEqual([
+      "https://youtube.com/a",
+      "https://youtube.com/b",
+    ]);
+  });
+
+  it("nao corta virgula dentro de link com esquema explicito", () => {
+    expect(urls("ver https://exemplo.com/a,b/c")).toEqual(["https://exemplo.com/a,b/c"]);
+  });
+
+  it("preserva coordenada de mapa (virgula na query)", () => {
+    expect(urls("ver https://maps.google.com/?q=-23.5,-46.6")).toEqual([
+      "https://maps.google.com/?q=-23.5,-46.6",
+    ]);
+  });
+
+  // Duas URLs com esquema coladas sem espaço nao tem separador nenhum pro tokenizador: vira um so
+  // token malformado e a segunda URL some. Limitacao que ja existia antes dos dois fixes de
+  // virgula (tokenizacao por espaco em branco nunca resolveu isso); com espaco depois da virgula
+  // (o caso comum de colar dois links numa tarefa) separa certo, como o segundo caso mostra.
+  it("colada sem espaco engole a segunda URL (limitacao conhecida)", () => {
+    expect(urls("ver https://a.com/x,https://b.com/y")).toEqual([
+      "https://a.com/x,https://b.com/y",
+    ]);
+  });
+
+  it("colada com espaco depois da virgula separa normalmente", () => {
+    expect(urls("ver https://a.com/x, https://b.com/y")).toEqual([
+      "https://a.com/x",
+      "https://b.com/y",
+    ]);
+  });
+});
+
+describe("URL repetida", () => {
+  it("sai uma vez só (chip duplicado / linha duplicada no D1), mas com os dois spans", () => {
+    const input = "ver youtube.com/abc e youtube.com/abc";
+    const parsed = parseLinks(input);
+    expect(parsed.urls).toEqual(["https://youtube.com/abc"]);
+    expect(parsed.spans).toHaveLength(2);
+  });
+});
+
+describe("spans", () => {
+  it("aponta pro trecho exato do original", () => {
+    const input = "reunião meet.google.com/abc hoje";
+    const [start, end] = parseLinks(input).spans[0];
+    expect(input.slice(start, end)).toBe("meet.google.com/abc");
+  });
+});
