@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { FormEvent, useEffect, useId, useRef, useState } from "react";
 import { TimeValue } from "react-aria-components";
 import { toast } from "sonner";
 import type { Repeat } from "@dailify/shared";
@@ -54,6 +54,9 @@ const parseDuration = (duration: string): TimeValue => {
 
 export function TaskForm({ id, task, defaultDate, className, onSubmit }: TaskFormProps) {
   const titleRef = useRef<HTMLInputElement>(null);
+  // LinksField nao tem um unico controle focavel pra "for" apontar (chips + botao + inputs que
+  // trocam); role="group" + aria-labelledby e a associacao correta pra um conjunto assim.
+  const linksLabelId = useId();
   const [selectedDate, setSelectedDate] = useState<Date>(() =>
     task ? new Date(task.date) : (defaultDate ?? new Date()),
   );
@@ -165,10 +168,10 @@ export function TaskForm({ id, task, defaultDate, className, onSubmit }: TaskFor
       </div>
 
       <div className="flex flex-col gap-1.5">
-        <Label htmlFor="links" className={labelClass}>
+        <Label id={linksLabelId} className={labelClass}>
           {copy.form.links}
         </Label>
-        <LinksField value={links ?? []} onChange={setLinks} />
+        <LinksField value={links ?? []} onChange={setLinks} labelledBy={linksLabelId} />
       </div>
 
       <div className="flex flex-col gap-1.5">

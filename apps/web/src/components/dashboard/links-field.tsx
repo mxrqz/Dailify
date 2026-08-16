@@ -32,9 +32,11 @@ const chipClass =
 export function LinksField({
   value,
   onChange,
+  labelledBy,
 }: {
   value: string[];
   onChange: (links: string[]) => void;
+  labelledBy: string;
 }): JSX.Element {
   // índice em edição, ou "new" pro input de adicionar; null = nenhum input aberto
   const [editing, setEditing] = useState<number | "new" | null>(null);
@@ -66,7 +68,7 @@ export function LinksField({
   };
 
   return (
-    <div className="flex flex-wrap items-center gap-1.5">
+    <div role="group" aria-labelledby={labelledBy} className="flex flex-wrap items-center gap-1.5">
       {value.map((url, index) =>
         editing === index ? (
           <Input
