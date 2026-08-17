@@ -45,10 +45,18 @@ must match an `sk_live` worker or all auth 401s.
 
 ## Deploy & migrations
 
-`bun run deploy` é **só** `wrangler deploy` — não aplica migration nenhuma. Com migration pendente,
-rode `wrangler d1 migrations apply dailify --remote` **antes** de publicar. Coluna nova só passa a
-existir em D1 depois disso, e worker novo sobre schema velho derruba todo `POST`/`PATCH` de tarefa
-com `no such column` — o `SELECT` sobrevive, então o app parece saudável até alguém salvar.
+`bun run deploy` aplica as migrations pendentes em `--remote` **antes** do `wrangler deploy`, nessa
+ordem. O deploy real vem do **Workers Builds** (Cloudflare conectado ao repo, não GitHub Actions), e
+é o *deploy command* configurado no dashboard do worker `dailify-server` que precisa apontar pra cá
+— se ele estiver como `npx wrangler deploy` cru, a migration não roda e o script aqui não adianta.
+
+Por que a ordem importa: worker novo sobre schema velho derruba todo `POST`/`PATCH` de tarefa com
+`no such column`, e o `SELECT` sobrevive — o app parece saudável até alguém salvar. Já aconteceu com
+a `0002`.
+
+O caso que essa ordem **não** cobre é a migration destrutiva (`DROP COLUMN`): entre ela e o worker
+novo subir, o worker antigo ainda no ar perde uma coluna que usa. Para essas, o seguro é publicar em
+dois passos — aditiva + deploy primeiro, destrutiva depois que o novo estiver no ar.
 
 ## Tests
 
