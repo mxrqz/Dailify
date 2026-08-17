@@ -12,6 +12,7 @@ import RepeatPicker from "@/components/ui/repeat-picker";
 import { DatetimePicker } from "@/components/ui/datetime-picker";
 import { DateInput, TimeField } from "@/components/ui/timefield";
 import { copy } from "@/components/dashboard/copy";
+import { fieldClass } from "@/components/dashboard/styles";
 import { cn } from "@/lib/utils";
 import type { TaskProps } from "@/types/types";
 
@@ -34,7 +35,6 @@ interface TaskFormProps {
 }
 
 const labelClass = "font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground";
-const fieldClass = "border-surface-line focus-visible:border-accent-primary focus-visible:ring-0";
 const boxClass =
   "flex h-9 items-center rounded-md border border-surface-line px-2 focus-within:border-accent-primary";
 

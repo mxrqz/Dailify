@@ -8,7 +8,7 @@ import { upsertTaskById } from "@/functions/functions";
 import type { TaskProps } from "@/types/types";
 
 /**
- * Concluir/excluir uma tarefa — compartilhado pelo menu (⋮) do cartão e pela sheet de detalhe.
+ * Concluir/excluir uma tarefa — compartilhado pelo menu (⋮) do cartão e pelo painel de edição.
  * As escritas são otimistas SÓ depois do servidor responder, como manda o `components/CLAUDE.md`.
  */
 export function useTaskActions(task: TaskProps) {

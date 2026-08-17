@@ -4,6 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { ArrowUpIcon, LinkIcon, Loader2Icon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
+import { chipClass } from "@/components/dashboard/styles";
 import { Label } from "@/components/ui/label";
 import { parseTaskText, type ParsedTask } from "@/functions/parse-task";
 import { linkLabel } from "@/functions/link-label";
@@ -18,10 +19,6 @@ interface TaskComposerProps {
   className?: string;
   onSubmit: (values: ComposerValues) => void;
 }
-
-const chipClass =
-  "inline-flex items-center gap-1.5 rounded-md border border-surface-line px-2 py-1 " +
-  "font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground";
 
 /**
  * Barra de captura rápida: uma frase só. O que o parser tirou dela aparece em chips embaixo — sem

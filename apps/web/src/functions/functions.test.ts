@@ -83,6 +83,12 @@ describe("isTaskModified", () => {
     expect(isTaskModified(withLink, { ...withLink, links: undefined })).toBe(true);
   });
 
+  // O caminho que a UI realmente produz: remover o último chip deixa `[]`, nunca `undefined`.
+  test("esvaziar a lista de links conta como alteração", () => {
+    const withLink = makeTask({ links: ["https://x.com"] });
+    expect(isTaskModified(withLink, { ...withLink, links: [] })).toBe(true);
+  });
+
   test("trocar a URL conta como alteração", () => {
     const t = makeTask({ links: ["https://x.com"] });
     expect(isTaskModified(t, { ...t, links: ["https://y.com"] })).toBe(true);

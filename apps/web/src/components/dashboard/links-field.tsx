@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { LinkIcon, PencilIcon, PlusIcon, XIcon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
+import { chipClass, fieldClass } from "@/components/dashboard/styles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { linkLabel } from "@/functions/link-label";
@@ -10,24 +11,32 @@ import { parseLinks } from "@/functions/parse-links";
 const MAX_LINKS = 10; // igual ao teto da rota; passar disso volta 400 do servidor
 const MAX_URL_LEN = 2048; // idem — mesmo teto de apps/server/src/routes/tasks.ts
 
+const inputClass = `h-9 w-64 ${fieldClass}`;
+
 /**
  * A mesma regra do detector do composer decide o que é URL aqui — sem segunda definição.
  * `parseLinks` não cobre tamanho nem credencial embutida quando o esquema é explícito (fica pra
  * validação do servidor, por design dele) — replicados aqui pra não estourar um 400 só no salvar.
  */
 export function normalizeUrl(raw: string): string | null {
-  const { urls } = parseLinks(raw.trim());
+  const input = raw.trim();
+  const { urls } = parseLinks(input);
   if (urls.length !== 1) return null;
-  const [url] = urls;
-  if (url.length > MAX_URL_LEN) return null;
+  // `parseLinks` apara pontuação final porque no composer a URL vem no meio de prosa ("(veja
+  // x.com)"); aqui o campo só recebe URL, então token único com esquema explícito vale inteiro —
+  // aparar corromperia ".../Java_(linguagem_de_programação)" e ".../path.".
+  const url = /^https?:\/\/\S+$/i.test(input) ? input : urls[0];
+  if (url.length > MAX_URL_LEN || !URL.canParse(url)) return null;
   const { username, password } = new URL(url);
   if (username || password) return null;
   return url;
 }
 
-const chipClass =
-  "inline-flex items-center gap-1.5 rounded-md border border-surface-line px-2 py-1 " +
-  "font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground";
+/** Mesma regra do composer: URL repetida vira um chip só, e uma linha só no D1. */
+export function withLink(links: string[], url: string, at: number | "new"): string[] {
+  const next = at === "new" ? [...links, url] : links.map((v, i) => (i === at ? url : v));
+  return [...new Set(next)];
+}
 
 export function LinksField({
   value,
@@ -38,10 +47,29 @@ export function LinksField({
   onChange: (links: string[]) => void;
   labelledBy: string;
 }): JSX.Element {
+  const groupRef = useRef<HTMLDivElement>(null);
   // índice em edição, ou "new" pro input de adicionar; null = nenhum input aberto
   const [editing, setEditing] = useState<number | "new" | null>(null);
   const [draft, setDraft] = useState("");
   const [invalid, setInvalid] = useState(false);
+
+  // O Radix escuta o Escape em `document` na fase de captura, ou seja antes de qualquer handler do
+  // React (que ficam no container do portal, `body`) — um `onKeyDown` aqui só rodaria com a Sheet
+  // já fechada e a edição inteira perdida. `window` é o primeiro alvo da captura, então este
+  // listener chega antes e cancela o evento; o Radix desiste quando ele já vem cancelado.
+  useEffect(() => {
+    if (editing === null) return;
+    const onEscape = (e: KeyboardEvent) => {
+      if (e.key !== "Escape") return;
+      if (!(e.target instanceof Node) || !groupRef.current?.contains(e.target)) return;
+      e.preventDefault();
+      setEditing(null);
+      setDraft("");
+      setInvalid(false);
+    };
+    window.addEventListener("keydown", onEscape, true);
+    return () => window.removeEventListener("keydown", onEscape, true);
+  }, [editing]);
 
   const openEditor = (target: number | "new") => {
     setEditing(target);
@@ -62,13 +90,18 @@ export function LinksField({
       setInvalid(true);
       return;
     }
-    onChange(editing === "new" ? [...value, url] : value.map((v, i) => (i === editing ? url : v)));
+    if (editing !== null) onChange(withLink(value, url, editing));
     setEditing(null);
     setDraft("");
   };
 
   return (
-    <div role="group" aria-labelledby={labelledBy} className="flex flex-wrap items-center gap-1.5">
+    <div
+      ref={groupRef}
+      role="group"
+      aria-labelledby={labelledBy}
+      className="flex flex-wrap items-center gap-1.5"
+    >
       {value.map((url, index) =>
         editing === index ? (
           <Input
@@ -85,12 +118,11 @@ export function LinksField({
                 e.preventDefault();
                 commit();
               }
-              if (e.key === "Escape") setEditing(null);
             }}
             aria-label={copy.form.linkEdit}
             aria-invalid={invalid}
             title={invalid ? copy.form.linkInvalid : undefined}
-            className="h-8 w-64"
+            className={inputClass}
           />
         ) : (
           <span key={url} className={chipClass}>
@@ -138,12 +170,11 @@ export function LinksField({
               e.preventDefault();
               commit();
             }
-            if (e.key === "Escape") setEditing(null);
           }}
           aria-label={copy.form.linkAdd}
           aria-invalid={invalid}
           title={invalid ? copy.form.linkInvalid : undefined}
-          className="h-8 w-64"
+          className={inputClass}
         />
       ) : (
         <Button
