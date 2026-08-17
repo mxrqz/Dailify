@@ -3,6 +3,7 @@ import { Input } from "./input";
 import { Button } from "./button";
 import { PlusIcon } from "lucide-react";
 import { Badge } from "./badge";
+import { copy } from "@/components/dashboard/copy";
 import { TagsPickerProps } from "@/types/types";
 
 export default function TagsPicker({ onSelectedTags, task }: TagsPickerProps) {
@@ -36,7 +37,7 @@ export default function TagsPicker({ onSelectedTags, task }: TagsPickerProps) {
         <Input
           ref={inputRef}
           type="text"
-          placeholder="Add a tag"
+          placeholder={copy.form.tagPlaceholder}
           onKeyDown={(e) => e.key === "Enter" && addTag()}
         />
 

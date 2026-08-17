@@ -1,4 +1,6 @@
-import { FormEvent, useEffect, useId, useRef, useState } from "react";
+import { FormEvent, useEffect, useId, useMemo, useRef, useState } from "react";
+import { format } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { TimeValue } from "react-aria-components";
 import { toast } from "sonner";
 import type { Repeat } from "@dailify/shared";
@@ -12,7 +14,6 @@ import RepeatPicker from "@/components/ui/repeat-picker";
 import { DatetimePicker } from "@/components/ui/datetime-picker";
 import { DateInput, TimeField } from "@/components/ui/timefield";
 import { copy } from "@/components/dashboard/copy";
-import { fieldClass } from "@/components/dashboard/styles";
 import { cn } from "@/lib/utils";
 import type { TaskProps } from "@/types/types";
 
@@ -37,6 +38,32 @@ interface TaskFormProps {
 const labelClass = "font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground";
 const boxClass =
   "flex h-9 items-center rounded-md border border-surface-line px-2 focus-within:border-accent-primary";
+
+/**
+ * Uma propriedade da tarefa: rótulo estreito à esquerda, controle ocupando o resto. Sete blocos
+ * empilhados de "rótulo em cima, campo largo embaixo" gastavam a altura toda e transbordavam a
+ * largura da sheet — em linha, cabem sem rolagem e o olho percorre os valores numa coluna só.
+ */
+function Row({
+  label,
+  htmlFor,
+  labelId,
+  children,
+}: {
+  label: string;
+  htmlFor?: string;
+  labelId?: string;
+  children: React.ReactNode;
+}): JSX.Element {
+  return (
+    <div className="flex items-start gap-3 py-1">
+      <Label htmlFor={htmlFor} id={labelId} className={cn(labelClass, "w-20 shrink-0 pt-2.5")}>
+        {label}
+      </Label>
+      <div className="min-w-0 flex-1">{children}</div>
+    </div>
+  );
+}
 
 // "10m" and a real task.duration ("1h30m") share the same "Xh Ym" shape, so one parser covers both.
 // ponytail: o `as` sobrevive aqui porque TimeValue é uma união de CLASSES do @internationalized/date,
@@ -73,6 +100,16 @@ export function TaskForm({ id, task, defaultDate, className, onSubmit }: TaskFor
     if (task || !defaultDate) return;
     setSelectedDate(defaultDate);
   }, [defaultDate, task]);
+
+  // O eco do composer, de novo aqui: a mesma frase em mono que o usuário viu ao criar a tarefa.
+  const summary = useMemo(
+    () =>
+      // EEEEEE, não EEE: no locale pt-BR do date-fns, `EEE` devolve "segunda" por extenso.
+      [format(selectedDate, "EEEEEE · d MMM · HH:mm", { locale: ptBR }), selectedDuration]
+        .filter(Boolean)
+        .join(" · "),
+    [selectedDate, selectedDuration],
+  );
 
   const handleDurationChange = (e: TimeValue) => {
     const { hour, minute } = e;
@@ -112,51 +149,56 @@ export function TaskForm({ id, task, defaultDate, className, onSubmit }: TaskFor
       noValidate
       className={cn("flex flex-col gap-4", className)}
     >
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="title" className={labelClass}>
-          {copy.form.title}
-        </Label>
+      {/* O texto da tarefa é o cabeçalho, não mais um campo rotulado: a sheet já é "a tarefa", e
+          um rótulo "TAREFA" acima dele repetia a mesma palavra duas vezes na vertical. */}
+      <div className="flex flex-col gap-1">
         <Input
           ref={titleRef}
           id="title"
           defaultValue={task?.title}
           type="text"
           placeholder={copy.form.titlePlaceholder}
-          className={fieldClass}
+          // O FocusScope do Radix chama focus() e, logo depois, select() — abrir o painel
+          // deixava a tarefa inteira selecionada, e a próxima tecla a apagaria. Desfazer a
+          // seleção precisa acontecer DEPOIS desse select(), daí o frame de espera.
+          onFocus={(e) => {
+            const el = e.currentTarget;
+            requestAnimationFrame(() => el.setSelectionRange(el.value.length, el.value.length));
+          }}
+          className="h-auto border-0 bg-transparent px-0 py-0 text-xl font-semibold tracking-[-0.01em] shadow-none focus-visible:border-0 focus-visible:ring-0"
           required
         />
+
+        {/* Mesmo vocabulário dos chips do composer: o que o app entendeu daquela tarefa. */}
+        <p className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
+          {summary}
+        </p>
       </div>
 
-      <div className="flex gap-3">
-        <div className="flex flex-col gap-1.5">
-          <Label htmlFor="date" className={labelClass}>
-            {copy.form.date}
-          </Label>
-
+      <div className="flex flex-col divide-y divide-surface-line border-y border-surface-line">
+        <Row label={copy.form.date}>
           <DatetimePicker
             value={task ? selectedDate : undefined}
             className="h-9 border border-surface-line focus-within:border-accent-primary"
             onChange={(e) => e && setSelectedDate(e)}
+            // Ordem e relógio de pt-BR: 17/08/2026 · 16:00, não 08/17/2026 ... PM.
+            dtOptions={{ hour12: false }}
             format={[
-              ["months", "days", "years"],
-              ["hours", "minutes", "am/pm"],
+              ["days", "months", "years"],
+              ["hours", "minutes"],
             ]}
           />
-        </div>
+        </Row>
 
-        <div className="w-full">
+        <Row label={copy.form.duration} htmlFor="duration">
           <TimeField
             aria-label={copy.form.duration}
             id="duration"
             defaultValue={task ? undefined : parseDuration("10m")}
             value={task?.duration ? parseDuration(task.duration) : undefined}
             onChange={(e) => e && handleDurationChange(e)}
-            className="flex w-full flex-col gap-1.5"
+            className="w-full"
           >
-            <Label htmlFor="duration" className={labelClass}>
-              {copy.form.duration}
-            </Label>
-
             <div className={boxClass}>
               <DateInput className="h-8 border-0 p-0 data-[focus-within]:ring-0 data-[focus-within]:ring-offset-0" />
               <span className="ml-auto font-mono text-2xs text-muted-foreground">
@@ -164,35 +206,23 @@ export function TaskForm({ id, task, defaultDate, className, onSubmit }: TaskFor
               </span>
             </div>
           </TimeField>
-        </div>
-      </div>
+        </Row>
 
-      <div className="flex flex-col gap-1.5">
-        <Label id={linksLabelId} className={labelClass}>
-          {copy.form.links}
-        </Label>
-        <LinksField value={links ?? []} onChange={setLinks} labelledBy={linksLabelId} />
-      </div>
+        <Row label={copy.form.links} labelId={linksLabelId}>
+          <LinksField value={links ?? []} onChange={setLinks} labelledBy={linksLabelId} />
+        </Row>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="priority" className={labelClass}>
-          {copy.form.priority}
-        </Label>
-        <PriorityPicker onSelectedPriority={setPriority} task={task} />
-      </div>
+        <Row label={copy.form.priority} htmlFor="priority">
+          <PriorityPicker onSelectedPriority={setPriority} task={task} />
+        </Row>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="tags" className={labelClass}>
-          {copy.form.tags}
-        </Label>
-        <TagsPicker onSelectedTags={setTags} task={task} />
-      </div>
+        <Row label={copy.form.tags} htmlFor="tags">
+          <TagsPicker onSelectedTags={setTags} task={task} />
+        </Row>
 
-      <div className="flex flex-col gap-1.5">
-        <Label htmlFor="repeat" className={labelClass}>
-          {copy.form.repeat}
-        </Label>
-        <RepeatPicker onSelectedRepeat={setRepeat} task={task} />
+        <Row label={copy.form.repeat} htmlFor="repeat">
+          <RepeatPicker onSelectedRepeat={setRepeat} task={task} />
+        </Row>
       </div>
     </form>
   );

@@ -68,6 +68,7 @@ export const copy = {
     linkLimit: "Máximo de 10 links por tarefa",
     priority: "Prioridade",
     tags: "Tags",
+    tagPlaceholder: "adicionar tag",
     repeat: "Repetição",
     repeatOff: "Não repetir",
     repeatDaily: "Diária",

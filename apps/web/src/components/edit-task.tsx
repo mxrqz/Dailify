@@ -1,7 +1,6 @@
 import { createContext, useContext, useId, useState, ReactNode } from "react";
 import {
   Sheet,
-  SheetClose,
   SheetContent,
   SheetDescription,
   SheetFooter,
@@ -127,14 +126,13 @@ export function EditTaskContent({
   };
 
   return (
-    <SheetContent className="w-full overflow-hidden rounded-l-panel border-surface-line bg-surface-card shadow-panel">
-      <SheetHeader>
-        <SheetTitle className="text-lg font-semibold tracking-[-0.01em]">
-          {copy.form.editTitle}
-        </SheetTitle>
-        <SheetDescription className="text-sm text-content-secondary">
-          {copy.form.editDescription}
-        </SheetDescription>
+    // 384px (o `sm:max-w-sm` do primitivo) não comportava a linha de data + duração nem quatro
+    // ações no rodapé — era a origem da rolagem horizontal e dos rótulos cortados.
+    <SheetContent className="w-full overflow-hidden rounded-l-panel border-surface-line bg-surface-card shadow-panel sm:max-w-[27.5rem]">
+      {/* O texto da tarefa é o cabeçalho visível; o título do diálogo existe pro leitor de tela. */}
+      <SheetHeader className="pb-0">
+        <SheetTitle className="sr-only">{copy.form.editTitle}</SheetTitle>
+        <SheetDescription className="sr-only">{copy.form.editDescription}</SheetDescription>
       </SheetHeader>
 
       <TaskForm
@@ -144,49 +142,46 @@ export function EditTaskContent({
         onSubmit={handleSubmit}
       />
 
-      <SheetFooter className="flex-row items-center justify-between gap-2">
+      {/* "Cancelar" saiu: o ✕ e o Esc já são duas saídas, e três era ruído no caminho do Salvar. */}
+      <SheetFooter className="flex-row items-center justify-end gap-2 border-t border-surface-line">
         <Button
           variant="ghost"
-          className="cursor-pointer gap-2 text-destructive hover:text-destructive"
+          disabled={completed}
+          className="cursor-pointer gap-2"
           onClick={() => {
-            void onDelete();
+            void onComplete();
             onClose();
           }}
         >
-          <Trash2Icon className="size-4" />
-          {copy.task.delete}
+          <CheckIcon className="size-4" />
+          {completed ? copy.task.completed : copy.task.complete}
         </Button>
 
-        <div className="flex items-center gap-2">
-          <SheetClose asChild>
-            <Button variant="ghost" className="cursor-pointer">
-              {copy.form.cancel}
-            </Button>
-          </SheetClose>
-
-          <Button
-            variant="ghost"
-            disabled={completed}
-            className="cursor-pointer gap-2"
-            onClick={() => {
-              void onComplete();
-              onClose();
-            }}
-          >
-            <CheckIcon className="size-4" />
-            {completed ? copy.task.completed : copy.task.complete}
-          </Button>
-
-          <Button
-            type="submit"
-            form={formId}
-            className="cursor-pointer rounded-full bg-accent-primary px-5 text-primary-foreground hover:bg-accent-hover"
-            disabled={loading}
-          >
-            {loading ? <Loader2 className="animate-spin" /> : copy.form.save}
-          </Button>
-        </div>
+        <Button
+          type="submit"
+          form={formId}
+          className="cursor-pointer rounded-full bg-accent-primary px-5 text-primary-foreground hover:bg-accent-hover"
+          disabled={loading}
+        >
+          {loading ? <Loader2 className="animate-spin" /> : copy.form.save}
+        </Button>
       </SheetFooter>
+
+      {/* Fica no fim do DOM de propósito, ainda que apareça no topo: o Radix foca o primeiro
+          elemento focável ao abrir, e um botão de excluir nessa posição significa abrir o painel
+          e apertar Enter pra perder a tarefa. Aqui, quem recebe o foco é o texto da tarefa. */}
+      <Button
+        variant="ghost"
+        size="icon"
+        aria-label={copy.task.delete}
+        onClick={() => {
+          void onDelete();
+          onClose();
+        }}
+        className="absolute top-3 right-12 size-8 cursor-pointer text-muted-foreground hover:text-destructive"
+      >
+        <Trash2Icon className="size-4" />
+      </Button>
     </SheetContent>
   );
 }

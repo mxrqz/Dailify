@@ -82,9 +82,12 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
           <div aria-live="polite" className="flex flex-wrap items-center gap-1.5 px-1">
             <span className={cn(chipClass, !parsed.date && "text-accent-primary")}>
               {parsed.date
-                ? format(parsed.date, parsed.hasTime ? "EEE · d MMM · HH:mm" : "EEE · d MMM", {
-                    locale: ptBR,
-                  })
+                ? // EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
+                  format(
+                    parsed.date,
+                    parsed.hasTime ? "EEEEEE · d MMM · HH:mm" : "EEEEEE · d MMM",
+                    { locale: ptBR },
+                  )
                 : copy.composer.missingWhen}
             </span>
 

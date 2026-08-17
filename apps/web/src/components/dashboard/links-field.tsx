@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { LinkIcon, PencilIcon, PlusIcon, XIcon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
-import { chipClass, fieldClass } from "@/components/dashboard/styles";
+import { fieldClass } from "@/components/dashboard/styles";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { linkLabel } from "@/functions/link-label";
@@ -100,7 +100,7 @@ export function LinksField({
       ref={groupRef}
       role="group"
       aria-labelledby={labelledBy}
-      className="flex flex-wrap items-center gap-1.5"
+      className="flex flex-col items-start gap-1 py-1.5"
     >
       {value.map((url, index) =>
         editing === index ? (
@@ -125,13 +125,16 @@ export function LinksField({
             className={inputClass}
           />
         ) : (
-          <span key={url} className={chipClass}>
-            <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
+          // Link é leitura antes de ser campo: texto sublinhado, como em qualquer lugar da web,
+          // com os controles ao lado em vez de um chip que disfarça o que ele é.
+          <span key={url} className="group/link flex max-w-full items-center gap-1.5 text-sm">
+            <LinkIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
             <a
               href={url}
               target="_blank"
               rel="noopener noreferrer"
-              className="hover:text-foreground"
+              title={url}
+              className="truncate text-foreground underline decoration-surface-line underline-offset-4 transition-colors hover:decoration-accent-primary"
             >
               {linkLabel(url)}
             </a>
@@ -139,17 +142,17 @@ export function LinksField({
               type="button"
               aria-label={copy.form.linkEdit}
               onClick={() => openEditor(index)}
-              className="text-muted-foreground hover:text-foreground"
+              className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
             >
-              <PencilIcon className="size-3" />
+              <PencilIcon className="size-3.5" />
             </button>
             <button
               type="button"
               aria-label={copy.form.linkRemove}
               onClick={() => onChange(value.filter((_, i) => i !== index))}
-              className="text-muted-foreground hover:text-destructive"
+              className="shrink-0 text-muted-foreground transition-colors hover:text-destructive"
             >
-              <XIcon className="size-3" />
+              <XIcon className="size-3.5" />
             </button>
           </span>
         ),
