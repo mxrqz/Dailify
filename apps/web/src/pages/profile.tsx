@@ -3,6 +3,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
+import { ThemeSelect } from "@/components/mode-toggle";
 import { PersonalTab, SecurityTab, SubscriptionTab } from "@/components/profileTabs";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -42,6 +43,21 @@ export default function ProfilePage() {
             paymentDetails={paymentDetails}
             permissions={permissions}
           />
+        )}
+
+        {active === "settings" && (
+          <Card className="rounded-2xl border-surface-line bg-surface-card">
+            <CardHeader>
+              <CardTitle>{copy.profile.themeTitle}</CardTitle>
+              <CardDescription className="text-content-secondary">
+                {copy.profile.themeDescription}
+              </CardDescription>
+            </CardHeader>
+
+            <CardContent>
+              <ThemeSelect />
+            </CardContent>
+          </Card>
         )}
 
         {active === "settings" && (

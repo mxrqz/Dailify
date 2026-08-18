@@ -7,10 +7,12 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { isTheme, useTheme } from "./theme-provider";
 import { cn } from "@/lib/utils";
 import { copy } from "@/components/dashboard/copy";
 
+/** Versão de barra, usada só pelo header da landing — no app o tema mora em Configurações. */
 export function ModeToggle({ className }: { className?: string }) {
   const { theme, setTheme } = useTheme();
 
@@ -38,5 +40,29 @@ export function ModeToggle({ className }: { className?: string }) {
         </DropdownMenuRadioGroup>
       </DropdownMenuContent>
     </DropdownMenu>
+  );
+}
+
+/**
+ * Seletor de tema em linha, pra dentro de `/profile?tab=settings`. O guard do `isTheme` não é
+ * decoração: clicar no item já ativo faz o Radix emitir `""`, que sem ele zeraria o tema.
+ */
+export function ThemeSelect(): JSX.Element {
+  const { theme, setTheme } = useTheme();
+
+  return (
+    <ToggleGroup
+      type="single"
+      variant="outline"
+      value={theme}
+      onValueChange={(value) => {
+        if (isTheme(value)) setTheme(value);
+      }}
+      aria-label={copy.header.themeToggle}
+    >
+      <ToggleGroupItem value="light">{copy.header.themeLight}</ToggleGroupItem>
+      <ToggleGroupItem value="dark">{copy.header.themeDark}</ToggleGroupItem>
+      <ToggleGroupItem value="system">{copy.header.themeSystem}</ToggleGroupItem>
+    </ToggleGroup>
   );
 }

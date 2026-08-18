@@ -1,3 +1,4 @@
+import { useUser } from "@clerk/clerk-react";
 import { useLocation, useSearchParams } from "react-router-dom";
 
 import { copy } from "@/components/dashboard/copy";
@@ -6,6 +7,7 @@ import { PremiumButton } from "./premium-button";
 import { ProfileButton } from "./profile-button";
 import { SecurityButton } from "./security-button";
 import { SettingsButton } from "./settings-button";
+import { SignOutButton } from "./sign-out-button";
 import type { SidebarSection } from "./sidebar-item";
 
 export type { SidebarSection };
@@ -25,9 +27,12 @@ function useActiveSection(): SidebarSection {
 /**
  * Navegação do app: coluna estreita à esquerda, presente em todas as páginas (montada pelo
  * `app-layout`). Cada destino vive no próprio arquivo desta pasta; aqui só a ordem.
+ *
+ * "Sair" fica no rodapé e só existe logado — `/premium` divide este layout sem `ProtectedRoute`.
  */
 export function Sidebar(): JSX.Element {
   const active = useActiveSection();
+  const { isSignedIn } = useUser();
 
   return (
     <nav
@@ -39,6 +44,12 @@ export function Sidebar(): JSX.Element {
       <SecurityButton active={active === "security"} />
       <PremiumButton active={active === "premium"} />
       <SettingsButton active={active === "settings"} />
+
+      {isSignedIn && (
+        <div className="mt-auto flex flex-col border-t border-surface-line pt-1">
+          <SignOutButton />
+        </div>
+      )}
     </nav>
   );
 }

@@ -1,34 +1,23 @@
-import { useAuth, useUser } from "@clerk/clerk-react";
-import {
-  ChevronLeftIcon,
-  ChevronRightIcon,
-  LogOutIcon,
-  SettingsIcon,
-  UserIcon,
-} from "lucide-react";
+import { useUser } from "@clerk/clerk-react";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { Brand } from "@/components/brand";
 import { copy } from "@/components/dashboard/copy";
-import { ModeToggle } from "@/components/mode-toggle";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { PLAN_ID } from "@/consts/conts";
 import { cn } from "@/lib/utils";
 
 /**
- * Barra do app no formato de título de janela de desktop: fina, com a marca à esquerda, o par
- * voltar/avançar logo ao lado e a conta à direita. Altura fixa em `h-10` — o `home.tsx` desconta
- * exatamente esse valor pra centralizar o composer, então mexer aqui pede mexer lá.
+ * Barra do app no formato de título de janela de desktop: fina, com a marca à esquerda e o par
+ * voltar/avançar logo ao lado. Altura fixa em `h-10` — o `home.tsx` desconta exatamente esse valor
+ * pra centralizar o composer, então mexer aqui pede mexer lá.
+ *
+ * Conta e tema não moram aqui: perfil/configurações/sair são a sidebar, e o seletor de tema é uma
+ * seção de `/profile?tab=settings`. O "Entrar" sobrevive porque `/premium` divide este layout sem
+ * `ProtectedRoute`.
  */
 export function AppHeader({ className }: { className?: string }): JSX.Element {
-  const { signOut } = useAuth();
   const { user, isSignedIn } = useUser();
   const navigate = useNavigate();
   const isFree = user?.publicMetadata?.plan === PLAN_ID.free;
@@ -65,8 +54,6 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
       </div>
 
       <div className="ml-auto inline-flex items-center gap-2">
-        <ModeToggle className="size-6 rounded-md border-0 bg-transparent shadow-none hover:bg-surface-hover" />
-
         {isFree && (
           <Button
             asChild
@@ -77,7 +64,7 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
           </Button>
         )}
 
-        {!isSignedIn ? (
+        {!isSignedIn && (
           <Button
             asChild
             variant="outline"
@@ -85,33 +72,6 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
           >
             <Link to="/login">{copy.header.signIn}</Link>
           </Button>
-        ) : (
-          <DropdownMenu>
-            <DropdownMenuTrigger aria-label={copy.header.accountMenu}>
-              <Avatar className="size-6 cursor-pointer">
-                <AvatarImage src={user?.imageUrl} alt="" />
-                <AvatarFallback className="text-2xs">
-                  {user?.firstName?.slice(0, 1)}
-                  {user?.lastName?.slice(0, 1)}
-                </AvatarFallback>
-              </Avatar>
-            </DropdownMenuTrigger>
-
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem onClick={() => navigate("/profile")} className="cursor-pointer">
-                <UserIcon />
-                <span>{copy.header.profile}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={(e) => e.preventDefault()} className="cursor-pointer">
-                <SettingsIcon />
-                <span>{copy.header.settings}</span>
-              </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => signOut()} className="cursor-pointer">
-                <LogOutIcon />
-                <span>{copy.header.signOut}</span>
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
         )}
       </div>
     </header>

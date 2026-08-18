@@ -10,6 +10,19 @@ export interface SidebarItemProps {
 }
 
 /**
+ * A aparência de um item da sidebar, separada do `<Link>` porque "Sair" é ação, não destino, e
+ * precisa das mesmas classes num `<button>`.
+ */
+export function sidebarItemClass(active: boolean): string {
+  return cn(
+    "inline-flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors",
+    active
+      ? "bg-surface-hover text-foreground"
+      : "text-muted-foreground hover:bg-surface-hover hover:text-foreground",
+  );
+}
+
+/**
  * A forma de um item da sidebar. Cada destino tem arquivo próprio nesta pasta e só preenche
  * ícone, rótulo e rota. O ativo é neutro de propósito — crimson aqui competiria com a ação
  * primária, que é o que ele marca no resto do app.
@@ -21,16 +34,7 @@ export function SidebarItem({
   active,
 }: SidebarItemProps & { icon: LucideIcon; label: string; to: string }): JSX.Element {
   return (
-    <Link
-      to={to}
-      aria-current={active ? "page" : undefined}
-      className={cn(
-        "inline-flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors",
-        active
-          ? "bg-surface-hover text-foreground"
-          : "text-muted-foreground hover:bg-surface-hover hover:text-foreground",
-      )}
-    >
+    <Link to={to} aria-current={active ? "page" : undefined} className={sidebarItemClass(active)}>
       <Icon className="size-4 shrink-0" aria-hidden="true" />
       {label}
     </Link>
