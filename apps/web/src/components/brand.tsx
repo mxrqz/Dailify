@@ -9,6 +9,10 @@ import { cn } from "@/lib/utils";
  * O `src` é absoluto de propósito — o header antigo usava "./dailify_logo_2.png", que resolve
  * relativo à rota atual e quebra em qualquer path aninhado.
  *
+ * `compact` é o header do app, que fica logo acima da sidebar: o `pl-2.5` e o `gap-2.5` repetem o
+ * `px-2.5`/`gap-2.5` do `sidebar-item` de propósito — sem eles a marca cai 10px à esquerda dos
+ * ícones da nav e a coluna fica torta.
+ *
  * `alt=""`: o logo é decorativo aqui — o wordmark "Dailify" ao lado já anuncia o nome. Um `alt`
  * repetindo o texto faria o leitor de tela dizer "Dailify Dailify". Em `iconOnly` (auth) não há
  * wordmark, então o nome volta como `aria-label` no link, senão ele fica sem nome acessível.
@@ -26,7 +30,7 @@ export function Brand({
     <Link
       to={to}
       aria-label={iconOnly ? "Dailify" : undefined}
-      className={cn("inline-flex items-center", compact ? "gap-1.5" : "gap-2")}
+      className={cn("inline-flex items-center", compact ? "gap-2.5 pl-2.5" : "gap-2")}
     >
       <img
         src="/dailify_logo_2.png"
