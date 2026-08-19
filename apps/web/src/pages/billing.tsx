@@ -5,9 +5,13 @@ import { FaCcAmex, FaCcVisa } from "react-icons/fa";
 import { RiMastercardFill } from "react-icons/ri";
 import { Link } from "react-router-dom";
 
+import { toast } from "sonner";
+
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { PageHeader } from "@/components/page-header";
+import { copy as pricingCopy } from "@/components/pricing/copy";
+import { PlanCards, type Cycle } from "@/components/pricing/plan-cards";
 import { Badge } from "@/components/ui/badge";
 import ApplePayLogo from "@/components/ui/applePayLogo";
 import { Button } from "@/components/ui/button";
@@ -16,10 +20,13 @@ import GooglePayLogo from "@/components/ui/googlePayLogo";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { PLAN_ID, planMap } from "@/consts/conts";
-import { billingPortal } from "@/functions/api";
+import type { PlanRole } from "@/consts/pricing";
+import { billingPortal, checkout } from "@/functions/api";
 import { billingSections } from "@/functions/billing-sections";
 import { useEntitlements } from "@/hooks/useEntitlements";
 import { toText } from "@/lib/utils";
+
+const PAID_ROLES: readonly PlanRole[] = [PLAN_ID.pro, PLAN_ID.proAi];
 
 export default function BillingPage(): JSX.Element {
   const { user } = useUser();
@@ -57,15 +64,24 @@ export default function BillingPage(): JSX.Element {
     if (url) window.location.href = url;
   };
 
+  const startCheckout = async (role: PlanRole, cycle: Cycle) => {
+    const token = await getToken();
+    if (!token) return;
+
+    const { url } = await checkout(token, cycle === "yearly" ? `${role}-year` : role);
+    if (url) window.location.href = url;
+    else toast.error(pricingCopy.page.checkoutFailed);
+  };
+
   return (
     <main className="flex w-full flex-col gap-6 py-6">
       <PageHeader title={copy.profile.billingPageTitle} />
 
       <Card className="rounded-2xl border-surface-line bg-surface-card">
         <CardHeader>
-          <CardTitle>Plano e Assinatura</CardTitle>
+          <CardTitle>{copy.profile.billingTitle}</CardTitle>
           <CardDescription className="text-content-secondary">
-            Gerencie seu plano atual e informações de pagamento.
+            {copy.profile.billingDescription}
           </CardDescription>
         </CardHeader>
 
@@ -73,21 +89,29 @@ export default function BillingPage(): JSX.Element {
           <div className="rounded-lg border p-4">
             <div className="flex items-center justify-between">
               <div>
-                <h3 className="text-lg font-semibold">Plano {plan}</h3>
+                <h3 className="text-lg font-semibold">
+                  {copy.profile.billingCurrentPlan.replace("{plan}", plan)}
+                </h3>
 
                 {sections.subscription && paymentDetails && (
                   <p className="text-sm text-content-secondary">
-                    Próxima cobrança em{" "}
-                    {format(new Date(paymentDetails.start * 1000), "dd/MM/yyyy")} •{" "}
-                    {amountFormatted(paymentDetails.amount, paymentDetails.currency)} /{" "}
-                    {paymentDetails.recurring}
+                    {copy.profile.billingNextCharge
+                      .replace(
+                        "{date}",
+                        format(new Date(paymentDetails.start * 1000), "dd/MM/yyyy"),
+                      )
+                      .replace(
+                        "{amount}",
+                        amountFormatted(paymentDetails.amount, paymentDetails.currency),
+                      )
+                      .replace("{cycle}", paymentDetails.recurring)}
                   </p>
                 )}
               </div>
 
               {sections.subscription && (
                 <Button variant="outline" onClick={getBillingPortalUrl}>
-                  Gerenciar plano
+                  {copy.profile.billingManage}
                 </Button>
               )}
             </div>
@@ -97,11 +121,13 @@ export default function BillingPage(): JSX.Element {
             {!entitlements.loading && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
-                  <span>Tarefas utilizadas</span>
+                  <span>{copy.profile.billingTasksUsed}</span>
 
                   <span className="font-medium">
                     {entitlements.tasksUsed} /{" "}
-                    {entitlements.unlimited ? "ilimitado" : entitlements.monthlyLimit}
+                    {entitlements.unlimited
+                      ? copy.profile.billingUnlimited
+                      : entitlements.monthlyLimit}
                   </span>
                 </div>
 
@@ -116,24 +142,46 @@ export default function BillingPage(): JSX.Element {
 
                 <p className="text-xs text-muted-foreground">
                   {entitlements.unlimited
-                    ? "Tarefas ilimitadas"
-                    : `${entitlements.remaining} tarefas restantes neste ciclo`}
+                    ? copy.profile.billingUnlimitedTasks
+                    : copy.profile.billingRemaining.replace("{n}", String(entitlements.remaining))}
                 </p>
               </div>
             )}
           </div>
 
           {paymentDetails === null && (
-            <div className="rounded-lg border border-surface-line p-4">
-              <p className="text-sm text-content-secondary">{copy.profile.billingNoSubscription}</p>
-              <Button asChild variant="outline" className="mt-3">
-                <Link to="/premium">{copy.profile.billingSeePlans}</Link>
-              </Button>
-            </div>
+            <p className="text-sm text-content-secondary">{copy.profile.billingNoSubscription}</p>
           )}
 
           <div className="space-y-4">
-            <h3 className="text-lg font-semibold">Histórico de pagamentos</h3>
+            <div>
+              <h3 className="text-lg font-semibold">
+                {paymentDetails === null
+                  ? pricingCopy.billingSection.titleFree
+                  : pricingCopy.billingSection.titleSubscribed}
+              </h3>
+              <p className="text-sm text-content-secondary">
+                {pricingCopy.billingSection.description}
+              </p>
+            </div>
+
+            <PlanCards
+              roles={PAID_ROLES}
+              recommended={PLAN_ID.proAi}
+              renderCta={(role, cycle) => (
+                <Button
+                  className="w-full"
+                  variant={role === PLAN_ID.proAi ? "default" : "outline"}
+                  onClick={() => startCheckout(role, cycle)}
+                >
+                  {pricingCopy.page.choosePlan}
+                </Button>
+              )}
+            />
+          </div>
+
+          <div className="space-y-4">
+            <h3 className="text-lg font-semibold">{copy.profile.billingHistory}</h3>
 
             {sections.invoices ? (
               <div className="space-y-4">
@@ -172,13 +220,15 @@ export default function BillingPage(): JSX.Element {
                         <div className="flex gap-5">
                           <div className="flex items-center gap-2">
                             <Badge variant="outline" className="capitalize">
-                              {invoice.status === "paid" ? "Pago" : invoice.status}
+                              {invoice.status === "paid"
+                                ? copy.profile.billingPaid
+                                : invoice.status}
                             </Badge>
 
                             <Link to={invoice.hosted_invoice_url ?? "#"}>
                               <Button variant="ghost" size="icon" className="h-8 w-8">
                                 <Receipt className="h-4 w-4" />
-                                <span className="sr-only">Ver fatura</span>
+                                <span className="sr-only">{copy.profile.billingViewInvoice}</span>
                               </Button>
                             </Link>
                           </div>

@@ -19,3 +19,6 @@ export const PLAN_PRICING = {
   pro: { monthly: "R$ 9,90", yearly: "R$ 99,00", yearlySavings: "Economize R$ 19,80" },
   "pro+ai": { monthly: "R$ 19,90", yearly: "R$ 199,00", yearlySavings: "Economize R$ 39,80" },
 } as const satisfies Record<"pro" | "pro+ai", PlanPricing>;
+
+/** Os planos que aparecem numa tabela de preço. `admin` é papel interno, não é vendido. */
+export type PlanRole = "free" | "pro" | "pro+ai";
