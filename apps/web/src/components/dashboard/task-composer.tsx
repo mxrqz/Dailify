@@ -41,7 +41,7 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
     <form
       onSubmit={handleSubmit}
       className={cn(
-        "rounded-[21px] border border-surface-line bg-surface-page p-[3px] transition-colors focus-within:border-accent-primary",
+        "rounded-[21px] border border-surface-line bg-surface-page p-1 transition-colors focus-within:border-accent-primary",
         className,
       )}
     >
@@ -78,8 +78,8 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
           </div>
         )}
 
-        {/* rounded-[18px] = 21 do form menos os 3 do padding, pra manter os cantos concêntricos */}
-        <div className="flex min-h-28 items-center gap-2 rounded-[18px] bg-surface-line px-3 py-2">
+        {/* rounded-[17px] = 21 do form menos os 4 do p-1, pra manter os cantos concêntricos */}
+        <div className="flex min-h-28 items-center gap-2 rounded-[17px] bg-surface-line px-3 py-2">
           <Label htmlFor="composer-text" className="sr-only">
             {copy.composer.text}
           </Label>
