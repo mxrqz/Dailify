@@ -19,9 +19,8 @@ const invoice: InvoicesProps = {
 };
 
 describe("billingSections", () => {
-  // O bug que motivou tudo: o server responde 400 pra quem não tem stripeCustomerId, o client
-  // devolve null, e o gate antigo (`permissions && paymentDetails && invoices`) apagava a página
-  // inteira — inclusive o consumo de tarefas, que não vem do Stripe.
+  // O gate antigo `permissions && paymentDetails && invoices` apagava a página inteira,
+  // inclusive o consumo de tarefas que não vem do Stripe.
   it("Free sem Stripe: esconde assinatura e faturas", () => {
     expect(billingSections(null, [])).toEqual({ subscription: false, invoices: false });
   });
