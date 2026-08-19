@@ -107,8 +107,8 @@ Area-specific guidance lives in nested `CLAUDE.md` files (auto-loaded when you w
 
 - **No `as` type assertions.** Use type guards or proper types. `as const` is fine. Enforced as
   an ESLint *warning* while the ~50 existing ones are cleaned up gradually (bd issue `aqa`).
-- **Formatting: Prettier** (`.prettierrc`, `printWidth: 100`). Run `bun run format` before
-  committing; `bun run check` is the full gate (format + lint + typecheck + test).
+- **Formatting: Prettier** (`.prettierrc`, `printWidth: 100`). Run `bun --filter '@dailify/web'
+  format` before committing; `bun run check` is the full gate (format + lint + typecheck + test).
 - **Design tokens** live in `src/global.css`. Colors are defined ONCE via `light-dark(light, dark)`
   in `oklch` (no per-mode duplication, no `display-p3`); dark mode is bridged from the `.dark`
   class through `color-scheme`. No hex/arbitrary colors in components — add a token + a

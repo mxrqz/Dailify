@@ -7,10 +7,10 @@ Routes are declared in `src/App.tsx` (react-router). Provider nesting (from `mai
 | --------------- | ---------------------- | ---------------------------------------------------------------------- |
 | `/`             | `landingPage.tsx`      | public marketing page                                                  |
 | `/dashboard`    | `home.tsx`             | **protected**; the app (task list + calendar, toggled by `isCalendar`) |
-| `/profile`      | `profile.tsx`          | **protected**; dados pessoais, foto, telefone, timezone                |
-| `/security`     | `security.tsx`         | **protected**; sessões ativas e segurança da conta                     |
-| `/billing`      | `billing.tsx`          | **protected**; plano, consumo, faturas. Free vê consumo + CTA          |
-| `/settings`     | `settings.tsx`         | **protected**; tema e (em breve) notificações                          |
+| `/profile`      | `profile.tsx`          | **protected**; personal data, photo, phone, timezone                   |
+| `/security`     | `security.tsx`         | **protected**; active sessions and account security                    |
+| `/billing`      | `billing.tsx`          | **protected**; plan, usage, invoices. Free sees usage + CTA            |
+| `/settings`     | `settings.tsx`         | **protected**; theme and (soon) notifications                          |
 | `/login`        | `login.tsx`            | Clerk sign-in — `AuthPage mode="signIn"` (`components/auth/`)          |
 | `/signup`       | `signup.tsx`           | same machinery, `mode="signUp"` — only the copy differs                |
 | `/sso-callback` | Clerk                  | `AuthenticateWithRedirectCallback`, declared inline in `App.tsx`       |
