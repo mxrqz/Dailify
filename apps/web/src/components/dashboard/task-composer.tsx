@@ -45,10 +45,9 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
         className,
       )}
     >
-      {/* rounded-[18px] = 21 do form menos os 3 do padding, pra manter os cantos concêntricos */}
-      <div className="flex min-h-28 flex-col gap-2 rounded-[18px] bg-surface-line px-3 py-2">
+      <div className="flex flex-col gap-2">
         {input.trim() && (
-          <div aria-live="polite" className="flex flex-wrap items-center gap-1.5">
+          <div aria-live="polite" className="flex flex-wrap items-center gap-1.5 px-1">
             <span className={cn(chipClass, !parsed.date && "text-accent-primary")}>
               {parsed.date
                 ? // EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
@@ -79,8 +78,8 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
           </div>
         )}
 
-        {/* flex-1 + items-center: o texto fica no meio da altura sobrando, não grudado no topo */}
-        <div className="flex flex-1 items-center gap-2">
+        {/* rounded-[18px] = 21 do form menos os 3 do padding, pra manter os cantos concêntricos */}
+        <div className="flex min-h-28 items-center gap-2 rounded-[18px] bg-surface-line px-3 py-2">
           <Label htmlFor="composer-text" className="sr-only">
             {copy.composer.text}
           </Label>
