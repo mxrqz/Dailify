@@ -12,11 +12,17 @@ import type { SidebarSection } from "./sidebar-item";
 
 export type { SidebarSection };
 
-/** Qual item está aceso, lido da URL — a sidebar não guarda estado próprio. */
+/**
+ * Qual item está aceso, lido da URL — a sidebar não guarda estado próprio.
+ *
+ * `/premium` (escolher plano) acende "Premium", que aponta pra `/profile?tab=premium` (gerenciar
+ * assinatura): o destaque marca o assunto, não o destino, então clicar nele troca de página.
+ */
 function useActiveSection(): SidebarSection {
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
 
+  if (pathname === "/premium") return "premium";
   if (pathname !== "/profile") return "dashboard";
 
   const tab = searchParams.get("tab");
