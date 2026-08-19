@@ -92,6 +92,9 @@ export const copy = {
 
   profile: {
     pageTitle: "Perfil",
+    settingsPageTitle: "Configurações",
+    securityPageTitle: "Segurança",
+    billingPageTitle: "Premium",
     back: "Voltar",
     navLabel: "Navegação",
     navDashboard: "Tarefas",

@@ -23,6 +23,7 @@ function useActiveSection(): SidebarSection {
   const [searchParams] = useSearchParams();
 
   if (pathname === "/premium") return "premium";
+  if (pathname === "/settings") return "settings";
   if (pathname !== "/profile") return "dashboard";
 
   const tab = searchParams.get("tab");

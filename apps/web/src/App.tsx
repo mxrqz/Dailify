@@ -12,6 +12,7 @@ import Verify from "./pages/verify";
 import { copy } from "@/components/auth/copy";
 import { DailifyProvider } from "./components/dailifyContext";
 import ProfilePage from "./pages/profile";
+import SettingsPage from "./pages/settings";
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import TaskPreview from "./pages/[id]/taskPreview";
 import LandingPage from "./pages/landingPage";
@@ -56,6 +57,19 @@ export default function App() {
                         </Helmet>
 
                         <ProfilePage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/settings"
+                    element={
+                      <ProtectedRoute>
+                        <Helmet>
+                          <title>Dailify - Configurações</title>
+                        </Helmet>
+
+                        <SettingsPage />
                       </ProtectedRoute>
                     }
                   />
