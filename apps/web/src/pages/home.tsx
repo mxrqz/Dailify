@@ -75,7 +75,17 @@ export default function Home() {
   const stripHeight = useHeight(stripRef);
   const composerHeight = useHeight(composerRef);
 
-  const centered = `calc(50dvh - 2.5rem - ${composerHeight / 2}px)`;
+  // Centraliza pela altura SEM os chips e desconta o crescimento inteiro (não a metade): assim o
+  // rodapé do composer fica cravado e ele só abre pra cima quando o eco do parser entra.
+  const [baseHeight, setBaseHeight] = useState(0);
+  useEffect(() => {
+    if (composerHeight > 0) {
+      setBaseHeight((prev) => (prev === 0 ? composerHeight : Math.min(prev, composerHeight)));
+    }
+  }, [composerHeight]);
+
+  const grown = baseHeight > 0 ? composerHeight - baseHeight : 0;
+  const centered = `calc(50dvh - 2.5rem - ${baseHeight / 2 + grown}px)`;
   const belowStrip = `${STRIP_TOP + stripHeight + STRIP_GAP}px`;
 
   const handleCompose = async ({ parsed }: ComposerValues) => {
@@ -116,6 +126,11 @@ export default function Home() {
         <WeekStrip />
       </div>
 
+      {/*
+       * Sem transition no margin-top de propósito: o ResizeObserver reporta a altura a cada frame
+       * da animação dos chips, então o margin já muda suave — animá-lo de novo o faria perseguir um
+       * alvo móvel com atraso, e o rodapé flutuaria em vez de ficar parado.
+       */}
       <div ref={composerRef} style={{ marginTop: `max(${centered}, ${belowStrip})` }}>
         <TaskComposer submitting={submitting} onSubmit={handleCompose} />
       </div>

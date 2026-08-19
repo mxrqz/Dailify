@@ -45,38 +45,50 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
         className,
       )}
     >
-      <div className="flex flex-col gap-2">
-        {input.trim() && (
-          <div aria-live="polite" className="flex flex-wrap items-center gap-1.5 px-1">
-            <span className={cn(chipClass, !parsed.date && "text-accent-primary")}>
-              {parsed.date
-                ? // EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
-                  format(
-                    parsed.date,
-                    parsed.hasTime ? "EEEEEE · d MMM · HH:mm" : "EEEEEE · d MMM",
-                    {
-                      locale: ptBR,
-                    },
-                  )
-                : copy.composer.missingWhen}
-            </span>
-
-            {parsed.duration && <span className={chipClass}>{parsed.duration}</span>}
-
-            {!parsed.text && (
-              <span className={cn(chipClass, "text-accent-primary")}>
-                {copy.composer.missingText}
+      <div className="flex flex-col">
+        {/*
+         * grid-rows 0fr→1fr: é o único jeito de transicionar até `height: auto` sem número mágico.
+         * Fica sempre montado (não `&&`) senão não haveria estado inicial pra animar.
+         */}
+        <div
+          aria-hidden={!input.trim()}
+          className={cn(
+            "grid transition-[grid-template-rows] duration-200 ease-out",
+            input.trim() ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+          )}
+        >
+          <div className="overflow-hidden">
+            <div aria-live="polite" className="flex flex-wrap items-center gap-1.5 px-1 pb-2">
+              <span className={cn(chipClass, !parsed.date && "text-accent-primary")}>
+                {parsed.date
+                  ? // EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
+                    format(
+                      parsed.date,
+                      parsed.hasTime ? "EEEEEE · d MMM · HH:mm" : "EEEEEE · d MMM",
+                      {
+                        locale: ptBR,
+                      },
+                    )
+                  : copy.composer.missingWhen}
               </span>
-            )}
 
-            {parsed.links.map((url) => (
-              <span key={url} className={chipClass}>
-                <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
-                {linkLabel(url)}
-              </span>
-            ))}
+              {parsed.duration && <span className={chipClass}>{parsed.duration}</span>}
+
+              {!parsed.text && (
+                <span className={cn(chipClass, "text-accent-primary")}>
+                  {copy.composer.missingText}
+                </span>
+              )}
+
+              {parsed.links.map((url) => (
+                <span key={url} className={chipClass}>
+                  <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
+                  {linkLabel(url)}
+                </span>
+              ))}
+            </div>
           </div>
-        )}
+        </div>
 
         {/* rounded-[17px] = 21 do form menos os 4 do p-1, pra manter os cantos concêntricos */}
         <div className="flex min-h-19 items-center gap-2 rounded-[17px] bg-surface-panel px-3 py-2">
