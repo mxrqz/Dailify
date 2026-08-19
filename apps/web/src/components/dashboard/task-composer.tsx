@@ -41,86 +41,76 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
     <form
       onSubmit={handleSubmit}
       className={cn(
-        "rounded-[21px] border border-surface-line bg-surface-page p-1 transition-colors focus-within:border-accent-primary",
+        "rounded-panel border border-surface-line bg-surface-page p-1 transition-colors focus-within:border-accent-primary",
         className,
       )}
     >
-      <div className="flex flex-col">
-        {/*
-         * grid-rows 0fr→1fr: é o único jeito de transicionar até `height: auto` sem número mágico.
-         * Fica sempre montado (não `&&`) senão não haveria estado inicial pra animar.
-         */}
-        <div
-          aria-hidden={!input.trim()}
-          className={cn(
-            "grid transition-[grid-template-rows] duration-200 ease-out",
-            input.trim() ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+      {/*
+       * grid-rows 0fr→1fr: é o único jeito de transicionar até `height: auto` sem número mágico. Os
+       * dois níveis são o mínimo da técnica — a grid mede, o filho corta. Fica sempre montado (não
+       * `&&`) senão não haveria estado inicial pra animar.
+       */}
+      <div
+        aria-hidden={!input.trim()}
+        className={cn(
+          "grid transition-[grid-template-rows] duration-200 ease-out",
+          input.trim() ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+        )}
+      >
+        <div aria-live="polite" className="flex flex-wrap items-center gap-1.5 overflow-hidden p-2">
+          <span className={cn(chipClass, !parsed.date && "text-accent-primary")}>
+            {parsed.date
+              ? // EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
+                format(parsed.date, parsed.hasTime ? "EEEEEE · d MMM · HH:mm" : "EEEEEE · d MMM", {
+                  locale: ptBR,
+                })
+              : copy.composer.missingWhen}
+          </span>
+
+          {parsed.duration && <span className={chipClass}>{parsed.duration}</span>}
+
+          {!parsed.text && (
+            <span className={cn(chipClass, "text-accent-primary")}>
+              {copy.composer.missingText}
+            </span>
           )}
+
+          {parsed.links.map((url) => (
+            <span key={url} className={chipClass}>
+              <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
+              {linkLabel(url)}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="flex min-h-19 items-center gap-2 rounded-field bg-surface-panel p-2">
+        <Label htmlFor="composer-text" className="sr-only">
+          {copy.composer.text}
+        </Label>
+        {/* input, não textarea: a captura é de uma frase só, e o Enter já submete pelo form. */}
+        <input
+          id="composer-text"
+          type="text"
+          value={input}
+          onChange={(e) => setInput(e.target.value)}
+          placeholder={copy.composer.textPlaceholder}
+          autoComplete="off"
+          className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+        />
+
+        <button
+          type="submit"
+          aria-label={copy.composer.submit}
+          disabled={!canSubmit}
+          className="flex size-10 shrink-0 items-center justify-center rounded-full border border-surface-line bg-surface-page text-accent-primary transition-colors hover:bg-surface-hover disabled:text-muted-foreground disabled:hover:bg-surface-page"
         >
-          <div className="overflow-hidden">
-            <div aria-live="polite" className="flex flex-wrap items-center gap-1.5 px-1 pb-2">
-              <span className={cn(chipClass, !parsed.date && "text-accent-primary")}>
-                {parsed.date
-                  ? // EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
-                    format(
-                      parsed.date,
-                      parsed.hasTime ? "EEEEEE · d MMM · HH:mm" : "EEEEEE · d MMM",
-                      {
-                        locale: ptBR,
-                      },
-                    )
-                  : copy.composer.missingWhen}
-              </span>
-
-              {parsed.duration && <span className={chipClass}>{parsed.duration}</span>}
-
-              {!parsed.text && (
-                <span className={cn(chipClass, "text-accent-primary")}>
-                  {copy.composer.missingText}
-                </span>
-              )}
-
-              {parsed.links.map((url) => (
-                <span key={url} className={chipClass}>
-                  <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
-                  {linkLabel(url)}
-                </span>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* rounded-[17px] = 21 do form menos os 4 do p-1, pra manter os cantos concêntricos */}
-        <div className="flex min-h-19 items-center gap-2 rounded-[17px] bg-surface-panel px-3 py-2">
-          <Label htmlFor="composer-text" className="sr-only">
-            {copy.composer.text}
-          </Label>
-          {/* input, não textarea: a captura é de uma frase só, e o Enter já submete pelo form. */}
-          <input
-            id="composer-text"
-            type="text"
-            value={input}
-            onChange={(e) => setInput(e.target.value)}
-            placeholder={copy.composer.textPlaceholder}
-            autoComplete="off"
-            className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
-          />
-
-          <button
-            type="submit"
-            aria-label={copy.composer.submit}
-            disabled={!canSubmit}
-            // `border` sem cor herda o `border-border` do reset — o mesmo das demais bordas do app.
-            // `border-surface-line` era escuro demais pra aparecer sobre o painel.
-            className="flex size-10 shrink-0 items-center justify-center rounded-full border bg-surface-page text-accent-primary transition-colors hover:bg-surface-hover disabled:text-muted-foreground disabled:hover:bg-surface-page"
-          >
-            {submitting ? (
-              <Loader2Icon className="size-4 animate-spin" />
-            ) : (
-              <ArrowUpIcon className="size-4" />
-            )}
-          </button>
-        </div>
+          {submitting ? (
+            <Loader2Icon className="size-4 animate-spin" />
+          ) : (
+            <ArrowUpIcon className="size-4" />
+          )}
+        </button>
       </div>
     </form>
   );
