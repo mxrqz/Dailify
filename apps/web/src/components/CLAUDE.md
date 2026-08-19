@@ -45,6 +45,9 @@ with a `mode` ("signIn" | "signUp").
 - Use semantic tokens (`bg-background`, `text-foreground`, `text-muted-foreground`, `bg-tag-N`,
   `bg-success`, …) — they already adapt to light/dark. Reach for the `dark:` variant only for the rare
   case a token can't express. **No hex / arbitrary colors.**
+- The same rule covers **radii**: `rounded-panel` / `rounded-field` / `rounded-md`, never
+  `rounded-[17px]`. Tokens are in `global.css` (`:root` + `@theme inline`); if none fits, add one
+  instead of inlining a pixel value. See the token table in the root `CLAUDE.md`.
 - Prefer solid state colors over `/opacity` on interactive elements (bd task `k00`).
 
 ## Misc

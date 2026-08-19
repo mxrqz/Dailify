@@ -109,8 +109,25 @@ Area-specific guidance lives in nested `CLAUDE.md` files (auto-loaded when you w
   an ESLint *warning* while the ~50 existing ones are cleaned up gradually (bd issue `aqa`).
 - **Formatting: Prettier** (`.prettierrc`, `printWidth: 100`). Run `bun --filter '@dailify/web'
   format` before committing; `bun run check` is the full gate (format + lint + typecheck + test).
-- **Design tokens** live in `src/global.css`. Colors are defined ONCE via `light-dark(light, dark)`
-  in `oklch` (no per-mode duplication, no `display-p3`); dark mode is bridged from the `.dark`
-  class through `color-scheme`. No hex/arbitrary colors in components — add a token + a
-  `@theme inline` mapping. Prefer solid state colors over `/opacity` on interactive elements.
+- **Design tokens — no arbitrary values, ever.** This covers colors AND radii, and any other design
+  value with a token. `rounded-[17px]`, `bg-[#151515]`, `border-[#242424]` are all defects: if a
+  token fits, use it; if none fits, **add one**. Everything lives in `apps/web/src/global.css`:
+
+  | what | defined at | exposed at | utilities |
+  | --- | --- | --- | --- |
+  | colors | `:root` (`--surface-*`, `--accent-*`, …) | `@theme inline` as `--color-*` | `bg-surface-panel`, `text-content-secondary`, … |
+  | radii | `:root` (`--radius`, `--radius-panel`, `--radius-field`) | `@theme inline` as `--radius-*` | `rounded-panel`, `rounded-field`, `rounded-md`, … |
+  | layout | `@utility` blocks near the end of the file | — | `px-gutter`, `section-y` |
+
+  Adding a token is two lines: the value in `:root` and the mapping in `@theme inline`. Put the
+  *reasoning* in a comment on the token (e.g. `--radius-field` is `--radius-panel` minus the `p-1`
+  of its parent, so the corners stay concentric) — that is where the next person looks, not the JSX.
+
+  Colors are defined ONCE via `light-dark(light, dark)` in `oklch` (no per-mode duplication, no
+  `display-p3`); dark mode is bridged from the `.dark` class through `color-scheme`. Prefer solid
+  state colors over `/opacity` on interactive elements.
+
+  Spacing follows the Tailwind scale (`p-2`, `gap-1`, `min-h-19` — v4 generates any step), so
+  `p-[7px]` is a defect too. Arbitrary values are acceptable only where no scale can apply, like a
+  one-off `grid-rows-[0fr]` animation.
 - Task tracking via **bd (beads)**, not markdown/TODO. Persistent knowledge via `bd remember`.

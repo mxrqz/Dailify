@@ -41,7 +41,7 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
     <form
       onSubmit={handleSubmit}
       className={cn(
-        "rounded-panel border border-surface-line bg-surface-page p-1 transition-colors focus-within:border-accent-primary",
+        "flex flex-col gap-1 rounded-panel border border-surface-line bg-surface-page p-1 transition-colors focus-within:border-accent-primary",
         className,
       )}
     >
