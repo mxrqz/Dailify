@@ -21,7 +21,7 @@ interface TaskComposerProps {
 }
 
 /**
- * Barra de captura rápida: uma frase só. O que o parser tirou dela aparece em chips embaixo — sem
+ * Barra de captura rápida: uma frase só. O que o parser tirou dela aparece em chips no topo — sem
  * esse eco o usuário digita no escuro e só descobre no envio que a data não foi entendida.
  */
 export function TaskComposer({ submitting, className, onSubmit }: TaskComposerProps): JSX.Element {
@@ -41,12 +41,46 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
     <form
       onSubmit={handleSubmit}
       className={cn(
-        "rounded-[21px] border border-surface-line bg-surface-page p-[5px] transition-colors focus-within:border-accent-primary",
+        "rounded-[21px] border border-surface-line bg-surface-page p-[3px] transition-colors focus-within:border-accent-primary",
         className,
       )}
     >
-      <div className="flex flex-col gap-2 rounded-2xl bg-surface-card p-3">
-        <div className="flex items-center gap-2 rounded-2xl bg-surface-page px-3 py-2">
+      {/* rounded-[18px] = 21 do form menos os 3 do padding, pra manter os cantos concêntricos */}
+      <div className="flex min-h-28 flex-col gap-2 rounded-[18px] bg-surface-line px-3 py-2">
+        {input.trim() && (
+          <div aria-live="polite" className="flex flex-wrap items-center gap-1.5">
+            <span className={cn(chipClass, !parsed.date && "text-accent-primary")}>
+              {parsed.date
+                ? // EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
+                  format(
+                    parsed.date,
+                    parsed.hasTime ? "EEEEEE · d MMM · HH:mm" : "EEEEEE · d MMM",
+                    {
+                      locale: ptBR,
+                    },
+                  )
+                : copy.composer.missingWhen}
+            </span>
+
+            {parsed.duration && <span className={chipClass}>{parsed.duration}</span>}
+
+            {!parsed.text && (
+              <span className={cn(chipClass, "text-accent-primary")}>
+                {copy.composer.missingText}
+              </span>
+            )}
+
+            {parsed.links.map((url) => (
+              <span key={url} className={chipClass}>
+                <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
+                {linkLabel(url)}
+              </span>
+            ))}
+          </div>
+        )}
+
+        {/* flex-1 + items-center: o texto fica no meio da altura sobrando, não grudado no topo */}
+        <div className="flex flex-1 items-center gap-2">
           <Label htmlFor="composer-text" className="sr-only">
             {copy.composer.text}
           </Label>
@@ -77,36 +111,6 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
             )}
           </button>
         </div>
-
-        {input.trim() && (
-          <div aria-live="polite" className="flex flex-wrap items-center gap-1.5 px-1">
-            <span className={cn(chipClass, !parsed.date && "text-accent-primary")}>
-              {parsed.date
-                ? // EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
-                  format(
-                    parsed.date,
-                    parsed.hasTime ? "EEEEEE · d MMM · HH:mm" : "EEEEEE · d MMM",
-                    { locale: ptBR },
-                  )
-                : copy.composer.missingWhen}
-            </span>
-
-            {parsed.duration && <span className={chipClass}>{parsed.duration}</span>}
-
-            {!parsed.text && (
-              <span className={cn(chipClass, "text-accent-primary")}>
-                {copy.composer.missingText}
-              </span>
-            )}
-
-            {parsed.links.map((url) => (
-              <span key={url} className={chipClass}>
-                <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
-                {linkLabel(url)}
-              </span>
-            ))}
-          </div>
-        )}
       </div>
     </form>
   );
