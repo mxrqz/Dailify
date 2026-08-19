@@ -6,7 +6,7 @@ import { Brand } from "@/components/brand";
 import { copy } from "@/components/dashboard/copy";
 import { Button } from "@/components/ui/button";
 import { PLAN_ID } from "@/consts/conts";
-import { cn } from "@/lib/utils";
+import { cn, toText } from "@/lib/utils";
 
 /**
  * Barra do app: `h-10` fixo — `home.tsx` desconta esse valor pra centralizar; mexer aqui mexe lá.
@@ -15,7 +15,9 @@ import { cn } from "@/lib/utils";
 export function AppHeader({ className }: { className?: string }): JSX.Element {
   const { user, isSignedIn } = useUser();
   const navigate = useNavigate();
-  const isFree = user?.publicMetadata?.plan === PLAN_ID.free;
+  // `publicMetadata.plan` só nasce por webhook do Stripe: quem nunca assinou não tem o campo, e a
+  // comparação crua escondia o "Assinar" justamente de quem deveria ver.
+  const isFree = isSignedIn && toText(user?.publicMetadata?.plan, PLAN_ID.free) === PLAN_ID.free;
 
   return (
     <header

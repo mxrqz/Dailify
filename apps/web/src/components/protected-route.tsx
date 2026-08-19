@@ -28,7 +28,11 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const location = useLocation();
   const { getToken, userId } = useAuth();
 
+  // Depende de `isLoaded`/`userId`: com deps `[]` o efeito rodava uma vez só, antes do Clerk ficar
+  // pronto, e o `getToken()` nulo deixava `permissions` undefined pelo resto da sessão.
   useEffect(() => {
+    if (!isLoaded || !userId) return;
+
     (async () => {
       try {
         const token = await getToken();
@@ -52,7 +56,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
         /* sem sessão utilizável */
       }
     })();
-  }, []);
+  }, [isLoaded, userId]);
 
   // 🌐 Salvar timezone no metadata do usuário
   useEffect(() => {

@@ -1,6 +1,6 @@
 import { AuthenticateWithRedirectCallback } from "@clerk/clerk-react";
 import { Loader2Icon } from "lucide-react";
-import { BrowserRouter as Router, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Navigate, Routes, Route } from "react-router-dom";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { ThemeProvider } from "./components/theme-provider";
 import "./global.css";
@@ -163,6 +163,9 @@ export default function App() {
                 <Route path="/privacidade" element={<PrivacyPage />} />
 
                 <Route path="/termos" element={<TermsPage />} />
+
+                {/* Sem isto, path inexistente renderiza tela branca — já custou o bug /prices. */}
+                <Route path="*" element={<Navigate to="/dashboard" replace />} />
               </Routes>
             </ErrorBoundary>
 

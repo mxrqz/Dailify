@@ -25,13 +25,10 @@ function CardHeader({ className, ...props }: React.ComponentProps<"div">) {
   );
 }
 
-function CardTitle({ className, ...props }: React.ComponentProps<"div">) {
+// <h3> e não <div>: era o motivo de páginas inteiras não terem heading nenhum pro leitor de tela.
+function CardTitle({ className, ...props }: React.ComponentProps<"h3">) {
   return (
-    <div
-      data-slot="card-title"
-      className={cn("leading-none font-semibold", className)}
-      {...props}
-    />
+    <h3 data-slot="card-title" className={cn("leading-none font-semibold", className)} {...props} />
   );
 }
 

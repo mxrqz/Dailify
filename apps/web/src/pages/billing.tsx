@@ -185,10 +185,9 @@ export default function BillingPage(): JSX.Element {
 
             {sections.invoices ? (
               <div className="space-y-4">
-                {invoices
-                  ?.sort((a, b) => {
-                    return b.created - a.created;
-                  })
+                {/* cópia antes de ordenar: `invoices` vem do contexto e `sort` é in-place */}
+                {[...(invoices ?? [])]
+                  .sort((a, b) => b.created - a.created)
                   .map((invoice, index) => (
                     <div className="flex flex-col gap-1" key={index}>
                       <p className="text-sm text-content-secondary">

@@ -59,13 +59,11 @@ export default function SecurityPage(): JSX.Element {
 
                 <div className="space-y-4">
                   {sessions &&
-                    sessions
+                    // ordena antes de cortar: o inverso pegava 3 sessões arbitrárias da ordem do
+                    // Clerk e só então as ordenava, em vez das 3 mais recentes
+                    [...sessions]
+                      .sort((a, b) => b.lastActiveAt.getTime() - a.lastActiveAt.getTime())
                       .slice(0, 3)
-                      .sort((a, b) => {
-                        const dateA = a.lastActiveAt.getTime();
-                        const dateB = b.lastActiveAt.getTime();
-                        return dateB - dateA;
-                      })
                       .map((session) => (
                         <div
                           key={session.id}

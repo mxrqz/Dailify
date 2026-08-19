@@ -1,7 +1,7 @@
 import { useUser } from "@clerk/clerk-react";
 import { FormDataValues } from "@/types/types";
 import { useSearchParams } from "react-router-dom";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Card,
   CardContent,
@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/components/dashboard/copy";
+import { CountryPicker, countries } from "@/components/country-picker";
 import { Separator } from "@/components/ui/separator";
 import { formFile, formString } from "@/lib/form";
 
@@ -40,14 +41,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-import {
-  getCountries,
-  getCountryCallingCode,
-  parsePhoneNumberWithError,
-  PhoneNumber,
-} from "libphonenumber-js";
-import * as countriesLib from "i18n-iso-countries";
-import enLocale from "i18n-iso-countries/langs/en.json";
+import { parsePhoneNumberWithError, PhoneNumber } from "libphonenumber-js";
 
 import {
   Dialog,
@@ -78,18 +72,6 @@ import {
 import { REGEXP_ONLY_DIGITS } from "input-otp";
 
 import moment from "moment-timezone";
-countriesLib.registerLocale(enLocale);
-const countries = getCountries().map((code) => ({
-  code,
-  name: countriesLib.getName(code, "en") ?? code,
-  dialCode: `+${getCountryCallingCode(code)}`,
-}));
-
-function getFlagEmoji(countryCode: string) {
-  return countryCode
-    .toUpperCase()
-    .replace(/./g, (char) => String.fromCodePoint(127397 + char.charCodeAt(0)));
-}
 
 export default function ProfilePage(): JSX.Element {
   const { user, isLoaded } = useUser();
@@ -99,7 +81,6 @@ export default function ProfilePage(): JSX.Element {
   const [newProfilePicture, setNewProfilePicture] = useState<string>();
   const [timezoneOpen, setTimezoneOpen] = useState<boolean>(false);
   const [hasImageChanged, setHasImageChanged] = useState<boolean>(false);
-  const [open, setOpen] = useState<boolean>(false);
   const [phoneValue, setPhoneValue] = useState<string>("Brazil");
   const [phoneFromUrl, setPhoneFromUrl] = useState<PhoneNumber>();
   const [isVerifyingPhone, setIsVerifyingPhone] = useState<boolean>(false);
@@ -154,13 +135,14 @@ export default function ProfilePage(): JSX.Element {
     setIsLoading(false);
   };
 
-  const timezones = timezonesNames.map((timezone) => {
-    const offset = moment.tz(timezone).format("Z");
-    return {
-      timezone,
-      offset,
-    };
-  });
+  // ~400 zonas: montar e ordenar a cada render era desperdício, e o `.sort()` ficava no JSX.
+  const timezones = useMemo(
+    () =>
+      timezonesNames
+        .map((timezone) => ({ timezone, offset: moment.tz(timezone).format("Z") }))
+        .sort((a, b) => Number.parseInt(a.offset) - Number.parseInt(b.offset)),
+    [timezonesNames],
+  );
 
   const updateProfile = async (data: FormDataValues) => {
     if (!user || !isLoaded) return;
@@ -446,68 +428,7 @@ export default function ProfilePage(): JSX.Element {
                           <Label htmlFor="username">Phone</Label>
 
                           <div className="flex gap-1">
-                            <Popover open={open} onOpenChange={setOpen}>
-                              <PopoverTrigger>
-                                <Button
-                                  type="button"
-                                  variant="outline"
-                                  role="combobox"
-                                  aria-expanded={open}
-                                  className="w-fit p-0 px-2"
-                                >
-                                  {phoneValue
-                                    ? countries.find((country) => country.name === phoneValue)
-                                        ?.dialCode
-                                    : "+55"}
-                                </Button>
-                              </PopoverTrigger>
-
-                              <PopoverContent>
-                                <Command defaultValue={phoneValue}>
-                                  <CommandInput />
-
-                                  <CommandList className="scroll-py-0">
-                                    <CommandEmpty>Country not found</CommandEmpty>
-
-                                    <CommandGroup>
-                                      {countries
-                                        .sort((a, b) => {
-                                          const codeA = parseInt(a.dialCode.replace("+", ""));
-                                          const codeB = parseInt(b.dialCode.replace("+", ""));
-                                          return codeA - codeB;
-                                        })
-                                        .map((country, index) => (
-                                          <CommandItem
-                                            key={index}
-                                            className="flex gap-2"
-                                            value={country.name}
-                                            onSelect={(currentValue) => {
-                                              setPhoneValue(
-                                                currentValue === phoneValue ? "" : currentValue,
-                                              );
-                                              setOpen(false);
-                                            }}
-                                          >
-                                            <span>{getFlagEmoji(country.code)}</span>
-                                            <span className="text-muted-foreground">
-                                              {country.dialCode}
-                                            </span>
-                                            <span>{country.name}</span>
-                                            <Check
-                                              className={cn(
-                                                "ml-auto",
-                                                phoneValue === country.code
-                                                  ? "opacity-100"
-                                                  : "opacity-0",
-                                              )}
-                                            />
-                                          </CommandItem>
-                                        ))}
-                                    </CommandGroup>
-                                  </CommandList>
-                                </Command>
-                              </PopoverContent>
-                            </Popover>
+                            <CountryPicker value={phoneValue} onChange={setPhoneValue} />
 
                             <Input
                               id="phone"
@@ -545,36 +466,28 @@ export default function ProfilePage(): JSX.Element {
                                   <CommandEmpty>TimeZone not found</CommandEmpty>
 
                                   <CommandGroup>
-                                    {timezones
-                                      .sort((a, b) => {
-                                        const codeA = parseInt(a.offset);
-                                        const codeB = parseInt(b.offset);
-                                        return codeA - codeB;
-                                      })
-                                      .map((tz, index) => (
-                                        <CommandItem
-                                          key={index}
-                                          className="flex gap-2"
-                                          value={tz.timezone}
-                                          onSelect={(currentValue) => {
-                                            setTimezone(
-                                              currentValue === timezone ? "" : currentValue,
-                                            );
-                                            setTimezoneOpen(false);
-                                          }}
-                                        >
-                                          <span>{tz.timezone}</span>
-                                          <span>{tz.offset}</span>
-                                          <Check
-                                            className={cn(
-                                              "ml-auto",
-                                              timezone === tz.timezone
-                                                ? "opacity-100"
-                                                : "opacity-0",
-                                            )}
-                                          />
-                                        </CommandItem>
-                                      ))}
+                                    {timezones.map((tz, index) => (
+                                      <CommandItem
+                                        key={index}
+                                        className="flex gap-2"
+                                        value={tz.timezone}
+                                        onSelect={(currentValue) => {
+                                          setTimezone(
+                                            currentValue === timezone ? "" : currentValue,
+                                          );
+                                          setTimezoneOpen(false);
+                                        }}
+                                      >
+                                        <span>{tz.timezone}</span>
+                                        <span>{tz.offset}</span>
+                                        <Check
+                                          className={cn(
+                                            "ml-auto",
+                                            timezone === tz.timezone ? "opacity-100" : "opacity-0",
+                                          )}
+                                        />
+                                      </CommandItem>
+                                    ))}
                                   </CommandGroup>
                                 </CommandList>
                               </Command>
@@ -652,65 +565,13 @@ export default function ProfilePage(): JSX.Element {
 
             <form onSubmit={handleSubmit} className="flex flex-col gap-5">
               <div className="flex gap-1 w-full">
-                <Popover open={open} onOpenChange={setOpen}>
-                  <PopoverTrigger>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      role="combobox"
-                      aria-expanded={open}
-                      className="w-fit p-0 px-2"
-                    >
-                      {phoneValue
-                        ? countries.find((country) => country.name === phoneValue)?.dialCode
-                        : "+55"}
-                    </Button>
-                  </PopoverTrigger>
-
-                  <PopoverContent>
-                    <Command
-                      defaultValue={
-                        countries.find((country) => country.code === phoneFromUrl?.country)?.name
-                      }
-                    >
-                      <CommandInput />
-
-                      <CommandList className="scroll-py-0">
-                        <CommandEmpty>Country not found</CommandEmpty>
-
-                        <CommandGroup>
-                          {countries
-                            .sort((a, b) => {
-                              const codeA = parseInt(a.dialCode.replace("+", ""));
-                              const codeB = parseInt(b.dialCode.replace("+", ""));
-                              return codeA - codeB;
-                            })
-                            .map((country, index) => (
-                              <CommandItem
-                                key={index}
-                                className="flex gap-2"
-                                value={country.name}
-                                onSelect={(currentValue) => {
-                                  setPhoneValue(currentValue === phoneValue ? "" : currentValue);
-                                  setOpen(false);
-                                }}
-                              >
-                                <span>{getFlagEmoji(country.code)}</span>
-                                <span className="text-muted-foreground">{country.dialCode}</span>
-                                <span>{country.name}</span>
-                                <Check
-                                  className={cn(
-                                    "ml-auto",
-                                    phoneValue === country.code ? "opacity-100" : "opacity-0",
-                                  )}
-                                />
-                              </CommandItem>
-                            ))}
-                        </CommandGroup>
-                      </CommandList>
-                    </Command>
-                  </PopoverContent>
-                </Popover>
+                <CountryPicker
+                  value={phoneValue}
+                  onChange={setPhoneValue}
+                  defaultValue={
+                    countries.find((country) => country.code === phoneFromUrl?.country)?.name
+                  }
+                />
 
                 <Input
                   id="phone"
