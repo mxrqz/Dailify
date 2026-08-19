@@ -22,7 +22,7 @@ function useActiveSection(): SidebarSection {
   const { pathname } = useLocation();
   const [searchParams] = useSearchParams();
 
-  if (pathname === "/premium") return "premium";
+  if (pathname === "/billing" || pathname === "/premium") return "premium";
   if (pathname === "/settings") return "settings";
   if (pathname === "/security") return "security";
   if (pathname !== "/profile") return "dashboard";

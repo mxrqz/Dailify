@@ -11,6 +11,7 @@ import ProtectedRoute from "./components/protected-route";
 import Verify from "./pages/verify";
 import { copy } from "@/components/auth/copy";
 import { DailifyProvider } from "./components/dailifyContext";
+import BillingPage from "./pages/billing";
 import ProfilePage from "./pages/profile";
 import SecurityPage from "./pages/security";
 import SettingsPage from "./pages/settings";
@@ -84,6 +85,19 @@ export default function App() {
                         </Helmet>
 
                         <SecurityPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/billing"
+                    element={
+                      <ProtectedRoute>
+                        <Helmet>
+                          <title>Dailify - Premium</title>
+                        </Helmet>
+
+                        <BillingPage />
                       </ProtectedRoute>
                     }
                   />

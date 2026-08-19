@@ -117,6 +117,9 @@ export const copy = {
     saving: "Salvando",
     addPhone: "Adicionar telefone",
     revokeDevice: "Encerrar sessão",
+    billingNoSubscription: "Você está no plano Free. Nenhuma assinatura ativa.",
+    billingSeePlans: "Ver planos",
+    billingNoInvoices: "Nenhuma fatura ainda.",
   },
 
   composer: {

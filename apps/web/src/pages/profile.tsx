@@ -1,20 +1,18 @@
 import { ChevronLeft } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 
-import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { PersonalTab, SubscriptionTab } from "@/components/profileTabs";
+import { PersonalTab } from "@/components/profileTabs";
 import { Button } from "@/components/ui/button";
 
-type Section = "personal" | "premium";
+type Section = "personal";
 
-const SECTIONS: readonly string[] = ["personal", "premium"];
+const SECTIONS: readonly string[] = ["personal"];
 const isSection = (value: string | null): value is Section =>
   value !== null && SECTIONS.includes(value);
 
 export default function ProfilePage() {
   const navigate = useNavigate();
-  const { invoices, permissions, paymentDetails } = useDailify();
 
   const [searchParams] = useSearchParams();
   const tab = searchParams.get("tab");
@@ -30,17 +28,7 @@ export default function ProfilePage() {
         <h1 className="text-2xl font-semibold tracking-[-0.01em]">{copy.profile.pageTitle}</h1>
       </div>
 
-      <div className="flex flex-col gap-6">
-        {active === "personal" && <PersonalTab />}
-
-        {active === "premium" && permissions && paymentDetails && invoices && (
-          <SubscriptionTab
-            invoices={invoices}
-            paymentDetails={paymentDetails}
-            permissions={permissions}
-          />
-        )}
-      </div>
+      <div className="flex flex-col gap-6">{active === "personal" && <PersonalTab />}</div>
     </main>
   );
 }
