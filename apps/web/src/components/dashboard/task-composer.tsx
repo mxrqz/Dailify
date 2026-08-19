@@ -79,24 +79,19 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
         )}
 
         {/* rounded-[17px] = 21 do form menos os 4 do p-1, pra manter os cantos concêntricos */}
-        <div className="flex min-h-28 items-center gap-2 rounded-[17px] bg-surface-line px-3 py-2">
+        <div className="flex min-h-19 items-center gap-2 rounded-[17px] bg-surface-panel px-3 py-2">
           <Label htmlFor="composer-text" className="sr-only">
             {copy.composer.text}
           </Label>
-          {/* Enter envia, Shift+Enter quebra linha — senão duas linhas custariam o atalho. */}
-          <textarea
+          {/* input, não textarea: a captura é de uma frase só, e o Enter já submete pelo form. */}
+          <input
             id="composer-text"
+            type="text"
             value={input}
-            rows={1}
             onChange={(e) => setInput(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Enter" && !e.shiftKey) handleSubmit(e);
-            }}
             placeholder={copy.composer.textPlaceholder}
             autoComplete="off"
-            // rows=1 + field-sizing: a altura acompanha o conteúdo, então `items-center` centra o
-            // texto de verdade. Com rows=2 o elemento centrava mas o texto ficava na linha de cima.
-            className="max-h-24 min-w-0 flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none field-sizing-content"
+            className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
           />
 
           <button
