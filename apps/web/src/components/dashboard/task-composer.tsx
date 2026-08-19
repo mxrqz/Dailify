@@ -87,14 +87,16 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
           <textarea
             id="composer-text"
             value={input}
-            rows={2}
+            rows={1}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={(e) => {
               if (e.key === "Enter" && !e.shiftKey) handleSubmit(e);
             }}
             placeholder={copy.composer.textPlaceholder}
             autoComplete="off"
-            className="min-w-0 flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+            // rows=1 + field-sizing: a altura acompanha o conteúdo, então `items-center` centra o
+            // texto de verdade. Com rows=2 o elemento centrava mas o texto ficava na linha de cima.
+            className="max-h-24 min-w-0 flex-1 resize-none bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none field-sizing-content"
           />
 
           <button
