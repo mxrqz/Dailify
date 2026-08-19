@@ -1,8 +1,8 @@
 import { UserIcon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
-import { SidebarItem, type SidebarItemProps } from "./sidebar-item";
+import { SidebarItem } from "./sidebar-item";
 
-export function ProfileButton(props: SidebarItemProps): JSX.Element {
-  return <SidebarItem icon={UserIcon} label={copy.profile.navPersonal} to="/profile" {...props} />;
+export function ProfileButton(): JSX.Element {
+  return <SidebarItem icon={UserIcon} label={copy.profile.navPersonal} to="/profile" />;
 }

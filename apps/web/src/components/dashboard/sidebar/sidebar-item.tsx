@@ -1,18 +1,9 @@
 import type { LucideIcon } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
 
-export type SidebarSection = "dashboard" | "personal" | "security" | "premium" | "settings";
-
-export interface SidebarItemProps {
-  active: boolean;
-}
-
-/**
- * A aparência de um item da sidebar, separada do `<Link>` porque "Sair" é ação, não destino, e
- * precisa das mesmas classes num `<button>`.
- */
+// Separada do `<Link>` porque "Sair" é ação, não destino, e precisa das mesmas classes num `<button>`.
 export function sidebarItemClass(active: boolean): string {
   return cn(
     "inline-flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors",
@@ -22,17 +13,22 @@ export function sidebarItemClass(active: boolean): string {
   );
 }
 
-/**
- * A forma de um item da sidebar. Cada destino tem arquivo próprio nesta pasta e só preenche
- * ícone, rótulo e rota. O ativo é neutro de propósito — crimson aqui competiria com a ação
- * primária, que é o que ele marca no resto do app.
- */
+// `alsoActive`: `/premium` (escolher plano) acende "Premium", que aponta pra `/billing` (gerenciar
+// assinatura) — o destaque marca o assunto, não o destino.
 export function SidebarItem({
   icon: Icon,
   label,
   to,
-  active,
-}: SidebarItemProps & { icon: LucideIcon; label: string; to: string }): JSX.Element {
+  alsoActive,
+}: {
+  icon: LucideIcon;
+  label: string;
+  to: string;
+  alsoActive?: string;
+}): JSX.Element {
+  const { pathname } = useLocation();
+  const active = pathname === to || pathname === alsoActive;
+
   return (
     <Link to={to} aria-current={active ? "page" : undefined} className={sidebarItemClass(active)}>
       <Icon className="size-4 shrink-0" aria-hidden="true" />
