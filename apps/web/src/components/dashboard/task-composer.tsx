@@ -41,14 +41,16 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
     <form
       onSubmit={handleSubmit}
       className={cn(
-        "flex flex-col gap-1 rounded-panel border border-surface-line bg-surface-page p-1 transition-colors focus-within:border-accent-primary",
+        "flex flex-col rounded-panel border border-surface-line bg-surface-page p-1",
+        "transition-[gap,border-color] duration-200 ease-out focus-within:border-accent-primary",
+        input.trim() && "gap-1",
         className,
       )}
     >
       {/*
-       * grid-rows 0fr→1fr: é o único jeito de transicionar até `height: auto` sem número mágico. Os
-       * dois níveis são o mínimo da técnica — a grid mede, o filho corta. Fica sempre montado (não
-       * `&&`) senão não haveria estado inicial pra animar.
+       * O eco fica montado e colapsa por grid-rows 0fr→1fr: é o que faz a ALTURA DO FORM animar,
+       * já que crescimento por conteúdo novo no DOM não dispara transition. O `gap-1` do form é
+       * que vai e volta com ele, senão sobraria respiro morto acima do campo quando não há chip.
        */}
       <div
         aria-hidden={!input.trim()}
