@@ -58,8 +58,8 @@ bun install
 bun run dev           # vite dev server
 bun run build         # tsc + vite build
 bun run test          # vitest (run once)
-bun run lint          # eslint
-bun run format        # prettier --write src
+bun --filter '@dailify/web' lint     # eslint
+bun --filter '@dailify/web' format   # prettier --write src
 bun run check         # format:check + lint + typecheck + test (full gate)
 ```
 

@@ -44,7 +44,7 @@ export function ModeToggle({ className }: { className?: string }) {
 }
 
 /**
- * Seletor de tema em linha, pra dentro de `/profile?tab=settings`. O guard do `isTheme` não é
+ * Seletor de tema em linha, pra dentro de `/settings`. O guard do `isTheme` não é
  * decoração: clicar no item já ativo faz o Radix emitir `""`, que sem ele zeraria o tema.
  */
 export function ThemeSelect(): JSX.Element {

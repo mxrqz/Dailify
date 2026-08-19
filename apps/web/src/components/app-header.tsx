@@ -9,13 +9,8 @@ import { PLAN_ID } from "@/consts/conts";
 import { cn } from "@/lib/utils";
 
 /**
- * Barra do app no formato de título de janela de desktop: fina, com a marca à esquerda e o par
- * voltar/avançar logo ao lado. Altura fixa em `h-10` — o `home.tsx` desconta exatamente esse valor
- * pra centralizar o composer, então mexer aqui pede mexer lá.
- *
- * Conta e tema não moram aqui: perfil/configurações/sair são a sidebar, e o seletor de tema é uma
- * seção de `/profile?tab=settings`. O "Entrar" sobrevive porque `/premium` divide este layout sem
- * `ProtectedRoute`.
+ * Barra do app: `h-10` fixo — `home.tsx` desconta esse valor pra centralizar; mexer aqui mexe lá.
+ * Conta e tema ficam na sidebar e em `/settings`; "Entrar" sobrevive pq `/premium` reusa o layout.
  */
 export function AppHeader({ className }: { className?: string }): JSX.Element {
   const { user, isSignedIn } = useUser();
