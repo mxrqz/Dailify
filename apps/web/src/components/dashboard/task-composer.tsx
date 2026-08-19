@@ -110,7 +110,9 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
             type="submit"
             aria-label={copy.composer.submit}
             disabled={!canSubmit}
-            className="flex size-10 shrink-0 items-center justify-center rounded-full border border-surface-line bg-surface-page text-accent-primary transition-colors hover:bg-surface-hover disabled:text-muted-foreground disabled:hover:bg-surface-page"
+            // `border` sem cor herda o `border-border` do reset — o mesmo das demais bordas do app.
+            // `border-surface-line` era escuro demais pra aparecer sobre o painel.
+            className="flex size-10 shrink-0 items-center justify-center rounded-full border bg-surface-page text-accent-primary transition-colors hover:bg-surface-hover disabled:text-muted-foreground disabled:hover:bg-surface-page"
           >
             {submitting ? (
               <Loader2Icon className="size-4 animate-spin" />
