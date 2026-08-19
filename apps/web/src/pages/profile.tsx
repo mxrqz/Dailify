@@ -12,7 +12,6 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/components/dashboard/copy";
-import { PageHeader } from "@/components/page-header";
 import { Separator } from "@/components/ui/separator";
 import { formFile, formString } from "@/lib/form";
 
@@ -250,7 +249,8 @@ export default function ProfilePage(): JSX.Element {
 
   return (
     <main className="flex w-full flex-col gap-6 py-6">
-      <PageHeader title={copy.profile.pageTitle} />
+      {/* sr-only: a sidebar e o title do Helmet já nomeiam a página na tela */}
+      <h1 className="sr-only">{copy.profile.pageTitle}</h1>
 
       <div className="flex flex-col gap-6">
         <Card className="rounded-2xl border-surface-line bg-surface-card">

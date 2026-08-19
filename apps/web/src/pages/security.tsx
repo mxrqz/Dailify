@@ -5,7 +5,6 @@ import { formatRelative } from "date-fns";
 import { EllipsisVerticalIcon, Laptop2Icon, Smartphone } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
-import { PageHeader } from "@/components/page-header";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -28,7 +27,8 @@ export default function SecurityPage(): JSX.Element {
 
   return (
     <main className="flex w-full flex-col gap-6 py-6">
-      <PageHeader title={copy.profile.securityPageTitle} />
+      {/* sr-only: a sidebar e o title do Helmet já nomeiam a página na tela */}
+      <h1 className="sr-only">{copy.profile.securityPageTitle}</h1>
 
       <div className="flex flex-col gap-6">
         <Card className="rounded-2xl border-surface-line bg-surface-card">

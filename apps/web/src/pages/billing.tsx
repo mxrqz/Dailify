@@ -9,7 +9,6 @@ import { toast } from "sonner";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { PageHeader } from "@/components/page-header";
 import { copy as pricingCopy } from "@/components/pricing/copy";
 import { PlanCards, type Cycle } from "@/components/pricing/plan-cards";
 import { Badge } from "@/components/ui/badge";
@@ -75,7 +74,8 @@ export default function BillingPage(): JSX.Element {
 
   return (
     <main className="flex w-full flex-col gap-6 py-6">
-      <PageHeader title={copy.profile.billingPageTitle} />
+      {/* sr-only: a sidebar e o title do Helmet já nomeiam a página na tela */}
+      <h1 className="sr-only">{copy.profile.billingPageTitle}</h1>
 
       <Card className="rounded-2xl border-surface-line bg-surface-card">
         <CardHeader>

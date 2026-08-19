@@ -1,12 +1,12 @@
 import { copy } from "@/components/dashboard/copy";
 import { ThemeSelect } from "@/components/mode-toggle";
-import { PageHeader } from "@/components/page-header";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function SettingsPage(): JSX.Element {
   return (
     <main className="flex w-full flex-col gap-6 py-6">
-      <PageHeader title={copy.profile.settingsPageTitle} />
+      {/* sr-only: a sidebar e o title do Helmet já nomeiam a página na tela */}
+      <h1 className="sr-only">{copy.profile.settingsPageTitle}</h1>
 
       <div className="flex flex-col gap-6">
         <Card className="rounded-2xl border-surface-line bg-surface-card">
