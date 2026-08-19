@@ -1,5 +1,4 @@
 import { useAuth, useUser } from "@clerk/clerk-react";
-import { computeEntitlements } from "@dailify/shared";
 import { format } from "date-fns";
 import { CreditCard, Receipt } from "lucide-react";
 import { FaCcAmex, FaCcVisa } from "react-icons/fa";
@@ -16,22 +15,21 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/com
 import GooglePayLogo from "@/components/ui/googlePayLogo";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
-import { planMap } from "@/consts/conts";
+import { PLAN_ID, planMap } from "@/consts/conts";
 import { billingPortal } from "@/functions/api";
 import { billingSections } from "@/functions/billing-sections";
+import { useEntitlements } from "@/hooks/useEntitlements";
 import { toText } from "@/lib/utils";
 
 export default function BillingPage(): JSX.Element {
   const { user } = useUser();
   const { getToken } = useAuth();
-  const { tasks, invoices, permissions, paymentDetails } = useDailify();
+  const { invoices, paymentDetails } = useDailify();
 
   const sections = billingSections(paymentDetails, invoices);
 
-  const plan = planMap[toText(user?.publicMetadata.plan)];
-  // Quota from the single entitlements source (counts distinct base tasks, not expanded instances).
-  const tasksUsed = tasks ? new Set(tasks.map((t) => t.id)).size : 0;
-  const entitlements = computeEntitlements(permissions, tasksUsed);
+  const plan = planMap[toText(user?.publicMetadata.plan, PLAN_ID.free)];
+  const entitlements = useEntitlements();
 
   const brandIcons: Record<string, JSX.Element> = {
     visa: <FaCcVisa className="text-foreground size-5" />,
@@ -96,34 +94,36 @@ export default function BillingPage(): JSX.Element {
 
             <Separator className="my-4" />
 
-            <div className="space-y-2">
-              <div className="flex items-center justify-between text-sm">
-                <span>Tarefas utilizadas</span>
+            {!entitlements.loading && (
+              <div className="space-y-2">
+                <div className="flex items-center justify-between text-sm">
+                  <span>Tarefas utilizadas</span>
 
-                <span className="font-medium">
-                  {entitlements.tasksUsed} /{" "}
-                  {entitlements.unlimited ? "ilimitado" : entitlements.monthlyLimit}
-                </span>
+                  <span className="font-medium">
+                    {entitlements.tasksUsed} /{" "}
+                    {entitlements.unlimited ? "ilimitado" : entitlements.monthlyLimit}
+                  </span>
+                </div>
+
+                <Progress
+                  value={
+                    entitlements.unlimited || entitlements.monthlyLimit <= 0
+                      ? 0
+                      : (entitlements.tasksUsed / entitlements.monthlyLimit) * 100
+                  }
+                  className="h-2"
+                />
+
+                <p className="text-xs text-muted-foreground">
+                  {entitlements.unlimited
+                    ? "Tarefas ilimitadas"
+                    : `${entitlements.remaining} tarefas restantes neste ciclo`}
+                </p>
               </div>
-
-              <Progress
-                value={
-                  entitlements.unlimited || entitlements.monthlyLimit <= 0
-                    ? 0
-                    : (entitlements.tasksUsed / entitlements.monthlyLimit) * 100
-                }
-                className="h-2"
-              />
-
-              <p className="text-xs text-muted-foreground">
-                {entitlements.unlimited
-                  ? "Tarefas ilimitadas"
-                  : `${entitlements.remaining} tarefas restantes neste ciclo`}
-              </p>
-            </div>
+            )}
           </div>
 
-          {!sections.subscription && (
+          {paymentDetails === null && (
             <div className="rounded-lg border border-surface-line p-4">
               <p className="text-sm text-content-secondary">{copy.profile.billingNoSubscription}</p>
               <Button asChild variant="outline" className="mt-3">

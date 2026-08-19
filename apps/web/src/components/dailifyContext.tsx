@@ -30,7 +30,7 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState<null | string>(null);
   const [currentMonth, setCurrentMonth] = useState<Date>();
   const [currentMonthTasks, setCurrentMonthTasks] = useState<TaskProps[]>();
-  const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsProps | null>(null);
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsProps | null>();
   const [permissions, setPermissions] = useState<PermissionsProps>();
   const [invoices, setInvoices] = useState<InvoicesProps[]>();
 

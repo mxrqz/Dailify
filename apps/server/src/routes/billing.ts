@@ -41,7 +41,7 @@ billing.post("/billing/checkout", requireAuth, async (c) => {
     if (subscriptions.data.length) {
       const portal = await stripe.billingPortal.sessions.create({
         customer: stripeCustomerId,
-        return_url: `${c.env.ALLOWED_ORIGIN}/profile`,
+        return_url: `${c.env.ALLOWED_ORIGIN}/billing`,
       });
       return c.json({ url: portal.url });
     }
@@ -68,7 +68,7 @@ billing.get("/billing/portal", requireAuth, async (c) => {
 
   const portal = await stripeClient(c.env).billingPortal.sessions.create({
     customer: stripeCustomerId,
-    return_url: `${c.env.ALLOWED_ORIGIN}/profile?tab=subscription`,
+    return_url: `${c.env.ALLOWED_ORIGIN}/billing`,
   });
   return c.json({ url: portal.url });
 });

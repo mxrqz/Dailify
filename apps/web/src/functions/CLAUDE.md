@@ -1,12 +1,15 @@
 # `src/functions/` — data layer & pure logic
 
-Two very different files live here — keep them separate:
+Several very different files live here — keep them separate:
 
 - **`functions.ts`** — PURE helpers (dates, task list ops). No I/O. Everything with real logic goes
   here so it can be unit-tested.
 - **`api.ts`** — the impure I/O boundary: the thin fetch client for `apps/server` (tasks CRUD, month
   read, voice, permissions, billing). Not unit-tested (would need a live/mocked server).
-- **`functions.test.ts`** — vitest for the pure helpers. `bun run test`.
+- **`billing-sections.ts`** — pure helper deriving which billing sections (`subscription`,
+  `invoices`) to render from `paymentDetails`/`invoices`, without a single all-or-nothing gate.
+- **`functions.test.ts`** / **`billing-sections.test.ts`** — vitest for the pure helpers above.
+  `bun run test`.
 
 ## The read/write split
 

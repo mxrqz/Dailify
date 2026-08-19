@@ -3,7 +3,8 @@ import { Link, useLocation } from "react-router-dom";
 
 import { cn } from "@/lib/utils";
 
-// Separada do `<Link>` porque "Sair" é ação, não destino, e precisa das mesmas classes num `<button>`.
+// Separada do `<Link>` porque "Sair" é ação, não destino, e precisa das mesmas
+// classes num `<button>`.
 export function sidebarItemClass(active: boolean): string {
   return cn(
     "inline-flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors",
@@ -15,6 +16,7 @@ export function sidebarItemClass(active: boolean): string {
 
 // `alsoActive`: `/premium` (escolher plano) acende "Premium", que aponta pra `/billing` (gerenciar
 // assinatura) — o destaque marca o assunto, não o destino.
+// O ativo é neutro de propósito: crimson aqui competiria com a ação primária do resto do app.
 export function SidebarItem({
   icon: Icon,
   label,
