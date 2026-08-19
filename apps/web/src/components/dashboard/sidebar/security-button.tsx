@@ -5,11 +5,6 @@ import { SidebarItem, type SidebarItemProps } from "./sidebar-item";
 
 export function SecurityButton(props: SidebarItemProps): JSX.Element {
   return (
-    <SidebarItem
-      icon={ShieldIcon}
-      label={copy.profile.navSecurity}
-      to="/profile?tab=security"
-      {...props}
-    />
+    <SidebarItem icon={ShieldIcon} label={copy.profile.navSecurity} to="/security" {...props} />
   );
 }

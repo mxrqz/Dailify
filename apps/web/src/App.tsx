@@ -12,6 +12,7 @@ import Verify from "./pages/verify";
 import { copy } from "@/components/auth/copy";
 import { DailifyProvider } from "./components/dailifyContext";
 import ProfilePage from "./pages/profile";
+import SecurityPage from "./pages/security";
 import SettingsPage from "./pages/settings";
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import TaskPreview from "./pages/[id]/taskPreview";
@@ -70,6 +71,19 @@ export default function App() {
                         </Helmet>
 
                         <SettingsPage />
+                      </ProtectedRoute>
+                    }
+                  />
+
+                  <Route
+                    path="/security"
+                    element={
+                      <ProtectedRoute>
+                        <Helmet>
+                          <title>Dailify - Segurança</title>
+                        </Helmet>
+
+                        <SecurityPage />
                       </ProtectedRoute>
                     }
                   />

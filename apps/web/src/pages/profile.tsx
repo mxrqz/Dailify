@@ -3,12 +3,12 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { PersonalTab, SecurityTab, SubscriptionTab } from "@/components/profileTabs";
+import { PersonalTab, SubscriptionTab } from "@/components/profileTabs";
 import { Button } from "@/components/ui/button";
 
-type Section = "personal" | "security" | "premium";
+type Section = "personal" | "premium";
 
-const SECTIONS: readonly string[] = ["personal", "security", "premium"];
+const SECTIONS: readonly string[] = ["personal", "premium"];
 const isSection = (value: string | null): value is Section =>
   value !== null && SECTIONS.includes(value);
 
@@ -32,8 +32,6 @@ export default function ProfilePage() {
 
       <div className="flex flex-col gap-6">
         {active === "personal" && <PersonalTab />}
-
-        {active === "security" && <SecurityTab />}
 
         {active === "premium" && permissions && paymentDetails && invoices && (
           <SubscriptionTab
