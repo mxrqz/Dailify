@@ -126,12 +126,13 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
         </div>
       </div>
 
-      <div className="flex min-h-19 items-center gap-2 rounded-field bg-surface-panel p-2">
+      {/* px-7: com o min-h-19 sobram ~28px acima/abaixo do texto — o mesmo respiro nas laterais,
+       * pro campo e pro botão, sai daqui (os 4px do `p-1` do form entram na conta). */}
+      <div className="flex min-h-19 items-center gap-2 rounded-field bg-surface-panel px-7 py-2">
         <Label htmlFor="composer-text" className="sr-only">
           {copy.composer.text}
         </Label>
         {/* input, não textarea: a captura é de uma frase só, e o Enter já submete pelo form. */}
-        {/* pl-5: com o min-h-19 sobra ~28px acima/abaixo do texto, o p-2 sozinho dá 8 na lateral. */}
         <input
           id="composer-text"
           type="text"
@@ -141,7 +142,7 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
           onBlur={() => setFocused(false)}
           placeholder={copy.composer.textPlaceholder}
           autoComplete="off"
-          className="min-w-0 flex-1 bg-transparent pl-5 text-sm text-foreground placeholder:text-muted-foreground outline-none"
+          className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
         />
 
         <button
