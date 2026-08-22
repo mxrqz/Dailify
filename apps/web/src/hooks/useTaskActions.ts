@@ -3,7 +3,7 @@ import { toast } from "sonner";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { completeTask, deleteTask } from "@/functions/api";
+import { completeTask, deleteTask, updateTask } from "@/functions/api";
 import { upsertTaskById } from "@/functions/functions";
 import type { TaskProps } from "@/types/types";
 
@@ -37,5 +37,18 @@ export function useTaskActions(task: TaskProps) {
     }
   };
 
-  return { onComplete, onDelete };
+  /** Renomear pelo cartão. Devolve `false` pra quem chamou desfazer o texto na tela. */
+  const onRename = async (title: string): Promise<boolean> => {
+    const token = await getToken();
+    if (!token) return false;
+    const { task: updated, error } = await updateTask(token, task.id, { title });
+    if (error || !updated) {
+      toast.error(copy.task.renameError, { description: error });
+      return false;
+    }
+    setTasks(upsertTaskById(tasks ?? [], updated));
+    return true;
+  };
+
+  return { onComplete, onDelete, onRename };
 }

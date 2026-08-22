@@ -73,6 +73,7 @@ export function DayTaskRow({
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const data = taskToCardData(task, day);
+  const { onRename } = useTaskActions(task);
 
   const onOpenChange = (next: boolean) => setOpen(next);
 
@@ -83,6 +84,7 @@ export function DayTaskRow({
         time={showTime ? data.time : ""}
         selected={open}
         onClick={() => setOpen(true)}
+        onTitleChange={onRename}
         actions={<TaskActions task={task} />}
       />
 

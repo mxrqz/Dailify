@@ -1,4 +1,4 @@
-import { type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Check, Flag, LinkIcon, RepeatIcon } from "lucide-react";
 
@@ -122,6 +122,74 @@ export interface TaskCardProps extends TaskCardData {
   links?: string[];
   /** Rótulo pronto da recorrência (`repeatLabel`); "" = não repete, sem chip. */
   repeat?: string;
+  /** Renomear inline. Sem isto o título é texto puro — é o caso dos mocks da landing.
+   *  Devolver `false` (erro do servidor) faz o campo voltar pro título antigo. */
+  onTitleChange?: (title: string) => Promise<boolean>;
+}
+
+/**
+ * Título editável no lugar: o campo se revela no hover e fica com o mesmo fundo enquanto está em
+ * foco, então clicar não muda nada além do cursor. `surface-panel` é o mesmo fundo de campo do
+ * composer, e cava um degrau ABAIXO do hover do cartão. Enter e clicar fora salvam, Esc desiste.
+ * `-mx-2` cancela o `px-2` do campo pro texto não deslocar em relação ao cartão.
+ */
+function TitleField({
+  title,
+  completed,
+  onTitleChange,
+}: {
+  title: string;
+  completed?: boolean;
+  onTitleChange: (title: string) => Promise<boolean>;
+}): JSX.Element {
+  const [draft, setDraft] = useState(title);
+  const escaped = useRef(false);
+
+  useEffect(() => setDraft(title), [title]);
+
+  const commit = async () => {
+    const next = draft.trim();
+    if (!next || next === title) {
+      setDraft(title);
+      return;
+    }
+    if (!(await onTitleChange(next))) setDraft(title);
+  };
+
+  return (
+    <input
+      value={draft}
+      // `size` é o fallback do `field-sizing-content` (baseline só desde jun/2026): sem ele um
+      // navegador antigo daria a largura padrão de ~20 caracteres em vez da do texto.
+      size={draft.length || 1}
+      aria-label={copy.task.rename}
+      onChange={(e) => setDraft(e.target.value)}
+      onBlur={() => {
+        if (escaped.current) {
+          escaped.current = false;
+          return;
+        }
+        void commit();
+      }}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") e.currentTarget.blur();
+        if (e.key === "Escape") {
+          escaped.current = true;
+          setDraft(title);
+          e.currentTarget.blur();
+        }
+      }}
+      className={cn(
+        // 15ch de piso: com `field-sizing-content` um título curto encolhia o campo a quase nada e
+        // sobrava um alvo de clique minúsculo pra editar.
+        "relative z-10 -mx-2 min-w-[15ch] max-w-1/2 truncate rounded-md bg-transparent px-2 py-0.5",
+        "field-sizing-content",
+        "text-sm font-medium outline-none transition-colors",
+        "hover:bg-surface-panel focus:bg-surface-panel",
+        completed ? "text-muted-foreground line-through" : "text-foreground",
+      )}
+    />
+  );
 }
 
 /** Corpo do card — mesma estrutura em loading/ready (alturas casam, sem jump no crossfade). */
@@ -137,6 +205,7 @@ function CardBody({
   actions,
   links = [],
   repeat = "",
+  onTitleChange,
 }: TaskCardProps) {
   return (
     <div className="flex flex-col gap-1.5">
@@ -165,6 +234,8 @@ function CardBody({
         <div className="flex items-center justify-between gap-2">
           {loading ? (
             <span className="skeleton h-3.5 w-32 rounded" />
+          ) : onTitleChange ? (
+            <TitleField title={title} completed={completed} onTitleChange={onTitleChange} />
           ) : (
             <span
               className={cn(
@@ -212,11 +283,14 @@ function CardBody({
 export function TaskCard({ loading, ...data }: TaskCardProps): JSX.Element {
   const reduce = useReducedMotion();
   const transition = { duration: reduce ? 0 : 0.45, ease: EXPO };
+  // `grid-cols-1` (= `minmax(0, 1fr)`), não a coluna implícita `auto`: com `field-sizing:content` o
+  // campo do título contribui com o texto inteiro pro max-content da track — e o `max-w-1/2` dele é
+  // porcentagem, ignorada nessa conta — então a track auto esticava o cartão.
   return (
-    <div className="grid">
+    <div className="grid grid-cols-1">
       <motion.div
         aria-hidden
-        className="pointer-events-none col-start-1 row-start-1"
+        className="pointer-events-none col-start-1 row-start-1 min-w-0"
         initial={false}
         animate={{ opacity: loading ? 1 : 0 }}
         transition={transition}
@@ -224,7 +298,7 @@ export function TaskCard({ loading, ...data }: TaskCardProps): JSX.Element {
         <CardBody {...data} loading />
       </motion.div>
       <motion.div
-        className="col-start-1 row-start-1"
+        className="col-start-1 row-start-1 min-w-0"
         initial={false}
         animate={{ opacity: loading ? 0 : 1 }}
         transition={transition}
@@ -233,6 +307,7 @@ export function TaskCard({ loading, ...data }: TaskCardProps): JSX.Element {
           {...data}
           onClick={loading ? undefined : data.onClick}
           actions={loading ? undefined : data.actions}
+          onTitleChange={loading ? undefined : data.onTitleChange}
         />
       </motion.div>
     </div>
