@@ -14,7 +14,7 @@ import { upsertTaskById } from "@/functions/functions";
 import type { ParsedTask } from "@/functions/parse-task";
 import { useEntitlements } from "@/hooks/useEntitlements";
 
-/** Altura viva de um elemento: CSS não enxerga a altura do irmão, e aqui duas posições dependem. */
+/** Altura viva de um elemento: CSS não enxerga a altura do irmão, e o piso do slot depende da faixa. */
 function useHeight(ref: RefObject<HTMLElement>): number {
   const [height, setHeight] = useState(0);
 
@@ -36,6 +36,12 @@ function useHeight(ref: RefObject<HTMLElement>): number {
 const STRIP_TOP = 24; // top-6
 const STRIP_GAP = 24; // respiro entre a faixa e o composer
 
+// Composer fechado (p-1 + min-h-19 do campo + as duas bordas) e o quanto o eco acrescenta quando
+// abre (gap-1 + p-2 + a linha de chips). Constantes, não medidas: com a altura viva o rodapé
+// perseguia a animação e a lista inteira balançava a cada frame do ResizeObserver.
+const COMPOSER_HEIGHT = 86;
+const ECHO_HEIGHT = 42;
+
 const DEFAULT_HOUR = 9; // data sem hora ("amanhã" puro) cai no começo do dia útil, não em 00:00
 const DEFAULT_DURATION = "10m";
 
@@ -56,9 +62,9 @@ function composerTaskInput(parsed: ParsedTask): TaskInput {
 }
 
 /**
- * O dashboard. A faixa fica fora do fluxo pra não deslocar o composer, que é empurrado até o
- * centro da viewport pela margem — assim a lista vem 40px depois DELE, não depois da dobra.
- * 2.5rem = a top bar (h-10).
+ * O dashboard. A faixa fica fora do fluxo pra não deslocar o composer, que fica no rodapé de um
+ * slot de altura fixa terminando no centro da viewport — assim a lista vem 40px depois DELE, não
+ * depois da dobra. 2.5rem = a top bar (h-10).
  *
  * O piso do `max()` existe justamente porque "fora do fluxo" quer dizer que ninguém reserva
  * espaço pra faixa: sem ele, em tela baixa o composer sobe por cima dela.
@@ -71,22 +77,13 @@ export default function Home() {
   const [submitting, setSubmitting] = useState(false);
 
   const stripRef = useRef<HTMLDivElement>(null);
-  const composerRef = useRef<HTMLDivElement>(null);
   const stripHeight = useHeight(stripRef);
-  const composerHeight = useHeight(composerRef);
 
-  // Centraliza pela altura SEM os chips e desconta o crescimento inteiro (não a metade): assim o
-  // rodapé do composer fica cravado e ele só abre pra cima quando o eco do parser entra.
-  const [baseHeight, setBaseHeight] = useState(0);
-  useEffect(() => {
-    if (composerHeight > 0) {
-      setBaseHeight((prev) => (prev === 0 ? composerHeight : Math.min(prev, composerHeight)));
-    }
-  }, [composerHeight]);
-
-  const grown = baseHeight > 0 ? composerHeight - baseHeight : 0;
-  const centered = `calc(50dvh - 2.5rem - ${baseHeight / 2 + grown}px)`;
-  const belowStrip = `${STRIP_TOP + stripHeight + STRIP_GAP}px`;
+  // Alturas do SLOT, não do composer: ele termina meia altura de composer abaixo do centro da tela,
+  // que é onde o rodapé dele fica cravado. O piso soma o eco pra que abrir pra cima em tela baixa
+  // não invada a faixa.
+  const centered = `calc(50dvh - 2.5rem + ${COMPOSER_HEIGHT / 2}px)`;
+  const belowStrip = `${STRIP_TOP + stripHeight + STRIP_GAP + ECHO_HEIGHT + COMPOSER_HEIGHT}px`;
 
   const handleCompose = async ({ parsed }: ComposerValues) => {
     if (!canCreateTask) {
@@ -119,19 +116,20 @@ export default function Home() {
   };
 
   return (
-    // `flow-root`: sem ele a margem do composer colapsa pra fora e empurra este container junto
-    // — e a faixa, ancorada nele, desce junto, caindo em cima do composer.
-    <div className="relative flow-root pb-10" id="main">
+    <div className="relative pb-10" id="main">
       <div ref={stripRef} className="absolute inset-x-0 top-6">
         <WeekStrip />
       </div>
 
       {/*
-       * Sem transition no margin-top de propósito: o ResizeObserver reporta a altura a cada frame
-       * da animação dos chips, então o margin já muda suave — animá-lo de novo o faria perseguir um
-       * alvo móvel com atraso, e o rodapé flutuaria em vez de ficar parado.
+       * O slot tem altura fixa e o composer mora no rodapé dele: o eco abre pra dentro do vão que
+       * já estava reservado acima, então nem o campo nem a lista sentem a animação. Eco maior que o
+       * vão (chips em duas linhas numa tela curta) volta a empurrar — aí é subir o `ECHO_HEIGHT`.
        */}
-      <div ref={composerRef} style={{ marginTop: `max(${centered}, ${belowStrip})` }}>
+      <div
+        className="flex flex-col justify-end"
+        style={{ minHeight: `max(${centered}, ${belowStrip})` }}
+      >
         <TaskComposer submitting={submitting} onSubmit={handleCompose} />
       </div>
 

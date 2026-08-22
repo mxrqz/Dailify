@@ -75,7 +75,8 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
       onSubmit={handleSubmit}
       className={cn(
         "flex flex-col rounded-panel border border-surface-line bg-surface-page p-1",
-        "transition-[gap,border-color] duration-200 ease-out focus-within:border-accent-primary",
+        "transition-[gap,border-color] duration-200 ease-out motion-reduce:transition-none",
+        "focus-within:border-accent-primary",
         focused && "gap-1",
         className,
       )}
@@ -88,35 +89,40 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
       <div
         aria-hidden={!focused}
         className={cn(
-          "grid transition-[grid-template-rows] duration-200 ease-out",
-          focused ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+          "grid transition-[grid-template-rows,opacity] duration-200 ease-out",
+          "motion-reduce:transition-none",
+          focused ? "grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0",
         )}
       >
-        <div aria-live="polite" className="flex flex-wrap items-center gap-1.5 overflow-hidden p-2">
-          {slots.map(({ key, chip, filled, required }) => (
-            <span
-              key={key}
-              className={cn(
-                chipClass,
-                !filled && (required ? "text-accent-primary" : "text-content-secondary"),
-              )}
-            >
-              {chip}
-            </span>
-          ))}
-
-          {parsed.links.length ? (
-            parsed.links.map((url) => (
-              <span key={url} className={chipClass}>
-                <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
-                {linkLabel(url)}
+        {/* O `p-2` mora aqui dentro, não no item do grid: padding não encolhe com a track em 0fr
+         * e deixava 16px de eco invisível segurando o composer alto quando fechado. */}
+        <div className="min-h-0 overflow-hidden">
+          <div aria-live="polite" className="flex flex-wrap items-center gap-1.5 p-2">
+            {slots.map(({ key, chip, filled, required }) => (
+              <span
+                key={key}
+                className={cn(
+                  chipClass,
+                  !filled && (required ? "text-accent-primary" : "text-content-secondary"),
+                )}
+              >
+                {chip}
               </span>
-            ))
-          ) : (
-            <span className={cn(chipClass, "text-content-secondary")}>
-              {copy.composer.missingLink}
-            </span>
-          )}
+            ))}
+
+            {parsed.links.length ? (
+              parsed.links.map((url) => (
+                <span key={url} className={chipClass}>
+                  <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
+                  {linkLabel(url)}
+                </span>
+              ))
+            ) : (
+              <span className={cn(chipClass, "text-content-secondary")}>
+                {copy.composer.missingLink}
+              </span>
+            )}
+          </div>
         </div>
       </div>
 
