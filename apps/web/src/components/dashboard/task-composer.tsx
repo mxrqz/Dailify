@@ -26,32 +26,39 @@ interface TaskComposerProps {
  */
 export function TaskComposer({ submitting, className, onSubmit }: TaskComposerProps): JSX.Element {
   const [input, setInput] = useState("");
+  const [focused, setFocused] = useState(false);
 
   const parsed = useMemo(() => parseTaskText(input), [input]);
   const canSubmit = Boolean(parsed.text && parsed.date) && !submitting;
 
   /**
    * Os quatro slots ficam sempre montados, na mesma ordem: chip que some/aparece pisca e mexe o
-   * layout a cada tecla. Sem valor ele mostra a pergunta em destaque; preenchido cai pro muted do
-   * `chipClass` — respondido não precisa mais de atenção.
+   * layout a cada tecla. Pendente aparece em destaque; respondido cai pro muted do `chipClass` —
+   * o que já foi entendido não precisa mais de atenção. O título nunca vira chip: ele já está
+   * inteiro no campo logo abaixo.
    */
   const slots = [
-    { key: "text", label: copy.composer.missingText, value: parsed.text, required: true },
+    {
+      key: "text",
+      chip: copy.composer.missingText,
+      filled: Boolean(parsed.text),
+      required: true,
+    },
     {
       key: "when",
-      label: copy.composer.missingWhen,
-      // EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
-      value:
-        parsed.date &&
-        format(parsed.date, parsed.hasTime ? "EEEEEE · d MMM · HH:mm" : "EEEEEE · d MMM", {
-          locale: ptBR,
-        }),
+      chip: parsed.date
+        ? // EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
+          format(parsed.date, parsed.hasTime ? "EEEEEE · d MMM · HH:mm" : "EEEEEE · d MMM", {
+            locale: ptBR,
+          })
+        : copy.composer.missingWhen,
+      filled: Boolean(parsed.date),
       required: true,
     },
     {
       key: "duration",
-      label: copy.composer.missingDuration,
-      value: parsed.duration,
+      chip: parsed.duration ?? copy.composer.missingDuration,
+      filled: Boolean(parsed.duration),
       required: false,
     },
   ];
@@ -69,32 +76,32 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
       className={cn(
         "flex flex-col rounded-panel border border-surface-line bg-surface-page p-1",
         "transition-[gap,border-color] duration-200 ease-out focus-within:border-accent-primary",
-        input.trim() && "gap-1",
+        focused && "gap-1",
         className,
       )}
     >
       {/*
        * O eco fica montado e colapsa por grid-rows 0fr→1fr: é o que faz a ALTURA DO FORM animar,
        * já que crescimento por conteúdo novo no DOM não dispara transition. O `gap-1` do form é
-       * que vai e volta com ele, senão sobraria respiro morto acima do campo quando não há chip.
+       * que vai e volta com ele, senão sobraria respiro morto acima do campo com o eco fechado.
        */}
       <div
-        aria-hidden={!input.trim()}
+        aria-hidden={!focused}
         className={cn(
           "grid transition-[grid-template-rows] duration-200 ease-out",
-          input.trim() ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
+          focused ? "grid-rows-[1fr]" : "grid-rows-[0fr]",
         )}
       >
         <div aria-live="polite" className="flex flex-wrap items-center gap-1.5 overflow-hidden p-2">
-          {slots.map(({ key, label, value, required }) => (
+          {slots.map(({ key, chip, filled, required }) => (
             <span
               key={key}
               className={cn(
                 chipClass,
-                !value && (required ? "text-accent-primary" : "text-content-secondary"),
+                !filled && (required ? "text-accent-primary" : "text-content-secondary"),
               )}
             >
-              {value || label}
+              {chip}
             </span>
           ))}
 
@@ -124,6 +131,8 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
           type="text"
           value={input}
           onChange={(e) => setInput(e.target.value)}
+          onFocus={() => setFocused(true)}
+          onBlur={() => setFocused(false)}
           placeholder={copy.composer.textPlaceholder}
           autoComplete="off"
           className="min-w-0 flex-1 bg-transparent pl-5 text-sm text-foreground placeholder:text-muted-foreground outline-none"
