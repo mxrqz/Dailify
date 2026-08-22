@@ -30,6 +30,32 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
   const parsed = useMemo(() => parseTaskText(input), [input]);
   const canSubmit = Boolean(parsed.text && parsed.date) && !submitting;
 
+  /**
+   * Os quatro slots ficam sempre montados, na mesma ordem: chip que some/aparece pisca e mexe o
+   * layout a cada tecla. Sem valor ele mostra a pergunta em destaque; preenchido cai pro muted do
+   * `chipClass` — respondido não precisa mais de atenção.
+   */
+  const slots = [
+    { key: "text", label: copy.composer.missingText, value: parsed.text, required: true },
+    {
+      key: "when",
+      label: copy.composer.missingWhen,
+      // EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
+      value:
+        parsed.date &&
+        format(parsed.date, parsed.hasTime ? "EEEEEE · d MMM · HH:mm" : "EEEEEE · d MMM", {
+          locale: ptBR,
+        }),
+      required: true,
+    },
+    {
+      key: "duration",
+      label: copy.composer.missingDuration,
+      value: parsed.duration,
+      required: false,
+    },
+  ];
+
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
@@ -60,29 +86,30 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
         )}
       >
         <div aria-live="polite" className="flex flex-wrap items-center gap-1.5 overflow-hidden p-2">
-          <span className={cn(chipClass, !parsed.date && "text-accent-primary")}>
-            {parsed.date
-              ? // EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
-                format(parsed.date, parsed.hasTime ? "EEEEEE · d MMM · HH:mm" : "EEEEEE · d MMM", {
-                  locale: ptBR,
-                })
-              : copy.composer.missingWhen}
-          </span>
-
-          {parsed.duration && <span className={chipClass}>{parsed.duration}</span>}
-
-          {!parsed.text && (
-            <span className={cn(chipClass, "text-accent-primary")}>
-              {copy.composer.missingText}
-            </span>
-          )}
-
-          {parsed.links.map((url) => (
-            <span key={url} className={chipClass}>
-              <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
-              {linkLabel(url)}
+          {slots.map(({ key, label, value, required }) => (
+            <span
+              key={key}
+              className={cn(
+                chipClass,
+                !value && (required ? "text-accent-primary" : "text-content-secondary"),
+              )}
+            >
+              {value || label}
             </span>
           ))}
+
+          {parsed.links.length ? (
+            parsed.links.map((url) => (
+              <span key={url} className={chipClass}>
+                <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
+                {linkLabel(url)}
+              </span>
+            ))
+          ) : (
+            <span className={cn(chipClass, "text-content-secondary")}>
+              {copy.composer.missingLink}
+            </span>
+          )}
         </div>
       </div>
 

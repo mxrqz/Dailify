@@ -138,6 +138,8 @@ export const copy = {
     submit: "Criar tarefa",
     missingWhen: "quando?",
     missingText: "o que é a tarefa?",
+    missingDuration: "quanto tempo?",
+    missingLink: "link?",
   },
 
   voice: {
