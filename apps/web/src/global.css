@@ -241,6 +241,12 @@
   --radius-panel: var(--radius-panel);
   --radius-field: var(--radius-field);
   --shadow-panel: 0 24px 60px -20px light-dark(oklch(0% 0 0 / 0.18), oklch(0% 0 0 / 0.55));
+  /* Elevação 1 — o degrau mais baixo: o que flutua encostado na superfície (a toolbar do cartão).
+     Duas camadas de BOX-shadow, contato + difusa; nunca `drop-shadow`, que é filtro e se empilha
+     entre camadas — uma sombra acaba escurecendo a outra onde os elementos se sobrepõem. */
+  --shadow-elevation-1:
+    0 1px 2px -1px light-dark(oklch(0% 0 0 / 0.12), oklch(0% 0 0 / 0.5)),
+    0 4px 10px -3px light-dark(oklch(0% 0 0 / 0.1), oklch(0% 0 0 / 0.45));
 }
 
 @theme {

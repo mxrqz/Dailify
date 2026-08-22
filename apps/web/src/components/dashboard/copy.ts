@@ -164,6 +164,7 @@ export const copy = {
     editLinks: "Editar links",
     editRepeat: "Editar repetição",
     editPriority: "Editar prioridade",
+    editDuration: "Editar duração",
     deleteError: "Não foi possível excluir a tarefa",
   },
 } as const;

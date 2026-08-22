@@ -7,7 +7,7 @@ import {
   type ReactNode,
 } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Check, Flag, LinkIcon, RepeatIcon } from "lucide-react";
+import { Check, Flag, LinkIcon, RepeatIcon, TimerIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 /**
@@ -63,18 +63,8 @@ const chipClass =
   "text-content-secondary transition-colors outline-none hover:bg-surface-panel " +
   "focus-visible:ring-[3px] focus-visible:ring-ring/50";
 
-/**
- * Campo vazio (sem link, sem recorrência, sem prioridade) só existe como chip quando dá pra
- * editá-lo, e mesmo assim fica escondido até o mouse entrar no cartão: é o convite pra preencher,
- * sem sujar a linha de quem só está lendo. Aberto (`data-state`) ou focado, fica.
- */
-const ghostClass =
-  "opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 " +
-  "data-[state=open]:opacity-100";
-
 type ChipProps = ComponentPropsWithoutRef<"button"> & {
   editable?: boolean;
-  ghost?: boolean;
   label: string;
 };
 
@@ -86,10 +76,10 @@ type ChipProps = ComponentPropsWithoutRef<"button"> & {
  * que não abre nada (e um painel sem âncora, no React 18).
  */
 const Chip = forwardRef<HTMLButtonElement, ChipProps>(function Chip(
-  { editable, ghost, label, className, children, ...props },
+  { editable, label, className, children, ...props },
   ref,
 ) {
-  const classes = cn(chipClass, ghost && ghostClass, className);
+  const classes = cn(chipClass, className);
   if (!editable) {
     return (
       <span aria-label={label} className={classes}>
@@ -109,14 +99,8 @@ type MetaChipProps = Omit<ChipProps, "label" | "children">;
 const LinkChip = forwardRef<HTMLButtonElement, { links: string[] } & MetaChipProps>(
   function LinkChip({ links, editable, ...props }, ref) {
     const [first, ...rest] = links;
-    if (!first) {
-      if (!editable) return null;
-      return (
-        <Chip ref={ref} editable ghost label={copy.task.editLinks} {...props}>
-          <LinkIcon className="size-3.5 shrink-0" aria-hidden="true" />
-        </Chip>
-      );
-    }
+    // Campo vazio não vira chip: quem oferece o que ainda não existe é a toolbar.
+    if (!first) return null;
 
     const body = (
       <>
@@ -161,22 +145,13 @@ const LinkChip = forwardRef<HTMLButtonElement, { links: string[] } & MetaChipPro
 /** Recorrência como chip: o rótulo já vem pronto do `repeatLabel` ("" = não repete). */
 const RepeatChip = forwardRef<HTMLButtonElement, { label: string } & MetaChipProps>(
   function RepeatChip({ label, editable, ...props }, ref) {
-    if (!label && !editable) return null;
+    if (!label) return null;
     return (
-      <Chip
-        ref={ref}
-        editable={editable}
-        ghost={!label}
-        label={label || copy.task.editRepeat}
-        className="max-w-40"
-        {...props}
-      >
+      <Chip ref={ref} editable={editable} label={label} className="max-w-40" {...props}>
         <RepeatIcon className="size-3.5 shrink-0" aria-hidden="true" />
-        {label && (
-          <span className="hidden truncate sm:inline" aria-hidden="true">
-            {label}
-          </span>
-        )}
+        <span className="hidden truncate sm:inline" aria-hidden="true">
+          {label}
+        </span>
       </Chip>
     );
   },
@@ -188,25 +163,51 @@ const RepeatChip = forwardRef<HTMLButtonElement, { label: string } & MetaChipPro
  */
 const PriorityChip = forwardRef<HTMLButtonElement, { priority?: number } & MetaChipProps>(
   function PriorityChip({ priority = 0, editable, ...props }, ref) {
-    if (priority <= 0 && !editable) return null;
+    if (priority <= 0) return null;
     return (
-      <Chip
-        ref={ref}
-        editable={editable}
-        ghost={priority <= 0}
-        label={priority > 0 ? priorityText[priority] : copy.task.editPriority}
-        {...props}
-      >
+      <Chip ref={ref} editable={editable} label={priorityText[priority]} {...props}>
         <Flag className={cn("size-3.5 shrink-0", priorityTextColor[priority])} aria-hidden="true" />
-        {priority > 0 && (
-          <span className="hidden truncate sm:inline" aria-hidden="true">
-            {priorityText[priority]}
-          </span>
-        )}
+        <span className="hidden truncate sm:inline" aria-hidden="true">
+          {priorityText[priority]}
+        </span>
       </Chip>
     );
   },
 );
+
+/**
+ * Toolbar da tarefa: as quatro ações SEMPRE, tenham valor ou não — é por aqui que se adiciona o que
+ * a tarefa ainda não tem, sem o chip fantasma que fazia a linha piscar no hover. Flutua na borda de
+ * cima do cartão, então não ocupa espaço na linha nem empurra nada.
+ *
+ * `pointer-events-none` junto com o `opacity-0`: invisível não pode continuar clicável. Fica de pé
+ * enquanto algum menu dela estiver aberto (`has-[[data-state=open]]`), senão sumiria embaixo do
+ * painel que ela mesma abriu assim que o mouse saísse do cartão.
+ */
+const toolbarClass =
+  "pointer-events-none absolute -top-6 right-2 z-20 flex items-center gap-0.5 rounded-md " +
+  "border border-surface-line bg-surface-panel p-0.5 opacity-0 shadow-elevation-1 " +
+  "transition-opacity " +
+  "group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto " +
+  "focus-within:opacity-100 has-[[data-state=open]]:pointer-events-auto " +
+  "has-[[data-state=open]]:opacity-100";
+
+const ToolbarButton = forwardRef<
+  HTMLButtonElement,
+  { label: string; children: ReactNode } & ComponentPropsWithoutRef<"button">
+>(function ToolbarButton({ label, children, ...props }, ref) {
+  return (
+    <button
+      ref={ref}
+      type="button"
+      aria-label={label}
+      className="flex size-7 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      {...props}
+    >
+      {children}
+    </button>
+  );
+});
 
 /** Chip de duração (mono) ou seu skeleton. */
 const DurationChip = forwardRef<
@@ -373,6 +374,35 @@ function CardBody({
             aria-label={title}
             className="absolute inset-0 z-0 cursor-default rounded-lg outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           />
+        )}
+
+        {edit && (
+          <div className={toolbarClass}>
+            {wrap(
+              edit.link,
+              <ToolbarButton label={copy.task.editLinks}>
+                <LinkIcon className="size-3.5" aria-hidden="true" />
+              </ToolbarButton>,
+            )}
+            {wrap(
+              edit.repeat,
+              <ToolbarButton label={copy.task.editRepeat}>
+                <RepeatIcon className="size-3.5" aria-hidden="true" />
+              </ToolbarButton>,
+            )}
+            {wrap(
+              edit.priority,
+              <ToolbarButton label={copy.task.editPriority}>
+                <Flag className="size-3.5" aria-hidden="true" />
+              </ToolbarButton>,
+            )}
+            {wrap(
+              edit.duration,
+              <ToolbarButton label={copy.task.editDuration}>
+                <TimerIcon className="size-3.5" aria-hidden="true" />
+              </ToolbarButton>,
+            )}
+          </div>
         )}
 
         <div className="flex items-center justify-between gap-2">

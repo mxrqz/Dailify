@@ -126,9 +126,13 @@ export function EditTaskContent({
   };
 
   return (
-    // 384px (o `sm:max-w-sm` do primitivo) não comportava a linha de data + duração nem quatro
-    // ações no rodapé — era a origem da rolagem horizontal e dos rótulos cortados.
-    <SheetContent className="w-full overflow-hidden rounded-l-panel border-surface-line bg-surface-card shadow-panel sm:max-w-[27.5rem]">
+    // Folha de BAIXO: no desktop a edição acontece no próprio cartão, então o painel lateral perdeu
+    // a razão de existir — quem abre isto aqui é o toque, e no toque o polegar alcança o rodapé.
+    // `max-h`, não altura fixa: o formulário rola dentro e a folha para antes de cobrir a tela.
+    <SheetContent
+      side="bottom"
+      className="max-h-[85dvh] overflow-hidden rounded-t-panel border-surface-line bg-surface-card shadow-panel"
+    >
       {/* O texto da tarefa é o cabeçalho visível; o título do diálogo existe pro leitor de tela. */}
       <SheetHeader className="pb-0">
         <SheetTitle className="sr-only">{copy.form.editTitle}</SheetTitle>

@@ -13,6 +13,7 @@ import { TaskCard } from "@/components/task-card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { taskToCardData } from "@/functions/functions";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import type { TaskProps } from "@/types/types";
 
@@ -60,10 +61,18 @@ function TaskActions({ task }: { task: TaskProps }): JSX.Element {
 }
 
 /**
- * Uma linha da coluna do dia: o cartão + suas ações + a sheet, que abre direto no formulário de
- * edição — concluir e excluir moram no rodapé dele, sem modo leitura intermediário.
+ * Sem hover não há como alcançar a toolbar do cartão nem os chips, então é aí — e só aí — que o
+ * cartão inteiro vira um alvo que abre a folha. Com hover (desktop), a edição é toda no cartão e um
+ * clique no meio dele não faz mais nada. O `max-width` cobre a janela estreita com mouse, onde a
+ * linha de metadados já está apertada demais pra editar em cima dela.
+ */
+const SHEET_EDITING = "(hover: none), (max-width: 639px)";
+
+/**
+ * Uma linha da coluna do dia: o cartão + suas ações + a folha de edição, que no toque abre por
+ * baixo — concluir e excluir moram no rodapé dela, sem modo leitura intermediário.
  *
- * O clique no cartão abre a sheet por ESTADO (`open`), não por `SheetTrigger` — o TaskCard já tem
+ * O clique no cartão abre a folha por ESTADO (`open`), não por `SheetTrigger` — o TaskCard já tem
  * seu próprio botão-overlay, e envolvê-lo num trigger `asChild` aninharia botão dentro de botão.
  * `selected={open}` é o que dá ao cartão aberto a borda crimson: é o quinto papel do acento
  * ("tarefa aberta") previsto no spec, que até aqui não tinha quem o usasse.
@@ -78,6 +87,7 @@ export function DayTaskRow({
   showTime: boolean;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
+  const sheetEditing = useMediaQuery(SHEET_EDITING);
   const data = taskToCardData(task, day);
   const { onPatch, onRename } = useTaskActions(task);
 
@@ -89,7 +99,7 @@ export function DayTaskRow({
         {...data}
         time={showTime ? data.time : ""}
         selected={open}
-        onClick={() => setOpen(true)}
+        onClick={sheetEditing ? () => setOpen(true) : undefined}
         onTitleChange={onRename}
         edit={{
           link: (chip) => (
