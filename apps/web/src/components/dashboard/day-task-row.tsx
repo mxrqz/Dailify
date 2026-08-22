@@ -62,9 +62,11 @@ function TaskActions({ task }: { task: TaskProps }): JSX.Element {
 
 /**
  * Sem hover não há como alcançar a toolbar do cartão nem os chips, então é aí — e só aí — que o
- * cartão inteiro vira um alvo que abre a folha. Com hover (desktop), a edição é toda no cartão e um
- * clique no meio dele não faz mais nada. O `max-width` cobre a janela estreita com mouse, onde a
- * linha de metadados já está apertada demais pra editar em cima dela.
+ * cartão inteiro vira um alvo que abre a folha, e a edição no cartão é desligada INTEIRA (título
+ * incluído): dois caminhos de edição no toque só dariam campo aberto sem querer. Com hover
+ * (desktop) é o inverso — edita-se tudo no cartão e um clique no meio dele não faz nada. O
+ * `max-width` cobre a janela estreita com mouse, onde a linha de metadados já está apertada demais
+ * pra editar em cima dela.
  */
 const SHEET_EDITING = "(hover: none), (max-width: 639px)";
 
@@ -93,6 +95,36 @@ export function DayTaskRow({
 
   const onOpenChange = (next: boolean) => setOpen(next);
 
+  // Um caminho de edição por vez: no toque o cartão é só leitura e tudo acontece na folha.
+  const edit = sheetEditing
+    ? undefined
+    : {
+        link: (chip: JSX.Element) => (
+          <LinksPopover value={task.links ?? []} onChange={(links) => void onPatch({ links })}>
+            {chip}
+          </LinksPopover>
+        ),
+        repeat: (chip: JSX.Element) => (
+          <RepeatMenu
+            value={task.repeat}
+            date={task.date}
+            onChange={(repeat) => void onPatch({ repeat })}
+          >
+            {chip}
+          </RepeatMenu>
+        ),
+        priority: (chip: JSX.Element) => (
+          <PriorityMenu value={task.priority} onChange={(priority) => void onPatch({ priority })}>
+            {chip}
+          </PriorityMenu>
+        ),
+        duration: (chip: JSX.Element) => (
+          <DurationMenu value={task.duration} onChange={(duration) => void onPatch({ duration })}>
+            {chip}
+          </DurationMenu>
+        ),
+      };
+
   return (
     <EditTask open={open} onOpenChange={onOpenChange}>
       <TaskCard
@@ -100,37 +132,12 @@ export function DayTaskRow({
         time={showTime ? data.time : ""}
         selected={open}
         onClick={sheetEditing ? () => setOpen(true) : undefined}
-        onTitleChange={onRename}
-        edit={{
-          link: (chip) => (
-            <LinksPopover value={task.links ?? []} onChange={(links) => void onPatch({ links })}>
-              {chip}
-            </LinksPopover>
-          ),
-          repeat: (chip) => (
-            <RepeatMenu
-              value={task.repeat}
-              date={task.date}
-              onChange={(repeat) => void onPatch({ repeat })}
-            >
-              {chip}
-            </RepeatMenu>
-          ),
-          priority: (chip) => (
-            <PriorityMenu value={task.priority} onChange={(priority) => void onPatch({ priority })}>
-              {chip}
-            </PriorityMenu>
-          ),
-          duration: (chip) => (
-            <DurationMenu value={task.duration} onChange={(duration) => void onPatch({ duration })}>
-              {chip}
-            </DurationMenu>
-          ),
-        }}
+        onTitleChange={sheetEditing ? undefined : onRename}
+        edit={edit}
         actions={<TaskActions task={task} />}
       />
 
-      <EditTaskContent task={task} day={day} onClose={() => setOpen(false)} />
+      <EditTaskContent task={task} day={day} open={open} onClose={() => setOpen(false)} />
     </EditTask>
   );
 }

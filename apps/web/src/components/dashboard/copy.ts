@@ -77,6 +77,10 @@ export const copy = {
     repeatYearly: "Anual",
     // Ordem de `weekDays` do shared (domingo primeiro) — o índice vem do `dayMap`.
     repeatDays: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
+    back: "Voltar",
+    empty: "—",
+    tagSearch: "buscar ou criar tag",
+    tagCreate: "Criar",
     cancel: "Cancelar",
     save: "Salvar",
     create: "Criar tarefa",

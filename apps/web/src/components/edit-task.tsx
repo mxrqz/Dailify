@@ -1,4 +1,4 @@
-import { createContext, useContext, useId, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useState, ReactNode } from "react";
 import {
   Sheet,
   SheetContent,
@@ -15,9 +15,14 @@ import { Button } from "./ui/button";
 import { updateTask } from "@/functions/api";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { CheckIcon, Loader2, Trash2Icon } from "lucide-react";
+import { ChevronLeftIcon, CheckIcon, Loader2, Trash2Icon } from "lucide-react";
 import { getCompletionDate, isTaskModified, upsertTaskWithRecurrence } from "@/functions/functions";
-import { TaskForm, TaskFormValues } from "@/components/dashboard/task-form";
+import {
+  FORM_VIEWS,
+  TaskForm,
+  type FormView,
+  type TaskFormValues,
+} from "@/components/dashboard/task-form";
 import { copy } from "@/components/dashboard/copy";
 import { useTaskActions } from "@/hooks/useTaskActions";
 
@@ -58,10 +63,13 @@ export function EditTaskTrigger({ children }: { children: ReactNode }) {
 export function EditTaskContent({
   task,
   day,
+  open,
   onClose,
 }: {
   task: TaskProps;
   day: Date;
+  /** Só pra saber quando a folha fechou: reabrir tem que cair na raiz, não na última página. */
+  open?: boolean;
   onClose: () => void;
 }) {
   const { tasks, setTasks, selectedDay } = useDailify();
@@ -70,6 +78,11 @@ export function EditTaskContent({
   const navigate = useNavigate();
   const formId = useId();
   const [loading, setLoading] = useState<boolean>(false);
+  const [view, setView] = useState<FormView>("root");
+
+  useEffect(() => {
+    if (!open) setView("root");
+  }, [open]);
   const { onComplete, onDelete } = useTaskActions(task);
   const completed = getCompletionDate(task, day) === true;
 
@@ -128,48 +141,76 @@ export function EditTaskContent({
   return (
     // Folha de BAIXO: no desktop a edição acontece no próprio cartão, então o painel lateral perdeu
     // a razão de existir — quem abre isto aqui é o toque, e no toque o polegar alcança o rodapé.
-    // `max-h`, não altura fixa: o formulário rola dentro e a folha para antes de cobrir a tela.
+    // Altura FIXA, e em `svh`: a folha para sempre no mesmo lugar, tenha a página três linhas ou
+    // dez, e o teclado abrindo não redimensiona nada (é o `dvh` que encolhe com ele). O conteúdo
+    // rola por dentro. `pb` da safe area pro rodapé não cair sob a barra de gestos do aparelho.
     <SheetContent
       side="bottom"
-      className="max-h-[85dvh] overflow-hidden rounded-t-panel border-surface-line bg-surface-card shadow-panel"
+      className="h-[85svh] gap-0 overflow-hidden rounded-t-panel border-surface-line bg-surface-card pb-[env(safe-area-inset-bottom)] shadow-panel"
     >
-      {/* O texto da tarefa é o cabeçalho visível; o título do diálogo existe pro leitor de tela. */}
-      <SheetHeader className="pb-0">
+      {/* Puxador: é o que diz "isto é uma folha e sai por baixo" antes de qualquer texto. */}
+      <div className="mx-auto mt-2 h-1.5 w-10 shrink-0 rounded-full bg-surface-line" aria-hidden />
+
+      {/* A folha é uma pilha de páginas: na raiz o cabeçalho nomeia a tarefa, dentro de um campo ele
+          vira "voltar + nome do campo". O título do diálogo existe pro leitor de tela. */}
+      <SheetHeader className="gap-2 pb-0">
         <SheetTitle className="sr-only">{copy.form.editTitle}</SheetTitle>
         <SheetDescription className="sr-only">{copy.form.editDescription}</SheetDescription>
+
+        <div className="flex h-9 items-center gap-1">
+          {view !== "root" && (
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label={copy.form.back}
+              onClick={() => setView("root")}
+              className="-ml-2 size-9 cursor-pointer text-muted-foreground hover:text-foreground"
+            >
+              <ChevronLeftIcon className="size-5" />
+            </Button>
+          )}
+          <span className="text-base font-semibold">{FORM_VIEWS[view].title}</span>
+        </div>
       </SheetHeader>
 
       <TaskForm
         id={formId}
         task={task}
-        className="min-h-0 flex-1 scrollbar-floating px-4"
+        view={view}
+        onView={setView}
+        className="min-h-0 flex-1 scrollbar-floating px-4 pb-2"
         onSubmit={handleSubmit}
       />
 
-      {/* "Cancelar" saiu: o ✕ e o Esc já são duas saídas, e três era ruído no caminho do Salvar. */}
-      <SheetFooter className="flex-row items-center justify-end gap-2 border-t border-surface-line">
-        <Button
-          variant="ghost"
-          disabled={completed}
-          className="cursor-pointer gap-2"
-          onClick={() => {
-            void onComplete();
-            onClose();
-          }}
-        >
-          <CheckIcon className="size-4" />
-          {completed ? copy.task.completed : copy.task.complete}
-        </Button>
+      {/* "Cancelar" saiu: o ✕ e o Esc já são duas saídas, e três era ruído no caminho do Salvar.
+          Rodapé sem divisória, mas com respiro: o guia de formulário mobile pede ~40px entre o
+          último campo e a ação principal, e é o `pt-4` daqui somado ao `pb-2` do form. Dentro de um
+          campo ele some — ali quem confirma é a própria escolha, e o Salvar é da tarefa inteira. */}
+      {view === "root" && (
+        <SheetFooter className="flex-row items-center gap-2 pt-4">
+          <Button
+            variant="ghost"
+            disabled={completed}
+            className="h-12 flex-1 cursor-pointer gap-2 rounded-full"
+            onClick={() => {
+              void onComplete();
+              onClose();
+            }}
+          >
+            <CheckIcon className="size-4" />
+            {completed ? copy.task.completed : copy.task.complete}
+          </Button>
 
-        <Button
-          type="submit"
-          form={formId}
-          className="cursor-pointer rounded-full bg-accent-primary px-5 text-primary-foreground hover:bg-accent-hover"
-          disabled={loading}
-        >
-          {loading ? <Loader2 className="animate-spin" /> : copy.form.save}
-        </Button>
-      </SheetFooter>
+          <Button
+            type="submit"
+            form={formId}
+            className="h-12 flex-1 cursor-pointer rounded-full bg-accent-primary text-primary-foreground hover:bg-accent-hover"
+            disabled={loading}
+          >
+            {loading ? <Loader2 className="animate-spin" /> : copy.form.save}
+          </Button>
+        </SheetFooter>
+      )}
 
       {/* Fica no fim do DOM de propósito, ainda que apareça no topo: o Radix foca o primeiro
           elemento focável ao abrir, e um botão de excluir nessa posição significa abrir o painel

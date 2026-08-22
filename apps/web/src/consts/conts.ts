@@ -23,6 +23,14 @@ export const priorityBgColor = [
 // Selecionado = contorno + texto na cor, NÃO fill sólido. Um fill saturado poria o `text-foreground`
 // herdado do ToggleGroupItem sobre priority-4 (70% L no dark) — contraste ruim, e um bloco de cor
 // chapado destoa do sistema, que trata cartão e chip como contorno. O `/70` antigo saiu junto (k00).
+/** Escolhida: contorno e texto na cor da prioridade (o chip do formulário controla o estado). */
+export const prioritySelectedColor = [
+  "border-priority-0 text-priority-0",
+  "border-priority-1 text-priority-1",
+  "border-priority-2 text-priority-2",
+  "border-priority-3 text-priority-3",
+  "border-priority-4 text-priority-4",
+];
 export const prioritySelectedBgColor = [
   "data-[state=on]:border-priority-0 data-[state=on]:text-priority-0",
   "data-[state=on]:border-priority-1 data-[state=on]:text-priority-1",

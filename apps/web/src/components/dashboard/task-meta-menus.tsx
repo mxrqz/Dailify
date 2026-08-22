@@ -56,7 +56,7 @@ export function PriorityMenu({
 }
 
 /** Duração: os passos que a captura rápida já usa, mais o valor atual quando é um fora da régua. */
-const DURATIONS = ["10m", "15m", "30m", "45m", "1h", "1h30m", "2h"];
+export const DURATIONS = ["10m", "15m", "30m", "45m", "1h", "1h30m", "2h"];
 
 export function DurationMenu({
   value,
