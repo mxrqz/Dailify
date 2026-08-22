@@ -2,6 +2,8 @@ import { TaskProps } from "@/types/types";
 import { format, isSameDay } from "date-fns";
 import { enUS, ptBR } from "date-fns/locale";
 import type { TaskCardData } from "@/components/task-card";
+import { expandRecurringTask } from "@dailify/shared";
+
 import { repeatLabel } from "@/functions/repeat-label";
 
 export const returnFractedDate = (date: Date) => {
@@ -57,6 +59,21 @@ export function upsertTaskById(tasks: TaskProps[], task: TaskProps): TaskProps[]
   const next = [...tasks];
   next[i] = task;
   return next;
+}
+
+/**
+ * Troca a tarefa e reconstrói as instâncias recorrentes do mês visível. O servidor só expande a
+ * recorrência no GET, e as instâncias dividem o id da original — `upsertTaskById` trocaria só a
+ * primeira. Sem isto, virar "não repetir" em "diária" (ou renomear uma recorrente) só aparecia no
+ * próximo carregamento.
+ */
+export function upsertTaskWithRecurrence(
+  tasks: TaskProps[],
+  task: TaskProps,
+  month: Date,
+): TaskProps[] {
+  const others = tasks.filter((t) => t.id !== task.id);
+  return [...others, task, ...expandRecurringTask(task, month)];
 }
 
 export function getNextTask(currentMonthTasks: TaskProps[]) {

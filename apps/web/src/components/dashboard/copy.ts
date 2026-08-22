@@ -159,8 +159,11 @@ export const copy = {
     options: "Opções da tarefa",
     completed: "Concluída",
     completeError: "Não foi possível concluir a tarefa",
-    renameError: "Não foi possível renomear a tarefa",
+    patchError: "Não foi possível salvar a alteração",
     rename: "Editar o texto da tarefa",
+    editLinks: "Editar links",
+    editRepeat: "Editar repetição",
+    editPriority: "Editar prioridade",
     deleteError: "Não foi possível excluir a tarefa",
   },
 } as const;

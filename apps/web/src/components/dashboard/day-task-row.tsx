@@ -2,6 +2,12 @@ import { useState } from "react";
 import { CheckIcon, EllipsisVerticalIcon, Trash2Icon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
+import {
+  DurationMenu,
+  LinksPopover,
+  PriorityMenu,
+  RepeatMenu,
+} from "@/components/dashboard/task-meta-menus";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
 import { TaskCard } from "@/components/task-card";
 import { Button } from "@/components/ui/button";
@@ -73,7 +79,7 @@ export function DayTaskRow({
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const data = taskToCardData(task, day);
-  const { onRename } = useTaskActions(task);
+  const { onPatch, onRename } = useTaskActions(task);
 
   const onOpenChange = (next: boolean) => setOpen(next);
 
@@ -85,6 +91,32 @@ export function DayTaskRow({
         selected={open}
         onClick={() => setOpen(true)}
         onTitleChange={onRename}
+        edit={{
+          link: (chip) => (
+            <LinksPopover value={task.links ?? []} onChange={(links) => void onPatch({ links })}>
+              {chip}
+            </LinksPopover>
+          ),
+          repeat: (chip) => (
+            <RepeatMenu
+              value={task.repeat}
+              date={task.date}
+              onChange={(repeat) => void onPatch({ repeat })}
+            >
+              {chip}
+            </RepeatMenu>
+          ),
+          priority: (chip) => (
+            <PriorityMenu value={task.priority} onChange={(priority) => void onPatch({ priority })}>
+              {chip}
+            </PriorityMenu>
+          ),
+          duration: (chip) => (
+            <DurationMenu value={task.duration} onChange={(duration) => void onPatch({ duration })}>
+              {chip}
+            </DurationMenu>
+          ),
+        }}
         actions={<TaskActions task={task} />}
       />
 

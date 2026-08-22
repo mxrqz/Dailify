@@ -11,6 +11,7 @@ import {
   groupTasksByTime,
   taskToCardData,
   nowLineIndex,
+  upsertTaskWithRecurrence,
 } from "./functions";
 import type { TaskProps } from "@/types/types";
 
@@ -268,5 +269,35 @@ describe("nowLineIndex", () => {
 
   test("0 for an empty list", () => {
     expect(nowLineIndex([], at(12, 0))).toBe(0);
+  });
+});
+
+describe("upsertTaskWithRecurrence", () => {
+  const month = new Date(2026, 7, 1);
+  const daily = makeTask({ id: "r", repeat: "Daily", date: new Date(2026, 7, 1, 9, 0).getTime() });
+
+  test("virar diária cria as instâncias do mês na hora", () => {
+    const before = makeTask({ id: "r", date: daily.date });
+    const next = upsertTaskWithRecurrence([before], daily, month);
+    expect(next.length).toBe(31); // a original + os 30 dias que sobram de agosto
+  });
+
+  test("voltar pra 'não repetir' leva as instâncias junto", () => {
+    const expanded = upsertTaskWithRecurrence([daily], daily, month);
+    const off = makeTask({ id: "r", repeat: "Off", date: daily.date });
+    expect(upsertTaskWithRecurrence(expanded, off, month)).toEqual([off]);
+  });
+
+  test("editar uma recorrente atinge TODAS as instâncias, não só a primeira", () => {
+    const expanded = upsertTaskWithRecurrence([daily], daily, month);
+    const renamed = { ...daily, title: "novo" };
+    const next = upsertTaskWithRecurrence(expanded, renamed, month);
+    expect(next.every((t) => t.title === "novo")).toBe(true);
+  });
+
+  test("não mexe nas outras tarefas", () => {
+    const other = makeTask({ id: "outra" });
+    const next = upsertTaskWithRecurrence([other, daily], { ...daily, repeat: "Off" }, month);
+    expect(next.filter((t) => t.id === "outra")).toEqual([other]);
   });
 });

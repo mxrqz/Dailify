@@ -1,4 +1,11 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import {
+  forwardRef,
+  useEffect,
+  useRef,
+  useState,
+  type ComponentPropsWithoutRef,
+  type ReactNode,
+} from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { Check, Flag, LinkIcon, RepeatIcon } from "lucide-react";
 
@@ -44,55 +51,175 @@ export function TagBadge({ label, loading }: { label: string; loading?: boolean 
  * primeiro (o da reunião, na prática); o resto vive na edição. `+N` conta o que ficou de fora.
  * `pointer-events-auto` + z acima do overlay: clicar aqui abre a URL, não o detalhe da tarefa.
  */
-function LinkChip({ links }: { links: string[] }): JSX.Element | null {
-  const [first, ...rest] = links;
-  if (!first) return null;
+/**
+ * Chips de metadado: sem contorno — o hover do cartão apagava a hairline e a linha ficava
+ * remendada. O que revela cada chip é o hover DELE, com o mesmo fundo do campo do título.
+ * `pointer-events-auto` porque o cluster é `pointer-events-none` (o overlay do cartão é quem
+ * recebe o clique lá).
+ */
+const chipClass =
+  "pointer-events-auto inline-flex w-fit shrink-0 cursor-default items-center gap-1 " +
+  "overflow-hidden rounded-md px-2 py-0.5 text-sm font-normal whitespace-nowrap " +
+  "text-content-secondary transition-colors outline-none hover:bg-surface-panel " +
+  "focus-visible:ring-[3px] focus-visible:ring-ring/50";
+
+/**
+ * Campo vazio (sem link, sem recorrência, sem prioridade) só existe como chip quando dá pra
+ * editá-lo, e mesmo assim fica escondido até o mouse entrar no cartão: é o convite pra preencher,
+ * sem sujar a linha de quem só está lendo. Aberto (`data-state`) ou focado, fica.
+ */
+const ghostClass =
+  "opacity-0 transition-opacity group-hover:opacity-100 focus-visible:opacity-100 " +
+  "data-[state=open]:opacity-100";
+
+type ChipProps = ComponentPropsWithoutRef<"button"> & {
+  editable?: boolean;
+  ghost?: boolean;
+  label: string;
+};
+
+/**
+ * Um chip é `<button>` quando edita e `<span>` quando é só leitura — o `<a>` do link à parte.
+ *
+ * Todos eles encaminham props e ref porque, no modo editável, o chip É o gatilho do menu: com
+ * `asChild` o Radix clona este elemento, e um componente que engula `onClick`/`ref` vira um botão
+ * que não abre nada (e um painel sem âncora, no React 18).
+ */
+const Chip = forwardRef<HTMLButtonElement, ChipProps>(function Chip(
+  { editable, ghost, label, className, children, ...props },
+  ref,
+) {
+  const classes = cn(chipClass, ghost && ghostClass, className);
+  if (!editable) {
+    return (
+      <span aria-label={label} className={classes}>
+        {children}
+      </span>
+    );
+  }
   return (
-    <a
-      href={first}
-      target="_blank"
-      rel="noreferrer"
-      onClick={(e) => e.stopPropagation()}
-      className="pointer-events-auto max-w-40"
-    >
-      <Badge
-        variant="outline"
-        className="gap-1 border-surface-line px-2 py-0.5 text-2xs font-normal text-content-secondary transition-colors hover:border-accent-primary hover:text-foreground"
-      >
-        <LinkIcon className="size-2.5 shrink-0" aria-hidden="true" />
-        <span className="hidden truncate sm:inline">{linkLabel(first)}</span>
-        {rest.length > 0 && <span className="shrink-0">+{rest.length}</span>}
-      </Badge>
-    </a>
+    <button ref={ref} type="button" aria-label={label} className={classes} {...props}>
+      {children}
+    </button>
   );
-}
+});
+
+type MetaChipProps = Omit<ChipProps, "label" | "children">;
+
+const LinkChip = forwardRef<HTMLButtonElement, { links: string[] } & MetaChipProps>(
+  function LinkChip({ links, editable, ...props }, ref) {
+    const [first, ...rest] = links;
+    if (!first) {
+      if (!editable) return null;
+      return (
+        <Chip ref={ref} editable ghost label={copy.task.editLinks} {...props}>
+          <LinkIcon className="size-3.5 shrink-0" aria-hidden="true" />
+        </Chip>
+      );
+    }
+
+    const body = (
+      <>
+        <LinkIcon className="size-3.5 shrink-0" aria-hidden="true" />
+        <span className="hidden truncate sm:inline" aria-hidden="true">
+          {linkLabel(first)}
+        </span>
+        {rest.length > 0 && <span className="shrink-0">+{rest.length}</span>}
+      </>
+    );
+
+    // Sem edição o chip é o próprio atalho pra URL; com edição ele abre o painel, e é de lá que se
+    // chega no link — um chip não pode responder a dois cliques diferentes.
+    if (editable) {
+      return (
+        <Chip
+          ref={ref}
+          editable
+          label={copy.task.editLinks}
+          className="max-w-40 hover:text-foreground"
+          {...props}
+        >
+          {body}
+        </Chip>
+      );
+    }
+    return (
+      <a
+        href={first}
+        target="_blank"
+        rel="noreferrer"
+        onClick={(e) => e.stopPropagation()}
+        aria-label={linkLabel(first)}
+        className={cn(chipClass, "max-w-40 hover:text-foreground")}
+      >
+        {body}
+      </a>
+    );
+  },
+);
 
 /** Recorrência como chip: o rótulo já vem pronto do `repeatLabel` ("" = não repete). */
-function RepeatChip({ label }: { label: string }): JSX.Element | null {
-  if (!label) return null;
-  return (
-    <Badge
-      variant="outline"
-      className="max-w-40 gap-1 border-surface-line px-2 py-0.5 text-2xs font-normal text-content-secondary"
-    >
-      <RepeatIcon className="size-2.5 shrink-0" aria-hidden="true" />
-      <span className="hidden truncate sm:inline">{label}</span>
-    </Badge>
-  );
-}
+const RepeatChip = forwardRef<HTMLButtonElement, { label: string } & MetaChipProps>(
+  function RepeatChip({ label, editable, ...props }, ref) {
+    if (!label && !editable) return null;
+    return (
+      <Chip
+        ref={ref}
+        editable={editable}
+        ghost={!label}
+        label={label || copy.task.editRepeat}
+        className="max-w-40"
+        {...props}
+      >
+        <RepeatIcon className="size-3.5 shrink-0" aria-hidden="true" />
+        {label && (
+          <span className="hidden truncate sm:inline" aria-hidden="true">
+            {label}
+          </span>
+        )}
+      </Chip>
+    );
+  },
+);
 
-/** Badge de duração (outline, transparente) ou seu skeleton. */
-function DurationBadge({ value, loading }: { value: string; loading?: boolean }): JSX.Element {
+/**
+ * Prioridade como chip, igual aos vizinhos — antes era só a bandeira solta, o único metadado sem
+ * contorno na linha. A cor fica na bandeira; o contorno segue neutro pra não virar semáforo.
+ */
+const PriorityChip = forwardRef<HTMLButtonElement, { priority?: number } & MetaChipProps>(
+  function PriorityChip({ priority = 0, editable, ...props }, ref) {
+    if (priority <= 0 && !editable) return null;
+    return (
+      <Chip
+        ref={ref}
+        editable={editable}
+        ghost={priority <= 0}
+        label={priority > 0 ? priorityText[priority] : copy.task.editPriority}
+        {...props}
+      >
+        <Flag className={cn("size-3.5 shrink-0", priorityTextColor[priority])} aria-hidden="true" />
+        {priority > 0 && (
+          <span className="hidden truncate sm:inline" aria-hidden="true">
+            {priorityText[priority]}
+          </span>
+        )}
+      </Chip>
+    );
+  },
+);
+
+/** Chip de duração (mono) ou seu skeleton. */
+const DurationChip = forwardRef<
+  HTMLButtonElement,
+  { value: string; loading?: boolean } & MetaChipProps
+>(function DurationChip({ value, loading, editable, ...props }, ref) {
   if (loading) return <span className="skeleton block h-5 w-10 shrink-0 rounded-md" />;
   return (
-    <Badge
-      variant="outline"
-      className="shrink-0 border-surface-line bg-transparent px-2 py-0.5 font-mono text-2xs text-content-secondary"
-    >
+    <Chip ref={ref} editable={editable} label={value} className="font-mono" {...props}>
       {value}
-    </Badge>
+    </Chip>
   );
-}
+});
 
 export interface TaskCardData {
   time: string;
@@ -105,6 +232,9 @@ export interface TaskCardData {
  * O cartão nasceu como mock da landing (só os 4 campos de `TaskCardData`). Tudo abaixo é
  * capacidade do app e é OPCIONAL — a landing continua passando os 4 campos e não muda.
  */
+/** Recebe o chip pronto e devolve ele embrulhado no gatilho do editor. */
+export type ChipEditor = (chip: JSX.Element) => JSX.Element;
+
 export interface TaskCardProps extends TaskCardData {
   /** Skeleton com crossfade pro conteúdo. */
   loading?: boolean;
@@ -125,6 +255,14 @@ export interface TaskCardProps extends TaskCardData {
   /** Renomear inline. Sem isto o título é texto puro — é o caso dos mocks da landing.
    *  Devolver `false` (erro do servidor) faz o campo voltar pro título antigo. */
   onTitleChange?: (title: string) => Promise<boolean>;
+  /** Envolve cada chip no seu editor (menu/popover). O cartão só diz QUAL chip e em que ordem —
+   *  o que abre e o que salva é problema de quem monta a lista. */
+  edit?: {
+    link?: ChipEditor;
+    repeat?: ChipEditor;
+    priority?: ChipEditor;
+    duration?: ChipEditor;
+  };
 }
 
 /**
@@ -206,15 +344,21 @@ function CardBody({
   links = [],
   repeat = "",
   onTitleChange,
+  edit,
 }: TaskCardProps) {
+  const wrap = (editor: ChipEditor | undefined, chip: JSX.Element | null) =>
+    chip && editor ? editor(chip) : chip;
+
   return (
     <div className="flex flex-col gap-1.5">
       {/* Só renderiza com hora: um span vazio em coluna vira respiro morto acima do cartão. */}
-      {time && <span className="font-mono text-2xs text-muted-foreground">{time}</span>}
+      {time && (
+        <span className="cursor-default font-mono text-2xs text-muted-foreground">{time}</span>
+      )}
 
       <div
         className={cn(
-          "relative min-w-0 rounded-lg border bg-transparent px-3 py-2.5",
+          "group relative min-w-0 rounded-lg border bg-transparent px-3 py-2.5",
           selected && !loading ? "border-accent-primary" : "border-surface-line",
           onClick && !loading && "transition-colors hover:bg-surface-hover",
         )}
@@ -227,7 +371,7 @@ function CardBody({
             type="button"
             onClick={onClick}
             aria-label={title}
-            className="absolute inset-0 z-0 rounded-lg outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="absolute inset-0 z-0 cursor-default rounded-lg outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
           />
         )}
 
@@ -254,18 +398,19 @@ function CardBody({
                 <span className="sr-only">{copy.task.completed}</span>
               </>
             )}
-            {!loading && <LinkChip links={links} />}
-            {!loading && <RepeatChip label={repeat} />}
-            {!loading && priority !== undefined && priority > 0 && (
-              <>
-                <Flag
-                  className={cn("size-3 shrink-0", priorityTextColor[priority])}
-                  aria-hidden="true"
-                />
-                <span className="sr-only">{priorityText[priority]}</span>
-              </>
+            {!loading && wrap(edit?.link, <LinkChip links={links} editable={!!edit?.link} />)}
+            {!loading &&
+              wrap(edit?.repeat, <RepeatChip label={repeat} editable={!!edit?.repeat} />)}
+            {!loading &&
+              wrap(
+                edit?.priority,
+                <PriorityChip priority={priority} editable={!!edit?.priority} />,
+              )}
+            {loading ? (
+              <DurationChip value={duration} loading />
+            ) : (
+              wrap(edit?.duration, <DurationChip value={duration} editable={!!edit?.duration} />)
             )}
-            <DurationBadge value={duration} loading={loading} />
             {!loading && actions && <span className="pointer-events-auto">{actions}</span>}
           </div>
         </div>
@@ -308,6 +453,7 @@ export function TaskCard({ loading, ...data }: TaskCardProps): JSX.Element {
           onClick={loading ? undefined : data.onClick}
           actions={loading ? undefined : data.actions}
           onTitleChange={loading ? undefined : data.onTitleChange}
+          edit={loading ? undefined : data.edit}
         />
       </motion.div>
     </div>

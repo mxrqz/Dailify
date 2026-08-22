@@ -4,7 +4,8 @@ import { toast } from "sonner";
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { completeTask, deleteTask, updateTask } from "@/functions/api";
-import { upsertTaskById } from "@/functions/functions";
+import { upsertTaskWithRecurrence } from "@/functions/functions";
+import type { TaskInput } from "@dailify/shared";
 import type { TaskProps } from "@/types/types";
 
 /**
@@ -12,7 +13,7 @@ import type { TaskProps } from "@/types/types";
  * As escritas são otimistas SÓ depois do servidor responder, como manda o `components/CLAUDE.md`.
  */
 export function useTaskActions(task: TaskProps) {
-  const { tasks, setTasks } = useDailify();
+  const { tasks, setTasks, selectedDay } = useDailify();
   const { getToken } = useAuth();
 
   const onComplete = async () => {
@@ -23,7 +24,13 @@ export function useTaskActions(task: TaskProps) {
       toast.error(copy.task.completeError, { description: error });
       return;
     }
-    setTasks(upsertTaskById(tasks ?? [], { ...task, completed: [...task.completed, Date.now()] }));
+    setTasks(
+      upsertTaskWithRecurrence(
+        tasks ?? [],
+        { ...task, completed: [...task.completed, Date.now()] },
+        selectedDay,
+      ),
+    );
   };
 
   const onDelete = async () => {
@@ -37,18 +44,21 @@ export function useTaskActions(task: TaskProps) {
     }
   };
 
-  /** Renomear pelo cartão. Devolve `false` pra quem chamou desfazer o texto na tela. */
-  const onRename = async (title: string): Promise<boolean> => {
+  /**
+   * Edição campo a campo pelo cartão (título, duração, prioridade, recorrência, links). Devolve
+   * `false` pra quem chamou desfazer o que já mostrou na tela.
+   */
+  const onPatch = async (patch: Partial<TaskInput>): Promise<boolean> => {
     const token = await getToken();
     if (!token) return false;
-    const { task: updated, error } = await updateTask(token, task.id, { title });
+    const { task: updated, error } = await updateTask(token, task.id, patch);
     if (error || !updated) {
-      toast.error(copy.task.renameError, { description: error });
+      toast.error(copy.task.patchError, { description: error });
       return false;
     }
-    setTasks(upsertTaskById(tasks ?? [], updated));
+    setTasks(upsertTaskWithRecurrence(tasks ?? [], updated, selectedDay));
     return true;
   };
 
-  return { onComplete, onDelete, onRename };
+  return { onComplete, onDelete, onPatch, onRename: (title: string) => onPatch({ title }) };
 }

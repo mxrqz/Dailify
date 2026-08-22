@@ -19,7 +19,9 @@ Single source of truth via `useDailify()`: `tasks`, `currentMonthTasks`, `select
 
 ## Writes are optimistic against the shared array
 
-On create/edit success: `setTasks(upsertTaskById(tasks ?? [], task))`. Complete/delete also update
+On create success: `setTasks(upsertTaskById(tasks ?? [], task))`. On EDIT, use
+`upsertTaskWithRecurrence(tasks ?? [], task, selectedDay)` — recurring instances share the original's
+id, so `upsertTaskById` would swap only the first one and leave the rest stale. Complete/delete also update
 `tasks` (and toast on failure — apply the optimistic change only after the server call succeeds).
 The day view's write path is **`dashboard/day-task-row.tsx`** for complete/delete actions.
 There is **no** `newTask` mechanism anymore (it only mutated a local copy and desynced — removed in

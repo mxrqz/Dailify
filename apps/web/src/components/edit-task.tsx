@@ -16,7 +16,7 @@ import { updateTask } from "@/functions/api";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { CheckIcon, Loader2, Trash2Icon } from "lucide-react";
-import { getCompletionDate, isTaskModified, upsertTaskById } from "@/functions/functions";
+import { getCompletionDate, isTaskModified, upsertTaskWithRecurrence } from "@/functions/functions";
 import { TaskForm, TaskFormValues } from "@/components/dashboard/task-form";
 import { copy } from "@/components/dashboard/copy";
 import { useTaskActions } from "@/hooks/useTaskActions";
@@ -64,7 +64,7 @@ export function EditTaskContent({
   day: Date;
   onClose: () => void;
 }) {
-  const { tasks, setTasks } = useDailify();
+  const { tasks, setTasks, selectedDay } = useDailify();
   const { getToken } = useAuth();
   const { user } = useUser();
   const navigate = useNavigate();
@@ -119,7 +119,7 @@ export function EditTaskContent({
       });
     } else {
       toast.success(copy.form.updated);
-      setTasks(upsertTaskById(tasks ?? [], updated));
+      setTasks(upsertTaskWithRecurrence(tasks ?? [], updated, selectedDay));
     }
 
     setLoading(false);
