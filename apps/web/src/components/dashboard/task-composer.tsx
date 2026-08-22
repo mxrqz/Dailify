@@ -91,6 +91,7 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
           {copy.composer.text}
         </Label>
         {/* input, não textarea: a captura é de uma frase só, e o Enter já submete pelo form. */}
+        {/* pl-5: com o min-h-19 sobra ~28px acima/abaixo do texto, o p-2 sozinho dá 8 na lateral. */}
         <input
           id="composer-text"
           type="text"
@@ -98,7 +99,7 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
           onChange={(e) => setInput(e.target.value)}
           placeholder={copy.composer.textPlaceholder}
           autoComplete="off"
-          className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
+          className="min-w-0 flex-1 bg-transparent pl-5 text-sm text-foreground placeholder:text-muted-foreground outline-none"
         />
 
         <button
