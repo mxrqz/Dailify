@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { Check, Flag, Plus } from "lucide-react";
+import { Check, Flag, LinkIcon, RepeatIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 /**
@@ -9,21 +9,21 @@ import { Badge } from "@/components/ui/badge";
  * transativa do landing no dicionário do dashboard é segura e inevitável.
  */
 import { copy } from "@/components/dashboard/copy";
-import { priorityText, priorityTextColor, tagsBgColors2 } from "@/consts/conts";
+import { priorityText, priorityTextColor } from "@/consts/conts";
+import { linkLabel } from "@/functions/link-label";
 import { cn } from "@/lib/utils";
 
 /**
  * Cartão de task (mock decorativo do hero, mas modelado como componente real reutilizável).
- * `TaskCard` compõe `TagBadge` + `TagDots`. Cada um é auto-contido: recebe `loading` e renderiza
- * o próprio skeleton — o crossfade skeleton→conteúdo mora no TaskCard (`AnimatePresence` em `loading`),
- * então nada dessincroniza. Sem `loading`/timer interno: o pai controla quando resolve.
+ * O cartão cabe em UMA linha: título truncado à esquerda, e à direita os metadados na ordem
+ * link → repetição → prioridade → duração → menu. `TagBadge` continua exportado pros mocks da
+ * landing, mas o cartão não mostra tags — elas vivem na edição.
  *
- * Cores: badge de tag é outline neutro (mastra); a cor de tag vive só nos dots (`bg-tag-N`,
- * índice-based, igual ao app real via `tagsBgColors2`). O dot "+" é neutro.
+ * Cada peça é auto-contida: recebe `loading` e renderiza o próprio skeleton — o crossfade
+ * skeleton→conteúdo mora no TaskCard, então nada dessincroniza. Sem `loading`/timer interno:
+ * o pai controla quando resolve.
  */
 
-const MAX_TAGS = 3; // tags mostradas como badge antes de colapsar no cluster de dots
-const MAX_DOTS = 3; // dots coloridos antes do "+"
 const EXPO = [0.16, 1, 0.3, 1] as const; // ease-out-expo
 
 /** Uma tag como badge outline neutro (ou seu skeleton). */
@@ -40,35 +40,43 @@ export function TagBadge({ label, loading }: { label: string; loading?: boolean 
 }
 
 /**
- * Cluster de dots pro overflow de tags: um dot colorido (`bg-tag-N`) por tag além das 3 mostradas,
- * no máximo `MAX_DOTS`; se sobrar mais, um dot "+" neutro no fim. `startIndex` = índice da 1ª tag
- * escondida (mantém a cor de cada dot alinhada à cor que a tag teria como badge).
+ * Um link só, mesmo quando a tarefa tem vários: o cartão informa que existe link e leva pro
+ * primeiro (o da reunião, na prática); o resto vive na edição. `+N` conta o que ficou de fora.
+ * `pointer-events-auto` + z acima do overlay: clicar aqui abre a URL, não o detalhe da tarefa.
  */
-export function TagDots({
-  extra,
-  startIndex = MAX_TAGS,
-  loading,
-}: {
-  extra: number;
-  startIndex?: number;
-  loading?: boolean;
-}): JSX.Element | null {
-  if (extra <= 0) return null;
-  if (loading) return <span className="skeleton block h-5 w-11 rounded-md" />;
-  const colored = Math.min(extra, MAX_DOTS);
+function LinkChip({ links }: { links: string[] }): JSX.Element | null {
+  const [first, ...rest] = links;
+  if (!first) return null;
   return (
-    <Badge variant="outline" className="gap-0 border-surface-line px-2 py-0.5">
-      {/* dots sobrepostos (avatar-stack): ring da cor do fundo separa, direita fica por cima */}
-      {Array.from({ length: colored }).map((_, i) => (
-        <span
-          key={i}
-          className={cn(
-            "-ml-0.5 size-1.5 rounded-full ring-2 ring-surface-card first:ml-0",
-            tagsBgColors2[(startIndex + i) % tagsBgColors2.length],
-          )}
-        />
-      ))}
-      {extra > MAX_DOTS && <Plus className="ml-1 size-1.5 text-muted-foreground" />}
+    <a
+      href={first}
+      target="_blank"
+      rel="noreferrer"
+      onClick={(e) => e.stopPropagation()}
+      className="pointer-events-auto max-w-40"
+    >
+      <Badge
+        variant="outline"
+        className="gap-1 border-surface-line px-2 py-0.5 text-2xs font-normal text-content-secondary transition-colors hover:border-accent-primary hover:text-foreground"
+      >
+        <LinkIcon className="size-2.5 shrink-0" aria-hidden="true" />
+        <span className="hidden truncate sm:inline">{linkLabel(first)}</span>
+        {rest.length > 0 && <span className="shrink-0">+{rest.length}</span>}
+      </Badge>
+    </a>
+  );
+}
+
+/** Recorrência como chip: o rótulo já vem pronto do `repeatLabel` ("" = não repete). */
+function RepeatChip({ label }: { label: string }): JSX.Element | null {
+  if (!label) return null;
+  return (
+    <Badge
+      variant="outline"
+      className="max-w-40 gap-1 border-surface-line px-2 py-0.5 text-2xs font-normal text-content-secondary"
+    >
+      <RepeatIcon className="size-2.5 shrink-0" aria-hidden="true" />
+      <span className="hidden truncate sm:inline">{label}</span>
     </Badge>
   );
 }
@@ -110,13 +118,16 @@ export interface TaskCardProps extends TaskCardData {
   onClick?: () => void;
   /** Menu (⋮) do app, à direita da duração. Fica FORA do overlay clicável. */
   actions?: ReactNode;
+  /** URLs da tarefa; vira UM chip (o primeiro + `+N`). */
+  links?: string[];
+  /** Rótulo pronto da recorrência (`repeatLabel`); "" = não repete, sem chip. */
+  repeat?: string;
 }
 
 /** Corpo do card — mesma estrutura em loading/ready (alturas casam, sem jump no crossfade). */
 function CardBody({
   time,
   title,
-  tags,
   duration,
   loading,
   selected,
@@ -124,18 +135,17 @@ function CardBody({
   priority,
   onClick,
   actions,
+  links = [],
+  repeat = "",
 }: TaskCardProps) {
-  const shown = tags.slice(0, MAX_TAGS);
-  const extra = tags.length - shown.length;
   return (
-    <div className="flex items-start gap-3">
-      <span className="w-12 shrink-0 pt-2.5 text-right font-mono text-2xs text-muted-foreground">
-        {time}
-      </span>
+    <div className="flex flex-col gap-1.5">
+      {/* Só renderiza com hora: um span vazio em coluna vira respiro morto acima do cartão. */}
+      {time && <span className="font-mono text-2xs text-muted-foreground">{time}</span>}
 
       <div
         className={cn(
-          "relative min-w-0 flex-1 rounded-lg border bg-transparent px-3 py-2.5",
+          "relative min-w-0 rounded-lg border bg-transparent px-3 py-2.5",
           selected && !loading ? "border-accent-primary" : "border-surface-line",
           onClick && !loading && "transition-colors hover:bg-surface-hover",
         )}
@@ -152,13 +162,13 @@ function CardBody({
           />
         )}
 
-        <div className="flex items-center justify-between gap-3">
+        <div className="flex items-center justify-between gap-2">
           {loading ? (
             <span className="skeleton h-3.5 w-32 rounded" />
           ) : (
             <span
               className={cn(
-                "truncate text-sm font-medium",
+                "min-w-0 flex-1 truncate text-sm font-medium",
                 completed ? "text-muted-foreground line-through" : "text-foreground",
               )}
             >
@@ -173,6 +183,8 @@ function CardBody({
                 <span className="sr-only">{copy.task.completed}</span>
               </>
             )}
+            {!loading && <LinkChip links={links} />}
+            {!loading && <RepeatChip label={repeat} />}
             {!loading && priority !== undefined && priority > 0 && (
               <>
                 <Flag
@@ -186,15 +198,6 @@ function CardBody({
             {!loading && actions && <span className="pointer-events-auto">{actions}</span>}
           </div>
         </div>
-
-        {(shown.length > 0 || extra > 0) && (
-          <div className="pointer-events-none relative z-10 mt-2 flex items-center gap-1.5 overflow-hidden">
-            {shown.map((tag, i) => (
-              <TagBadge key={i} label={tag} loading={loading} />
-            ))}
-            <TagDots extra={extra} startIndex={MAX_TAGS} loading={loading} />
-          </div>
-        )}
       </div>
     </div>
   );

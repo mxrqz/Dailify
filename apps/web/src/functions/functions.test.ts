@@ -212,6 +212,8 @@ describe("taskToCardData", () => {
       duration: "45min",
       priority: 3,
       tags: ["dev", "review"],
+      links: ["https://github.com/org/repo/pull/1"],
+      repeat: { Weekly: ["Monday"] },
       date: new Date(2026, 7, 10, 8, 30).getTime(),
     });
     expect(taskToCardData(task, day)).toEqual({
@@ -221,6 +223,8 @@ describe("taskToCardData", () => {
       tags: ["dev", "review"],
       priority: 3,
       completed: false,
+      links: ["https://github.com/org/repo/pull/1"],
+      repeat: "Seg",
     });
   });
 

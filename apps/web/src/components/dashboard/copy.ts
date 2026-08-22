@@ -75,6 +75,8 @@ export const copy = {
     repeatWeekly: "Semanal",
     repeatMonthly: "Mensal",
     repeatYearly: "Anual",
+    // Ordem de `weekDays` do shared (domingo primeiro) — o índice vem do `dayMap`.
+    repeatDays: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
     cancel: "Cancelar",
     save: "Salvar",
     create: "Criar tarefa",

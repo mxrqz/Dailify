@@ -2,6 +2,7 @@ import { TaskProps } from "@/types/types";
 import { format, isSameDay } from "date-fns";
 import { enUS, ptBR } from "date-fns/locale";
 import type { TaskCardData } from "@/components/task-card";
+import { repeatLabel } from "@/functions/repeat-label";
 
 export const returnFractedDate = (date: Date) => {
   const day = date.getDate();
@@ -125,7 +126,7 @@ function timeToMinutes(time: string): number {
 export function taskToCardData(
   task: TaskProps,
   day: Date,
-): TaskCardData & { completed: boolean; priority: number } {
+): TaskCardData & { completed: boolean; priority: number; links: string[]; repeat: string } {
   return {
     time: getTime(task.date, "HH:MM"),
     title: task.title,
@@ -133,6 +134,8 @@ export function taskToCardData(
     tags: task.tags ?? [],
     priority: task.priority,
     completed: getCompletionDate(task, day) === true,
+    links: task.links ?? [],
+    repeat: repeatLabel(task.repeat),
   };
 }
 
