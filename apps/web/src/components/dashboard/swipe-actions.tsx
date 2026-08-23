@@ -6,11 +6,19 @@ import { copy } from "@/components/dashboard/copy";
 import { cn } from "@/lib/utils";
 
 /**
- * Fração da LARGURA do cartão que o gesto precisa vencer pra ação valer — não um número de pixels:
- * um terço de um celular estreito e de um tablet são gestos igualmente deliberados, e excluir não
- * pode sair de um esbarrão. Abaixo disso o cartão volta e nada acontece.
+ * Distância pra ação valer: um quarto da largura do cartão, com teto em pixels — a fração sozinha
+ * viraria um gesto absurdo num tablet. É a faixa que as listas com arrasto usam (80–100px).
  */
-const THRESHOLD = 0.35;
+const THRESHOLD = 0.25;
+const MAX_DISTANCE = 96;
+
+/**
+ * Um empurrão rápido também vale, mesmo sem percorrer a distância: é assim que essas listas se
+ * comportam em todo lugar, e sem isto o gesto natural (um flick curto) não dispara nada.
+ * `FLICK_MIN` existe pra um toque trêmulo não virar flick.
+ */
+const FLICK_VELOCITY = 400;
+const FLICK_MIN = 24;
 
 type Armed = "complete" | "delete" | null;
 
@@ -51,7 +59,7 @@ export function SwipeActions({
    * acontecer. O ref é o que evita um `setState` a cada pixel do arrasto.
    */
   useMotionValueEvent(x, "change", (value) => {
-    const distance = width.current * THRESHOLD;
+    const distance = Math.min(width.current * THRESHOLD, MAX_DISTANCE);
     const next: Armed = value > distance ? "complete" : value < -distance ? "delete" : null;
     if (next === armedRef.current) return;
     armedRef.current = next;
@@ -68,12 +76,14 @@ export function SwipeActions({
         dragMomentum={false}
         style={{ x }}
         dragConstraints={{ left: 0, right: 0 }}
-        dragElastic={0.35}
+        // 1 = o cartão acompanha o dedo. Com resistência (0.35) ele andava um terço do gesto, então
+        // a distância da ação só chegava se o dedo cruzasse a tela inteira — impossível na mão.
+        dragElastic={1}
         onDragStart={() => {
           width.current = track.current?.offsetWidth ?? 0;
         }}
-        onDragEnd={() => {
-          const action = armedRef.current;
+        onDragEnd={(_, info) => {
+          const action = armedRef.current ?? flick(info.offset.x, info.velocity.x);
           armedRef.current = null;
           setArmed(null);
           // A volta é ANIMADA POR NÓS e a ação só roda quando ela termina. Deixar o `dragSnapToOrigin`
@@ -120,4 +130,10 @@ export function SwipeActions({
       </motion.div>
     </div>
   );
+}
+
+/** Empurrão rápido: vale pela velocidade, desde que o dedo tenha saído do lugar. */
+function flick(offset: number, velocity: number): Armed {
+  if (Math.abs(velocity) < FLICK_VELOCITY || Math.abs(offset) < FLICK_MIN) return null;
+  return velocity > 0 ? "complete" : "delete";
 }

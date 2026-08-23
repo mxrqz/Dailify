@@ -353,6 +353,14 @@
     @apply border-border outline-ring/50;
   }
 
+  /* `overscroll-behavior-x: contain` mata o voltar/avançar por arrasto horizontal do navegador:
+     sem isso, arrastar um cartão pro lado no Chrome disputa com a navegação da página e some com o
+     app no meio do gesto. (O arrasto de borda do iOS é do sistema e não dá pra impedir por CSS.) */
+  html,
+  body {
+    overscroll-behavior-x: contain;
+  }
+
   body {
     @apply bg-canvas text-foreground min-h-dvh;
   }
