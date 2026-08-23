@@ -331,6 +331,15 @@ function TitleField({
   );
 }
 
+/**
+ * O rótulo do horário. Exportado porque no toque ele sai do cartão e fica ACIMA da faixa que
+ * desliza — se viajasse junto, os painéis de concluir/excluir teriam a altura dele somada e não
+ * casariam mais com o cartão.
+ */
+export function TimeLabel({ time }: { time: string }): JSX.Element {
+  return <span className="cursor-default font-mono text-2xs text-muted-foreground">{time}</span>;
+}
+
 /** Corpo do card — mesma estrutura em loading/ready (alturas casam, sem jump no crossfade). */
 function CardBody({
   time,
@@ -353,9 +362,7 @@ function CardBody({
   return (
     <div className="flex flex-col gap-1.5">
       {/* Só renderiza com hora: um span vazio em coluna vira respiro morto acima do cartão. */}
-      {time && (
-        <span className="cursor-default font-mono text-2xs text-muted-foreground">{time}</span>
-      )}
+      {time && <TimeLabel time={time} />}
 
       <div
         className={cn(

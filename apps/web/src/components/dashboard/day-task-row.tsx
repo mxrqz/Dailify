@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CheckIcon, EllipsisVerticalIcon, Trash2Icon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
+import { SwipeActions } from "@/components/dashboard/swipe-actions";
 import {
   DurationMenu,
   LinksPopover,
@@ -9,7 +10,7 @@ import {
   RepeatMenu,
 } from "@/components/dashboard/task-meta-menus";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
-import { TaskCard } from "@/components/task-card";
+import { TaskCard, TimeLabel } from "@/components/task-card";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { taskToCardData } from "@/functions/functions";
@@ -91,7 +92,7 @@ export function DayTaskRow({
   const [open, setOpen] = useState(false);
   const sheetEditing = useMediaQuery(SHEET_EDITING);
   const data = taskToCardData(task, day);
-  const { onPatch, onRename } = useTaskActions(task);
+  const { onPatch, onRename, onComplete, onDelete } = useTaskActions(task);
 
   const onOpenChange = (next: boolean) => setOpen(next);
 
@@ -125,17 +126,34 @@ export function DayTaskRow({
         ),
       };
 
+  const time = showTime ? data.time : "";
+  const card = (
+    <TaskCard
+      {...data}
+      // No toque o horário sai do cartão e fica fora da faixa que desliza (ver abaixo).
+      time={sheetEditing ? "" : time}
+      selected={open}
+      onClick={sheetEditing ? () => setOpen(true) : undefined}
+      onTitleChange={sheetEditing ? undefined : onRename}
+      edit={edit}
+      // No toque o (⋮) sai: o alvo é pequeno demais pro polegar, e quem faz o trabalho dele é o
+      // arrasto pro lado.
+      actions={sheetEditing ? undefined : <TaskActions task={task} />}
+    />
+  );
+
   return (
     <EditTask open={open} onOpenChange={onOpenChange}>
-      <TaskCard
-        {...data}
-        time={showTime ? data.time : ""}
-        selected={open}
-        onClick={sheetEditing ? () => setOpen(true) : undefined}
-        onTitleChange={sheetEditing ? undefined : onRename}
-        edit={edit}
-        actions={<TaskActions task={task} />}
-      />
+      {sheetEditing ? (
+        <div className="flex flex-col gap-1.5">
+          {time && <TimeLabel time={time} />}
+          <SwipeActions onComplete={() => void onComplete()} onDelete={() => void onDelete()}>
+            {card}
+          </SwipeActions>
+        </div>
+      ) : (
+        card
+      )}
 
       <EditTaskContent task={task} day={day} open={open} onClose={() => setOpen(false)} />
     </EditTask>
