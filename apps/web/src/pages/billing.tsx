@@ -3,7 +3,8 @@ import { format } from "date-fns";
 import { CreditCard, Receipt } from "lucide-react";
 import { FaCcAmex, FaCcVisa } from "react-icons/fa";
 import { RiMastercardFill } from "react-icons/ri";
-import { Link } from "react-router-dom";
+import { useEffect } from "react";
+import { Link, useSearchParams } from "react-router-dom";
 
 import { toast } from "sonner";
 
@@ -31,6 +32,21 @@ export default function BillingPage(): JSX.Element {
   const { user } = useUser();
   const { getToken } = useAuth();
   const { invoices, paymentDetails } = useDailify();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const checkoutStatus = searchParams.get("checkout");
+
+  // Volta do checkout do Stripe. O plano novo chega pelo webhook, então recarrega o user do Clerk
+  // em vez de confiar no publicMetadata que veio com a sessão antiga.
+  useEffect(() => {
+    if (!checkoutStatus) return;
+    if (checkoutStatus === "success") {
+      toast.success(pricingCopy.page.checkoutSuccess);
+      void user?.reload();
+    } else {
+      toast.info(pricingCopy.page.checkoutCanceled);
+    }
+    setSearchParams({}, { replace: true });
+  }, [checkoutStatus, setSearchParams, user]);
 
   const sections = billingSections(paymentDetails, invoices);
 

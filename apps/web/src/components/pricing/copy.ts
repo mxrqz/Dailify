@@ -49,6 +49,8 @@ export const copy = {
     choosePlan: "Assinar",
     signInFirst: "Entre na sua conta pra assinar.",
     checkoutFailed: "Não foi possível abrir o checkout. Tente de novo.",
+    checkoutSuccess: "Pagamento confirmado. Seu plano é atualizado em instantes.",
+    checkoutCanceled: "Checkout cancelado — nada foi cobrado.",
     haveAccount: "Já tem uma conta?",
     signIn: "Faça login",
     faqTitle: "Perguntas frequentes",

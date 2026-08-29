@@ -70,6 +70,9 @@ describe("POST /billing/checkout", () => {
       expect.objectContaining({
         line_items: [{ price: "price_pro_month", quantity: 1 }],
         customer_email: "a@b.com",
+        // rotas que existem em apps/web/src/App.tsx — /sucesso e /cancel não existiam
+        success_url: `${env.ALLOWED_ORIGIN}/billing?checkout=success`,
+        cancel_url: `${env.ALLOWED_ORIGIN}/billing?checkout=cancel`,
       }),
     );
   });
