@@ -95,24 +95,27 @@ export default function Home() {
     }
 
     setSubmitting(true);
-    const token = await getToken();
-    if (!token) {
-      setSubmitting(false);
-      return;
-    }
 
-    const { task, error } = await createTask(token, composerTaskInput(parsed));
-    if (error || !task) {
-      toast(copy.form.createError, {
-        description: error?.message,
-        action: { label: copy.form.upgrade, onClick: () => navigate("/premium") },
-      });
-    } else {
+    // `finally`: qualquer exceção no meio (o token do Clerk, o parser) deixava o botão girando
+    // pra sempre — o mesmo modo de falha que `protected-route.tsx` já tinha aprendido.
+    try {
+      const token = await getToken();
+      if (!token) return;
+
+      const { task, error } = await createTask(token, composerTaskInput(parsed));
+      if (error || !task) {
+        toast(copy.form.createError, {
+          description: error?.message,
+          action: { label: copy.form.upgrade, onClick: () => navigate("/premium") },
+        });
+        return;
+      }
+
       setTasks(upsertTaskById(tasks ?? [], task));
       toast.message(copy.form.created, { description: task.title });
+    } finally {
+      setSubmitting(false);
     }
-
-    setSubmitting(false);
   };
 
   return (
