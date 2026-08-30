@@ -84,10 +84,13 @@ export function DayTaskRow({
   task,
   day,
   showTime,
+  countdown,
 }: {
   task: TaskProps;
   day: Date;
   showTime: boolean;
+  /** Substitui o horário no gutter na próxima tarefa do dia ("EM 25 MIN"). */
+  countdown?: string;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const sheetEditing = useMediaQuery(SHEET_EDITING);
@@ -126,12 +129,13 @@ export function DayTaskRow({
         ),
       };
 
-  const time = showTime ? data.time : "";
+  const time = showTime ? (countdown ?? data.time) : "";
   const card = (
     <TaskCard
       {...data}
       // No toque o horário sai do cartão e fica fora da faixa que desliza (ver abaixo).
       time={sheetEditing ? "" : time}
+      upcoming={Boolean(countdown)}
       selected={open}
       onClick={sheetEditing ? () => setOpen(true) : undefined}
       onTitleChange={sheetEditing ? undefined : onRename}
@@ -146,7 +150,7 @@ export function DayTaskRow({
     <EditTask open={open} onOpenChange={onOpenChange}>
       {sheetEditing ? (
         <div className="flex flex-col gap-1.5">
-          {time && <TimeLabel time={time} />}
+          {time && <TimeLabel time={time} accent={Boolean(countdown)} />}
           <SwipeActions onComplete={() => void onComplete()} onDelete={() => void onDelete()}>
             {card}
           </SwipeActions>

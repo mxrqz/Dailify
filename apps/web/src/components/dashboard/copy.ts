@@ -14,6 +14,7 @@ export const copy = {
     upgrade: "Assinar",
     profile: "Perfil",
     accountMenu: "Menu da conta",
+    openNav: "Abrir navegação",
     settings: "Configurações",
     signOut: "Sair",
     signIn: "Entrar",
@@ -27,7 +28,9 @@ export const copy = {
   day: {
     today: "Hoje",
     tomorrow: "Amanhã",
-    now: "agora",
+    startingNow: "AGORA",
+    inMinutes: "EM {n} MIN",
+    inHours: "EM {n} H",
     openCalendar: "Abrir calendário",
     noTasks: "Nenhuma tarefa",
     listEmpty: "Nada agendado até o fim do mês. Escreva acima pra criar a primeira.",

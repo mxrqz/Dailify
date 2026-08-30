@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 // classes num `<button>`.
 export function sidebarItemClass(active: boolean): string {
   return cn(
-    "inline-flex h-8 items-center gap-2.5 rounded-md px-2.5 text-sm transition-colors",
+    "inline-flex h-10 items-center gap-3 rounded-md px-3 text-base transition-colors",
     active
       ? "bg-surface-hover text-foreground"
       : "text-muted-foreground hover:bg-surface-hover hover:text-foreground",
@@ -33,7 +33,7 @@ export function SidebarItem({
 
   return (
     <Link to={to} aria-current={active ? "page" : undefined} className={sidebarItemClass(active)}>
-      <Icon className="size-4 shrink-0" aria-hidden="true" />
+      <Icon className="size-5 shrink-0" aria-hidden="true" />
       {label}
     </Link>
   );

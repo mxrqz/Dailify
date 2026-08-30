@@ -156,14 +156,12 @@ export function taskToCardData(
   };
 }
 
-/**
- * Índice do grupo ANTES do qual a linha do "agora" é inserida; `groups.length` = depois de todos.
- * Um grupo que começa exatamente agora fica à frente da linha (a tarefa está começando, não passou).
- * Os extremos são deliberados: a linha aparece no topo antes do primeiro compromisso e no rodapé
- * depois do último, que são justamente os dois momentos do dia em que ela mais informa.
- */
-export function nowLineIndex(groups: ReadonlyArray<Pick<TimeGroup, "time">>, now: Date): number {
-  const nowMinutes = now.getHours() * 60 + now.getMinutes();
-  const index = groups.findIndex((group) => timeToMinutes(group.time) >= nowMinutes);
-  return index === -1 ? groups.length : index;
+/** Minutos daqui até o "HH:MM" de hoje. Negativo quando o horário já passou. */
+export function minutesUntil(time: string, now: Date): number {
+  return timeToMinutes(time) - (now.getHours() * 60 + now.getMinutes());
+}
+
+/** Índice do primeiro grupo que ainda não começou; -1 quando o dia inteiro já passou. */
+export function nextGroupIndex(groups: ReadonlyArray<Pick<TimeGroup, "time">>, now: Date): number {
+  return groups.findIndex((group) => minutesUntil(group.time, now) >= 0);
 }

@@ -241,6 +241,8 @@ export interface TaskCardProps extends TaskCardData {
   loading?: boolean;
   /** Borda crimson — a tarefa cuja sheet está aberta. */
   selected?: boolean;
+  /** A próxima do dia: o gutter vira contagem em crimson (o `time` já vem trocado). */
+  upcoming?: boolean;
   /** Concluída neste dia: título riscado + check verde. */
   completed?: boolean;
   /** 0–4; só aparece a partir de 1 (0 = "sem prioridade" não merece ícone). */
@@ -336,13 +338,23 @@ function TitleField({
  * desliza — se viajasse junto, os painéis de concluir/excluir teriam a altura dele somada e não
  * casariam mais com o cartão.
  */
-export function TimeLabel({ time }: { time: string }): JSX.Element {
-  return <span className="cursor-default font-mono text-2xs text-muted-foreground">{time}</span>;
+export function TimeLabel({ time, accent }: { time: string; accent?: boolean }): JSX.Element {
+  return (
+    <span
+      className={cn(
+        "cursor-default font-mono text-2xs",
+        accent ? "text-accent-primary" : "text-muted-foreground",
+      )}
+    >
+      {time}
+    </span>
+  );
 }
 
 /** Corpo do card — mesma estrutura em loading/ready (alturas casam, sem jump no crossfade). */
 function CardBody({
   time,
+  upcoming,
   title,
   duration,
   loading,
@@ -362,7 +374,7 @@ function CardBody({
   return (
     <div className="flex flex-col gap-1.5">
       {/* Só renderiza com hora: um span vazio em coluna vira respiro morto acima do cartão. */}
-      {time && <TimeLabel time={time} />}
+      {time && <TimeLabel time={time} accent={upcoming} />}
 
       <div
         className={cn(

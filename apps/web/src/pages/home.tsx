@@ -104,7 +104,7 @@ export default function Home() {
     const { task, error } = await createTask(token, composerTaskInput(parsed));
     if (error || !task) {
       toast(copy.form.createError, {
-        description: error,
+        description: error?.message,
         action: { label: copy.form.upgrade, onClick: () => navigate("/premium") },
       });
     } else {

@@ -114,9 +114,11 @@ export function EditTaskContent({
       links: values.links,
     };
 
+    // Salvar sem mexer em nada ainda é "terminei aqui": a folha fecha do mesmo jeito.
     if (!isTaskModified(task, taskData)) {
       toast.info(copy.form.noChanges);
       setLoading(false);
+      onClose();
       return;
     }
 
@@ -124,7 +126,7 @@ export function EditTaskContent({
 
     if (error || !updated) {
       toast(copy.form.createError, {
-        description: error,
+        description: error?.message,
         action: {
           label: copy.form.upgrade,
           onClick: () => navigate("/premium"),
@@ -133,6 +135,7 @@ export function EditTaskContent({
     } else {
       toast.success(copy.form.updated);
       setTasks(upsertTaskWithRecurrence(tasks ?? [], updated, selectedDay));
+      onClose();
     }
 
     setLoading(false);

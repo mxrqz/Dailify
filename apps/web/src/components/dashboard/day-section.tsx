@@ -1,7 +1,6 @@
 import { format, isSameWeek, isToday, isTomorrow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, useReducedMotion, type Variants } from "framer-motion";
-import { Fragment } from "react";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
@@ -10,7 +9,8 @@ import { TaskCard } from "@/components/task-card";
 import {
   getTasksForDay,
   groupTasksByTime,
-  nowLineIndex,
+  minutesUntil,
+  nextGroupIndex,
   type TimeGroup,
 } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
@@ -22,18 +22,6 @@ const SKELETON_ROWS = 3;
 /** Id da seção de um dia — a `WeekStrip` usa isto pra rolar até ele. */
 export const dayAnchorId = (day: Date) => `day-${format(day, "yyyy-MM-dd")}`;
 
-/** Linha do "agora": rótulo mono no gutter + régua crimson com glow. Só existe no dia de hoje. */
-function NowLine(): JSX.Element {
-  return (
-    <div className="flex items-center gap-3 py-0.5" aria-hidden="true">
-      <span className="w-12 shrink-0 text-right font-mono text-2xs text-accent-primary">
-        {copy.day.now}
-      </span>
-      <span className="h-px flex-1 bg-accent-primary shadow-[0_0_10px_var(--accent-glow)]" />
-    </div>
-  );
-}
-
 /**
  * Um grupo de horário. O rótulo aparece só no PRIMEIRO cartão do grupo — os seguintes recebem
  * `time: ""` e ficam com o gutter vazio. É isso que produz a leitura de coluna do tempo; repetir
@@ -43,16 +31,29 @@ function TimeGroupRows({
   group,
   day,
   variants,
+  past,
+  countdown,
 }: {
   group: TimeGroup;
   day: Date;
   variants: Variants;
+  past?: boolean;
+  countdown?: string;
 }): JSX.Element {
   return (
     <>
       {group.tasks.map((task, index) => (
         <motion.li key={task.id} variants={variants}>
-          <DayTaskRow task={task} day={day} showTime={index === 0} />
+          {/* O recuo do passado mora AQUI, não no <li>: a variante `visible` anima opacity e o
+              style inline do framer venceria a classe. Volta inteiro no hover — segue editável. */}
+          <div className={cn(past && "opacity-60 transition-opacity hover:opacity-100")}>
+            <DayTaskRow
+              task={task}
+              day={day}
+              showTime={index === 0}
+              countdown={index === 0 ? countdown : undefined}
+            />
+          </div>
         </motion.li>
       ))}
     </>
@@ -85,6 +86,13 @@ function dayLabel(day: Date, now: Date): string {
   return capitalize(format(day, "EEEE", { locale: ptBR }).replace("-feira", ""));
 }
 
+/** Quanto falta pra próxima, no mono do gutter. Acima de uma hora a precisão em minutos não ajuda. */
+function countdownLabel(minutes: number): string {
+  if (minutes <= 0) return copy.day.startingNow;
+  if (minutes < 60) return copy.day.inMinutes.replace("{n}", String(minutes));
+  return copy.day.inHours.replace("{n}", String(Math.round(minutes / 60)));
+}
+
 function taskCountLabel(count: number): string {
   if (count === 0) return copy.day.noTasks;
   if (count === 1) return copy.day.oneTask;
@@ -103,7 +111,8 @@ export function DaySection({ day }: { day: Date }): JSX.Element {
   const isCurrentDay = isToday(day);
   const dayTasks = tasks ? getTasksForDay(tasks, day) : [];
   const groups = groupTasksByTime(dayTasks);
-  const lineAt = isCurrentDay ? nowLineIndex(groups, now) : -1;
+  // -1 = nenhum grupo à frente: hoje já acabou, e aí tudo que está na tela é passado.
+  const nextAt = isCurrentDay ? nextGroupIndex(groups, now) : -1;
 
   const listVariants: Variants = {
     hidden: {},
@@ -148,12 +157,17 @@ export function DaySection({ day }: { day: Date }): JSX.Element {
           animate="visible"
         >
           {groups.map((group, index) => (
-            <Fragment key={group.time}>
-              {index === lineAt && <NowLine />}
-              <TimeGroupRows group={group} day={day} variants={rowVariants} />
-            </Fragment>
+            <TimeGroupRows
+              key={group.time}
+              group={group}
+              day={day}
+              variants={rowVariants}
+              past={isCurrentDay && (nextAt === -1 || index < nextAt)}
+              countdown={
+                index === nextAt ? countdownLabel(minutesUntil(group.time, now)) : undefined
+              }
+            />
           ))}
-          {lineAt === groups.length && <NowLine />}
         </motion.ul>
       )}
     </section>

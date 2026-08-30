@@ -9,7 +9,7 @@ export function SignOutButton(): JSX.Element {
 
   return (
     <button type="button" onClick={() => signOut()} className={sidebarItemClass(false)}>
-      <LogOutIcon className="size-4 shrink-0" aria-hidden="true" />
+      <LogOutIcon className="size-5 shrink-0" aria-hidden="true" />
       {copy.profile.signOut}
     </button>
   );

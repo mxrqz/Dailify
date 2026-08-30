@@ -21,7 +21,7 @@ export function useTaskActions(task: TaskProps) {
     if (!token) return;
     const { error } = await completeTask(token, task.id);
     if (error) {
-      toast.error(copy.task.completeError, { description: error });
+      toast.error(copy.task.completeError, { description: error.message });
       return;
     }
     setTasks(
@@ -36,12 +36,13 @@ export function useTaskActions(task: TaskProps) {
   const onDelete = async () => {
     const token = await getToken();
     if (!token) return;
-    try {
-      await deleteTask(token, task.id);
-      setTasks((tasks ?? []).filter((t) => t.id !== task.id));
-    } catch {
-      toast.error(copy.task.deleteError);
+    // Um 500 aqui não pode passar por sucesso: antes o cartão sumia da tela com a tarefa viva.
+    const { error } = await deleteTask(token, task.id);
+    if (error) {
+      toast.error(copy.task.deleteError, { description: error.message });
+      return;
     }
+    setTasks((tasks ?? []).filter((t) => t.id !== task.id));
   };
 
   /**
@@ -53,7 +54,7 @@ export function useTaskActions(task: TaskProps) {
     if (!token) return false;
     const { task: updated, error } = await updateTask(token, task.id, patch);
     if (error || !updated) {
-      toast.error(copy.task.patchError, { description: error });
+      toast.error(copy.task.patchError, { description: error?.message });
       return false;
     }
     setTasks(upsertTaskWithRecurrence(tasks ?? [], updated, selectedDay));

@@ -3,6 +3,7 @@ import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { Brand } from "@/components/brand";
+import { MobileNav } from "@/components/dashboard/sidebar/mobile-nav";
 import { copy } from "@/components/dashboard/copy";
 import { Button } from "@/components/ui/button";
 import { PLAN_ID } from "@/consts/conts";
@@ -26,9 +27,17 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
         className,
       )}
     >
-      <Brand to="/dashboard" compact />
+      <MobileNav />
 
-      <div className="flex items-center gap-0.5">
+      {/* No mobile a marca é o centro da barra — sem sidebar à esquerda, o pl-3 que alinha
+          com ela só puxaria o logo pra fora do eixo. */}
+      <Brand
+        to="/dashboard"
+        compact
+        className="absolute left-1/2 -translate-x-1/2 pl-0 md:static md:translate-x-0 md:pl-3"
+      />
+
+      <div className="hidden items-center gap-0.5 md:flex">
         <Button
           variant="ghost"
           size="icon"

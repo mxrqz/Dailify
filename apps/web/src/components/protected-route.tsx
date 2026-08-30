@@ -80,7 +80,14 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       const token = await getToken();
       if (!token) return;
 
-      const tasks = await getTasksForMonth(token, selectedDay);
+      const { tasks, error } = await getTasksForMonth(token, selectedDay);
+
+      // Erro de carga não é mês vazio: sem o aviso, quem está sem rede lê "nada agendado" e acha
+      // que perdeu as tarefas.
+      if (error) {
+        toast.error(copy.loading.tasksError, { description: error.message });
+        return;
+      }
 
       if (isSameMonth(new Date(), selectedDay)) {
         setCurrentMonthTasks(tasks);

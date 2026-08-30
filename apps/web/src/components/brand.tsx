@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
  * O `src` é absoluto de propósito — o header antigo usava "./dailify_logo_2.png", que resolve
  * relativo à rota atual e quebra em qualquer path aninhado.
  *
- * `compact` é o header do app, que fica logo acima da sidebar: o `pl-2.5` e o `gap-2.5` repetem o
- * `px-2.5`/`gap-2.5` do `sidebar-item` de propósito — sem eles a marca cai 10px à esquerda dos
+ * `compact` é o header do app, que fica logo acima da sidebar: o `pl-3` e o `gap-3` repetem o
+ * `px-3`/`gap-3` do `sidebar-item` de propósito — sem eles a marca cai 10px à esquerda dos
  * ícones da nav e a coluna fica torta.
  *
  * `alt=""`: o logo é decorativo aqui — o wordmark "Dailify" ao lado já anuncia o nome. Um `alt`
@@ -21,16 +21,18 @@ export function Brand({
   to,
   compact,
   iconOnly,
+  className,
 }: {
   to: string;
   compact?: boolean;
   iconOnly?: boolean;
+  className?: string;
 }): JSX.Element {
   return (
     <Link
       to={to}
       aria-label={iconOnly ? "Dailify" : undefined}
-      className={cn("inline-flex items-center", compact ? "gap-2.5 pl-2.5" : "gap-2")}
+      className={cn("inline-flex items-center", compact ? "gap-3 pl-3" : "gap-2", className)}
     >
       <img
         src="/dailify_logo_2.png"
@@ -44,7 +46,9 @@ export function Brand({
         <span
           className={cn(
             "font-semibold tracking-[-0.01em] text-foreground",
-            compact ? "text-sm" : "text-lg",
+            // no header do app o wordmark só volta com a sidebar: sr-only (não hidden) pra o link
+            // não ficar sem nome acessível no mobile
+            compact ? "text-sm sr-only md:not-sr-only" : "text-lg",
           )}
         >
           Dailify

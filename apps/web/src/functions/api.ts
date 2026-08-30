@@ -1,6 +1,17 @@
 import type { Task, TaskInput, Permissions, PaymentDetails, Invoice } from "@dailify/shared";
 import { apiURL } from "@/consts/conts";
 
+/**
+ * Falha de rede e falha de servidor pedem reações diferentes — uma volta sozinha quando a conexão
+ * voltar, a outra não —, então quem chama precisa conseguir separar as duas.
+ */
+export interface ApiError {
+  message: string;
+  offline: boolean;
+}
+
+const OFFLINE: ApiError = { message: "Sem conexão com o servidor.", offline: true };
+
 const authed = (token: string, init: RequestInit = {}) => ({
   ...init,
   headers: {
@@ -10,47 +21,92 @@ const authed = (token: string, init: RequestInit = {}) => ({
   },
 });
 
-export async function getTasksForMonth(token: string, month: Date): Promise<Task[]> {
+/** O servidor erra em `{ error: "..." }` (`lib/errors.ts`); qualquer outro corpo não tem recado. */
+function serverMessage(body: unknown): string | undefined {
+  if (body && typeof body === "object" && "error" in body) {
+    const { error } = body;
+    if (typeof error === "string") return error;
+  }
+  return undefined;
+}
+
+/**
+ * Todo acesso à API passa por aqui. O `fetch` cru de antes devolvia `[]` num erro de carga (a tela
+ * dizia "nada agendado" pra quem só estava sem rede), aceitava um 500 no delete como sucesso, e
+ * estourava em `res.json()` quando o corpo não era JSON — um 502 do Worker vem em HTML.
+ */
+async function request<T>(
+  path: string,
+  token: string,
+  init: RequestInit = {},
+): Promise<{ data?: T; error?: ApiError }> {
+  let res: Response;
+  try {
+    res = await fetch(`${apiURL}${path}`, authed(token, init));
+  } catch {
+    // `fetch` só rejeita por rede/CORS — status de erro chega como resposta normal.
+    return { error: OFFLINE };
+  }
+
+  const body = await res.json().catch(() => undefined);
+
+  if (!res.ok) {
+    return {
+      error: {
+        message: serverMessage(body) ?? `O servidor falhou (${res.status}).`,
+        offline: false,
+      },
+    };
+  }
+
+  return { data: body };
+}
+
+export async function getTasksForMonth(
+  token: string,
+  month: Date,
+): Promise<{ tasks: Task[]; error?: ApiError }> {
   const m = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
-  const res = await fetch(`${apiURL}/tasks?month=${m}`, authed(token));
-  if (!res.ok) return [];
-  const data = await res.json();
-  return data.tasks ?? [];
+  const { data, error } = await request<{ tasks?: Task[] }>(`/tasks?month=${m}`, token);
+  return { tasks: data?.tasks ?? [], error };
 }
 
 export async function createTask(
   token: string,
   input: TaskInput,
-): Promise<{ task?: Task; error?: string }> {
-  const res = await fetch(
-    `${apiURL}/tasks`,
-    authed(token, { method: "POST", body: JSON.stringify(input) }),
-  );
-  return res.json();
+): Promise<{ task?: Task; error?: ApiError }> {
+  const { data, error } = await request<{ task?: Task; error?: string }>("/tasks", token, {
+    method: "POST",
+    body: JSON.stringify(input),
+  });
+  return { task: data?.task, error };
 }
 
 export async function updateTask(
   token: string,
   id: string,
   patch: Partial<TaskInput>,
-): Promise<{ task?: Task; error?: string }> {
-  const res = await fetch(
-    `${apiURL}/tasks/${id}`,
-    authed(token, { method: "PATCH", body: JSON.stringify(patch) }),
-  );
-  return res.json();
+): Promise<{ task?: Task; error?: ApiError }> {
+  const { data, error } = await request<{ task?: Task }>(`/tasks/${id}`, token, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
+  return { task: data?.task, error };
 }
 
 export async function completeTask(
   token: string,
   id: string,
-): Promise<{ task?: Task; error?: string }> {
-  const res = await fetch(`${apiURL}/tasks/${id}/complete`, authed(token, { method: "POST" }));
-  return res.json();
+): Promise<{ task?: Task; error?: ApiError }> {
+  const { data, error } = await request<{ task?: Task }>(`/tasks/${id}/complete`, token, {
+    method: "POST",
+  });
+  return { task: data?.task, error };
 }
 
-export async function deleteTask(token: string, id: string): Promise<void> {
-  await fetch(`${apiURL}/tasks/${id}`, authed(token, { method: "DELETE" }));
+export async function deleteTask(token: string, id: string): Promise<{ error?: ApiError }> {
+  const { error } = await request(`/tasks/${id}`, token, { method: "DELETE" });
+  return { error };
 }
 
 export async function createTaskVoice(token: string, formData: FormData): Promise<Response> {
@@ -62,37 +118,32 @@ export async function createTaskVoice(token: string, formData: FormData): Promis
 }
 
 export async function getPermissions(token: string): Promise<Permissions | undefined> {
-  const res = await fetch(`${apiURL}/permissions`, authed(token));
-  if (!res.ok) return undefined;
-  return res.json();
+  const { data } = await request<Permissions>("/permissions", token);
+  return data;
 }
 
 export async function getPaymentDetails(token: string): Promise<PaymentDetails | null> {
-  const res = await fetch(`${apiURL}/billing/payment-details`, authed(token));
-  if (!res.ok) return null;
-  return res.json();
+  const { data } = await request<PaymentDetails>("/billing/payment-details", token);
+  return data ?? null;
 }
 
 export async function getInvoices(token: string): Promise<Invoice[]> {
-  const res = await fetch(`${apiURL}/billing/invoices`, authed(token));
-  if (!res.ok) return [];
-  return res.json();
+  const { data } = await request<Invoice[]>("/billing/invoices", token);
+  return data ?? [];
 }
 
 export async function checkout(
   token: string,
   productName: string,
 ): Promise<{ url: string | null }> {
-  const res = await fetch(
-    `${apiURL}/billing/checkout`,
-    authed(token, { method: "POST", body: JSON.stringify({ productName }) }),
-  );
-  if (!res.ok) return { url: null };
-  return res.json();
+  const { data } = await request<{ url: string | null }>("/billing/checkout", token, {
+    method: "POST",
+    body: JSON.stringify({ productName }),
+  });
+  return { url: data?.url ?? null };
 }
 
 export async function billingPortal(token: string): Promise<{ url: string | null }> {
-  const res = await fetch(`${apiURL}/billing/portal`, authed(token));
-  if (!res.ok) return { url: null };
-  return res.json();
+  const { data } = await request<{ url: string | null }>("/billing/portal", token);
+  return { url: data?.url ?? null };
 }
