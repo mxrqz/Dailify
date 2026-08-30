@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { Brand } from "@/components/brand";
 import { MobileNav } from "@/components/dashboard/sidebar/mobile-nav";
+import { SyncBadge } from "@/components/sync-badge";
 import { copy } from "@/components/dashboard/copy";
 import { Button } from "@/components/ui/button";
 import { PLAN_ID } from "@/consts/conts";
@@ -60,6 +61,8 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
       </div>
 
       <div className="ml-auto inline-flex items-center gap-2">
+        <SyncBadge />
+
         {isFree && (
           <Button
             asChild

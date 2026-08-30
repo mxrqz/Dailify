@@ -51,6 +51,12 @@ export const copy = {
     weekDayInitials: ["D", "S", "T", "Q", "Q", "S", "S"],
   },
 
+  sync: {
+    offline: "Sem conexão",
+    onePending: "1 pendente",
+    manyPending: "{n} pendentes",
+  },
+
   loading: {
     tasks: "Carregando tarefas",
     tasksError: "Não foi possível carregar suas tarefas",

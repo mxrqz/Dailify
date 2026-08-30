@@ -5,6 +5,7 @@ import react from "@vitejs/plugin-react";
 import path from "path"
 import tailwindcss from "@tailwindcss/vite"
 import mkcert from 'vite-plugin-mkcert'
+import { VitePWA } from 'vite-plugin-pwa'
 
 const host = process.env.TAURI_DEV_HOST;
 
@@ -19,6 +20,36 @@ export default defineConfig(async ({ mode }) => ({
     tailwindcss(),
     // mkcert installs a local CA (needs sudo) — skip under vitest
     ...(process.env.VITEST ? [] : [mkcert()]),
+
+    // Sem service worker o app nem abre sem rede, e todo o cache local do `functions/offline.ts`
+    // ficaria inalcançável. `autoUpdate`: versão nova entra sozinha, sem prompt — o app é de uso
+    // diário e um "recarregue" na cara do usuário é pedágio.
+    VitePWA({
+      registerType: 'autoUpdate',
+      includeAssets: ['dailify_logo_2.png'],
+      manifest: {
+        name: 'Dailify',
+        short_name: 'Dailify',
+        description: 'Sua agenda do dia, escrita como você fala.',
+        lang: 'pt-BR',
+        start_url: '/dashboard',
+        display: 'standalone',
+        background_color: '#0a0a0a',
+        theme_color: '#0a0a0a',
+        icons: [
+          { src: '/dailify_logo_2.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+        ],
+      },
+      workbox: {
+        // Só o shell: com png/jpg dentro, o precache subia pra ~7.8MB por causa das imagens da
+        // landing — megabytes baixados no 3G de quem só queria abrir a agenda.
+        globPatterns: ['**/*.{js,css,html,woff2}'],
+        // O SPA responde qualquer rota pelo index; a API fica de fora do fallback, senão um
+        // /api offline devolveria HTML no lugar do erro que o cliente sabe tratar.
+        navigateFallback: '/index.html',
+        navigateFallbackDenylist: [/^\/api/],
+      },
+    }),
   ],
 
   resolve: {
