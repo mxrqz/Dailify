@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useCallback } from "react";
+import { ReactNode, useEffect, useCallback, useRef } from "react";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { Navigate, useLocation } from "react-router-dom";
 import { Loader2Icon } from "lucide-react";
@@ -8,6 +8,9 @@ import { getTasksForMonth, getPermissions, getPaymentDetails, getInvoices } from
 import { isSameMonth } from "date-fns";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
+
+/** Piso entre revalidações: alternar de aba não pode virar rajada de fetch. */
+const REVALIDATE_AFTER_MS = 30_000;
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isSignedIn, isLoaded, user } = useUser();
@@ -115,6 +118,28 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       getTasks();
     }
   }, [selectedDay, isLoaded, userId]);
+
+  // O celular passa horas em segundo plano e volta com a lista de antes; tarefa criada no desktop
+  // não aparecia. Revalida ao voltar pra aba e ao reconectar, com um piso de tempo pra alternar
+  // de aba não virar rajada de fetch.
+  const lastFetch = useRef(Date.now());
+  useEffect(() => {
+    if (!isLoaded || !userId) return;
+
+    const revalidate = () => {
+      if (document.visibilityState !== "visible") return;
+      if (Date.now() - lastFetch.current < REVALIDATE_AFTER_MS) return;
+      lastFetch.current = Date.now();
+      getTasks();
+    };
+
+    document.addEventListener("visibilitychange", revalidate);
+    window.addEventListener("online", revalidate);
+    return () => {
+      document.removeEventListener("visibilitychange", revalidate);
+      window.removeEventListener("online", revalidate);
+    };
+  }, [isLoaded, userId, getTasks]);
 
   // 🧭 Redirecionar se não estiver logado
   if (!isLoaded || (isLoading && !tasks)) {

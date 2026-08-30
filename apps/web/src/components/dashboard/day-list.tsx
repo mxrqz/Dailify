@@ -4,6 +4,7 @@ import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { DaySection, TaskSkeletons } from "@/components/dashboard/day-section";
 import { getTasksForDay } from "@/functions/functions";
+import { useNow } from "@/hooks/useNow";
 
 /**
  * A lista do dashboard: um bloco por dia COM TAREFA, de hoje até o fim do mês carregado. Não há
@@ -15,7 +16,9 @@ import { getTasksForDay } from "@/functions/functions";
 export function DayList(): JSX.Element {
   const { selectedDay, tasks, isLoading } = useDailify();
 
-  const today = startOfDay(new Date());
+  // `useNow` e não `new Date()` solto: com o app aberto na virada do dia, a lista continuava
+  // começando em ontem.
+  const today = startOfDay(useNow(60_000));
   const start = isSameMonth(selectedDay, today) ? today : startOfMonth(selectedDay);
 
   // Só os dias que têm tarefa: a sequência completa do mês era uma parede de "nenhuma tarefa".
