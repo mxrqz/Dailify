@@ -94,6 +94,11 @@ export const copy = {
     limitReached: "Limite de tarefas atingido",
     limitReachedHint: "Você atingiu o limite do seu plano neste mês.",
     upgrade: "Assinar",
+    scopeTitle: "Esta tarefa se repete",
+    scopeDescription: "O que você quer alterar?",
+    scopeOccurrence: "Só esta ocorrência",
+    scopeSeries: "Todas as ocorrências",
+    scopeDetached: "Ocorrência atualizada",
   },
 
   profile: {

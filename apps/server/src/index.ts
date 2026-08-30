@@ -4,13 +4,18 @@ import { clerkMiddleware } from "./middleware/auth";
 import tasks from "./routes/tasks";
 import billing from "./routes/billing";
 import voice from "./routes/voice";
+import clerkWebhook from "./routes/clerk-webhook";
 import { fail } from "./lib/errors";
 
 export interface Env {
   DB: D1Database;
+  // Opcionais: em teste/dev local o binding de rate limit nao existe (ver middleware/rate-limit.ts).
+  API_LIMITER?: RateLimit;
+  VOICE_LIMITER?: RateLimit;
   ALLOWED_ORIGIN: string;
   CLERK_SECRET_KEY: string;
   CLERK_PUBLISHABLE_KEY: string;
+  CLERK_WEBHOOK_SECRET: string;
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
   OPENAI_API_KEY: string;
@@ -30,6 +35,7 @@ app.use("*", clerkMiddleware());
 app.route("/tasks", tasks);
 app.route("/tasks", voice);
 app.route("/", billing);
+app.route("/", clerkWebhook);
 
 app.onError((err, c) => {
   console.error(err);

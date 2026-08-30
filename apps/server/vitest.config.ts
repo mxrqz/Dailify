@@ -20,6 +20,8 @@ export default defineConfig({
             // No token is ever sent in this phase's tests, so no real Clerk network call happens.
             CLERK_SECRET_KEY: "sk_test_00000000000000000000000000000000000000000000",
             CLERK_PUBLISHABLE_KEY: "pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk",
+            // Svix secret de teste — o webhook do Clerk é assinado com ele em clerk-webhook.test.ts.
+            CLERK_WEBHOOK_SECRET: "whsec_dGVzdHNlY3JldA==",
             // Stripe is mocked in billing tests (vi.mock("stripe")) — these are just deterministic
             // price-id fixtures, no real Stripe network call happens.
             STRIPE_SECRET_KEY: "sk_test_stripe",

@@ -2,6 +2,7 @@ import { Hono } from "hono";
 import { nanoid } from "nanoid";
 import type { Env } from "../index";
 import { requireAuth } from "../middleware/auth";
+import { rateLimit } from "../middleware/rate-limit";
 import {
   getMonthTasks,
   getRecurringTasks,
@@ -9,35 +10,25 @@ import {
   updateTask,
   appendCompletion,
   deleteTask,
+  detachOccurrence,
 } from "../db/tasks";
 import { enforceCreate } from "../db/limits";
-import { expandRecurringTask, normalizeRepeat, type Task, type TaskInput } from "@dailify/shared";
+import { expandRecurringTask, type Task } from "@dailify/shared";
+import { parseNewTask, parseTaskFields } from "../lib/task-input";
 import { fail } from "../lib/errors";
 
 const tasks = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 tasks.use("*", requireAuth);
+tasks.use("*", rateLimit("API_LIMITER"));
 
 const MONTH_RE = /^\d{4}-\d{2}$/;
-const MAX_LINKS = 10;
-const MAX_URL_LEN = 2048; // limite historico de navegador/proxy; nenhum link legitimo chega perto
 
-// `undefined` = campo nao veio (ou veio null); "invalid" = veio e nao presta pra nada.
-// So http(s) passa porque `javascript:`/`data:` num `<a href>` do cliente e XSS; `username`/
-// `password` sao recusados porque "paypal.com@evil.com" se disfarca de dominio confiavel.
-function sanitizeLinks(value: unknown): string[] | undefined | "invalid" {
-  if (value === undefined || value === null) return undefined;
-  if (!Array.isArray(value) || value.length > MAX_LINKS) return "invalid";
-
-  const urls: string[] = [];
-  for (const item of value) {
-    if (typeof item !== "string" || item.length > MAX_URL_LEN || !URL.canParse(item))
-      return "invalid";
-    const { protocol, username, password } = new URL(item);
-    if (protocol !== "http:" && protocol !== "https:") return "invalid";
-    if (username || password) return "invalid";
-    urls.push(item);
+async function readJson(c: { req: { json: () => Promise<unknown> } }): Promise<unknown> {
+  try {
+    return await c.req.json();
+  } catch {
+    return undefined; // body vazio ou JSON quebrado cai na validacao como "invalid body"
   }
-  return urls.length ? urls : undefined;
 }
 
 tasks.get("/", async (c) => {
@@ -59,21 +50,11 @@ tasks.get("/", async (c) => {
 
 tasks.post("/", async (c) => {
   const userId = c.get("userId");
-  const body = await c.req.json<TaskInput>();
-  const links = sanitizeLinks(body.links);
-  if (links === "invalid") return fail(c, 400, "invalid links");
-  const task: Task = {
-    id: body.id ?? nanoid(6),
-    title: body.title,
-    date: body.date,
-    alert: body.alert,
-    duration: body.duration,
-    priority: body.priority ?? 0,
-    repeat: normalizeRepeat(body.repeat),
-    tags: body.tags,
-    links,
-    completed: body.completed ?? [],
-  };
+  const parsed = parseNewTask(await readJson(c));
+  if ("error" in parsed) return fail(c, 400, parsed.error);
+
+  // id sempre do servidor: o PK do D1 e global, entao id vindo do cliente colide entre contas.
+  const task: Task = { ...parsed.task, id: nanoid(6) };
   const err = await enforceCreate(c.env, userId, task);
   if (err) return fail(c, 429, err);
   await insertTask(c.env.DB, userId, task);
@@ -83,14 +64,20 @@ tasks.post("/", async (c) => {
 tasks.patch("/:id", async (c) => {
   const userId = c.get("userId");
   const id = c.req.param("id");
-  const patch = await c.req.json<Partial<TaskInput>>();
-  if (patch.repeat !== undefined) patch.repeat = normalizeRepeat(patch.repeat);
-  if (patch.links !== undefined) {
-    const links = sanitizeLinks(patch.links);
-    if (links === "invalid") return fail(c, 400, "invalid links");
-    patch.links = links;
+  const parsed = parseTaskFields(await readJson(c), { partial: true });
+  if ("error" in parsed) return fail(c, 400, parsed.error);
+
+  // ?occurrence=<epoch-ms> = "editar só esta": edita a instância daquele dia em vez da série.
+  const occurrence = c.req.query("occurrence");
+  if (occurrence !== undefined) {
+    const at = Number(occurrence);
+    if (!Number.isInteger(at)) return fail(c, 400, "invalid occurrence");
+    const detached = await detachOccurrence(c.env.DB, userId, id, at, parsed.fields, nanoid(6));
+    if (!detached) return fail(c, 404, "Recurring task not found");
+    return c.json(detached); // { task, series }
   }
-  const updated = await updateTask(c.env.DB, userId, id, patch);
+
+  const updated = await updateTask(c.env.DB, userId, id, parsed.fields);
   if (!updated) return fail(c, 404, "Task not found");
   return c.json({ task: updated });
 });

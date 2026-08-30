@@ -10,3 +10,21 @@ database_id = "7fdd1f9f-c6b2-40e1-9a5f-3a13ec224580"
 
 [vars]
 ALLOWED_ORIGIN = "https://dailify.mxrqz.com"
+
+# Limites por usuario (ver middleware/rate-limit.ts). O da voz e ordens de grandeza menor porque
+# cada chamada gasta Whisper + GPT: sem ele, um Pro+AI em loop queima dinheiro real.
+[[ratelimits]]
+name = "API_LIMITER"
+namespace_id = "1001"
+
+  [ratelimits.simple]
+  limit = 120
+  period = 60
+
+[[ratelimits]]
+name = "VOICE_LIMITER"
+namespace_id = "1002"
+
+  [ratelimits.simple]
+  limit = 6
+  period = 60

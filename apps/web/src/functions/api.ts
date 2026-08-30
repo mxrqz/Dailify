@@ -29,13 +29,19 @@ export async function createTask(
   return res.json();
 }
 
+/**
+ * `occurrence` (epoch-ms da instância) = "editar só esta": o servidor destaca aquele dia da série
+ * numa tarefa própria e devolve as duas — a nova em `task`, a série atualizada em `series`.
+ */
 export async function updateTask(
   token: string,
   id: string,
   patch: Partial<TaskInput>,
-): Promise<{ task?: Task; error?: string }> {
+  occurrence?: number,
+): Promise<{ task?: Task; series?: Task; error?: string }> {
+  const query = occurrence === undefined ? "" : `?occurrence=${occurrence}`;
   const res = await fetch(
-    `${apiURL}/tasks/${id}`,
+    `${apiURL}/tasks/${id}${query}`,
     authed(token, { method: "PATCH", body: JSON.stringify(patch) }),
   );
   return res.json();

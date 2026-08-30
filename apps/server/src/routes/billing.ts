@@ -3,6 +3,7 @@ import type Stripe from "stripe";
 import { PLAN_PERMISSIONS } from "@dailify/shared";
 import type { Env } from "../index";
 import { requireAuth } from "../middleware/auth";
+import { rateLimit } from "../middleware/rate-limit";
 import { clerk, getUserRole, readStripeCustomerId, updateUserRole, userEmail } from "../lib/clerk";
 import {
   customerId,
@@ -22,7 +23,7 @@ billing.get("/permissions", requireAuth, async (c) =>
   c.json(PLAN_PERMISSIONS[await getUserRole(c.env, c.get("userId"))]),
 );
 
-billing.post("/billing/checkout", requireAuth, async (c) => {
+billing.post("/billing/checkout", requireAuth, rateLimit("API_LIMITER"), async (c) => {
   if (!c.env.STRIPE_SECRET_KEY) return fail(c, 503, "Billing não configurado");
   const { productName } = await c.req.json<{ productName?: string }>();
   if (!productName || !isProductName(c.env, productName)) return fail(c, 400, "Unknown productName");
