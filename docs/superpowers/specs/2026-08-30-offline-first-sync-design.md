@@ -57,10 +57,14 @@ single-user por conta, e está marcado no código com `ponytail:` apontando o ca
 
 ### 5. Camadas no cliente
 
+**Correção sobre o rascunho:** não entrou `idb-keyval`. A agenda de um mês são dezenas de KB, muito
+abaixo dos 5MB do `localStorage`, e o custo síncrono é ~1ms — dependência nova só se um dia isso
+virar histórico inteiro.
+
 ```
-IndexedDB (idb-keyval)
-  tasks:<userId>   → última lista conhecida do mês        (leitura instantânea no boot)
-  outbox:<userId>  → fila FIFO de mutações não confirmadas (escrita)
+localStorage
+  dailify:tasks:<userId>    → última lista conhecida       (leitura instantânea no boot)
+  dailify:outbox:<userId>   → fila FIFO de mutações        (escrita)
 
 boot            → pinta do cache, revalida em background
 mutação         → aplica na lista, enfileira, tenta enviar

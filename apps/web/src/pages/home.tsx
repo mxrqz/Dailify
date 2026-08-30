@@ -11,6 +11,7 @@ import { WeekStrip } from "@/components/dashboard/week-strip";
 import { TaskComposer, type ComposerValues } from "@/components/dashboard/task-composer";
 import { createTask } from "@/functions/api";
 import { upsertTaskById } from "@/functions/functions";
+import { enqueue } from "@/functions/offline";
 import type { ParsedTask } from "@/functions/parse-task";
 import { useEntitlements } from "@/hooks/useEntitlements";
 
@@ -70,7 +71,7 @@ function composerTaskInput(parsed: ParsedTask): TaskInput {
  * espaço pra faixa: sem ele, em tela baixa o composer sobe por cima dela.
  */
 export default function Home() {
-  const { getToken } = useAuth();
+  const { getToken, userId } = useAuth();
   const { tasks, setTasks } = useDailify();
   const { canCreateTask } = useEntitlements();
   const navigate = useNavigate();
@@ -98,12 +99,29 @@ export default function Home() {
 
     // `finally`: qualquer exceção no meio (o token do Clerk, o parser) deixava o botão girando
     // pra sempre — o mesmo modo de falha que `protected-route.tsx` já tinha aprendido.
-    try {
-      const token = await getToken();
-      if (!token) return;
+    // O id nasce aqui, não no servidor: sem rede a tarefa precisa existir na tela e na fila com
+    // uma identidade estável, e o upsert do servidor aceita o id do cliente sem duplicar.
+    const at = Date.now();
+    const input = { ...composerTaskInput(parsed), id: crypto.randomUUID(), updatedAt: at };
+    const previous = tasks ?? [];
+    const optimistic = { ...input, id: input.id, completed: [] };
+    setTasks(upsertTaskById(previous, optimistic));
 
-      const { task, error } = await createTask(token, composerTaskInput(parsed));
+    try {
+      const token = await getToken().catch(() => null);
+
+      const { task, error } = token
+        ? await createTask(token, input)
+        : { task: undefined, error: { message: copy.task.queued, offline: !navigator.onLine } };
+
+      if (error?.offline && userId) {
+        enqueue(userId, { op: "create", taskId: input.id, input, at });
+        toast.message(copy.form.created, { description: copy.task.queued });
+        return;
+      }
+
       if (error || !task) {
+        setTasks(previous);
         toast(copy.form.createError, {
           description: error?.message,
           action: { label: copy.form.upgrade, onClick: () => navigate("/premium") },
@@ -111,7 +129,7 @@ export default function Home() {
         return;
       }
 
-      setTasks(upsertTaskById(tasks ?? [], task));
+      setTasks(upsertTaskById(previous, task));
       toast.message(copy.form.created, { description: task.title });
     } finally {
       setSubmitting(false);

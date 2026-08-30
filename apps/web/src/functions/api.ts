@@ -97,9 +97,13 @@ export async function updateTask(
 export async function completeTask(
   token: string,
   id: string,
+  at: number = Date.now(),
 ): Promise<{ task?: Task; error?: ApiError }> {
+  // `at` vai no corpo: uma conclusão feita offline aconteceu na hora do toque, não na hora em que
+  // a fila conseguiu subir.
   const { data, error } = await request<{ task?: Task }>(`/tasks/${id}/complete`, token, {
     method: "POST",
+    body: JSON.stringify({ at }),
   });
   return { task: data?.task, error };
 }

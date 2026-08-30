@@ -5,6 +5,7 @@ import { Loader2Icon } from "lucide-react";
 import { useDailify } from "./dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { getTasksForMonth, getPermissions, getPaymentDetails, getInvoices } from "@/functions/api";
+import { cacheTasks, flushQueue, readCachedTasks } from "@/functions/offline";
 import { isSameMonth } from "date-fns";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -74,6 +75,17 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
+  // O boot pinta o que estava salvo antes de tocar na rede: sem isso, abrir sem conexão dá tela
+  // vazia mesmo com a agenda inteira em mãos.
+  useEffect(() => {
+    if (!userId || tasks) return;
+    const cached = readCachedTasks(userId);
+    if (cached?.length) {
+      setTasks(cached);
+      setIsLoading(null);
+    }
+  }, [userId]);
+
   // 📅 Função principal para carregar as tasks
   const getTasks = useCallback(async () => {
     if (!userId || !user) return;
@@ -83,20 +95,27 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       const token = await getToken();
       if (!token) return;
 
-      const { tasks, error } = await getTasksForMonth(token, selectedDay);
+      // A fila sobe ANTES da leitura: sem isso o servidor devolveria o estado velho e a tela
+      // andaria pra trás por um instante.
+      if (userId) await flushQueue(userId, token);
+
+      const { tasks: fetched, error } = await getTasksForMonth(token, selectedDay);
 
       // Erro de carga não é mês vazio: sem o aviso, quem está sem rede lê "nada agendado" e acha
-      // que perdeu as tarefas.
+      // que perdeu as tarefas. Offline com cache na tela é silencioso — o indicador já conta.
       if (error) {
-        toast.error(copy.loading.tasksError, { description: error.message });
+        if (!error.offline || !tasks?.length) {
+          toast.error(copy.loading.tasksError, { description: error.message });
+        }
         return;
       }
 
       if (isSameMonth(new Date(), selectedDay)) {
-        setCurrentMonthTasks(tasks);
+        setCurrentMonthTasks(fetched);
       }
 
-      setTasks(tasks);
+      setTasks(fetched);
+      if (userId) cacheTasks(userId, fetched);
     } catch {
       // Sem isto o app trava no spinner para sempre: a exceção pulava o `setIsLoading(null)` e o
       // gate lá embaixo (`isLoading && !tasks`) nunca liberava. `setTasks([])` é o que destrava —
@@ -106,7 +125,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(null);
     }
-  }, [userId, user, selectedDay]);
+  }, [userId, user, selectedDay, tasks]);
 
   // 🗓️ Atualizar tarefas se mudar de mês (também cobre a carga inicial, já que currentMonth começa undefined)
   useEffect(() => {

@@ -182,6 +182,7 @@ export const copy = {
     undo: "Desfazer",
     undoError: "Não foi possível restaurar a tarefa",
     restored: "Tarefa restaurada",
+    queued: "Sem conexão — guardado pra sincronizar depois",
   },
 } as const;
 
