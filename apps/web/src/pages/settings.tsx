@@ -1,5 +1,6 @@
 import { copy } from "@/components/dashboard/copy";
 import { ThemeSelect } from "@/components/mode-toggle";
+import { PushToggle } from "@/components/dashboard/push-toggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
 export default function SettingsPage(): JSX.Element {
@@ -31,7 +32,7 @@ export default function SettingsPage(): JSX.Element {
           </CardHeader>
 
           <CardContent>
-            <p className="text-sm text-content-secondary">{copy.profile.notificationsSoon}</p>
+            <PushToggle />
           </CardContent>
         </Card>
       </div>

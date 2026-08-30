@@ -67,6 +67,31 @@ export async function createTaskVoice(token: string, formData: FormData): Promis
   });
 }
 
+export async function getPushKey(): Promise<string | null> {
+  const res = await fetch(`${apiURL}/push/key`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.key ?? null;
+}
+
+export async function savePushSubscription(
+  token: string,
+  subscription: { endpoint: string; p256dh: string; auth: string; timezone: string },
+): Promise<boolean> {
+  const res = await fetch(
+    `${apiURL}/push/subscription`,
+    authed(token, { method: "POST", body: JSON.stringify(subscription) }),
+  );
+  return res.ok;
+}
+
+export async function removePushSubscription(token: string, endpoint: string): Promise<void> {
+  await fetch(
+    `${apiURL}/push/subscription`,
+    authed(token, { method: "DELETE", body: JSON.stringify({ endpoint }) }),
+  );
+}
+
 export async function getPermissions(token: string): Promise<Permissions | undefined> {
   const res = await fetch(`${apiURL}/permissions`, authed(token));
   if (!res.ok) return undefined;

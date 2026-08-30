@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "CI=1 wrangler d1 migrations apply dailify --local && wrangler dev",
     "deploy": "CI=1 wrangler d1 migrations apply dailify --remote && wrangler deploy",
+    "vapid": "bun run scripts/vapid.ts",
     "test": "vitest run",
     "check": "tsc --noEmit && vitest run"
   },

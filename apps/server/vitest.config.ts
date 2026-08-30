@@ -22,6 +22,12 @@ export default defineConfig({
             CLERK_PUBLISHABLE_KEY: "pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk",
             // Svix secret de teste — o webhook do Clerk é assinado com ele em clerk-webhook.test.ts.
             CLERK_WEBHOOK_SECRET: "whsec_dGVzdHNlY3JldA==",
+            // Par VAPID do exemplo da RFC 8291: chaves P-256 reais, mas de domínio público. O envio
+            // em si é mockado nos testes; elas só precisam existir e ter o formato certo.
+            VAPID_PUBLIC_KEY:
+              "BP4z9KsN6nGRTbVYI_c7VJSPQTBtkgcy27mlmlMoZIIgDll6e3vCYLocInmYWAmS6TlzAC8wEqKK6PBru3jl7A8",
+            VAPID_PRIVATE_KEY: "yfWPiYE-n46HLnH0KqZOF1fJJU3MYrct3AELtAQ-oRw",
+            VAPID_SUBJECT: "mailto:test@dailify.local",
             // Stripe is mocked in billing tests (vi.mock("stripe")) — these are just deterministic
             // price-id fixtures, no real Stripe network call happens.
             STRIPE_SECRET_KEY: "sk_test_stripe",

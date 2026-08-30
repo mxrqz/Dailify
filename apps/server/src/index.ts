@@ -5,6 +5,8 @@ import tasks from "./routes/tasks";
 import billing from "./routes/billing";
 import voice from "./routes/voice";
 import clerkWebhook from "./routes/clerk-webhook";
+import push from "./routes/push";
+import { dispatchAlerts } from "./alerts";
 import { fail } from "./lib/errors";
 
 export interface Env {
@@ -19,6 +21,10 @@ export interface Env {
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
   OPENAI_API_KEY: string;
+  // Par VAPID do Web Push (`bun run vapid` gera). A pública é servida em GET /push/key.
+  VAPID_PUBLIC_KEY: string;
+  VAPID_PRIVATE_KEY: string;
+  VAPID_SUBJECT: string; // "mailto:..." — quem o push service contata se algo der errado
   STRIPE_PRICE_PRO: string;
   STRIPE_PRICE_PRO_YEAR: string;
   STRIPE_PRICE_PROAI: string;
@@ -36,10 +42,17 @@ app.route("/tasks", tasks);
 app.route("/tasks", voice);
 app.route("/", billing);
 app.route("/", clerkWebhook);
+app.route("/", push);
 
 app.onError((err, c) => {
   console.error(err);
   return fail(c, 500, "Internal error");
 });
 
-export default app;
+// O Worker precisa de `scheduled` no default export (Cron Trigger em wrangler.toml), e os testes
+// precisam do `app` com `.request()` — pendurar um no outro entrega os dois sem uma casca extra.
+export default Object.assign(app, {
+  scheduled: async (_controller: ScheduledController, env: Env, ctx: ExecutionContext) => {
+    ctx.waitUntil(dispatchAlerts(env));
+  },
+});
