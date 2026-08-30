@@ -1,4 +1,19 @@
-import { describe, it, expect, beforeAll } from "vitest";
+import { describe, it, expect, beforeAll, beforeEach, vi } from "vitest";
+
+const { stripeMock } = vi.hoisted(() => ({
+  stripeMock: {
+    subscriptions: { search: vi.fn(), cancel: vi.fn() },
+  },
+}));
+
+vi.mock("stripe", () => {
+  function MockStripe() {
+    return stripeMock;
+  }
+  MockStripe.createFetchHttpClient = () => ({});
+  return { default: MockStripe };
+});
+
 import { env } from "cloudflare:test";
 import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
@@ -36,6 +51,11 @@ const post = (body: string, headers: Record<string, string>) =>
   app.request("/webhooks/clerk", { method: "POST", headers, body }, env);
 
 describe("POST /webhooks/clerk", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    stripeMock.subscriptions.search.mockResolvedValue({ data: [] });
+  });
+
   it("apaga as tarefas do usuário em user.deleted", async () => {
     await insertTask(env.DB, "gone", {
       id: "wh1",
@@ -82,5 +102,42 @@ describe("POST /webhooks/clerk", () => {
     const body = JSON.stringify({ type: "user.updated", data: { id: "gone" } });
     const res = await post(body, await svixHeaders(body));
     expect(res.status).toBe(200);
+  });
+
+  it("cancela a assinatura ativa do usuário apagado", async () => {
+    stripeMock.subscriptions.search.mockResolvedValue({
+      data: [
+        { id: "sub_1", status: "active" },
+        { id: "sub_2", status: "canceled" }, // já cancelada: não tocar
+      ],
+    });
+    const body = JSON.stringify({ type: "user.deleted", data: { id: "payer" } });
+    const res = await post(body, await svixHeaders(body));
+
+    expect(res.status).toBe(200);
+    expect(stripeMock.subscriptions.search).toHaveBeenCalledWith(
+      expect.objectContaining({ query: "metadata['clerkUserId']:'payer'" }),
+    );
+    expect(stripeMock.subscriptions.cancel).toHaveBeenCalledOnce();
+    expect(stripeMock.subscriptions.cancel).toHaveBeenCalledWith("sub_1");
+  });
+
+  // A exclusão dos dados é obrigação nossa; o Stripe fora do ar não pode segurá-la.
+  it("apaga os dados mesmo se o cancelamento falhar", async () => {
+    stripeMock.subscriptions.search.mockRejectedValue(new Error("stripe down"));
+    await insertTask(env.DB, "unlucky", {
+      id: "wh3",
+      title: "Some task",
+      date: Date.now(),
+      duration: "",
+      priority: 0,
+      repeat: "Off",
+      completed: [],
+    });
+    const body = JSON.stringify({ type: "user.deleted", data: { id: "unlucky" } });
+    const res = await post(body, await svixHeaders(body));
+
+    expect(res.status).toBe(200);
+    expect(await getTask(env.DB, "unlucky", "wh3")).toBeNull();
   });
 });

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import type { Env } from "../index";
 import { deleteUserData } from "../db/tasks";
+import { cancelSubscriptionsOf, stripeClient } from "../lib/stripe";
 import { verifySvix } from "../lib/svix";
 import { fail } from "../lib/errors";
 
@@ -35,7 +36,20 @@ clerkWebhook.post("/webhooks/clerk", async (c) => {
   if (!valid) return fail(c, 400, "Invalid signature");
 
   const { type, userId } = eventOf(body);
-  if (type === "user.deleted" && userId) await deleteUserData(c.env.DB, userId);
+  if (type === "user.deleted" && userId) {
+    // A cobrança some junto com a conta: sem isto o cartão continua sendo debitado por uma
+    // assinatura que ninguém mais consegue nem achar (o customer id morreu com o usuário).
+    if (c.env.STRIPE_SECRET_KEY) {
+      try {
+        await cancelSubscriptionsOf(stripeClient(c.env), userId);
+      } catch (err) {
+        // Falhar aqui não pode segurar a exclusão dos dados — essa é a parte que o usuário pediu
+        // e que a /privacidade promete. Assinatura órfã fica no log para ser tratada à mão.
+        console.error(`Falha ao cancelar assinatura de ${userId}`, err);
+      }
+    }
+    await deleteUserData(c.env.DB, userId);
+  }
 
   return c.body(null, 200);
 });

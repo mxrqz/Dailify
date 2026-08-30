@@ -38,11 +38,33 @@ export interface BillingDetails {
   paymentMethodType?: string;
 }
 
+/**
+ * Conta apagada não tem metadata para atualizar — e um throw aqui viraria 500 no webhook do
+ * Stripe, que então retenta e acaba desabilitando o endpoint. Um usuário deletado derrubava a
+ * atualização de plano de todos os outros.
+ */
+async function updateMetadata(
+  env: Env,
+  clerkUserId: string,
+  metadata: Parameters<ReturnType<typeof clerk>["users"]["updateUserMetadata"]>[1],
+): Promise<void> {
+  try {
+    await clerk(env).users.updateUserMetadata(clerkUserId, metadata);
+  } catch (err) {
+    if (!isMissingUser(err)) throw err;
+    console.warn(`Clerk user ${clerkUserId} não existe mais; metadata ignorada`);
+  }
+}
+
+function isMissingUser(err: unknown): boolean {
+  return typeof err === "object" && err !== null && Reflect.get(err, "status") === 404;
+}
+
 export async function updateUserRole(
   env: Env,
   params: { clerkUserId: string; role: Role; stripeCustomerId: string | undefined },
 ): Promise<void> {
-  await clerk(env).users.updateUserMetadata(params.clerkUserId, {
+  await updateMetadata(env, params.clerkUserId, {
     privateMetadata: {
       plan: params.role,
       stripeCustomerId: params.stripeCustomerId,
@@ -58,5 +80,5 @@ export async function updateUserBillingDetails(
   clerkUserId: string,
   billing: BillingDetails,
 ): Promise<void> {
-  await clerk(env).users.updateUserMetadata(clerkUserId, { privateMetadata: { ...billing } });
+  await updateMetadata(env, clerkUserId, { privateMetadata: { ...billing } });
 }
