@@ -67,7 +67,9 @@ export default function SecurityPage(): JSX.Element {
                       .map((session) => (
                         <div
                           key={session.id}
-                          className="grid grid-cols-[25%_45%_25%_5%] items-center"
+                          // Abaixo de sm as quatro colunas viram uma pilha, com o (⋮) ancorado no
+                          // topo: em 360px o grid fixo espremia o IP em duas letras por linha.
+                          className="relative flex flex-col gap-1 sm:grid sm:grid-cols-[25%_45%_25%_5%] sm:items-center sm:gap-0"
                         >
                           <div className="flex items-center gap-3">
                             <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-subtle">
@@ -111,7 +113,10 @@ export default function SecurityPage(): JSX.Element {
                           </span>
 
                           <Popover>
-                            <PopoverTrigger className="justify-self-end cursor-pointer" asChild>
+                            <PopoverTrigger
+                              className="absolute top-0 right-0 cursor-pointer sm:static sm:justify-self-end"
+                              asChild
+                            >
                               <Button size={"icon"} variant={"ghost"}>
                                 <EllipsisVerticalIcon />
                               </Button>

@@ -211,7 +211,7 @@ export default function BillingPage(): JSX.Element {
                         {amountFormatted(invoice.amount_paid, invoice.currency)}
                       </p>
 
-                      <div className="flex items-center justify-between rounded-lg border p-3">
+                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
                         <div className="flex items-center gap-3">
                           <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-subtle relative">
                             <CreditCard className="h-5 w-5 text-foreground" />

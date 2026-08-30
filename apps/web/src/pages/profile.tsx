@@ -388,7 +388,7 @@ export default function ProfilePage(): JSX.Element {
                     <Separator />
 
                     <div className="grid gap-4">
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="grid gap-2">
                           <Label htmlFor="name">Name</Label>
                           <Input
@@ -412,7 +412,7 @@ export default function ProfilePage(): JSX.Element {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="grid gap-2">
                           <Label htmlFor="username">Username</Label>
                           <Input
@@ -441,7 +441,7 @@ export default function ProfilePage(): JSX.Element {
                         </div>
                       </div>
 
-                      <div className="grid grid-cols-2 gap-4">
+                      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                         <div className="grid gap-2 w-full">
                           <Label htmlFor="timezone">Time Zone</Label>
 
