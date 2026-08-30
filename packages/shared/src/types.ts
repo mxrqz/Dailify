@@ -11,9 +11,16 @@ export interface Task {
   tags?: string[];
   links?: string[]; // URLs absolutas http(s), validadas na rota
   completed: number[]; // epoch ms
+  /** Epoch-ms da última escrita. É o que decide o conflito no servidor (LWW). */
+  updatedAt?: number;
+  /** Hash do conteúdo (`taskHash`) — derivado, nunca guardado: quem lê recalcula. */
+  hash?: string;
 }
 
-export type TaskInput = Omit<Task, "id" | "completed"> & { id?: string; completed?: number[] };
+export type TaskInput = Omit<Task, "id" | "completed" | "hash"> & {
+  id?: string;
+  completed?: number[];
+};
 
 export type Role = "free" | "pro" | "pro+ai" | "admin";
 

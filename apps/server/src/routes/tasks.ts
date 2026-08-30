@@ -74,11 +74,14 @@ tasks.post("/", async (c) => {
     tags: body.tags,
     links,
     completed: body.completed ?? [],
+    updatedAt: body.updatedAt,
   };
   const err = await enforceCreate(c.env, userId, task);
   if (err) return fail(c, 429, err);
-  await insertTask(c.env.DB, userId, task);
-  return c.json({ task });
+  // Devolve o que ficou GRAVADO: numa reentrada da fila o upsert pode ter recusado a escrita por
+  // ser mais velha que a linha, e o cliente precisa reconciliar com a versão do servidor.
+  const stored = await insertTask(c.env.DB, userId, task);
+  return c.json({ task: stored });
 });
 
 tasks.patch("/:id", async (c) => {
@@ -98,7 +101,11 @@ tasks.patch("/:id", async (c) => {
 
 tasks.post("/:id/complete", async (c) => {
   const userId = c.get("userId");
-  const updated = await appendCompletion(c.env.DB, userId, c.req.param("id"), Date.now());
+  // `at` opcional: uma conclusão feita offline aconteceu quando o cliente diz, não quando a fila
+  // subiu. Sem corpo (o caminho online normal), vale o relógio do servidor.
+  const body = await c.req.json<{ at?: number }>().catch(() => ({ at: undefined }));
+  const at = Number.isFinite(body.at) && body.at ? body.at : Date.now();
+  const updated = await appendCompletion(c.env.DB, userId, c.req.param("id"), at);
   if (!updated) return fail(c, 404, "Task not found");
   return c.json({ task: updated });
 });
