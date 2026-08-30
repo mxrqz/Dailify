@@ -36,6 +36,11 @@ export function normalizeRepeat(value: unknown): Repeat {
  * skipped for Daily/Weekly).
  */
 export function expandRecurringTask(task: Task, month: Date): Task[] {
+  const detached = new Set(task.exdates ?? []);
+  return expandAll(task, month).filter((instance) => !detached.has(instance.date));
+}
+
+function expandAll(task: Task, month: Date): Task[] {
   const original = new Date(task.date);
   const year = month.getFullYear();
   const mon = month.getMonth();

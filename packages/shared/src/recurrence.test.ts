@@ -112,6 +112,21 @@ describe("expandRecurringTask", () => {
   });
 });
 
+describe("exdates", () => {
+  it("pula a ocorrência destacada e mantém as vizinhas", () => {
+    const skipped = new Date(2026, 0, 12, 9, 0, 0).getTime();
+    const out = expandRecurringTask({ ...base, exdates: [skipped] }, new Date(2026, 0, 1));
+
+    expect(out.some((t) => t.date === skipped)).toBe(false);
+    expect(out.some((t) => t.date === new Date(2026, 0, 13, 9, 0, 0).getTime())).toBe(true);
+  });
+
+  it("sem exdates nada muda", () => {
+    const withEmpty = expandRecurringTask({ ...base, exdates: [] }, new Date(2026, 0, 1));
+    expect(withEmpty).toHaveLength(expandRecurringTask(base, new Date(2026, 0, 1)).length);
+  });
+});
+
 describe("normalizeRepeat", () => {
   it("passes valid keywords through", () => {
     expect(normalizeRepeat("Daily")).toBe("Daily");

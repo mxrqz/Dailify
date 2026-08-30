@@ -11,6 +11,8 @@ export interface Task {
   tags?: string[];
   links?: string[]; // URLs absolutas http(s), validadas na rota
   completed: number[]; // epoch ms
+  /** Ocorrências da série que viraram tarefa própria: a expansão pula estas datas. Só o servidor escreve. */
+  exdates?: number[]; // epoch ms
 }
 
 export type TaskInput = Omit<Task, "id" | "completed"> & { id?: string; completed?: number[] };

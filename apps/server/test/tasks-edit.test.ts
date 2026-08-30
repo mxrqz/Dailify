@@ -158,3 +158,60 @@ describe("PATCH /tasks/:id — links", () => {
     expect(body.task.links).toBeUndefined();
   });
 });
+
+describe("PATCH /tasks/:id?occurrence — editar só esta ocorrência", () => {
+  const master = {
+    id: "serie",
+    title: "Reunião diária",
+    date: new Date(2026, 8, 1, 9).getTime(),
+    duration: "30m",
+    priority: 0,
+    repeat: "Daily" as const,
+    completed: [],
+  };
+  const occurrence = new Date(2026, 8, 10, 9).getTime();
+
+  const patchOccurrence = (id: string, at: number, body: Record<string, unknown>) =>
+    app.request(
+      `/tasks/${id}?occurrence=${at}`,
+      { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
+      env,
+    );
+
+  it("destaca a ocorrência sem mover a série", async () => {
+    await insertTask(env.DB, "u3", master);
+    const res = await patchOccurrence("serie", occurrence, {
+      title: "Reunião adiada",
+      date: occurrence + 60 * 60 * 1000,
+    });
+
+    expect(res.status).toBe(200);
+    const { task } = await res.json<{ task: Task }>();
+    expect(task.id).not.toBe("serie");
+    expect(task.repeat).toBe("Off");
+    expect(task.title).toBe("Reunião adiada");
+
+    const series = await getTask(env.DB, "u3", "serie");
+    expect(series?.date).toBe(master.date); // a série ficou onde estava
+    expect(series?.exdates).toEqual([occurrence]);
+  });
+
+  it("o mês não devolve a ocorrência destacada duas vezes", async () => {
+    const res = await app.request("/tasks?month=2026-09", {}, env);
+    const { tasks } = await res.json<{ tasks: Task[] }>();
+    const atThatDay = tasks.filter((t) => t.date === occurrence);
+    expect(atThatDay).toHaveLength(0); // a antiga sumiu; a nova está uma hora depois
+    expect(tasks.some((t) => t.title === "Reunião adiada")).toBe(true);
+  });
+
+  it("404 quando a tarefa não é recorrente", async () => {
+    await insertTask(env.DB, "u3", { ...master, id: "solo", repeat: "Off" });
+    const res = await patchOccurrence("solo", occurrence, { title: "x" });
+    expect(res.status).toBe(404);
+  });
+
+  it("400 em occurrence não numérico", async () => {
+    const res = await patchOccurrence("serie", NaN, { title: "x" });
+    expect(res.status).toBe(400);
+  });
+});

@@ -29,13 +29,19 @@ export async function createTask(
   return res.json();
 }
 
+/**
+ * `occurrence` (epoch-ms da instância) = "editar só esta": o servidor destaca aquele dia da série
+ * numa tarefa própria e devolve as duas — a nova em `task`, a série atualizada em `series`.
+ */
 export async function updateTask(
   token: string,
   id: string,
   patch: Partial<TaskInput>,
-): Promise<{ task?: Task; error?: string }> {
+  occurrence?: number,
+): Promise<{ task?: Task; series?: Task; error?: string }> {
+  const query = occurrence === undefined ? "" : `?occurrence=${occurrence}`;
   const res = await fetch(
-    `${apiURL}/tasks/${id}`,
+    `${apiURL}/tasks/${id}${query}`,
     authed(token, { method: "PATCH", body: JSON.stringify(patch) }),
   );
   return res.json();
@@ -59,6 +65,31 @@ export async function createTaskVoice(token: string, formData: FormData): Promis
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
+}
+
+export async function getPushKey(): Promise<string | null> {
+  const res = await fetch(`${apiURL}/push/key`);
+  if (!res.ok) return null;
+  const data = await res.json();
+  return data.key ?? null;
+}
+
+export async function savePushSubscription(
+  token: string,
+  subscription: { endpoint: string; p256dh: string; auth: string; timezone: string },
+): Promise<boolean> {
+  const res = await fetch(
+    `${apiURL}/push/subscription`,
+    authed(token, { method: "POST", body: JSON.stringify(subscription) }),
+  );
+  return res.ok;
+}
+
+export async function removePushSubscription(token: string, endpoint: string): Promise<void> {
+  await fetch(
+    `${apiURL}/push/subscription`,
+    authed(token, { method: "DELETE", body: JSON.stringify({ endpoint }) }),
+  );
 }
 
 export async function getPermissions(token: string): Promise<Permissions | undefined> {
