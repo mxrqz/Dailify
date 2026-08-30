@@ -166,6 +166,8 @@ export const copy = {
     options: "Opções da tarefa",
     completed: "Concluída",
     completeError: "Não foi possível concluir a tarefa",
+    uncomplete: "Reabrir",
+    uncompleteError: "Não foi possível reabrir a tarefa",
     patchError: "Não foi possível salvar a alteração",
     rename: "Editar o texto da tarefa",
     editLinks: "Editar links",

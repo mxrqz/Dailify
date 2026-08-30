@@ -104,6 +104,25 @@ export async function completeTask(
   return { task: data?.task, error };
 }
 
+/**
+ * Desfaz a conclusão do dia. O intervalo sai daqui (não do servidor) porque o dia é local do
+ * usuário e o Worker roda em UTC.
+ */
+export async function uncompleteTask(
+  token: string,
+  id: string,
+  day: Date,
+): Promise<{ task?: Task; error?: ApiError }> {
+  const from = new Date(day).setHours(0, 0, 0, 0);
+  const to = new Date(day).setHours(23, 59, 59, 999);
+  const { data, error } = await request<{ task?: Task }>(
+    `/tasks/${id}/complete?from=${from}&to=${to}`,
+    token,
+    { method: "DELETE" },
+  );
+  return { task: data?.task, error };
+}
+
 export async function deleteTask(token: string, id: string): Promise<{ error?: ApiError }> {
   const { error } = await request(`/tasks/${id}`, token, { method: "DELETE" });
   return { error };

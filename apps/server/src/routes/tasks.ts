@@ -8,6 +8,7 @@ import {
   insertTask,
   updateTask,
   appendCompletion,
+  removeCompletions,
   deleteTask,
 } from "../db/tasks";
 import { enforceCreate } from "../db/limits";
@@ -98,6 +99,17 @@ tasks.patch("/:id", async (c) => {
 tasks.post("/:id/complete", async (c) => {
   const userId = c.get("userId");
   const updated = await appendCompletion(c.env.DB, userId, c.req.param("id"), Date.now());
+  if (!updated) return fail(c, 404, "Task not found");
+  return c.json({ task: updated });
+});
+
+tasks.delete("/:id/complete", async (c) => {
+  const from = Number(c.req.query("from"));
+  const to = Number(c.req.query("to"));
+  if (!Number.isFinite(from) || !Number.isFinite(to) || to < from)
+    return fail(c, 400, "invalid range");
+
+  const updated = await removeCompletions(c.env.DB, c.get("userId"), c.req.param("id"), from, to);
   if (!updated) return fail(c, 404, "Task not found");
   return c.json({ task: updated });
 });

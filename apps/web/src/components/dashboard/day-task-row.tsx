@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { CheckIcon, EllipsisVerticalIcon, Trash2Icon } from "lucide-react";
+import { CheckIcon, EllipsisVerticalIcon, RotateCcwIcon, Trash2Icon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
 import { SwipeActions } from "@/components/dashboard/swipe-actions";
@@ -18,9 +18,17 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import type { TaskProps } from "@/types/types";
 
-/** Menu (⋮) da tarefa — o atalho para concluir/excluir sem abrir a sheet. */
-function TaskActions({ task }: { task: TaskProps }): JSX.Element {
-  const { onComplete, onDelete } = useTaskActions(task);
+/** Menu (⋮) da tarefa — o atalho para concluir/reabrir/excluir sem abrir a sheet. */
+function TaskActions({
+  task,
+  day,
+  completed,
+}: {
+  task: TaskProps;
+  day: Date;
+  completed: boolean;
+}): JSX.Element {
+  const { onComplete, onUncomplete, onDelete } = useTaskActions(task, day);
 
   return (
     <Popover>
@@ -38,11 +46,11 @@ function TaskActions({ task }: { task: TaskProps }): JSX.Element {
           className="justify-start gap-2"
           onClick={(e) => {
             e.stopPropagation();
-            void onComplete();
+            void (completed ? onUncomplete() : onComplete());
           }}
         >
-          <CheckIcon className="size-4" />
-          {copy.task.complete}
+          {completed ? <RotateCcwIcon className="size-4" /> : <CheckIcon className="size-4" />}
+          {completed ? copy.task.uncomplete : copy.task.complete}
         </Button>
 
         <Button
@@ -95,7 +103,7 @@ export function DayTaskRow({
   const [open, setOpen] = useState(false);
   const sheetEditing = useMediaQuery(SHEET_EDITING);
   const data = taskToCardData(task, day);
-  const { onPatch, onRename, onComplete, onDelete } = useTaskActions(task);
+  const { onPatch, onRename, onComplete, onUncomplete, onDelete } = useTaskActions(task, day);
 
   const onOpenChange = (next: boolean) => setOpen(next);
 
@@ -142,7 +150,9 @@ export function DayTaskRow({
       edit={edit}
       // No toque o (⋮) sai: o alvo é pequeno demais pro polegar, e quem faz o trabalho dele é o
       // arrasto pro lado.
-      actions={sheetEditing ? undefined : <TaskActions task={task} />}
+      actions={
+        sheetEditing ? undefined : <TaskActions task={task} day={day} completed={data.completed} />
+      }
     />
   );
 
@@ -151,7 +161,10 @@ export function DayTaskRow({
       {sheetEditing ? (
         <div className="flex flex-col gap-1.5">
           {time && <TimeLabel time={time} accent={Boolean(countdown)} />}
-          <SwipeActions onComplete={() => void onComplete()} onDelete={() => void onDelete()}>
+          <SwipeActions
+            onComplete={() => void (data.completed ? onUncomplete() : onComplete())}
+            onDelete={() => void onDelete()}
+          >
             {card}
           </SwipeActions>
         </div>

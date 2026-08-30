@@ -131,6 +131,27 @@ export async function appendCompletion(
   return { ...task, completed };
 }
 
+/**
+ * Desfaz a conclusão de UMA ocorrência. O intervalo vem do cliente porque o dia é local dele: o
+ * Worker roda em UTC e não tem como saber onde o dia do usuário começa.
+ */
+export async function removeCompletions(
+  db: D1Database,
+  userId: string,
+  id: string,
+  from: number,
+  to: number,
+): Promise<Task | null> {
+  const task = await getTask(db, userId, id);
+  if (!task) return null;
+  const completed = task.completed.filter((at) => at < from || at > to);
+  await db
+    .prepare(`UPDATE tasks SET completed=? WHERE user_id=? AND id=?`)
+    .bind(JSON.stringify(completed), userId, id)
+    .run();
+  return { ...task, completed };
+}
+
 export async function updateTask(
   db: D1Database,
   userId: string,

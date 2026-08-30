@@ -15,7 +15,7 @@ import { Button } from "./ui/button";
 import { updateTask } from "@/functions/api";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeftIcon, CheckIcon, Loader2, Trash2Icon } from "lucide-react";
+import { ChevronLeftIcon, CheckIcon, Loader2, RotateCcwIcon, Trash2Icon } from "lucide-react";
 import { getCompletionDate, isTaskModified, upsertTaskWithRecurrence } from "@/functions/functions";
 import {
   FORM_VIEWS,
@@ -83,7 +83,7 @@ export function EditTaskContent({
   useEffect(() => {
     if (!open) setView("root");
   }, [open]);
-  const { onComplete, onDelete } = useTaskActions(task);
+  const { onComplete, onUncomplete, onDelete } = useTaskActions(task, day);
   const completed = getCompletionDate(task, day) === true;
 
   const handleSubmit = async (values: TaskFormValues) => {
@@ -191,17 +191,18 @@ export function EditTaskContent({
           campo ele some — ali quem confirma é a própria escolha, e o Salvar é da tarefa inteira. */}
       {view === "root" && (
         <SheetFooter className="flex-row items-center gap-2 pt-4">
+          {/* Concluída não desabilita mais o botão: ele vira a saída — errar o toque não pode
+              custar a tarefa. */}
           <Button
             variant="ghost"
-            disabled={completed}
             className="h-12 flex-1 cursor-pointer gap-2 rounded-full"
             onClick={() => {
-              void onComplete();
+              void (completed ? onUncomplete() : onComplete());
               onClose();
             }}
           >
-            <CheckIcon className="size-4" />
-            {completed ? copy.task.completed : copy.task.complete}
+            {completed ? <RotateCcwIcon className="size-4" /> : <CheckIcon className="size-4" />}
+            {completed ? copy.task.uncomplete : copy.task.complete}
           </Button>
 
           <Button

@@ -41,3 +41,44 @@ describe("POST /tasks/:id/complete", () => {
     expect(res.status).toBe(404);
   });
 });
+
+describe("DELETE /tasks/:id/complete", () => {
+  const from = new Date(2026, 6, 3, 0, 0, 0).getTime();
+  const to = new Date(2026, 6, 3, 23, 59, 59, 999).getTime();
+
+  it("removes only the completion inside the range", async () => {
+    const other = new Date(2026, 6, 4, 10).getTime();
+    await insertTask(env.DB, "u4", {
+      id: "unc1",
+      title: "Task",
+      date: new Date(2026, 6, 3).getTime(),
+      duration: "10m",
+      priority: 0,
+      repeat: "Daily",
+      completed: [new Date(2026, 6, 3, 10).getTime(), other],
+    });
+
+    const res = await app.request(
+      `/tasks/unc1/complete?from=${from}&to=${to}`,
+      { method: "DELETE" },
+      env,
+    );
+    expect(res.status).toBe(200);
+    const body = await res.json<{ task: Task }>();
+    expect(body.task.completed).toEqual([other]);
+  });
+
+  it("400s on a range that isn't two numbers", async () => {
+    const res = await app.request("/tasks/unc1/complete?from=abc&to=1", { method: "DELETE" }, env);
+    expect(res.status).toBe(400);
+  });
+
+  it("404s for a missing task", async () => {
+    const res = await app.request(
+      `/tasks/nope/complete?from=${from}&to=${to}`,
+      { method: "DELETE" },
+      env,
+    );
+    expect(res.status).toBe(404);
+  });
+});

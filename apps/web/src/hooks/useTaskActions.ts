@@ -3,7 +3,7 @@ import { toast } from "sonner";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { completeTask, createTask, deleteTask, updateTask } from "@/functions/api";
+import { completeTask, createTask, deleteTask, uncompleteTask, updateTask } from "@/functions/api";
 import { upsertTaskWithRecurrence } from "@/functions/functions";
 import type { TaskInput } from "@dailify/shared";
 import type { TaskProps } from "@/types/types";
@@ -12,12 +12,33 @@ import type { TaskProps } from "@/types/types";
  * Concluir/excluir uma tarefa — compartilhado pelo menu (⋮) do cartão e pelo painel de edição.
  * As escritas são otimistas: a lista muda na hora e volta ao estado anterior se o servidor recusar.
  */
-export function useTaskActions(task: TaskProps) {
+export function useTaskActions(task: TaskProps, day: Date = new Date()) {
   const { tasks, setTasks, selectedDay } = useDailify();
   const { getToken } = useAuth();
 
   /** O que restaura a lista quando o servidor recusa o que já foi mostrado na tela. */
   const rollback = (previous: TaskProps[]) => setTasks(previous);
+
+  /** Reabre a ocorrência DESTE dia: a recorrente é concluída por ocorrência, não de uma vez. */
+  const onUncomplete = async () => {
+    const previous = tasks ?? [];
+    const from = new Date(day).setHours(0, 0, 0, 0);
+    const to = new Date(day).setHours(23, 59, 59, 999);
+    const reopened: TaskProps = {
+      ...task,
+      completed: task.completed.filter((at) => at < from || at > to),
+    };
+    setTasks(upsertTaskWithRecurrence(previous, reopened, selectedDay));
+
+    const token = await getToken();
+    if (!token) return rollback(previous);
+
+    const { error } = await uncompleteTask(token, task.id, day);
+    if (error) {
+      rollback(previous);
+      toast.error(copy.task.uncompleteError, { description: error.message });
+    }
+  };
 
   const onComplete = async () => {
     const previous = tasks ?? [];
@@ -99,5 +120,11 @@ export function useTaskActions(task: TaskProps) {
     return true;
   };
 
-  return { onComplete, onDelete, onPatch, onRename: (title: string) => onPatch({ title }) };
+  return {
+    onComplete,
+    onUncomplete,
+    onDelete,
+    onPatch,
+    onRename: (title: string) => onPatch({ title }),
+  };
 }
