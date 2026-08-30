@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowUpIcon, LinkIcon, Loader2Icon } from "lucide-react";
@@ -27,6 +27,35 @@ interface TaskComposerProps {
 export function TaskComposer({ submitting, className, onSubmit }: TaskComposerProps): JSX.Element {
   const [input, setInput] = useState("");
   const [focused, setFocused] = useState(false);
+  const field = useRef<HTMLInputElement>(null);
+
+  // "/" e "n" caem no campo, Esc sai dele: capturar é o único jeito de a tecla valer na página
+  // inteira. Não rouba a tecla de quem já está escrevendo em algum lugar, nem de uma folha aberta.
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && document.activeElement === field.current) {
+        field.current?.blur();
+        return;
+      }
+
+      if (event.key !== "/" && event.key !== "n") return;
+      if (event.metaKey || event.ctrlKey || event.altKey) return;
+      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+
+      const target = event.target;
+      if (
+        target instanceof HTMLElement &&
+        (target.isContentEditable || target.closest("input,textarea"))
+      )
+        return;
+
+      event.preventDefault();
+      field.current?.focus();
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, []);
 
   const parsed = useMemo(() => parseTaskText(input), [input]);
   const canSubmit = Boolean(parsed.text && parsed.date) && !submitting;
@@ -134,6 +163,7 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
         </Label>
         {/* input, não textarea: a captura é de uma frase só, e o Enter já submete pelo form. */}
         <input
+          ref={field}
           id="composer-text"
           type="text"
           value={input}
@@ -144,6 +174,13 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
           autoComplete="off"
           className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"
         />
+
+        {/* A tecla só existe se alguém contar que existe. Some no foco: aí o campo já é o assunto. */}
+        {!focused && (
+          <kbd className="hidden shrink-0 rounded-md border border-surface-line px-1.5 py-0.5 font-mono text-2xs text-muted-foreground md:inline-block">
+            /
+          </kbd>
+        )}
 
         <button
           type="submit"
