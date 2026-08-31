@@ -86,6 +86,12 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     }
   }, [userId]);
 
+  // O cache acompanha a TELA, não só o que veio do servidor: uma tarefa criada offline vive no
+  // estado e na fila, e sem isto ela sumia ao fechar o app — só voltava depois do sync.
+  useEffect(() => {
+    if (userId && tasks) cacheTasks(userId, tasks);
+  }, [userId, tasks]);
+
   // 📅 Função principal para carregar as tasks
   const getTasks = useCallback(async () => {
     if (!userId || !user) return;
@@ -97,7 +103,14 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
 
       // A fila sobe ANTES da leitura: sem isso o servidor devolveria o estado velho e a tela
       // andaria pra trás por um instante.
-      if (userId) await flushQueue(userId, token);
+      if (userId) {
+        const { dropped } = await flushQueue(userId, token);
+        // Descartada = o servidor recusou (quota, tarefa que já não existe). A tarefa vai sumir da
+        // tela no fetch logo abaixo, e sumir sem explicação parece perda de dado.
+        if (dropped) {
+          toast.error(copy.sync.dropped.replace("{n}", String(dropped)));
+        }
+      }
 
       const { tasks: fetched, error } = await getTasksForMonth(token, selectedDay);
 
@@ -115,12 +128,12 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       }
 
       setTasks(fetched);
-      if (userId) cacheTasks(userId, fetched);
     } catch {
       // Sem isto o app trava no spinner para sempre: a exceção pulava o `setIsLoading(null)` e o
-      // gate lá embaixo (`isLoading && !tasks`) nunca liberava. `setTasks([])` é o que destrava —
-      // a tela então mostra o estado vazio, que é honesto, em vez de um "carregando" eterno.
-      setTasks([]);
+      // gate lá embaixo (`isLoading && !tasks`) nunca liberava. `setTasks([])` é o que destrava.
+      // Mas só quando NÃO há nada na tela: offline o Clerk falha ao renovar o token e cai aqui —
+      // zerar ali apagaria a agenda que o cache tinha acabado de pintar.
+      if (!tasks?.length) setTasks([]);
       toast.error(copy.loading.tasksError);
     } finally {
       setIsLoading(null);
@@ -145,18 +158,22 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isLoaded || !userId) return;
 
-    const revalidate = () => {
+    const revalidate = (force = false) => {
       if (document.visibilityState !== "visible") return;
-      if (Date.now() - lastFetch.current < REVALIDATE_AFTER_MS) return;
+      if (!force && Date.now() - lastFetch.current < REVALIDATE_AFTER_MS) return;
       lastFetch.current = Date.now();
       getTasks();
     };
 
-    document.addEventListener("visibilitychange", revalidate);
-    window.addEventListener("online", revalidate);
+    const onVisible = () => revalidate();
+    // Reconectar ignora o piso: é o momento exato em que a fila tem que subir.
+    const onOnline = () => revalidate(true);
+
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("online", onOnline);
     return () => {
-      document.removeEventListener("visibilitychange", revalidate);
-      window.removeEventListener("online", revalidate);
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("online", onOnline);
     };
   }, [isLoaded, userId, getTasks]);
 

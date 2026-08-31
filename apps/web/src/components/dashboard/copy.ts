@@ -55,6 +55,7 @@ export const copy = {
     offline: "Sem conexão",
     onePending: "1 pendente",
     manyPending: "{n} pendentes",
+    dropped: "{n} alteração(ões) não foram aceitas pelo servidor",
   },
 
   loading: {

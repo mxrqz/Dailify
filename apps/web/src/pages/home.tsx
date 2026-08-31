@@ -11,7 +11,7 @@ import { WeekStrip } from "@/components/dashboard/week-strip";
 import { TaskComposer, type ComposerValues } from "@/components/dashboard/task-composer";
 import { createTask } from "@/functions/api";
 import { upsertTaskById } from "@/functions/functions";
-import { enqueue } from "@/functions/offline";
+import { enqueue, newTaskId } from "@/functions/offline";
 import type { ParsedTask } from "@/functions/parse-task";
 import { useEntitlements } from "@/hooks/useEntitlements";
 
@@ -102,7 +102,7 @@ export default function Home() {
     // O id nasce aqui, não no servidor: sem rede a tarefa precisa existir na tela e na fila com
     // uma identidade estável, e o upsert do servidor aceita o id do cliente sem duplicar.
     const at = Date.now();
-    const input = { ...composerTaskInput(parsed), id: crypto.randomUUID(), updatedAt: at };
+    const input = { ...composerTaskInput(parsed), id: newTaskId(), updatedAt: at };
     const previous = tasks ?? [];
     const optimistic = { ...input, id: input.id, completed: [] };
     setTasks(upsertTaskById(previous, optimistic));

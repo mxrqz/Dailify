@@ -17,6 +17,14 @@ export type Mutation =
 const key = (userId: string, what: "tasks" | "outbox") => `dailify:${what}:${userId}`;
 
 /**
+ * Id da tarefa nascido no cliente. `crypto.randomUUID` só existe em contexto seguro — testar no
+ * celular por `http://192.168.x.x` cairia num `undefined is not a function` bem no botão de criar.
+ */
+export const newTaskId = (): string =>
+  globalThis.crypto?.randomUUID?.() ??
+  `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
+
+/**
  * `localStorage` e não IndexedDB: a agenda de um mês são dezenas de KB, muito abaixo dos 5MB, e o
  * síncrono aqui custa ~1ms. Se um dia isso virar histórico inteiro, aí sim vale a mudança.
  *
