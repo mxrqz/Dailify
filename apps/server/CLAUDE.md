@@ -32,8 +32,13 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
   (`@dailify/shared`) by capability; `-1` = unlimited. The client gate is cosmetic — this is the
   real one (epic `d69`).
 - **Todo body de tarefa passa por `lib/task-input.ts`** (`parseNewTask` / `parseTaskFields`) — não
-  validar campo solto na rota. O `id` do POST é **sempre** do servidor (`nanoid`): o PK do D1 é
-  global, então id vindo do cliente colide entre contas.
+  validar campo solto na rota. O `id` do POST **pode** vir do cliente (`parseClientId` valida só o
+  formato): é o que permite à fila offline reenviar uma criação sem duplicar a tarefa que já está na
+  tela. O PK do D1 é global, e quem impede colisão entre contas é o `WHERE tasks.user_id =
+  excluded.user_id` do upsert (`db/tasks.ts`) — quando ele recusa, `insertTask` devolve `null` e a
+  rota responde **409** em vez de fingir sucesso.
+- **`updatedAt` é o carimbo do LWW** e atravessa o validador: a fila offline sobe com a hora da
+  edição, não a do envio. `stampUpdatedAt` (`@dailify/shared`) recusa relógio adiantado além de 5min.
 - **Dates are epoch-ms `number`s** in/out (same `Task` as the web). The month read expands recurring
   server-side (`expandRecurringTask`) and dedupes by `` `${id}-${date}` `` before returning.
 - **`PATCH /tasks/:id?occurrence=<epoch>`** = "editar só esta": a instância vira tarefa própria e a

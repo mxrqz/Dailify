@@ -36,6 +36,7 @@ export const copy = {
     save: "2 meses grátis",
     perMonth: "/mês",
     perYear: "/ano",
+    savings: "Economize {v}",
     freePrice: "Grátis",
     freeNote: "pra sempre",
     recommendedBadge: "Recomendado",

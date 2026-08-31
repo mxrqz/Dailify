@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { PLAN_PERMISSIONS } from "@dailify/shared";
+import { PLAN_PERMISSIONS, formatPrice, yearlySavings } from "@dailify/shared";
 
 import { PLAN_PRICING, type PlanRole } from "@/consts/pricing";
 import { cn } from "@/lib/utils";
@@ -108,7 +108,7 @@ export function PlanCards({
                   <>
                     <div className="flex items-baseline gap-1.5">
                       <span className="font-mono text-3xl font-semibold text-foreground">
-                        {cycle === "monthly" ? pricing.monthly : pricing.yearly}
+                        {formatPrice(cycle === "monthly" ? pricing.monthly : pricing.yearly)}
                       </span>
                       <span className="text-sm text-muted-foreground">
                         {cycle === "monthly" ? copy.billing.perMonth : copy.billing.perYear}
@@ -118,7 +118,7 @@ export function PlanCards({
                     <span
                       className={cn("text-xs text-success", cycle === "monthly" && "invisible")}
                     >
-                      {pricing.yearlySavings}
+                      {copy.billing.savings.replace("{v}", formatPrice(yearlySavings(pricing)))}
                     </span>
                   </>
                 ) : (

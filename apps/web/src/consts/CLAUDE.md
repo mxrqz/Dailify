@@ -6,11 +6,14 @@
 
 - **`apiURL`** (`import.meta.env.VITE_API_URL`) = `apps/server` (Hono/Workers, same repo) — every
   read and write goes there via `@/functions/api`. **`dailifyURL`** = prod site.
-- **`PLAN_ID`** is the single source for plan ids (`free` / `pro` / `pro+ai`); **`planMap`** maps them
-  to labels. Always use `PLAN_ID.*` for checkout ids — a raw string typo silently breaks checkout
-  (this bit us before: `"pro-ai"` vs `"pro+ai"`). `conts.test.ts` asserts every `PLAN_ID` is a
-  `planMap` key; keep it green. (`@dailify/shared` also exports a `PLAN_ID` with the same values,
-  used server-side and for `PLAN_PERMISSIONS` lookups — the two aren't merged, keep them in sync.)
+- **`PLAN_ID`** vem de `@dailify/shared` e é só **reexportado** aqui (havia duas declarações com os
+  mesmos ids; duas listas iguais só ficam iguais até alguém mexer numa). **`planMap`** mapeia id →
+  rótulo e fica no web, porque o servidor nunca mostra plano pra ninguém. Sempre use `PLAN_ID.*` nos
+  ids de checkout — string crua com typo quebra o checkout em silêncio (já aconteceu: `"pro-ai"` vs
+  `"pro+ai"`). `conts.test.ts` garante que todo `PLAN_ID` é chave de `planMap`; mantenha verde.
+- **`pricing.ts`** é reexport de `@dailify/shared`: o preço vive lá, em **centavos** (`PLAN_PRICING`),
+  com `formatPrice`/`yearlySavings`. Ficar no shared é o que permite ao servidor comparar o
+  anunciado com o cobrado (`apps/server/test/pricing-stripe.test.ts`).
 
 ## Colors are token class names, not hex
 
