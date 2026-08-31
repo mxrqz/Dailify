@@ -208,6 +208,7 @@ export const copy = {
     editPriority: "Editar prioridade",
     editDuration: "Editar duração",
     deleteError: "Não foi possível excluir a tarefa",
+    occurrenceDeleted: "Ocorrência excluída",
     deleted: "Tarefa excluída",
     undo: "Desfazer",
     undoError: "Não foi possível restaurar a tarefa",

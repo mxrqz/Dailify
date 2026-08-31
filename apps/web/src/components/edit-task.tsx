@@ -8,7 +8,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "./ui/sheet";
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
+import { RecurrenceScopeDialog } from "@/components/dashboard/recurrence-scope-dialog";
 import { TaskProps } from "@/types/types";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { useDailify } from "./dailifyContext";
@@ -86,7 +86,11 @@ export function EditTaskContent({
   useEffect(() => {
     if (!open) setView("root");
   }, [open]);
-  const { onComplete, onUncomplete, onDelete } = useTaskActions(task, day);
+  // onDeleted fecha a folha só depois que a exclusão aconteceu — fechar no clique desmontaria
+  // o diálogo de escopo antes de o usuário escolher.
+  const { onComplete, onUncomplete, onDelete, deleteDialog } = useTaskActions(task, day, {
+    onDeleted: onClose,
+  });
   const completed = getCompletionDate(task, day) === true;
 
   // Tarefa recorrente não tem um "salvar" óbvio: editar a série move todos os dias, editar o dia
@@ -241,34 +245,15 @@ export function EditTaskContent({
       )}
 
       {/* A escolha só aparece pra tarefa recorrente, e só na hora de salvar: perguntar antes seria
-          ruído em toda edição. "Só esta" vem primeiro por ser o caso comum (remarcar um dia). */}
-      <Dialog
+          ruído em toda edição. O diálogo gêmeo, o de excluir, vem do hook. */}
+      <RecurrenceScopeDialog
         open={pendingValues !== null}
         onOpenChange={(open) => !open && setPendingValues(null)}
-      >
-        <DialogContent className="rounded-panel border-surface-line bg-surface-card sm:max-w-sm">
-          <DialogHeader>
-            <DialogTitle>{copy.form.scopeTitle}</DialogTitle>
-            <DialogDescription>{copy.form.scopeDescription}</DialogDescription>
-          </DialogHeader>
-
-          <div className="flex flex-col gap-2">
-            <Button
-              className="h-12 cursor-pointer rounded-full bg-accent-primary text-primary-foreground hover:bg-accent-hover"
-              onClick={() => applyScope(task.date)}
-            >
-              {copy.form.scopeOccurrence}
-            </Button>
-            <Button
-              variant="outline"
-              className="h-12 cursor-pointer rounded-full border-surface-line"
-              onClick={() => applyScope(undefined)}
-            >
-              {copy.form.scopeSeries}
-            </Button>
-          </div>
-        </DialogContent>
-      </Dialog>
+        description={copy.form.scopeDescription}
+        onOccurrence={() => applyScope(task.date)}
+        onSeries={() => applyScope(undefined)}
+      />
+      {deleteDialog}
 
       {/* Fica no fim do DOM de propósito, ainda que apareça no topo: o Radix foca o primeiro
           elemento focável ao abrir, e um botão de excluir nessa posição significa abrir o painel
@@ -279,7 +264,6 @@ export function EditTaskContent({
         aria-label={copy.task.delete}
         onClick={() => {
           void onDelete();
-          onClose();
         }}
         className="absolute top-3 right-12 size-8 cursor-pointer text-muted-foreground hover:text-destructive"
       >

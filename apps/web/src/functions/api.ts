@@ -135,9 +135,18 @@ export async function uncompleteTask(
   return { task: data?.task, error };
 }
 
-export async function deleteTask(token: string, id: string): Promise<{ error?: ApiError }> {
-  const { error } = await request(`/tasks/${id}`, token, { method: "DELETE" });
-  return { error };
+export async function deleteTask(
+  token: string,
+  id: string,
+  /** Epoch-ms da ocorrência quando a exclusão vale só pra ela: sai da série via `exdates`, e a
+   *  série volta em `series` para o cliente reexpandir o mês sem aquele dia. */
+  occurrence?: number,
+): Promise<{ series?: Task; error?: ApiError }> {
+  const query = occurrence === undefined ? "" : `?occurrence=${occurrence}`;
+  const { data, error } = await request<{ series?: Task }>(`/tasks/${id}${query}`, token, {
+    method: "DELETE",
+  });
+  return { series: data?.series, error };
 }
 
 export async function createTaskVoice(token: string, formData: FormData): Promise<Response> {

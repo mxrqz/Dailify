@@ -28,44 +28,49 @@ function TaskActions({
   day: Date;
   completed: boolean;
 }): JSX.Element {
-  const { onComplete, onUncomplete, onDelete } = useTaskActions(task, day);
+  const { onComplete, onUncomplete, onDelete, deleteDialog } = useTaskActions(task, day);
 
   return (
-    <Popover>
-      <PopoverTrigger
-        aria-label={copy.task.options}
-        onClick={(e) => e.stopPropagation()}
-        className="rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
-      >
-        <EllipsisVerticalIcon className="size-4" />
-      </PopoverTrigger>
-
-      <PopoverContent align="end" className="flex w-40 flex-col gap-1 p-1">
-        <Button
-          variant="ghost"
-          className="justify-start gap-2"
-          onClick={(e) => {
-            e.stopPropagation();
-            void (completed ? onUncomplete() : onComplete());
-          }}
+    <>
+      <Popover>
+        <PopoverTrigger
+          aria-label={copy.task.options}
+          onClick={(e) => e.stopPropagation()}
+          className="rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
         >
-          {completed ? <RotateCcwIcon className="size-4" /> : <CheckIcon className="size-4" />}
-          {completed ? copy.task.uncomplete : copy.task.complete}
-        </Button>
+          <EllipsisVerticalIcon className="size-4" />
+        </PopoverTrigger>
 
-        <Button
-          variant="ghost"
-          className="justify-start gap-2 text-destructive hover:text-destructive"
-          onClick={(e) => {
-            e.stopPropagation();
-            void onDelete();
-          }}
-        >
-          <Trash2Icon className="size-4" />
-          {copy.task.delete}
-        </Button>
-      </PopoverContent>
-    </Popover>
+        <PopoverContent align="end" className="flex w-40 flex-col gap-1 p-1">
+          <Button
+            variant="ghost"
+            className="justify-start gap-2"
+            onClick={(e) => {
+              e.stopPropagation();
+              void (completed ? onUncomplete() : onComplete());
+            }}
+          >
+            {completed ? <RotateCcwIcon className="size-4" /> : <CheckIcon className="size-4" />}
+            {completed ? copy.task.uncomplete : copy.task.complete}
+          </Button>
+
+          <Button
+            variant="ghost"
+            className="justify-start gap-2 text-destructive hover:text-destructive"
+            onClick={(e) => {
+              e.stopPropagation();
+              void onDelete();
+            }}
+          >
+            <Trash2Icon className="size-4" />
+            {copy.task.delete}
+          </Button>
+        </PopoverContent>
+      </Popover>
+
+      {/* Fora do Popover: ele fecha no clique de excluir, e levaria o diálogo junto. */}
+      {deleteDialog}
+    </>
   );
 }
 
@@ -103,7 +108,10 @@ export function DayTaskRow({
   const [open, setOpen] = useState(false);
   const sheetEditing = useMediaQuery(SHEET_EDITING);
   const data = taskToCardData(task, day);
-  const { onPatch, onRename, onComplete, onUncomplete, onDelete } = useTaskActions(task, day);
+  const { onPatch, onRename, onComplete, onUncomplete, onDelete, deleteDialog } = useTaskActions(
+    task,
+    day,
+  );
 
   const onOpenChange = (next: boolean) => setOpen(next);
 
@@ -173,6 +181,7 @@ export function DayTaskRow({
       )}
 
       <EditTaskContent task={task} day={day} open={open} onClose={() => setOpen(false)} />
+      {deleteDialog}
     </EditTask>
   );
 }

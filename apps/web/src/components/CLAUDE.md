@@ -23,8 +23,12 @@ On create success: `setTasks(upsertTaskById(tasks ?? [], task))`. On EDIT, use
 `upsertTaskWithRecurrence(tasks ?? [], task, selectedDay)` — recurring instances share the original's
 id, so `upsertTaskById` would swap only the first one and leave the rest stale. Complete/delete/patch apply the
 change to `tasks` **immediately**, keep the previous array, and restore it if the server refuses
-(`hooks/useTaskActions.ts`) — waiting for the round-trip made every tap feel dead on mobile. Delete
+(`hooks/useTaskActions.tsx`) — waiting for the round-trip made every tap feel dead on mobile. Delete
 also offers "Desfazer" in the toast, which recreates the task with the same id.
+Numa tarefa **recorrente**, excluir e editar primeiro perguntam o escopo: o hook devolve
+`deleteDialog` (por isso ele é `.tsx`) e quem o usa renderiza — "só esta ocorrência" manda
+`?occurrence=` e a data entra no `exdates` da série, sem apagar nada. Essa exclusão não tem
+"Desfazer": não há rota que tire uma data do `exdates`.
 The day view's write path is **`dashboard/day-task-row.tsx`** for complete/delete actions.
 There is **no** `newTask` mechanism anymore (it only mutated a local copy and desynced — removed in
 `pz9.3`). If you add a write, surface it into `tasks`, not a component-local list.

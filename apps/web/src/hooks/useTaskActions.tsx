@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import { toast } from "sonner";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
+import { RecurrenceScopeDialog } from "@/components/dashboard/recurrence-scope-dialog";
 import { completeTask, createTask, deleteTask, uncompleteTask, updateTask } from "@/functions/api";
 import type { ApiError } from "@/functions/api";
 import { upsertTaskWithRecurrence } from "@/functions/functions";
@@ -17,9 +19,14 @@ import type { TaskProps } from "@/types/types";
  * guarda a mutação na fila (é o que faz o app funcionar sem conexão); falha de SERVIDOR desfaz,
  * porque aí a recusa é definitiva.
  */
-export function useTaskActions(task: TaskProps, day: Date = new Date()) {
+export function useTaskActions(
+  task: TaskProps,
+  day: Date = new Date(),
+  { onDeleted }: { onDeleted?: () => void } = {},
+) {
   const { tasks, setTasks, selectedDay } = useDailify();
   const { getToken, userId } = useAuth();
+  const [scopeOpen, setScopeOpen] = useState(false);
 
   const rollback = (previous: TaskProps[]) => setTasks(previous);
 
@@ -112,7 +119,7 @@ export function useTaskActions(task: TaskProps, day: Date = new Date()) {
       toast.success(copy.task.restored);
   };
 
-  const onDelete = async () => {
+  const removeSeries = async () => {
     const at = Date.now();
     const previous = tasks ?? [];
     setTasks(previous.filter((t) => t.id !== task.id));
@@ -127,6 +134,7 @@ export function useTaskActions(task: TaskProps, day: Date = new Date()) {
     // Um 500 aqui não pode passar por sucesso: antes o cartão sumia da tela com a tarefa viva.
     const { error } = await deleteTask(token, task.id);
     if (!settle(error, previous, mutation, copy.task.deleteError)) return;
+    onDeleted?.();
 
     // Desfazer no lugar de um diálogo de confirmação: não cobra um toque a mais das exclusões
     // certas, e cobre a errada.
@@ -136,6 +144,65 @@ export function useTaskActions(task: TaskProps, day: Date = new Date()) {
       action: { label: copy.task.undo, onClick: () => void restore(previous) },
     });
   };
+
+  /**
+   * Exclui só a ocorrência deste dia: a série continua inteira e a data entra no `exdates` dela.
+   * Sem "Desfazer" — reverter seria tirar a data do `exdates`, e não há rota pra isso; recriar a
+   * tarefa (o que o `restore` faz) devolveria uma cópia solta no lugar da ocorrência.
+   */
+  const removeOccurrence = async () => {
+    const at = Date.now();
+    const previous = tasks ?? [];
+    setTasks(previous.filter((t) => !(t.id === task.id && t.date === task.date)));
+
+    const mutation: Mutation = {
+      op: "delete-occurrence",
+      taskId: task.id,
+      occurrence: task.date,
+      at,
+    };
+    const { token, error: authError } = await authToken();
+    if (!token) {
+      settle(authError, previous, mutation, copy.task.deleteError);
+      return;
+    }
+
+    const { series, error } = await deleteTask(token, task.id, task.date);
+    if (!settle(error, previous, mutation, copy.task.deleteError)) return;
+    // Reexpandir a série com o `exdates` novo é mais fiel que o filtro otimista acima: é o servidor
+    // dizendo quais dias sobraram.
+    if (series) setTasks(upsertTaskWithRecurrence(previous, series, selectedDay));
+    onDeleted?.();
+    toast.success(copy.task.occurrenceDeleted, { description: task.title });
+  };
+
+  /** Recorrente pergunta o escopo antes; o resto apaga direto. */
+  const onDelete = async () => {
+    if (task.repeat !== "Off") {
+      setScopeOpen(true);
+      return;
+    }
+    await removeSeries();
+  };
+
+  // Renderizado por quem usa o hook: os três pontos que excluem (menu ⋮, swipe e folha de edição)
+  // precisam do diálogo, e duplicar a UI em cada um é que seria o erro.
+  const deleteDialog = (
+    <RecurrenceScopeDialog
+      open={scopeOpen}
+      onOpenChange={setScopeOpen}
+      description={copy.form.scopeDeleteDescription}
+      destructive
+      onOccurrence={() => {
+        setScopeOpen(false);
+        void removeOccurrence();
+      }}
+      onSeries={() => {
+        setScopeOpen(false);
+        void removeSeries();
+      }}
+    />
+  );
 
   /**
    * Edição campo a campo pelo cartão (título, duração, prioridade, recorrência, links). Devolve
@@ -164,6 +231,7 @@ export function useTaskActions(task: TaskProps, day: Date = new Date()) {
     onComplete,
     onUncomplete,
     onDelete,
+    deleteDialog,
     onPatch,
     onRename: (title: string) => onPatch({ title }),
   };

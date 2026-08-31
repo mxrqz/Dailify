@@ -12,7 +12,10 @@ export type Mutation =
   | { op: "patch"; taskId: string; patch: Partial<TaskInput>; at: number }
   | { op: "complete"; taskId: string; at: number }
   | { op: "uncomplete"; taskId: string; day: number; at: number }
-  | { op: "delete"; taskId: string; at: number };
+  | { op: "delete"; taskId: string; at: number }
+  // Op própria, não um `delete` com campo extra: excluir a terça de uma série não pode colapsar
+  // como exclusão da tarefa (o colapso do `delete` engole o create e os patches pendentes dela).
+  | { op: "delete-occurrence"; taskId: string; occurrence: number; at: number };
 
 const key = (userId: string, what: "tasks" | "outbox") => `dailify:${what}:${userId}`;
 
@@ -177,5 +180,7 @@ async function send(token: string, mutation: Mutation): Promise<ApiError | undef
       return (await uncompleteTask(token, mutation.taskId, new Date(mutation.day))).error;
     case "delete":
       return (await deleteTask(token, mutation.taskId)).error;
+    case "delete-occurrence":
+      return (await deleteTask(token, mutation.taskId, mutation.occurrence)).error;
   }
 }

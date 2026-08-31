@@ -79,3 +79,28 @@ describe("collapseQueue", () => {
     expect(out.map((m) => `${m.op}:${m.taskId}`)).toEqual(["patch:a", "delete:b"]);
   });
 });
+
+describe("delete-occurrence", () => {
+  const removeOccurrence = (taskId: string, occurrence: number, at = 5): Mutation => ({
+    op: "delete-occurrence",
+    taskId,
+    occurrence,
+    at,
+  });
+
+  // O motivo de ser uma op própria: como `delete`, ela engoliria os patches pendentes da série.
+  test("não engole as outras mutações da mesma tarefa", () => {
+    const queue = [patch("a", { title: "novo" }), removeOccurrence("a", 111)];
+    expect(collapseQueue(queue).map((m) => m.op)).toEqual(["patch", "delete-occurrence"]);
+  });
+
+  test("excluir a série descarta a exclusão de ocorrência pendente", () => {
+    const queue: Mutation[] = [removeOccurrence("a", 111), { op: "delete", taskId: "a", at: 6 }];
+    expect(collapseQueue(queue)).toEqual([{ op: "delete", taskId: "a", at: 6 }]);
+  });
+
+  test("duas ocorrências diferentes continuam sendo duas", () => {
+    const queue = [removeOccurrence("a", 111), removeOccurrence("a", 222)];
+    expect(collapseQueue(queue)).toHaveLength(2);
+  });
+});
