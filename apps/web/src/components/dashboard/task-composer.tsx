@@ -3,6 +3,8 @@ import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { ArrowUpIcon, LinkIcon, Loader2Icon } from "lucide-react";
 
+import { TASK_LIMITS } from "@dailify/shared";
+
 import { copy } from "@/components/dashboard/copy";
 import { chipClass } from "@/components/dashboard/styles";
 import { Label } from "@/components/ui/label";
@@ -170,6 +172,7 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
           onChange={(e) => setInput(e.target.value)}
           onFocus={() => setFocused(true)}
           onBlur={() => setFocused(false)}
+          maxLength={TASK_LIMITS.titleMax}
           placeholder={copy.composer.textPlaceholder}
           autoComplete="off"
           className="min-w-0 flex-1 bg-transparent text-sm text-foreground placeholder:text-muted-foreground outline-none"

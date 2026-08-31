@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { LinkIcon, PencilIcon, PlusIcon, XIcon } from "lucide-react";
 
+import { TASK_LIMITS } from "@dailify/shared";
+
 import { copy } from "@/components/dashboard/copy";
 import { fieldClass } from "@/components/dashboard/styles";
 import { Button } from "@/components/ui/button";
@@ -8,8 +10,9 @@ import { Input } from "@/components/ui/input";
 import { linkLabel } from "@/functions/link-label";
 import { parseLinks } from "@/functions/parse-links";
 
-const MAX_LINKS = 10; // igual ao teto da rota; passar disso volta 400 do servidor
-const MAX_URL_LEN = 2048; // idem — mesmo teto de apps/server/src/routes/tasks.ts
+// A régua é uma só (`@dailify/shared`): estes dois números eram cópia do servidor, com o
+// comentário apontando pra um arquivo que o refactor já tinha movido.
+const { linksMax: MAX_LINKS, urlMax: MAX_URL_LEN } = TASK_LIMITS;
 
 const inputClass = `h-9 w-64 ${fieldClass}`;
 

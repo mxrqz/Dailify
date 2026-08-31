@@ -1,17 +1,19 @@
-import { normalizeRepeat, type Task } from "@dailify/shared";
+import { DATE_RANGE, TASK_LIMITS, normalizeRepeat, type Task } from "@dailify/shared";
 
 /** Campos que o cliente pode ditar. `id`, `completed` e `exdates` são do servidor, nunca do body. */
 export type TaskFields = Partial<Omit<Task, "id" | "completed" | "exdates">>;
 
-const MAX_TITLE_LEN = 200;
-const MAX_DURATION_LEN = 20;
-const MAX_TAGS = 20;
-const MAX_TAG_LEN = 50;
-const MAX_LINKS = 10;
-const MAX_URL_LEN = 2048; // limite historico de navegador/proxy; nenhum link legitimo chega perto
-// epoch-ms plausivel. Fora dessa janela e lixo: segundos no lugar de ms, NaN, overflow de parse.
-const MIN_DATE = Date.UTC(2000, 0, 1);
-const MAX_DATE = Date.UTC(2100, 0, 1);
+// Os tetos vivem em `@dailify/shared` porque o formulario precisa da MESMA regua: enquanto eram
+// locais, o cliente oferecia mais do que esta porta aceita.
+const {
+  titleMax: MAX_TITLE_LEN,
+  durationMax: MAX_DURATION_LEN,
+  tagsMax: MAX_TAGS,
+  tagMax: MAX_TAG_LEN,
+  linksMax: MAX_LINKS,
+  urlMax: MAX_URL_LEN,
+} = TASK_LIMITS;
+const { min: MIN_DATE, max: MAX_DATE } = DATE_RANGE;
 
 const field = (o: object, k: string): unknown => Reflect.get(o, k);
 

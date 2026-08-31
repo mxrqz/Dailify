@@ -5,6 +5,8 @@ import { CalendarIcon, ChevronDownIcon, ChevronRightIcon, XIcon } from "lucide-r
 import { toast } from "sonner";
 import { dayMap, weekDays, type Repeat } from "@dailify/shared";
 
+import { TASK_LIMITS } from "@dailify/shared";
+
 import { copy } from "@/components/dashboard/copy";
 import { LinksField } from "@/components/dashboard/links-field";
 import { DURATIONS } from "@/components/dashboard/task-meta-menus";
@@ -330,6 +332,8 @@ export function TaskForm({
                   addTag(tagDraft);
                 }}
                 onBlur={() => addTag(tagDraft)}
+                maxLength={TASK_LIMITS.tagMax}
+                disabled={tags.length >= TASK_LIMITS.tagsMax}
                 placeholder={copy.form.tagSearch}
                 aria-label={copy.form.tags}
                 className="ml-auto min-w-0 flex-1 bg-transparent text-right text-sm text-foreground outline-none placeholder:text-muted-foreground"
@@ -373,6 +377,7 @@ export function TaskForm({
               e.preventDefault();
               onView("root");
             }}
+            maxLength={TASK_LIMITS.titleMax}
             placeholder={copy.form.titlePlaceholder}
             aria-label={copy.form.title}
             // Mesma régua do campo de busca: texto puro, e a linha é um Separator.

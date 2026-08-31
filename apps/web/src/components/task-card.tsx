@@ -15,6 +15,8 @@ import { Badge } from "@/components/ui/badge";
  * Mocks da landing passam só os 4 campos base e nunca atingem este código, então a dependência
  * transativa do landing no dicionário do dashboard é segura e inevitável.
  */
+import { TASK_LIMITS } from "@dailify/shared";
+
 import { copy } from "@/components/dashboard/copy";
 import { priorityText, priorityTextColor } from "@/consts/conts";
 import { linkLabel } from "@/functions/link-label";
@@ -303,6 +305,7 @@ function TitleField({
       // `size` é o fallback do `field-sizing-content` (baseline só desde jun/2026): sem ele um
       // navegador antigo daria a largura padrão de ~20 caracteres em vez da do texto.
       size={draft.length || 1}
+      maxLength={TASK_LIMITS.titleMax}
       aria-label={copy.task.rename}
       onChange={(e) => setDraft(e.target.value)}
       onBlur={() => {
