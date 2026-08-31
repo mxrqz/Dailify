@@ -5,8 +5,10 @@
  * Estruturado plano (sem concatenação) pra permitir um locale `en` futuro (bd Dailify-1xy) — cada
  * chave é uma string final pronta pra renderizar.
  *
- * Não hard-codar números de plano aqui: limites vêm de `@dailify/shared` `PLAN_PERMISSIONS` e
- * preços do Stripe, resolvidos onde a pricing section é montada.
+ * Não hard-codar número de plano aqui. Limites vêm de `PLAN_PERMISSIONS` e preços de
+ * `PLAN_PRICING` (os dois em `@dailify/shared`), resolvidos no `PlanCards`. O preço ainda é um
+ * valor digitado — NÃO vem do Stripe, como esta nota já afirmou; quem confere se ele bate com a
+ * cobrança é `apps/server/test/pricing-stripe.test.ts`.
  */
 export const copy = {
   nav: {
