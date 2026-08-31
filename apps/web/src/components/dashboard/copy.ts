@@ -112,6 +112,7 @@ export const copy = {
     scopeOccurrence: "Só esta ocorrência",
     scopeSeries: "Todas as ocorrências",
     scopeDetached: "Ocorrência atualizada",
+    scopeDeleteDescription: "O que você quer excluir?",
     notificationsEnable: "Ativar neste dispositivo",
     notificationsDisable: "Desativar",
     notificationsOn: "Ativadas neste dispositivo.",

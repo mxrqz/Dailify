@@ -12,6 +12,7 @@ import {
   removeCompletions,
   deleteTask,
   detachOccurrence,
+  excludeOccurrence,
 } from "../db/tasks";
 import { enforceCreate } from "../db/limits";
 import { expandRecurringTask, type Task } from "@dailify/shared";
@@ -114,7 +115,20 @@ tasks.delete("/:id/complete", async (c) => {
 });
 
 tasks.delete("/:id", async (c) => {
-  await deleteTask(c.env.DB, c.get("userId"), c.req.param("id"));
+  const userId = c.get("userId");
+  const id = c.req.param("id");
+
+  // Mesmo contrato do PATCH: ?occurrence=<epoch-ms> mexe num dia só, sem ?occurrence apaga a série.
+  const occurrence = c.req.query("occurrence");
+  if (occurrence !== undefined) {
+    const at = Number(occurrence);
+    if (!Number.isInteger(at)) return fail(c, 400, "invalid occurrence");
+    const series = await excludeOccurrence(c.env.DB, userId, id, at);
+    if (!series) return fail(c, 404, "Recurring task not found");
+    return c.json({ series });
+  }
+
+  await deleteTask(c.env.DB, userId, id);
   return c.body(null, 204);
 });
 

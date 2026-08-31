@@ -209,6 +209,39 @@ export async function removeCompletions(
   return { ...task, completed, updatedAt, hash: taskHash({ ...task, completed }) };
 }
 
+function exdatesWith(master: Task, occurrence: number): number[] {
+  return [...new Set([...(master.exdates ?? []), occurrence])];
+}
+
+function setExdatesStatement(
+  db: D1Database,
+  userId: string,
+  id: string,
+  exdates: number[],
+): D1PreparedStatement {
+  return db
+    .prepare(`UPDATE tasks SET exdates=? WHERE user_id=? AND id=?`)
+    .bind(JSON.stringify(exdates), userId, id);
+}
+
+/**
+ * "Excluir só esta ocorrência": nada é apagado de fato — a data entra no `exdates` e a expansão
+ * para de gerar aquele dia. A série volta pro cliente reexpandir o mês.
+ */
+export async function excludeOccurrence(
+  db: D1Database,
+  userId: string,
+  id: string,
+  occurrence: number,
+): Promise<Task | null> {
+  const master = await getTask(db, userId, id);
+  if (!master || master.repeat === "Off") return null;
+
+  const exdates = exdatesWith(master, occurrence);
+  await setExdatesStatement(db, userId, id, exdates).run();
+  return { ...master, exdates };
+}
+
 /**
  * "Editar só esta ocorrência": a instância vira tarefa própria (sem recorrência) e a data original
  * entra no `exdates` da série, senão a expansão devolveria a ocorrência antiga junto com a nova.
@@ -224,7 +257,7 @@ export async function detachOccurrence(
   const master = await getTask(db, userId, id);
   if (!master || master.repeat === "Off") return null;
 
-  const exdates = [...new Set([...(master.exdates ?? []), occurrence])];
+  const exdates = exdatesWith(master, occurrence);
   const detached: Task = {
     ...master,
     ...fields,
@@ -238,9 +271,7 @@ export async function detachOccurrence(
   // batch = atômico: sem isso, um insert que falha deixaria a ocorrência apagada da série e sem
   // substituta — o dia simplesmente perderia a tarefa.
   await db.batch([
-    db
-      .prepare(`UPDATE tasks SET exdates=? WHERE user_id=? AND id=?`)
-      .bind(JSON.stringify(exdates), userId, id),
+    setExdatesStatement(db, userId, id, exdates),
     insertStatement(db, userId, detached),
   ]);
   // A série volta junto: o cliente precisa do `exdates` novo para reexpandir o mês sem a ocorrência.
