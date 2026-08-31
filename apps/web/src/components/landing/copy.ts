@@ -125,22 +125,13 @@ export const copy = {
     },
     freePrice: "Grátis",
     freeNote: "pra sempre",
+    // Só o CTA: nome, descrição e bullets vêm do `PlanCards` (pricing/copy.ts + PLAN_PERMISSIONS).
+    // Havia cópia de `name`/`description` aqui, idêntica à de lá e não renderizada por ninguém —
+    // editar essa cópia não mudava a landing, que é exatamente como uma divergência nasce.
     plans: {
-      free: {
-        name: "Free",
-        description: "Pra começar a organizar seu dia sem pagar nada.",
-        cta: "Começar grátis",
-      },
-      pro: {
-        name: "Pro",
-        description: "Mais tarefas por mês e recorrência ilimitada pra quem já vive no Dailify.",
-        cta: "Assinar Pro",
-      },
-      proAi: {
-        name: "Pro+AI",
-        description: "Tudo do Pro, mais criação de tarefa por voz.",
-        cta: "Assinar Pro+AI",
-      },
+      free: { cta: "Começar grátis" },
+      pro: { cta: "Assinar Pro" },
+      proAi: { cta: "Assinar Pro+AI" },
     },
     recommendedBadge: "Recomendado",
   },
