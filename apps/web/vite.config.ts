@@ -26,7 +26,10 @@ export default defineConfig(async ({ mode }) => ({
     // diário e um "recarregue" na cara do usuário é pedágio.
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['dailify_logo_2.png'],
+      includeAssets: ['dailify_logo_2.png', 'push-sw.js'],
+      // Em dev o SW só existe se pedirmos: sem isto, ligar notificações em `bun run dev` falharia
+      // ao registrar /sw.js.
+      devOptions: { enabled: true, type: 'module' },
       manifest: {
         name: 'Dailify',
         short_name: 'Dailify',
@@ -41,6 +44,10 @@ export default defineConfig(async ({ mode }) => ({
         ],
       },
       workbox: {
+        // Um service worker só: os handlers de push entram no gerado em vez de disputar o escopo.
+        importScripts: ['/push-sw.js'],
+        skipWaiting: true,
+        clientsClaim: true,
         // Só o shell: com png/jpg dentro, o precache subia pra ~7.8MB por causa das imagens da
         // landing — megabytes baixados no 3G de quem só queria abrir a agenda.
         globPatterns: ['**/*.{js,css,html,woff2}'],

@@ -15,6 +15,8 @@ export interface Task {
   updatedAt?: number;
   /** Hash do conteúdo (`taskHash`) — derivado, nunca guardado: quem lê recalcula. */
   hash?: string;
+  /** Ocorrências da série que viraram tarefa própria: a expansão pula estas datas. Só o servidor escreve. */
+  exdates?: number[]; // epoch ms
 }
 
 export type TaskInput = Omit<Task, "id" | "completed" | "hash"> & {

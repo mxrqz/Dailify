@@ -8,6 +8,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "./ui/sheet";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "./ui/dialog";
 import { TaskProps } from "@/types/types";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { useDailify } from "./dailifyContext";
@@ -79,6 +80,8 @@ export function EditTaskContent({
   const formId = useId();
   const [loading, setLoading] = useState<boolean>(false);
   const [view, setView] = useState<FormView>("root");
+  /** Valores segurando na mão enquanto o usuário escolhe entre a ocorrência e a série. */
+  const [pendingValues, setPendingValues] = useState<TaskFormValues | null>(null);
 
   useEffect(() => {
     if (!open) setView("root");
@@ -86,7 +89,23 @@ export function EditTaskContent({
   const { onComplete, onUncomplete, onDelete } = useTaskActions(task, day);
   const completed = getCompletionDate(task, day) === true;
 
+  // Tarefa recorrente não tem um "salvar" óbvio: editar a série move todos os dias, editar o dia
+  // clicado não é o que o PATCH fazia. Quem decide é o usuário, no diálogo abaixo.
   const handleSubmit = async (values: TaskFormValues) => {
+    if (task.repeat !== "Off") {
+      setPendingValues(values);
+      return;
+    }
+    await save(values);
+  };
+
+  const applyScope = (occurrence: number | undefined) => {
+    const values = pendingValues;
+    setPendingValues(null);
+    if (values) void save(values, occurrence);
+  };
+
+  const save = async (values: TaskFormValues, occurrence?: number) => {
     if (!user) {
       toast.warning(copy.form.authError);
       return;
@@ -122,7 +141,7 @@ export function EditTaskContent({
       return;
     }
 
-    const { task: updated, error } = await updateTask(token, task.id, taskData);
+    const { task: updated, series, error } = await updateTask(token, task.id, taskData, occurrence);
 
     if (error || !updated) {
       toast(copy.form.createError, {
@@ -133,8 +152,13 @@ export function EditTaskContent({
         },
       });
     } else {
-      toast.success(copy.form.updated);
-      setTasks(upsertTaskWithRecurrence(tasks ?? [], updated, selectedDay));
+      toast.success(occurrence === undefined ? copy.form.updated : copy.form.scopeDetached);
+      // A série vem primeiro: reexpandi-la é o que tira da lista a ocorrência que virou tarefa
+      // própria (ela some pelo `exdates` novo), antes de inserir a tarefa destacada.
+      const base = series
+        ? upsertTaskWithRecurrence(tasks ?? [], series, selectedDay)
+        : (tasks ?? []);
+      setTasks(upsertTaskWithRecurrence(base, updated, selectedDay));
       onClose();
     }
 
@@ -215,6 +239,36 @@ export function EditTaskContent({
           </Button>
         </SheetFooter>
       )}
+
+      {/* A escolha só aparece pra tarefa recorrente, e só na hora de salvar: perguntar antes seria
+          ruído em toda edição. "Só esta" vem primeiro por ser o caso comum (remarcar um dia). */}
+      <Dialog
+        open={pendingValues !== null}
+        onOpenChange={(open) => !open && setPendingValues(null)}
+      >
+        <DialogContent className="rounded-panel border-surface-line bg-surface-card sm:max-w-sm">
+          <DialogHeader>
+            <DialogTitle>{copy.form.scopeTitle}</DialogTitle>
+            <DialogDescription>{copy.form.scopeDescription}</DialogDescription>
+          </DialogHeader>
+
+          <div className="flex flex-col gap-2">
+            <Button
+              className="h-12 cursor-pointer rounded-full bg-accent-primary text-primary-foreground hover:bg-accent-hover"
+              onClick={() => applyScope(task.date)}
+            >
+              {copy.form.scopeOccurrence}
+            </Button>
+            <Button
+              variant="outline"
+              className="h-12 cursor-pointer rounded-full border-surface-line"
+              onClick={() => applyScope(undefined)}
+            >
+              {copy.form.scopeSeries}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Fica no fim do DOM de propósito, ainda que apareça no topo: o Radix foca o primeiro
           elemento focável ao abrir, e um botão de excluir nessa posição significa abrir o painel

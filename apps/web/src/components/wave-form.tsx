@@ -48,6 +48,9 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
 
     const formData = new FormData();
     formData.append("audio", record);
+    // O browser sempre sabe o fuso; o do Clerk é só fallback. Sem isto, quem nunca abriu /profile
+    // levava 400 "No timezone set" na primeira gravação.
+    formData.append("timezone", Intl.DateTimeFormat().resolvedOptions().timeZone);
 
     const response = await createTaskVoice(token, formData);
     const data = await response.json();

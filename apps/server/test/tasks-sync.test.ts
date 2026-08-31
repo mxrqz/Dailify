@@ -27,7 +27,7 @@ describe("insertTask upsert (a fila offline reenvia)", () => {
     await insertTask(env.DB, "sync-u", task);
     const again = await insertTask(env.DB, "sync-u", task);
 
-    expect(again.id).toBe("dup1");
+    expect(again?.id).toBe("dup1");
     const { results } = await env.DB.prepare("SELECT id FROM tasks WHERE id=?").bind("dup1").all();
     expect(results).toHaveLength(1);
   });
@@ -40,23 +40,28 @@ describe("insertTask upsert (a fila offline reenvia)", () => {
       "sync-u",
       make({ id: "lww1", title: "segunda", updatedAt: T0 + 1000 }),
     );
-    expect(newer.title).toBe("segunda");
+    expect(newer?.title).toBe("segunda");
 
     const older = await insertTask(
       env.DB,
       "sync-u",
       make({ id: "lww1", title: "atrasada", updatedAt: T0 - 1000 }),
     );
-    expect(older.title).toBe("segunda");
+    expect(older?.title).toBe("segunda");
   });
 
   it("never writes over another user's row — the primary key is global", async () => {
     await insertTask(env.DB, "owner", make({ id: "steal1", title: "do dono", updatedAt: T0 }));
-    await insertTask(env.DB, "thief", make({ id: "steal1", title: "roubada", updatedAt: T0 + 1 }));
+    const stolen = await insertTask(
+      env.DB,
+      "thief",
+      make({ id: "steal1", title: "roubada", updatedAt: T0 + 1 }),
+    );
 
+    // null = nada foi criado; a rota transforma isso em 409 em vez de fingir sucesso.
+    expect(stolen).toBeNull();
     const owned = await getTask(env.DB, "owner", "steal1");
     expect(owned?.title).toBe("do dono");
-    expect(await getTask(env.DB, "thief", "steal1")).toBeNull();
   });
 });
 

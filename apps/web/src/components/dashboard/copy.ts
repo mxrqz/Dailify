@@ -107,6 +107,19 @@ export const copy = {
     limitReached: "Limite de tarefas atingido",
     limitReachedHint: "Você atingiu o limite do seu plano neste mês.",
     upgrade: "Assinar",
+    scopeTitle: "Esta tarefa se repete",
+    scopeDescription: "O que você quer alterar?",
+    scopeOccurrence: "Só esta ocorrência",
+    scopeSeries: "Todas as ocorrências",
+    scopeDetached: "Ocorrência atualizada",
+    notificationsEnable: "Ativar neste dispositivo",
+    notificationsDisable: "Desativar",
+    notificationsOn: "Ativadas neste dispositivo.",
+    notificationsOff: "Receba um lembrete na hora do alerta da tarefa.",
+    notificationsUnsupported: "Este navegador não suporta notificações.",
+    notificationsDenied:
+      "As notificações estão bloqueadas para o Dailify. Libere nas permissões do navegador.",
+    notificationsError: "Não foi possível ativar as notificações",
   },
 
   profile: {
@@ -130,7 +143,6 @@ export const copy = {
     signOut: "Sair",
     notificationsTitle: "Notificações",
     notificationsDescription: "Escolha como você quer ser avisado sobre suas tarefas.",
-    notificationsSoon: "As opções de notificação chegam em breve.",
     emailLocked: "O e-mail não pode ser alterado.",
     saving: "Salvando",
     addPhone: "Adicionar telefone",

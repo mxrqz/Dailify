@@ -119,6 +119,26 @@ export async function handleInvoicePaid(
   });
 }
 
+/**
+ * Cancela o que o usuário apagado ainda tem ativo. A busca é por `metadata.clerkUserId` porque
+ * quando o webhook chega o usuário já não existe no Clerk — o `stripeCustomerId` que ficava no
+ * `privateMetadata` foi embora com ele, e a metadata da própria assinatura (gravada no checkout)
+ * é a única trilha que sobra. Devolve quantas cancelou.
+ */
+export async function cancelSubscriptionsOf(
+  stripe: Stripe,
+  clerkUserId: string,
+): Promise<number> {
+  const found = await stripe.subscriptions.search({
+    query: `metadata['clerkUserId']:'${clerkUserId}'`,
+    limit: 20,
+  });
+  const active = found.data.filter((s) => s.status !== "canceled" && s.status !== "incomplete_expired");
+
+  for (const subscription of active) await stripe.subscriptions.cancel(subscription.id);
+  return active.length;
+}
+
 /** Resolves the role for a `customer.subscription.updated` event's current price. */
 export function roleForPrice(env: Env, priceId: string): Role {
   return priceInfo(env, priceId)?.role ?? "free";

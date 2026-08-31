@@ -1,10 +1,11 @@
 import { Hono } from "hono";
 import { nanoid } from "nanoid";
-import { DateTime } from "luxon";
+import { DateTime, IANAZone } from "luxon";
 import type { User } from "@clerk/backend";
 import { normalizeRepeat, PLAN_PERMISSIONS, type Task } from "@dailify/shared";
 import type { Env } from "../index";
 import { requireAuth } from "../middleware/auth";
+import { rateLimit } from "../middleware/rate-limit";
 import { clerk, getUserRole } from "../lib/clerk";
 import { transcribe, generateTasks } from "../lib/openai";
 import { insertTask } from "../db/tasks";
@@ -15,7 +16,12 @@ const voice = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 
 function readTimezone(user: User): string | undefined {
   const tz = user.unsafeMetadata?.timezone;
-  return typeof tz === "string" ? tz : undefined;
+  return validZone(tz);
+}
+
+/** Fuso vindo do cliente: sempre presente (Intl), mas é entrada de usuário — validar antes de usar. */
+function validZone(value: unknown): string | undefined {
+  return typeof value === "string" && IANAZone.isValidZone(value) ? value : undefined;
 }
 
 // GPT is prompted to emit naive local ISO strings with no 'Z'/offset (see lib/openai.ts's PROMPT) —
@@ -29,7 +35,7 @@ function formatToUTC(iso: string, timeZone: string): number | null {
   return dt.isValid ? dt.toUTC().toMillis() : null;
 }
 
-voice.post("/voice", requireAuth, async (c) => {
+voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const userId = c.get("userId");
   const role = await getUserRole(c.env, userId);
   if (!PLAN_PERMISSIONS[role].features.voiceCreation) {
@@ -47,7 +53,7 @@ voice.post("/voice", requireAuth, async (c) => {
   if (audio.type && !audio.type.startsWith("audio/")) return fail(c, 415, "Unsupported audio type");
 
   const user = await clerk(c.env).users.getUser(userId);
-  const timezone = readTimezone(user);
+  const timezone = validZone(body["timezone"]) ?? readTimezone(user);
   if (!timezone) return fail(c, 400, "No timezone set");
 
   const transcript = await transcribe(c.env, audio);

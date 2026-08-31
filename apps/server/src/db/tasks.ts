@@ -15,6 +15,7 @@ interface Row {
   links: string | null;
   completed: string;
   updated_at: number;
+  exdates: string | null;
 }
 
 function repeatToCols(repeat: Repeat): { kind: string; days: string | null } {
@@ -22,8 +23,30 @@ function repeatToCols(repeat: Repeat): { kind: string; days: string | null } {
   return { kind: "Weekly", days: JSON.stringify(repeat.Weekly) };
 }
 
+// Linha corrompida no D1 (por qualquer caminho) tem que virar campo vazio na leitura, nao crash.
+function safeParse(json: string | null): unknown {
+  if (!json) return undefined;
+  try {
+    return JSON.parse(json);
+  } catch {
+    return undefined;
+  }
+}
+
+function stringArray(json: string | null): string[] | undefined {
+  const value = safeParse(json);
+  if (!Array.isArray(value)) return undefined;
+  const items = value.filter((v): v is string => typeof v === "string");
+  return items.length ? items : undefined;
+}
+
+function numberArray(json: string | null): number[] {
+  const value = safeParse(json);
+  return Array.isArray(value) ? value.filter((v): v is number => typeof v === "number") : [];
+}
+
 function colsToRepeat(kind: string, days: string | null): Repeat {
-  if (kind === "Weekly") return { Weekly: days ? JSON.parse(days) : [] };
+  if (kind === "Weekly") return { Weekly: stringArray(days) ?? [] };
   if (kind === "Daily" || kind === "Monthly" || kind === "Yearly") return kind;
   return "Off";
 }
@@ -37,24 +60,22 @@ export function rowToTask(r: Row): Task {
     duration: r.duration,
     priority: r.priority,
     repeat: colsToRepeat(r.repeat_kind, r.repeat_days),
-    tags: r.tags ? JSON.parse(r.tags) : undefined,
-    links: r.links ? JSON.parse(r.links) : undefined,
-    completed: JSON.parse(r.completed),
+    tags: stringArray(r.tags),
+    links: stringArray(r.links),
+    completed: numberArray(r.completed),
+    exdates: r.exdates ? numberArray(r.exdates) : undefined,
     updatedAt: r.updated_at,
   };
   // O hash não é coluna: dado derivado guardado é dado que sai de sincronia com a linha.
   return { ...task, hash: taskHash(task) };
 }
 
-export async function insertTask(db: D1Database, userId: string, task: Task): Promise<Task> {
+function insertStatement(db: D1Database, userId: string, task: Task): D1PreparedStatement {
   const { kind, days } = repeatToCols(task.repeat);
-  const updatedAt = stampUpdatedAt(task.updatedAt);
-
   // Upsert, não INSERT: a fila offline reenvia a mesma criação quando a rede volta no meio do
-  // caminho, e um id que já existe não pode virar 500 (bd Dailify-7wg). O WHERE é o que impede
-  // duas coisas: pisar na linha de OUTRO usuário (a PK é global) e deixar uma escrita velha
-  // sobrescrever uma nova (LWW).
-  await db
+  // caminho, e um id repetido não pode virar 500. O WHERE impede duas coisas: pisar na linha de
+  // OUTRO usuário (a PK é global) e deixar uma escrita velha sobrescrever uma nova (LWW).
+  return db
     .prepare(
       `INSERT INTO tasks (id,user_id,title,date,alert,duration,priority,repeat_kind,repeat_days,tags,links,completed,updated_at)
      VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
@@ -78,14 +99,16 @@ export async function insertTask(db: D1Database, userId: string, task: Task): Pr
       task.tags ? JSON.stringify(task.tags) : null,
       task.links ? JSON.stringify(task.links) : null,
       JSON.stringify(task.completed),
-      updatedAt,
-    )
-    .run();
+      stampUpdatedAt(task.updatedAt),
+    );
+}
 
-  // Lê de volta: numa colisão o WHERE pode ter recusado a escrita, e quem chamou precisa do que
-  // ficou gravado, não do que tentou gravar.
-  const stored = await getTask(db, userId, task.id);
-  return stored ?? { ...task, updatedAt, hash: taskHash(task) };
+/** `null` = o id existe e é de OUTRA conta: o upsert não tocou na linha e nada foi criado. */
+export async function insertTask(db: D1Database, userId: string, task: Task): Promise<Task | null> {
+  await insertStatement(db, userId, task).run();
+  // Lê de volta: numa reentrada da fila o upsert pode ter recusado a escrita por ser mais velha
+  // que a linha, e quem chamou precisa do que ficou GRAVADO, não do que tentou gravar.
+  return getTask(db, userId, task.id);
 }
 
 export async function getMonthTasks(db: D1Database, userId: string, month: Date): Promise<Task[]> {
@@ -136,6 +159,14 @@ export async function deleteTask(db: D1Database, userId: string, id: string): Pr
   await db.prepare(`DELETE FROM tasks WHERE user_id=? AND id=?`).bind(userId, id).run();
 }
 
+/** Tudo que o usuário tem no D1 — chamado pelo webhook `user.deleted` do Clerk. */
+export async function deleteUserData(db: D1Database, userId: string): Promise<void> {
+  await db.batch([
+    db.prepare(`DELETE FROM tasks WHERE user_id=?`).bind(userId),
+    db.prepare(`DELETE FROM push_subscriptions WHERE user_id=?`).bind(userId),
+  ]);
+}
+
 export async function appendCompletion(
   db: D1Database,
   userId: string,
@@ -178,11 +209,49 @@ export async function removeCompletions(
   return { ...task, completed, updatedAt, hash: taskHash({ ...task, completed }) };
 }
 
+/**
+ * "Editar só esta ocorrência": a instância vira tarefa própria (sem recorrência) e a data original
+ * entra no `exdates` da série, senão a expansão devolveria a ocorrência antiga junto com a nova.
+ */
+export async function detachOccurrence(
+  db: D1Database,
+  userId: string,
+  id: string,
+  occurrence: number,
+  fields: Partial<Omit<Task, "id" | "completed" | "exdates">>,
+  newId: string,
+): Promise<{ task: Task; series: Task } | null> {
+  const master = await getTask(db, userId, id);
+  if (!master || master.repeat === "Off") return null;
+
+  const exdates = [...new Set([...(master.exdates ?? []), occurrence])];
+  const detached: Task = {
+    ...master,
+    ...fields,
+    id: newId,
+    date: fields.date ?? occurrence,
+    repeat: "Off",
+    exdates: undefined,
+    completed: [],
+  };
+
+  // batch = atômico: sem isso, um insert que falha deixaria a ocorrência apagada da série e sem
+  // substituta — o dia simplesmente perderia a tarefa.
+  await db.batch([
+    db
+      .prepare(`UPDATE tasks SET exdates=? WHERE user_id=? AND id=?`)
+      .bind(JSON.stringify(exdates), userId, id),
+    insertStatement(db, userId, detached),
+  ]);
+  // A série volta junto: o cliente precisa do `exdates` novo para reexpandir o mês sem a ocorrência.
+  return { task: detached, series: { ...master, exdates } };
+}
+
 export async function updateTask(
   db: D1Database,
   userId: string,
   id: string,
-  patch: Partial<Omit<Task, "id" | "completed">>,
+  patch: Partial<Omit<Task, "id" | "completed" | "exdates">>,
 ): Promise<Task | null> {
   const cur = await getTask(db, userId, id);
   if (!cur) return null;

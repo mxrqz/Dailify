@@ -186,20 +186,14 @@ export default function ProfilePage(): JSX.Element {
       await user?.reload();
     }
 
-    if (user?.publicMetadata.timeZone !== timezone) {
-      user?.update({
-        unsafeMetadata: {
-          timezone: timezone,
-        },
-      });
-    }
-
-    if (user?.publicMetadata.language !== language) {
-      user?.update({
-        unsafeMetadata: {
-          language: language,
-        },
-      });
+    // Um update só, com spread: `unsafeMetadata` é substituído inteiro a cada update — dois
+    // updates seguidos faziam o segundo apagar o campo do primeiro (era o que sumia com o
+    // timezone e derrubava a criação por voz com 400).
+    if (
+      user &&
+      (user.unsafeMetadata.timezone !== timezone || user.unsafeMetadata.language !== language)
+    ) {
+      await user.update({ unsafeMetadata: { ...user.unsafeMetadata, timezone, language } });
     }
 
     if (file && !isFileInvalid && hasImageChanged) {
