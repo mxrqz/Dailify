@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { copy } from "@/components/dashboard/copy";
+import { DeleteAccount } from "@/components/delete-account";
 import { CountryPicker, countries } from "@/components/country-picker";
 import { Separator } from "@/components/ui/separator";
 import { formFile, formString } from "@/lib/form";
@@ -547,6 +548,8 @@ export default function ProfilePage(): JSX.Element {
             </Dialog>
           </CardFooter>
         </Card>
+
+        <DeleteAccount />
 
         <Dialog open={phoneDialogOpen} onOpenChange={setPhoneDialogOpen}>
           <DialogContent>

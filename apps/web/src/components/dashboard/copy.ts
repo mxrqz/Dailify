@@ -161,6 +161,16 @@ export const copy = {
     billingHistory: "Histórico de pagamentos",
     billingPaid: "Pago",
     billingViewInvoice: "Ver fatura",
+    dangerTitle: "Excluir conta",
+    dangerDescription:
+      "Encerra sua conta, apaga suas tarefas e cancela a assinatura. Não há como desfazer.",
+    deleteAccount: "Excluir conta",
+    deleteConfirmTitle: "Excluir sua conta?",
+    deleteConfirmDescription:
+      "Suas tarefas são apagadas, a assinatura é cancelada e a conta deixa de existir. Isto não pode ser desfeito.",
+    deleteConfirmPrompt: "Digite {email} para confirmar",
+    deleteConfirmCta: "Excluir permanentemente",
+    deleteAccountError: "Não foi possível excluir a conta",
   },
 
   composer: {

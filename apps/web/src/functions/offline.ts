@@ -124,6 +124,16 @@ export function enqueue(userId: string, mutation: Mutation): void {
 
 export const pendingCount = (userId: string): number => readQueue(userId).length;
 
+/** Apaga o rastro local do usuário. A conta some do servidor; o aparelho não pode ficar com cópia. */
+export function clearLocal(userId: string): void {
+  try {
+    localStorage.removeItem(key(userId, "tasks"));
+    localStorage.removeItem(key(userId, "outbox"));
+  } catch {
+    /* sem acesso ao storage: não havia o que limpar */
+  }
+}
+
 /**
  * Sobe a fila em ordem. Para no primeiro erro de REDE (a ordem importa: criar antes de editar), e
  * descarta a entrada num erro de servidor — quota estourada, tarefa que não existe mais. Retentar
