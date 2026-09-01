@@ -108,7 +108,9 @@ export function RepeatMenu({
   onChange: (repeat: Repeat) => void;
   children: ReactNode;
 }): JSX.Element {
-  const recurrence = !useQuotas().states.recurring.blocked;
+  // `exhausted`, não `blocked`: nenhum plano tem limite 0, então `blocked` nunca é true e o gate
+  // seria morto. Aqui é sempre edição de tarefa que existe: se ela já repete, a vaga já é dela.
+  const recurrence = !useQuotas().states.recurring.exhausted || value !== "Off";
   const current = typeof value === "string" ? value : "Weekly";
 
   return (
