@@ -4,6 +4,7 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { Brand } from "@/components/brand";
 import { MobileNav } from "@/components/dashboard/sidebar/mobile-nav";
+import { QuotaBar } from "@/components/quota-bar";
 import { SyncBadge } from "@/components/sync-badge";
 import { copy } from "@/components/dashboard/copy";
 import { Button } from "@/components/ui/button";
@@ -61,6 +62,8 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
       </div>
 
       <div className="ml-auto inline-flex items-center gap-2">
+        <QuotaBar />
+
         <SyncBadge />
 
         {isFree && (
