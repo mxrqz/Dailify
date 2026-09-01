@@ -27,8 +27,8 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
 
   const [record, setRecord] = useState<Blob>();
 
-  // 60s é o teto de custo por comando: a transcrição é cobrada por minuto de áudio. O servidor
-  // recusa acima de 512 KB de qualquer jeito — parar aqui evita perder a gravação inteira no 413.
+  // Cortesia, não controle: quem limita o custo é o cap de 512 KB no servidor. Parar aqui só evita
+  // que uma fala longa vire um 413 com a gravação perdida.
   const MAX_RECORDING_MS = 60_000;
 
   const stopRecording = async () => {
