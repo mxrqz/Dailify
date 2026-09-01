@@ -26,22 +26,6 @@ export type TaskInput = Omit<Task, "id" | "completed" | "hash"> & {
 
 export type Role = "free" | "pro" | "pro+ai" | "admin";
 
-export interface Permissions {
-  taskLimits: { monthly: number; recurring: number }; // -1 = unlimited
-  features: { voiceCreation: boolean };
-}
-
-export interface Entitlements {
-  loading: boolean;
-  voice: boolean;
-  recurrence: boolean;
-  monthlyLimit: number;
-  unlimited: boolean;
-  tasksUsed: number;
-  remaining: number;
-  canCreateTask: boolean;
-}
-
 export const PLAN_ID = { free: "free", pro: "pro", proAi: "pro+ai" } as const;
 
 export interface PaymentDetails {

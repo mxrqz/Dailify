@@ -6,11 +6,12 @@ primitives (see `ui/CLAUDE.md`). `@/` resolves to `src/`.
 ## Shared state — `dailifyContext.tsx`
 
 Single source of truth via `useDailify()`: `tasks`, `currentMonthTasks`, `selectedDay`,
-`isCalendar`, `permissions`, `invoices`, `paymentDetails`, and their setters.
+`isCalendar`, `quotas`, `invoices`, `paymentDetails`, and their setters.
 
 - **`protected-route.tsx`** is where it all loads: gates on Clerk (`isLoaded`/`userId`), then
-  `getTasks()` (→ `getTasksForMonth`, `@/functions/api`) for the selected month, plus
-  permissions/invoices/payment (also `api.ts`). It refetches when the month changes.
+  `getTasks()` (→ `getTasksForMonth`, `@/functions/api`) for the selected month. Payment/invoices
+  load once in the boot effect (deps `[isLoaded, userId]`); quotas load in their own effect keyed
+  by month (`quotaMonth`) — only that fetch refires when the month changes.
 - **`dashboard/day-view.tsx`** derives `dayTasks` from `getTasksForDay(tasks, selectedDay)` then
   `groupTasksByTime`. (The two-column day+aside layout lives one level up, in `pages/home.tsx`, which
   mounts `DayView` beside `DayAside`.) **`dashboard/month-view.tsx`** (grid chrome) and

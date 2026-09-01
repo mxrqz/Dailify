@@ -14,12 +14,11 @@ here) plus the web-only picker prop interfaces. The invariants that aren't obvio
   `normalizeRepeat` — but note the server already normalizes recurring/voice-created tasks before
   they reach the client, so the web app itself rarely needs to call it.
 
-## `PermissionsProps` (= shared `Permissions`) — the tiering contract
+## Quotas — o contrato de tiering
 
-Shape: `taskLimits.{monthly,recurring}`, `features.voiceCreation`. Gate features on **capabilities
-in this object**, never on the plan name string. `monthly === -1` means unlimited. `PLAN_PERMISSIONS`
-(`@dailify/shared`) is the source of truth the tiering epic (`d69`) builds on — it must match what
-the server returns (it's the same import on both sides).
+Os limites e o uso vêm do servidor em `GET /permissions?month=YYYY-MM` e são lidos por `useQuotas()`.
+Gate a UI em `states[key].blocked` / `.exhausted`, nunca no nome do plano. O registro é `QUOTAS`
+(`@dailify/shared`), o mesmo import dos dois lados.
 
 ## Stripe shapes
 

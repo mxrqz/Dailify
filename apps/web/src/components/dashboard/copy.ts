@@ -7,7 +7,7 @@ import type { QuotaKey } from "@dailify/shared";
  * `landing/copy.ts`. Estruturado plano (sem concatenação) pra permitir um locale `en` futuro
  * (bd Dailify-17s) — cada chave é uma string final pronta pra renderizar.
  *
- * Não hard-codar números de plano aqui: limites vêm de `@dailify/shared` `PLAN_PERMISSIONS`.
+ * Não hard-codar números de plano aqui: limites vêm de `@dailify/shared` `limitsFor`/`QUOTAS`.
  */
 export const copy = {
   header: {

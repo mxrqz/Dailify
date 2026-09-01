@@ -91,15 +91,15 @@ Area-specific guidance lives in nested `CLAUDE.md` files (auto-loaded when you w
   tested helpers (dates, task list ops). Start here for anything data-shaped.
 - **`apps/web/src/components/`** — React components, shared state (`dailifyContext`), dark mode;
   shadcn in `ui/`.
-- **`apps/web/src/types/`** — re-exports the shared TS model (`TaskProps`/`Task`, tiering
-  `PermissionsProps`) from `@dailify/shared` and its invariants.
+- **`apps/web/src/types/`** — re-exports the shared TS model (`TaskProps`/`Task`, tiering via
+  `QUOTAS`) from `@dailify/shared` and its invariants.
 - **`apps/web/src/consts/`** — constants, plan ids, `apiURL`, color-token class names, priority
   scale.
 - **`apps/web/src/pages/`** — routes, Clerk auth pages, Stripe checkout.
 - **`apps/server/src/`** — the backend: Hono routes (`routes/`), D1 queries (`db/`),
   Clerk/Stripe/OpenAI clients (`lib/`), auth middleware. Its own vitest suite lives in
   `apps/server/test/`.
-- **`packages/shared/src/`** — the canonical `Task`/`Permissions`/pricing/recurrence model,
+- **`packages/shared/src/`** — the canonical `Task`/`Quotas`/pricing/recurrence model,
   imported by both `apps/web` and `apps/server` so drift between client and server shapes is a
   compile error.
 

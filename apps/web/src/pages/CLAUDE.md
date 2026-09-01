@@ -24,12 +24,12 @@ to paths listed above (this caused the `/prices` vs `/premium` bug).
 ## Auth
 
 Clerk (`main.tsx`). Protected pages are wrapped in `ProtectedRoute` (`src/components/`), which gates
-on Clerk (`isLoaded`/`userId`) and loads tasks/permissions from `apps/server` before rendering.
+on Clerk (`isLoaded`/`userId`) and loads tasks/quotas from `apps/server` before rendering.
 
 ## Billing (premium.tsx)
 
 `handleSelectPlan(planId)` calls `checkout(token, productName)` (`@/functions/api`) with
 `productName` (yearly appends `-year`); the server returns a Stripe URL and we redirect. Plan ids
 come from `PLAN_ID` (`consts`); copy that references limits reads from `@dailify/shared`'s
-`PLAN_PERMISSIONS` instead of hard-coding numbers. The billing portal (`pages/billing.tsx`) is
+`limitsFor` instead of hard-coding numbers. The billing portal (`pages/billing.tsx`) is
 fetched the same way via `billingPortal`.
