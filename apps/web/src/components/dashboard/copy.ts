@@ -200,6 +200,7 @@ export const copy = {
     stop: "Parar gravação",
     send: "Criar tarefa",
     sending: "Criando tarefa",
+    maxLength: "Gravação encerrada no limite de 60 segundos.",
   },
 
   task: {
