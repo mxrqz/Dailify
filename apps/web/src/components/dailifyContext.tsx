@@ -1,5 +1,7 @@
-import { InvoicesProps, PaymentDetailsProps, PermissionsProps, TaskProps } from "@/types/types";
+import { InvoicesProps, PaymentDetailsProps, TaskProps } from "@/types/types";
 import { createContext, useContext, useState, ReactNode } from "react";
+import type { QuotaKey } from "@dailify/shared";
+import type { QuotaSnapshot } from "@/functions/api";
 
 interface DailifyContextType {
   selectedDay: Date;
@@ -16,8 +18,10 @@ interface DailifyContextType {
   setPaymentDetails: (paymentDetails: PaymentDetailsProps | null) => void;
   invoices: InvoicesProps[] | undefined;
   setInvoices: (invoices: InvoicesProps[]) => void;
-  permissions: PermissionsProps | undefined;
-  setPermissions: (permissions: PermissionsProps) => void;
+  quotas: QuotaSnapshot | undefined;
+  setQuotas: (quotas: QuotaSnapshot) => void;
+  /** Incremento otimista: sem ele a barra só se moveria no próximo fetch. */
+  bumpUsage: (key: QuotaKey) => void;
 }
 
 // Criando o contexto com um valor inicial `undefined`
@@ -31,8 +35,15 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
   const [currentMonth, setCurrentMonth] = useState<Date>();
   const [currentMonthTasks, setCurrentMonthTasks] = useState<TaskProps[]>();
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsProps | null>();
-  const [permissions, setPermissions] = useState<PermissionsProps>();
+  const [quotas, setQuotas] = useState<QuotaSnapshot>();
   const [invoices, setInvoices] = useState<InvoicesProps[]>();
+
+  const bumpUsage = (key: QuotaKey) =>
+    setQuotas((current) =>
+      current
+        ? { ...current, usage: { ...current.usage, [key]: current.usage[key] + 1 } }
+        : current,
+    );
 
   return (
     <DailifyContext.Provider
@@ -51,8 +62,9 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
         setInvoices,
         paymentDetails,
         setPaymentDetails,
-        permissions,
-        setPermissions,
+        quotas,
+        setQuotas,
+        bumpUsage,
       }}
     >
       {children}

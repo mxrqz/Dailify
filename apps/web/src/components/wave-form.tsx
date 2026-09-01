@@ -7,6 +7,7 @@ import { useAuth } from "@clerk/clerk-react";
 import { TaskProps } from "@/types/types";
 import { createTaskVoice } from "@/functions/api";
 import { copy } from "@/components/dashboard/copy";
+import { useDailify } from "@/components/dailifyContext";
 
 export default function Waveform({ onResponse }: { onResponse: (response: TaskProps[]) => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
@@ -14,6 +15,7 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
   const recordRef = useRef<RecordPlugin | null>(null);
 
   const { getToken } = useAuth();
+  const { bumpUsage } = useDailify();
 
   const rootStyles = getComputedStyle(document.documentElement);
   const foregroundColor = rootStyles.getPropertyValue("--foreground").trim();
@@ -59,6 +61,10 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
       setLoading(false);
       return;
     }
+
+    // `response` é crua: um 402/429 também devolve corpo JSON, e contar uma gravação recusada
+    // deixaria a barra mentindo até o próximo fetch.
+    if (response.ok) bumpUsage("voice");
 
     const tasks: TaskProps[] = data.tasks ?? [];
     onResponse(tasks);

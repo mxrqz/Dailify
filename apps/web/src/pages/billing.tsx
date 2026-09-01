@@ -23,7 +23,7 @@ import { PLAN_ID, planMap } from "@/consts/conts";
 import type { PlanRole } from "@/consts/pricing";
 import { billingPortal, checkout } from "@/functions/api";
 import { billingSections } from "@/functions/billing-sections";
-import { useEntitlements } from "@/hooks/useEntitlements";
+import { useQuotas } from "@/hooks/useQuotas";
 import { toText } from "@/lib/utils";
 
 const PAID_ROLES: readonly PlanRole[] = [PLAN_ID.pro, PLAN_ID.proAi];
@@ -51,7 +51,8 @@ export default function BillingPage(): JSX.Element {
   const sections = billingSections(paymentDetails, invoices);
 
   const plan = planMap[toText(user?.publicMetadata.plan, PLAN_ID.free)];
-  const entitlements = useEntitlements();
+  const quotas = useQuotas();
+  const taskQuota = quotas.states.tasks;
 
   const brandIcons: Record<string, JSX.Element> = {
     visa: <FaCcVisa className="text-foreground size-5" />,
@@ -134,32 +135,26 @@ export default function BillingPage(): JSX.Element {
 
             <Separator className="my-4" />
 
-            {!entitlements.loading && (
+            {!quotas.loading && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between text-sm">
                   <span>{copy.profile.billingTasksUsed}</span>
 
                   <span className="font-medium">
-                    {entitlements.tasksUsed} /{" "}
-                    {entitlements.unlimited
-                      ? copy.profile.billingUnlimited
-                      : entitlements.monthlyLimit}
+                    {taskQuota.used} /{" "}
+                    {taskQuota.unlimited ? copy.profile.billingUnlimited : taskQuota.limit}
                   </span>
                 </div>
 
                 <Progress
-                  value={
-                    entitlements.unlimited || entitlements.monthlyLimit <= 0
-                      ? 0
-                      : (entitlements.tasksUsed / entitlements.monthlyLimit) * 100
-                  }
+                  value={taskQuota.ratio === null ? 0 : taskQuota.ratio * 100}
                   className="h-2"
                 />
 
                 <p className="text-xs text-muted-foreground">
-                  {entitlements.unlimited
+                  {taskQuota.unlimited
                     ? copy.profile.billingUnlimitedTasks
-                    : copy.profile.billingRemaining.replace("{n}", String(entitlements.remaining))}
+                    : copy.profile.billingRemaining.replace("{n}", String(taskQuota.remaining))}
                 </p>
               </div>
             )}

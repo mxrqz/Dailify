@@ -13,7 +13,7 @@ import { createTask } from "@/functions/api";
 import { upsertTaskById } from "@/functions/functions";
 import { enqueue, newTaskId } from "@/functions/offline";
 import type { ParsedTask } from "@/functions/parse-task";
-import { useEntitlements } from "@/hooks/useEntitlements";
+import { useQuotas } from "@/hooks/useQuotas";
 
 /** Altura viva de um elemento: CSS não enxerga a altura do irmão, e o piso do slot depende da faixa. */
 function useHeight(ref: RefObject<HTMLElement>): number {
@@ -72,8 +72,9 @@ function composerTaskInput(parsed: ParsedTask): TaskInput {
  */
 export default function Home() {
   const { getToken, userId } = useAuth();
-  const { tasks, setTasks } = useDailify();
-  const { canCreateTask } = useEntitlements();
+  const { tasks, setTasks, bumpUsage } = useDailify();
+  const quotas = useQuotas();
+  const canCreateTask = !quotas.states.tasks.exhausted;
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
 
@@ -130,6 +131,8 @@ export default function Home() {
       }
 
       setTasks(upsertTaskById(previous, task));
+      bumpUsage("tasks");
+      if (task.repeat !== "Off") bumpUsage("recurring");
       toast.message(copy.form.created, { description: task.title });
     } finally {
       setSubmitting(false);

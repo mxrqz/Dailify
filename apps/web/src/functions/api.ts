@@ -1,4 +1,11 @@
-import type { Task, TaskInput, Permissions, PaymentDetails, Invoice } from "@dailify/shared";
+import type {
+  Task,
+  TaskInput,
+  QuotaLimits,
+  QuotaUsage,
+  PaymentDetails,
+  Invoice,
+} from "@dailify/shared";
 import { apiURL } from "@/consts/conts";
 
 /**
@@ -185,8 +192,14 @@ export async function removePushSubscription(token: string, endpoint: string): P
   );
 }
 
-export async function getPermissions(token: string): Promise<Permissions | undefined> {
-  const { data } = await request<Permissions>("/permissions", token);
+export interface QuotaSnapshot {
+  limits: QuotaLimits;
+  usage: QuotaUsage;
+}
+
+export async function getQuotas(token: string, month: Date): Promise<QuotaSnapshot | undefined> {
+  const m = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+  const { data } = await request<QuotaSnapshot>(`/permissions?month=${m}`, token);
   return data;
 }
 
