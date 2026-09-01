@@ -50,8 +50,19 @@ describe("POST /tasks", () => {
     expect(saved).toMatchObject({ title: "Under limit" });
   });
 
-  it("429s a free user creating a recurring task", async () => {
+  it("429s a free user creating a 4th recurring task", async () => {
     role = "free";
+    for (let i = 0; i < 3; i++) {
+      await insertTask(env.DB, "u2", {
+        id: `rec-${i}`,
+        title: `R${i}`,
+        date: new Date(2026, 6, 1, 9).getTime(),
+        duration: "10m",
+        priority: 0,
+        repeat: "Daily",
+        completed: [],
+      });
+    }
     const res = await app.request(
       "/tasks",
       {
