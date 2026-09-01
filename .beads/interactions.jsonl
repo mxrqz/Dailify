@@ -97,3 +97,4 @@
 {"id":"int-0be743f8","kind":"field_change","created_at":"2026-09-01T00:00:59.564620797Z","actor":"mxrqz","issue_id":"Dailify-d69","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"5/5 children fechados."}}
 {"id":"int-bb3f0946","kind":"field_change","created_at":"2026-09-01T00:08:09.850046332Z","actor":"mxrqz","issue_id":"Dailify-3uv","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}
 {"id":"int-7cacd092","kind":"field_change","created_at":"2026-09-01T00:08:09.967460938Z","actor":"mxrqz","issue_id":"Dailify-bv7","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}
+{"id":"int-120b3728","kind":"field_change","created_at":"2026-09-01T00:14:53.668972692Z","actor":"mxrqz","issue_id":"Dailify-040","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}

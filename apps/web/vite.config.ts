@@ -67,7 +67,11 @@ export default defineConfig(async ({ mode }) => ({
 
   test: {
     globals: true,
+    // `node` por padrão: os testes de lógica pura são a maioria e não pagam o custo do DOM. Quem
+    // precisa de DOM declara `@vitest-environment jsdom` no topo do arquivo (os `*.render.test.tsx`)
+    // — `environmentMatchGlobs` deixou de existir no vitest 4.
     environment: "node",
+    setupFiles: ["./src/test/setup.ts"],
   },
 
   clearScreen: false,

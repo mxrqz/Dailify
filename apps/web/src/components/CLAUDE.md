@@ -38,9 +38,8 @@ There is **no** `newTask` mechanism anymore (it only mutated a local copy and de
 `/login` and `/signup` are the same machine, differing only in copy: both mount `auth-page.tsx`
 with a `mode` ("signIn" | "signUp").
 
-- **`auth-state.ts` is the only place logic goes**, and the only tested file of the folder
-  (`auth-state.test.ts`) — the repo has no jsdom or `@testing-library/react`, so anything worth a
-  test has to be a pure function. `use-email-link-auth.ts` is just the wire to Clerk: if you're
+- **`auth-state.ts` is the only place logic goes**, and the tested file of the folder
+  (`auth-state.test.ts`). `use-email-link-auth.ts` is just the wire to Clerk: if you're
   writing an `if` that isn't about Clerk's API, it belongs in the reducer.
 - Every visible string comes from `auth/copy.ts` (pt-BR) — no literals in JSX.
 - `auth-shell.tsx` owns the whole layout; the body components are `email-form.tsx` and
@@ -57,6 +56,23 @@ with a `mode` ("signIn" | "signUp").
   `rounded-[17px]`. Tokens are in `global.css` (`:root` + `@theme inline`); if none fits, add one
   instead of inlining a pixel value. See the token table in the root `CLAUDE.md`.
 - Prefer solid state colors over `/opacity` on interactive elements (bd task `k00`).
+
+## Testes de render
+
+Componente com estado condicional **tem** teste de render (bd `040`): `/billing` já apareceu em
+branco para todo usuário Free, e depois anunciou "ilimitado" para quem tinha 30/mês — os dois
+passariam por qualquer suíte de função pura.
+
+- Arquivo `*.render.test.tsx` com `/** @vitest-environment jsdom */` na primeira linha. O default do
+  projeto é `node` (a maioria dos testes é de lógica pura e não paga o custo do DOM), e
+  `environmentMatchGlobs` não existe mais no vitest 4.
+- `src/test/setup.ts` faz `cleanup` entre testes e stuba `IntersectionObserver` / `ResizeObserver` /
+  `matchMedia`, que jsdom não tem e o app usa (framer-motion, Radix, `useMediaQuery`).
+- Mocke `@clerk/clerk-react` e `useDailify` por arquivo — montar os providers de verdade traria
+  rede e sessão para dentro do teste. Envolva em `MemoryRouter` quem usa rota.
+- Prefira o contrato acessível ao detalhe visual: `aria-current="page"` para item de navegação
+  aceso, `getByRole("heading")` para título. E cuidado com escopo: a `/billing` mostra a tabela de
+  planos junto, então "Tarefas ilimitadas" existe na página mesmo para o Free — use `within()`.
 
 ## Misc
 
