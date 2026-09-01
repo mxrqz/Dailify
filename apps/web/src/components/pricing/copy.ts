@@ -1,10 +1,12 @@
+import type { QuotaKey } from "@dailify/shared";
+
 /**
  * Copy de planos e cobrança — landing, `/premium` e `/billing` leem daqui, então o que a página de
  * venda promete e o que a de cobrança mostra não podem divergir. Fonte da verdade do texto: quando
  * houver inglês, é este arquivo que ganha um par.
  *
- * `{n}` em `monthlyTasks` é substituído pelo limite real de `PLAN_PERMISSIONS` — nenhum número de
- * plano é digitado aqui.
+ * `{n}` em `features.finite` é substituído pelo limite real de `QUOTAS` — nenhum número de plano é
+ * digitado aqui.
  */
 export const copy = {
   plans: {
@@ -14,20 +16,27 @@ export const copy = {
     },
     pro: {
       name: "Pro",
-      description: "Mais tarefas por mês e recorrência ilimitada pra quem já vive no Dailify.",
+      description:
+        "Dez vezes mais tarefas e dez vezes mais recorrência pra quem já vive no Dailify.",
     },
     "pro+ai": {
       name: "Pro+AI",
-      description: "Tudo do Pro, mais criação de tarefa por voz.",
+      description: "Tarefas e recorrência sem teto, e voz de sobra pra criar falando.",
     },
   },
 
-  /** Bullets derivados de `PLAN_PERMISSIONS`. Só existe bullet pro que o servidor entrega. */
+  /** Uma frase por quota, em duas versões. Quota sem frase não compila. */
   features: {
-    unlimitedTasks: "Tarefas ilimitadas",
-    monthlyTasks: "{n} tarefas/mês",
-    unlimitedRecurrence: "Recorrência ilimitada",
-    voiceCreation: "Criação por voz",
+    finite: {
+      tasks: "{n} tarefas/mês",
+      recurring: "{n} tarefas recorrentes",
+      voice: "{n} comandos de voz/mês",
+    } satisfies Record<QuotaKey, string>,
+    unlimited: {
+      tasks: "Tarefas ilimitadas",
+      recurring: "Recorrência ilimitada",
+      voice: "Comandos de voz ilimitados",
+    } satisfies Record<QuotaKey, string>,
   },
 
   billing: {
@@ -46,7 +55,7 @@ export const copy = {
   page: {
     eyebrow: "// PLANOS",
     title: "Escolha o plano perfeito para você",
-    subtitle: "Mais tarefas por mês, recorrência ilimitada e criação por voz.",
+    subtitle: "Todos os planos têm tudo. O que muda é quanto cabe.",
     choosePlan: "Assinar",
     signInFirst: "Entre na sua conta pra assinar.",
     checkoutFailed: "Não foi possível abrir o checkout. Tente de novo.",
