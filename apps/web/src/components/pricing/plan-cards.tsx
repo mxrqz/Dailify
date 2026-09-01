@@ -1,26 +1,23 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { motion, useReducedMotion } from "framer-motion";
-import { PLAN_PERMISSIONS, formatPrice, yearlySavings } from "@dailify/shared";
+import { limitsFor, QUOTA_KEYS, formatPrice, yearlySavings } from "@dailify/shared";
 
 import { PLAN_PRICING, type PlanRole } from "@/consts/pricing";
 import { cn } from "@/lib/utils";
 import { copy } from "./copy";
 
 /**
- * Bullets derivados de `PLAN_PERMISSIONS` — a página de venda não pode prometer o que o servidor
- * não entrega. `recurring === 0` (Free) não gera bullet: é ausência de recurso, não recurso básico.
+ * Bullets derivados do registro de quotas — a página de venda não pode prometer o que o servidor
+ * não entrega, nem calar o que entrega. Limite `0` não vira bullet: é ausência de recurso.
  */
 export function planFeatures(role: PlanRole): string[] {
-  const { taskLimits, features } = PLAN_PERMISSIONS[role];
-  const bullets: string[] = [
-    taskLimits.monthly === -1
-      ? copy.features.unlimitedTasks
-      : copy.features.monthlyTasks.replace("{n}", String(taskLimits.monthly)),
-  ];
-  if (taskLimits.recurring === -1) bullets.push(copy.features.unlimitedRecurrence);
-  if (features.voiceCreation) bullets.push(copy.features.voiceCreation);
-  return bullets;
+  const limits = limitsFor(role);
+  return QUOTA_KEYS.filter((key) => limits[key] !== 0).map((key) =>
+    limits[key] < 0
+      ? copy.features.unlimited[key]
+      : copy.features.finite[key].replace("{n}", String(limits[key])),
+  );
 }
 
 export type Cycle = "monthly" | "yearly";
