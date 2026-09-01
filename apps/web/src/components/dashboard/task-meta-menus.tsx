@@ -12,7 +12,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { priorityText, priorityTextColor } from "@/consts/conts";
-import { useEntitlements } from "@/hooks/useEntitlements";
+import { useQuotas } from "@/hooks/useQuotas";
 import { cn } from "@/lib/utils";
 import { Flag } from "lucide-react";
 
@@ -108,7 +108,7 @@ export function RepeatMenu({
   onChange: (repeat: Repeat) => void;
   children: ReactNode;
 }): JSX.Element {
-  const { recurrence } = useEntitlements();
+  const recurrence = !useQuotas().states.recurring.blocked;
   const current = typeof value === "string" ? value : "Weekly";
 
   return (

@@ -15,7 +15,7 @@ import { Separator } from "@/components/ui/separator";
 import { bareFieldClass } from "@/components/dashboard/styles";
 import { priorityText } from "@/consts/conts";
 import { useDailify } from "@/components/dailifyContext";
-import { useEntitlements } from "@/hooks/useEntitlements";
+import { useQuotas } from "@/hooks/useQuotas";
 import { linkLabel } from "@/functions/link-label";
 import { cn } from "@/lib/utils";
 import type { TaskProps } from "@/types/types";
@@ -181,7 +181,7 @@ export function TaskForm({
   onSubmit,
 }: TaskFormProps) {
   const { tasks } = useDailify();
-  const { recurrence } = useEntitlements();
+  const recurrence = !useQuotas().states.recurring.blocked;
 
   const [title, setTitle] = useState(task?.title ?? "");
   const [date, setDate] = useState<Date>(() =>

@@ -4,7 +4,7 @@ import { Navigate, useLocation } from "react-router-dom";
 import { Loader2Icon } from "lucide-react";
 import { useDailify } from "./dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { getTasksForMonth, getPermissions, getPaymentDetails, getInvoices } from "@/functions/api";
+import { getTasksForMonth, getQuotas, getPaymentDetails, getInvoices } from "@/functions/api";
 import { cacheTasks, flushQueue, readCachedTasks } from "@/functions/offline";
 import { isSameMonth } from "date-fns";
 import { motion } from "framer-motion";
@@ -26,14 +26,14 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     setCurrentMonthTasks,
     setInvoices,
     setPaymentDetails,
-    setPermissions,
+    setQuotas,
   } = useDailify();
 
   const location = useLocation();
   const { getToken, userId } = useAuth();
 
   // Depende de `isLoaded`/`userId`: com deps `[]` o efeito rodava uma vez só, antes do Clerk ficar
-  // pronto, e o `getToken()` nulo deixava `permissions` undefined pelo resto da sessão.
+  // pronto, e o `getToken()` nulo deixava os dados de cobrança undefined pelo resto da sessão.
   useEffect(() => {
     if (!isLoaded || !userId) return;
 
@@ -43,24 +43,37 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
         if (!token) return;
 
         // allSettled: uma falha não derruba as vizinhas.
-        const [payment, permissions, invoices] = await Promise.allSettled([
+        const [payment, invoices] = await Promise.allSettled([
           getPaymentDetails(token),
-          getPermissions(token),
           getInvoices(token),
         ]);
 
         if (payment.status === "fulfilled") setPaymentDetails(payment.value);
         if (invoices.status === "fulfilled") setInvoices(invoices.value);
-        // permissions fica undefined se a API falhou — `computeEntitlements` trata isso como
-        // "ainda carregando", que é o comportamento seguro. Guardar o corpo do erro quebraria.
-        if (permissions.status === "fulfilled" && permissions.value) {
-          setPermissions(permissions.value);
-        }
       } catch {
         /* sem sessão utilizável */
       }
     })();
   }, [isLoaded, userId]);
+
+  // Efeito próprio porque quota de escopo mensal muda com o mês olhado; os outros dados, não.
+  // A chave é só o MÊS: andar de dia dentro dele não muda a resposta e não deve refazer o fetch.
+  // `quotas` fica undefined se a API falhou — `computeQuotas` trata isso como "ainda carregando",
+  // que é o comportamento seguro: a UI se esconde e a criação não é bloqueada.
+  const quotaMonth = `${selectedDay.getFullYear()}-${selectedDay.getMonth()}`;
+  useEffect(() => {
+    if (!isLoaded || !userId) return;
+    (async () => {
+      try {
+        const token = await getToken();
+        if (!token) return;
+        const snapshot = await getQuotas(token, selectedDay);
+        if (snapshot) setQuotas(snapshot);
+      } catch {
+        /* sem sessão utilizável */
+      }
+    })();
+  }, [isLoaded, userId, quotaMonth]);
 
   // 🌐 Salvar timezone no metadata do usuário
   useEffect(() => {
