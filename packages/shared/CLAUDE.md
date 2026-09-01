@@ -31,5 +31,7 @@ no build step); keep it isomorphic (no Node, no DOM, no `fetch`).
 
 ## Tests
 
-`bun run test` (or `bun --filter @dailify/shared test`) — vitest, colocated `*.test.ts`. Pricing and
-recurrence are pure and fully tested; keep new logic pure and add a test. No `as`; see root `CLAUDE.md`.
+`bun run test` (or `bun --filter @dailify/shared test`) — vitest, colocated `*.test.ts`. Pricing's
+pure helpers (`formatPrice`, `yearlySavings`) and recurrence are fully tested; the quota registry
+has its own suite in `quotas.test.ts`. Keep new logic pure and add a test. No `as`; see root
+`CLAUDE.md`.
