@@ -5,6 +5,7 @@ import { FaCcAmex, FaCcVisa } from "react-icons/fa";
 import { RiMastercardFill } from "react-icons/ri";
 import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
+import { QUOTA_KEYS } from "@dailify/shared";
 
 import { toast } from "sonner";
 
@@ -23,6 +24,7 @@ import { PLAN_ID, planMap } from "@/consts/conts";
 import type { PlanRole } from "@/consts/pricing";
 import { billingPortal, checkout } from "@/functions/api";
 import { billingSections } from "@/functions/billing-sections";
+import { quotaLabel } from "@/functions/quota-label";
 import { useQuotas } from "@/hooks/useQuotas";
 import { toText } from "@/lib/utils";
 
@@ -52,7 +54,6 @@ export default function BillingPage(): JSX.Element {
 
   const plan = planMap[toText(user?.publicMetadata.plan, PLAN_ID.free)];
   const quotas = useQuotas();
-  const taskQuota = quotas.states.tasks;
 
   const brandIcons: Record<string, JSX.Element> = {
     visa: <FaCcVisa className="text-foreground size-5" />,
@@ -136,26 +137,26 @@ export default function BillingPage(): JSX.Element {
             <Separator className="my-4" />
 
             {!quotas.loading && (
-              <div className="space-y-2">
-                <div className="flex items-center justify-between text-sm">
-                  <span>{copy.profile.billingTasksUsed}</span>
+              <div className="space-y-4">
+                {QUOTA_KEYS.map((key) => {
+                  const state = quotas.states[key];
+                  return (
+                    <div key={key} className="space-y-2">
+                      <div className="flex items-center justify-between text-sm">
+                        <span>{copy.quota.names[key]}</span>
+                        <span className="font-medium">
+                          {state.used} / {state.unlimited ? copy.quota.unlimited : state.limit}
+                        </span>
+                      </div>
 
-                  <span className="font-medium">
-                    {taskQuota.used} /{" "}
-                    {taskQuota.unlimited ? copy.profile.billingUnlimited : taskQuota.limit}
-                  </span>
-                </div>
-
-                <Progress
-                  value={taskQuota.ratio === null ? 0 : taskQuota.ratio * 100}
-                  className="h-2"
-                />
-
-                <p className="text-xs text-muted-foreground">
-                  {taskQuota.unlimited
-                    ? copy.profile.billingUnlimitedTasks
-                    : copy.profile.billingRemaining.replace("{n}", String(taskQuota.remaining))}
-                </p>
+                      <Progress
+                        value={state.ratio === null ? null : state.ratio * 100}
+                        className="h-2"
+                        aria-label={quotaLabel(state, copy.quota.names[key], copy.quota.unlimited)}
+                      />
+                    </div>
+                  );
+                })}
               </div>
             )}
           </div>
