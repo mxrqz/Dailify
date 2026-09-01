@@ -48,3 +48,30 @@ describe("GET /tasks", () => {
     expect(keys.size).toBe(mine.length); // deduped
   });
 });
+
+describe("GET /tasks?tz — fuso do cliente", () => {
+  it("expande a recorrente na hora local do usuário, não em UTC", async () => {
+    await insertTask(env.DB, "u1", {
+      id: "tz-daily",
+      title: "Diária 09:00 SP",
+      date: Date.UTC(2026, 11, 1, 12, 0), // 09:00 em São Paulo
+      duration: "10m",
+      priority: 0,
+      repeat: "Daily",
+      completed: [],
+    });
+
+    const res = await app.request("/tasks?month=2026-12&tz=America%2FSao_Paulo", {}, env);
+    const { tasks } = await res.json<{ tasks: Task[] }>();
+    const instances = tasks.filter((t) => t.id === "tz-daily");
+
+    expect(instances.length).toBeGreaterThan(1);
+    // toda instância continua às 12:00Z = 09:00 local
+    for (const t of instances) expect(new Date(t.date).getUTCHours()).toBe(12);
+  });
+
+  it("tz inválido é ignorado em vez de derrubar a leitura", async () => {
+    const res = await app.request("/tasks?month=2026-12&tz=Marte%2FOlympus", {}, env);
+    expect(res.status).toBe(200);
+  });
+});

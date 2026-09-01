@@ -41,18 +41,24 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
   edição, não a do envio. `stampUpdatedAt` (`@dailify/shared`) recusa relógio adiantado além de 5min.
 - **Dates are epoch-ms `number`s** in/out (same `Task` as the web). The month read expands recurring
   server-side (`expandRecurringTask`) and dedupes by `` `${id}-${date}` `` before returning.
+- **Fuso vem do cliente, nunca do runtime.** O Worker roda em UTC, então `GET /tasks` aceita `?tz=`
+  (IANA, validado com `IANAZone`) e repassa para `expandRecurringTask`/`startOfMonthMs` — sem isso a
+  recorrência sai na hora errada e a tarefa perto da meia-noite cai no mês vizinho. Mesmo motivo do
+  `from`/`to` do `DELETE /:id/complete`.
 - **`PATCH /tasks/:id?occurrence=<epoch>`** = "editar só esta": a instância vira tarefa própria e a
   data entra em `tasks.exdates`, que `expandRecurringTask` pula. Devolve `{ task, series }` — o
   cliente precisa da série de volta pra reexpandir o mês sem a ocorrência antiga.
-- **Alertas**: o Cron Trigger (`*/5 * * * *`) chama `dispatchAlerts`, que só cobre tarefas **sem
-  recorrência** (`repeat_kind='Off'`) — alertar cada ocorrência de uma série depende de resolver o
-  fuso do Worker (bd `3uv`). `alert_sent` é o que impede reenvio a cada passada.
+- **Alertas**: o Cron Trigger (`*/5 * * * *`) chama `dispatchAlerts`, que cobre tarefa avulsa **e**
+  ocorrência de série (`lib/occurrence-alert.ts`). `alert_sent` impede o reenvio, e para a série ele
+  guarda o **instante do alerta da última ocorrência avisada**, não a hora do envio — é o que deixa
+  a próxima ocorrência valer. Série só é processada para quem tem device inscrito: é de
+  `push_subscriptions.timezone` que sai o fuso.
 - **Web Push é implementado à mão** (`lib/push.ts`, RFC 8291 + VAPID) porque as libs de npm são
   Node-only. `test/push.test.ts` valida contra o vetor da própria RFC — se mexer na derivação de
   chave, esse teste é o que avisa.
 - **Voice**: `voice.ts` caps upload at 5MB and checks `audio/*` **before** calling OpenAI; GPT is
-  prompted in **naive local time**, then dates are reinterpreted with the user's Clerk `timezone`.
-  DST/month-edge correctness is the one thing that needs live verification (bd `3uv`).
+  prompted in **naive local time**, then dates are reinterpreted with the timezone the client sends
+  (Clerk `unsafeMetadata` é só fallback).
 - **Stripe webhook** needs the **raw body** for signature verification — keep it off any body
   parser and verify async (`constructEventAsync`).
 

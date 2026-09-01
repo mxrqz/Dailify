@@ -1,4 +1,5 @@
 import { Hono } from "hono";
+import { IANAZone } from "luxon";
 import { nanoid } from "nanoid";
 import type { Env } from "../index";
 import { requireAuth } from "../middleware/auth";
@@ -25,6 +26,11 @@ tasks.use("*", rateLimit("API_LIMITER"));
 
 const MONTH_RE = /^\d{4}-\d{2}$/;
 
+/** Fuso IANA vindo da query — entrada de usuário, então validada antes de chegar no Intl. */
+function validZone(value: string | undefined): string | undefined {
+  return value && IANAZone.isValidZone(value) ? value : undefined;
+}
+
 async function readJson(c: { req: { json: () => Promise<unknown> } }): Promise<unknown> {
   try {
     return await c.req.json();
@@ -38,13 +44,19 @@ tasks.get("/", async (c) => {
   const monthParam = c.req.query("month"); // "YYYY-MM"
   if (!monthParam || !MONTH_RE.test(monthParam)) return fail(c, 400, "month required");
   const [y, m] = monthParam.split("-").map(Number);
+  // `new Date(y, m-1, 1)` só carrega o par ano/mês daqui pra frente; o instante em si é irrelevante
+  // porque tudo que vira epoch passa pelo fuso abaixo.
   const month = new Date(y, m - 1, 1);
 
+  // O fuso vem do cliente pelo mesmo motivo que o `from`/`to` do DELETE /complete: o Worker roda em
+  // UTC e não tem como saber onde o dia do usuário começa. Sem `tz` o comportamento é o antigo.
+  const timeZone = validZone(c.req.query("tz"));
+
   const [inRange, recurring] = await Promise.all([
-    getMonthTasks(c.env.DB, userId, month),
+    getMonthTasks(c.env.DB, userId, month, timeZone),
     getRecurringTasks(c.env.DB, userId),
   ]);
-  const expanded = recurring.flatMap((t) => expandRecurringTask(t, month));
+  const expanded = recurring.flatMap((t) => expandRecurringTask(t, month, timeZone));
   const byKey = new Map<string, Task>();
   for (const t of [...inRange, ...expanded]) byKey.set(`${t.id}-${t.date}`, t);
   return c.json({ tasks: [...byKey.values()] });

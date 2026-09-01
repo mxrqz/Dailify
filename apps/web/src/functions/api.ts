@@ -67,7 +67,10 @@ export async function getTasksForMonth(
   month: Date,
 ): Promise<{ tasks: Task[]; error?: ApiError }> {
   const m = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
-  const { data, error } = await request<{ tasks?: Task[] }>(`/tasks?month=${m}`, token);
+  // O fuso vai junto: o Worker roda em UTC e sem isto a expansão da recorrência e a janela do mês
+  // saem na hora errada para quem não está em Greenwich.
+  const tz = encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const { data, error } = await request<{ tasks?: Task[] }>(`/tasks?month=${m}&tz=${tz}`, token);
   return { tasks: data?.tasks ?? [], error };
 }
 

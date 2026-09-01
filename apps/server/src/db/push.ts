@@ -1,4 +1,6 @@
+import type { Task } from "@dailify/shared";
 import type { PushSubscriptionKeys } from "../lib/push";
+import { rowToTask, type Row } from "./tasks";
 
 export interface StoredSubscription extends PushSubscriptionKeys {
   userId: string;
@@ -106,9 +108,8 @@ interface DueRow {
  * Alertas vencidos ainda não enviados. `graceMs` é o quanto para trás vale a pena avisar: um cron
  * que ficou parado não deve despejar lembretes de ontem.
  *
- * ponytail: só tarefas sem recorrência (`repeat_kind='Off'`). Alertar cada ocorrência de uma série
- * exige derivar a hora local de cada instância (o Worker roda em UTC — ver bd Dailify-3uv); quando
- * isso for resolvido, é aqui que a query deixa de filtrar por repeat_kind.
+ * Só tarefas SEM recorrência: as séries têm um alerta por ocorrência e passam por
+ * `recurringAlertCandidates` logo abaixo.
  */
 export async function dueAlerts(
   db: D1Database,
@@ -133,6 +134,54 @@ export async function dueAlerts(
     date: r.date,
     alert: r.alert,
   }));
+}
+
+/**
+ * Séries com alerta cujos donos têm ao menos um device inscrito — só esses podem receber push, e
+ * é do device que sai o fuso (o Worker roda em UTC e não sabe onde o dia do usuário começa).
+ *
+ * `alert_sent` aqui guarda o INSTANTE DO ALERTA da última ocorrência avisada, não a hora do envio:
+ * é o que impede tanto o reenvio quanto pular a ocorrência seguinte.
+ */
+export async function recurringAlertCandidates(
+  db: D1Database,
+  limit = 200, // ponytail: teto por passada; acima disso o certo é uma fila (Queues)
+): Promise<RecurringCandidate[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT t.*, (
+         SELECT p.timezone FROM push_subscriptions p WHERE p.user_id = t.user_id LIMIT 1
+       ) AS timezone
+       FROM tasks t
+       WHERE t.alert IS NOT NULL AND t.repeat_kind != 'Off'
+         AND EXISTS (SELECT 1 FROM push_subscriptions p WHERE p.user_id = t.user_id)
+       LIMIT ?`,
+    )
+    .bind(limit)
+    .all<Row & { alert_sent: number | null; timezone: string | null }>();
+
+  return results.map((r) => ({
+    task: rowToTask(r),
+    userId: r.user_id,
+    alertSent: r.alert_sent,
+    timeZone: r.timezone ?? "UTC",
+  }));
+}
+
+export interface RecurringCandidate {
+  task: Task;
+  userId: string;
+  alertSent: number | null;
+  timeZone: string;
+}
+
+/** Marca até onde a série já foi avisada (o instante do alerta da ocorrência, não o do envio). */
+export async function markOccurrenceAlerted(
+  db: D1Database,
+  id: string,
+  alertAt: number,
+): Promise<void> {
+  await db.prepare(`UPDATE tasks SET alert_sent=? WHERE id=?`).bind(alertAt, id).run();
 }
 
 export async function markAlertsSent(db: D1Database, ids: string[], at: number): Promise<void> {

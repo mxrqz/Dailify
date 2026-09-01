@@ -1,5 +1,6 @@
 import { describe, it, test, expect } from "vitest";
 import { expandRecurringTask, normalizeRepeat } from "./recurrence";
+import { zonedParts } from "./timezone";
 import type { Task } from "./types";
 
 const base: Task = {
@@ -146,5 +147,45 @@ describe("normalizeRepeat", () => {
     expect(normalizeRepeat("Weekly")).toBe("Off");
     expect(normalizeRepeat(undefined)).toBe("Off");
     expect(normalizeRepeat({ Weekly: "nope" })).toBe("Off");
+  });
+});
+
+describe("expansão com fuso explícito", () => {
+  // O bug do Worker: sem fuso, o servidor (UTC) reconstruía a hora-de-parede em UTC e a instância
+  // saía 3h deslocada para o usuário em São Paulo.
+  const daily: Task = {
+    ...base,
+    repeat: "Daily",
+    date: Date.UTC(2026, 0, 10, 12, 0, 0), // 09:00 em São Paulo
+  };
+
+  it("mantém a hora local do usuário, não a do runtime", () => {
+    const out = expandRecurringTask(daily, new Date(2026, 0, 1), "America/Sao_Paulo");
+    const first = out[0];
+    expect(new Date(first.date).toISOString()).toContain("T12:00:00");
+  });
+
+  it("não deixa a virada do mês escorregar para o fuso errado", () => {
+    // 31/01 23:30 em São Paulo = 01/02 01:30 UTC: a instância pertence a JANEIRO para o usuário.
+    const late: Task = { ...base, repeat: "Daily", date: Date.UTC(2026, 0, 5, 2, 30) };
+    const january = expandRecurringTask(late, new Date(2026, 0, 1), "America/Sao_Paulo");
+    const last = january[january.length - 1];
+    expect(zonedParts(last.date, "America/Sao_Paulo")).toMatchObject({ month: 0, day: 31 });
+  });
+
+  it("Weekly usa o dia da semana do usuário", () => {
+    // Domingo 22:00 em São Paulo já é segunda-feira em UTC.
+    const sundayNight: Task = {
+      ...base,
+      repeat: { Weekly: ["Sunday"] },
+      date: Date.UTC(2026, 0, 5, 1, 0), // dom 04/01 22:00 em SP
+    };
+    const out = expandRecurringTask(sundayNight, new Date(2026, 0, 1), "America/Sao_Paulo");
+    for (const instance of out) {
+      expect(zonedParts(instance.date, "America/Sao_Paulo").hour).toBe(22);
+      const p = zonedParts(instance.date, "America/Sao_Paulo");
+      expect(new Date(Date.UTC(p.year, p.month, p.day)).getUTCDay()).toBe(0); // domingo
+    }
+    expect(out.length).toBeGreaterThan(0);
   });
 });

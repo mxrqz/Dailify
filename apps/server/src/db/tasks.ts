@@ -1,7 +1,8 @@
 import type { Task, Repeat } from "@dailify/shared";
 import { startOfMonthMs, endOfMonthMs, stampUpdatedAt, taskHash } from "@dailify/shared";
 
-interface Row {
+/** Linha crua de `tasks`. Exportada para `db/push.ts`, que faz o próprio SELECT com um campo extra. */
+export interface Row {
   id: string;
   user_id: string;
   title: string;
@@ -111,10 +112,15 @@ export async function insertTask(db: D1Database, userId: string, task: Task): Pr
   return getTask(db, userId, task.id);
 }
 
-export async function getMonthTasks(db: D1Database, userId: string, month: Date): Promise<Task[]> {
+export async function getMonthTasks(
+  db: D1Database,
+  userId: string,
+  month: Date,
+  timeZone?: string,
+): Promise<Task[]> {
   const { results } = await db
     .prepare(`SELECT * FROM tasks WHERE user_id=? AND date>=? AND date<=?`)
-    .bind(userId, startOfMonthMs(month), endOfMonthMs(month))
+    .bind(userId, startOfMonthMs(month, timeZone), endOfMonthMs(month, timeZone))
     .all<Row>();
   return results.map(rowToTask);
 }

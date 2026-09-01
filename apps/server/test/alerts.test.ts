@@ -1,7 +1,10 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 
 // hoisted: o vi.mock abaixo sobe para o topo do módulo e precisa do mock já construído.
-const { sendPush } = vi.hoisted(() => ({ sendPush: vi.fn(async () => 201) }));
+// Os parâmetros são declarados para que `sendPush.mock.calls[i][2]` (o payload) tenha tipo.
+const { sendPush } = vi.hoisted(() => ({
+  sendPush: vi.fn(async (_env: unknown, _subscription: unknown, _payload: unknown) => 201),
+}));
 
 vi.mock("../src/lib/push", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/lib/push")>();
@@ -134,5 +137,51 @@ describe("/push/subscription", () => {
     );
     expect(res.status).toBe(204);
     expect(await subscriptionsOf(env.DB, "pushuser")).toBe(0);
+  });
+});
+
+describe("dispatchAlerts — séries recorrentes", () => {
+  // Diária às 09:00 SP com alerta na hora; o device inscrito diz que o fuso é São Paulo.
+  const daily = {
+    id: "serie-alerta",
+    title: "Academia",
+    date: Date.UTC(2026, 4, 1, 12, 0),
+    alert: Date.UTC(2026, 4, 1, 12, 0),
+    duration: "1h",
+    priority: 0,
+    repeat: "Daily" as const,
+    completed: [],
+  };
+
+  it("alerta a ocorrência do dia e não repete na passada seguinte", async () => {
+    await insertTask(env.DB, "pushuser", daily);
+    await saveSubscription(env.DB, "pushuser", subscription);
+
+    const now = Date.UTC(2026, 4, 20, 12, 1);
+    expect(await dispatchAlerts(env, now)).toBe(1);
+    expect(sendPush).toHaveBeenCalledOnce();
+
+    // 5 minutos depois, mesma ocorrência: nada de novo
+    expect(await dispatchAlerts(env, now + 5 * 60_000)).toBe(0);
+    expect(sendPush).toHaveBeenCalledOnce();
+
+    // no dia seguinte, a próxima ocorrência vale
+    expect(await dispatchAlerts(env, now + 24 * 60 * 60_000)).toBe(1);
+    expect(sendPush).toHaveBeenCalledTimes(2);
+  });
+
+  it("a notificação leva a hora da ocorrência, não a da tarefa original", async () => {
+    await insertTask(env.DB, "pushuser", daily);
+    await saveSubscription(env.DB, "pushuser", subscription);
+
+    await dispatchAlerts(env, Date.UTC(2026, 4, 20, 12, 1));
+    const [, , payload] = sendPush.mock.calls[0];
+    expect(payload).toMatchObject({ title: "Academia", at: Date.UTC(2026, 4, 20, 12, 0) });
+  });
+
+  it("sem device inscrito, a série não é processada", async () => {
+    await insertTask(env.DB, "pushuser", daily);
+    expect(await dispatchAlerts(env, Date.UTC(2026, 4, 20, 12, 1))).toBe(0);
+    expect(sendPush).not.toHaveBeenCalled();
   });
 });
