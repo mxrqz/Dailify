@@ -16,7 +16,7 @@ describe("dashboard copy", () => {
     }
   });
 
-  it("não hard-coda limite de plano (vem de PLAN_PERMISSIONS)", () => {
+  it("não hard-coda limite de plano (vem de QUOTAS)", () => {
     expect(JSON.stringify(copy)).not.toMatch(/\d+ tarefas/);
   });
 });

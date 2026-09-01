@@ -28,9 +28,9 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
 - **Auth**: mount `requireAuth` on a route group, then read `c.get("userId")` — never trust a
   user id from the request body. `getUserRole` does a **direct** `getUser(id)` (the old server's
   `getUserList().find()` silently broke past 10 users — don't reintroduce that).
-- **Tiering is enforced here, not on the client.** `enforceCreate` reads `PLAN_PERMISSIONS`
-  (`@dailify/shared`) by capability; `-1` = unlimited. The client gate is cosmetic — this is the
-  real one (epic `d69`).
+- **Tiering is enforced here, not on the client.** `enforce`/`enforceCreate` (`db/limits.ts`) read
+  `limitsFor(role)` (`@dailify/shared`) and count through `COUNTERS`, one per quota; `-1` = unlimited,
+  `0` = blocked. The client gate is cosmetic — this is the real one (epic `d69`).
 - **Todo body de tarefa passa por `lib/task-input.ts`** (`parseNewTask` / `parseTaskFields`) — não
   validar campo solto na rota. O `id` do POST **pode** vir do cliente (`parseClientId` valida só o
   formato): é o que permite à fila offline reenviar uma criação sem duplicar a tarefa que já está na
