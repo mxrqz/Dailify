@@ -8,11 +8,13 @@ import { TaskProps } from "@/types/types";
 import { createTaskVoice } from "@/functions/api";
 import { copy } from "@/components/dashboard/copy";
 import { useDailify } from "@/components/dailifyContext";
+import { toast } from "sonner";
 
 export default function Waveform({ onResponse }: { onResponse: (response: TaskProps[]) => void }) {
   const containerRef = useRef<HTMLDivElement>(null);
   const wavesurferRef = useRef<WaveSurfer | null>(null);
   const recordRef = useRef<RecordPlugin | null>(null);
+  const capRef = useRef<ReturnType<typeof setTimeout>>();
 
   const { getToken } = useAuth();
   const { bumpUsage } = useDailify();
@@ -25,16 +27,25 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
 
   const [record, setRecord] = useState<Blob>();
 
+  // 60s é o teto de custo por comando: a transcrição é cobrada por minuto de áudio. O servidor
+  // recusa acima de 512 KB de qualquer jeito — parar aqui evita perder a gravação inteira no 413.
+  const MAX_RECORDING_MS = 60_000;
+
+  const stopRecording = async () => {
+    if (!recordRef.current) return;
+    clearTimeout(capRef.current);
+    recordRef.current.stopRecording();
+    setIsRecording(false);
+  };
+
   const startRecording = async () => {
     if (!recordRef.current) return;
     await recordRef.current.startRecording();
     setIsRecording(true);
-  };
-
-  const stopRecording = async () => {
-    if (!recordRef.current) return;
-    recordRef.current.stopRecording();
-    setIsRecording(false);
+    capRef.current = setTimeout(() => {
+      void stopRecording();
+      toast.message(copy.voice.maxLength);
+    }, MAX_RECORDING_MS);
   };
 
   const handleSendRequest = async () => {
@@ -109,6 +120,7 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
     recordRef.current = record;
 
     return () => {
+      clearTimeout(capRef.current);
       wavesurfer.destroy();
     };
   }, []);
