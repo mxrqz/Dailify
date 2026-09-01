@@ -1,3 +1,5 @@
+import type { QuotaKey } from "@dailify/shared";
+
 /**
  * Dicionário de copy pt-BR do dashboard.
  *
@@ -23,6 +25,17 @@ export const copy = {
     themeLight: "Claro",
     themeDark: "Escuro",
     themeSystem: "Sistema",
+  },
+
+  quota: {
+    names: {
+      tasks: "Tarefas",
+      recurring: "Recorrentes",
+      voice: "Voz",
+    } satisfies Record<QuotaKey, string>,
+    /** `{used} de {limit} {name}` — `{limit}` vira a palavra de ilimitado quando não há teto. */
+    summary: "{used} de {limit} {name}",
+    unlimited: "ilimitado",
   },
 
   day: {
