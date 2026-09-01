@@ -181,7 +181,9 @@ export function TaskForm({
   onSubmit,
 }: TaskFormProps) {
   const { tasks } = useDailify();
-  const recurrence = !useQuotas().states.recurring.blocked;
+  // `exhausted`, não `blocked`: nenhum plano tem limite 0, então `blocked` nunca é true e o gate
+  // seria morto. Tarefa que JÁ repete ocupa a vaga dela — mudar a cadência não cria linha nova.
+  const recurrence = !useQuotas().states.recurring.exhausted || (task?.repeat ?? "Off") !== "Off";
 
   const [title, setTitle] = useState(task?.title ?? "");
   const [date, setDate] = useState<Date>(() =>
