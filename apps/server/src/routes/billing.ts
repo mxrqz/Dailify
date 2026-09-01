@@ -1,10 +1,11 @@
 import { Hono } from "hono";
 import type Stripe from "stripe";
-import { PLAN_PERMISSIONS } from "@dailify/shared";
+import { limitsFor } from "@dailify/shared";
 import type { Env } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { clerk, getUserRole, readStripeCustomerId, updateUserRole, userEmail } from "../lib/clerk";
+import { readAllUsage } from "../db/limits";
 import {
   customerId,
   getPaymentDetails,
@@ -19,9 +20,27 @@ import { fail } from "../lib/errors";
 
 const billing = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 
-billing.get("/permissions", requireAuth, async (c) =>
-  c.json(PLAN_PERMISSIONS[await getUserRole(c.env, c.get("userId"))]),
-);
+/**
+ * O mês vem do cliente porque quota de escopo mensal é contada contra o mês que ele está olhando —
+ * a agenda de agosto tem as suas 30 vagas, setembro tem outras 30.
+ */
+function monthParam(value: string | undefined): Date {
+  const match = value === undefined ? null : /^(\d{4})-(\d{2})$/.exec(value);
+  if (!match) return new Date();
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return new Date();
+  return new Date(year, month - 1, 1);
+}
+
+billing.get("/permissions", requireAuth, async (c) => {
+  const userId = c.get("userId");
+  const at = monthParam(c.req.query("month"));
+  return c.json({
+    limits: limitsFor(await getUserRole(c.env, userId)),
+    usage: await readAllUsage(c.env.DB, userId, at),
+  });
+});
 
 billing.post("/billing/checkout", requireAuth, rateLimit("API_LIMITER"), async (c) => {
   if (!c.env.STRIPE_SECRET_KEY) return fail(c, 503, "Billing não configurado");
