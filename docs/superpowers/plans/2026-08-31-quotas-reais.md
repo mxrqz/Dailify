@@ -1767,6 +1767,12 @@ copy que referencia limites.
 
 **`CLAUDE.md` da raiz, linha 94-95** — troque `tiering PermissionsProps` por `tiering via QUOTAS`.
 
+**`apps/web/src/components/CLAUDE.md`, linhas 9 e 13** — descreve o contexto como tendo
+`permissions`, que não existe mais (virou `quotas`), e diz que o efeito de boot refaz
+"permissions/invoices/payment" quando o mês muda. Depois da T6 isso está duplamente errado: só o
+fetch de quotas é chaveado pelo mês; pagamento e faturas ficaram no efeito de boot. Corrija o nome
+do campo na linha 9 e, na 13, separe os dois efeitos.
+
 - [ ] **Step 5: Gate completo**
 
 Run: `bun run check`
