@@ -2,14 +2,15 @@ import { Hono } from "hono";
 import { nanoid } from "nanoid";
 import { DateTime, IANAZone } from "luxon";
 import type { User } from "@clerk/backend";
-import { normalizeRepeat, PLAN_PERMISSIONS, type Task } from "@dailify/shared";
+import { limitsFor, normalizeRepeat, type Task } from "@dailify/shared";
 import type { Env } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { clerk, getUserRole } from "../lib/clerk";
 import { transcribe, generateTasks } from "../lib/openai";
 import { insertTask } from "../db/tasks";
-import { enforceCreate } from "../db/limits";
+import { enforce, enforceCreate } from "../db/limits";
+import { bumpStoredUsage, periodFor } from "../db/usage";
 import { fail } from "../lib/errors";
 
 const voice = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
@@ -37,19 +38,25 @@ function formatToUTC(iso: string, timeZone: string): number | null {
 
 voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const userId = c.get("userId");
-  const role = await getUserRole(c.env, userId);
-  if (!PLAN_PERMISSIONS[role].features.voiceCreation) {
-    return fail(c, 403, "Voice not available on your plan");
+  const limits = limitsFor(await getUserRole(c.env, userId));
+  const now = new Date();
+
+  const quotaError = await enforce(c.env.DB, userId, limits, "voice", now);
+  if (quotaError) {
+    // Bloqueado (limite 0) e esgotado são a mesma resposta: em ambos não há comando disponível.
+    return fail(c, limits.voice === 0 ? 403 : 429, quotaError);
   }
 
   const body = await c.req.parseBody();
   const audio = body["audio"];
   if (!(audio instanceof File)) return fail(c, 400, "No audio");
 
-  // Cap upload size — guards OpenAI cost/abuse (Opus voice at ~24kbps is well under this;
-  // OpenAI itself rejects >25MB). Reject non-audio content types too.
-  const MAX_AUDIO_BYTES = 5 * 1024 * 1024;
-  if (audio.size > MAX_AUDIO_BYTES) return fail(c, 413, "Audio too large (max 5MB)");
+  // 60s a 24 kbps = ~180 KB; 512 KB dá folga pro AAC do Safari. Este é o teto de custo por comando:
+  // a transcrição é cobrada por minuto de áudio, e sem ele um upload cabia ~28 minutos.
+  // ponytail: byte é proxy de duração. Uma request forjada pode encodar ~8 min a 8 kbps aqui
+  // dentro; quem fecha a conta é a quota mensal, não este cap sozinho.
+  const MAX_AUDIO_BYTES = 512 * 1024;
+  if (audio.size > MAX_AUDIO_BYTES) return fail(c, 413, "Audio too large (max 512KB)");
   if (audio.type && !audio.type.startsWith("audio/")) return fail(c, 415, "Unsupported audio type");
 
   const user = await clerk(c.env).users.getUser(userId);
@@ -57,6 +64,9 @@ voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   if (!timezone) return fail(c, 400, "No timezone set");
 
   const transcript = await transcribe(c.env, audio);
+  // Conta aqui, não no fim: a transcrição é o que custa dinheiro. Se a geração falhar depois, o
+  // comando já foi pago.
+  await bumpStoredUsage(c.env.DB, userId, "voice", periodFor("voice", now));
   const ai = await generateTasks(c.env, transcript, timezone);
 
   if (ai.type !== "create" || !ai.tasks) {

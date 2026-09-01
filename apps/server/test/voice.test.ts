@@ -37,6 +37,7 @@ import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
 import { getTask } from "../src/db/tasks";
 import type { Task } from "@dailify/shared";
+import { bumpStoredUsage, periodFor, readStoredUsage } from "../src/db/usage";
 
 beforeAll(async () => {
   await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
@@ -54,14 +55,6 @@ function audioRequest() {
 }
 
 describe("POST /tasks/voice", () => {
-  it("403s a non-voice role without calling OpenAI", async () => {
-    role = "pro";
-    const res = await audioRequest();
-    expect(res.status).toBe(403);
-    expect(openaiMock.audio.transcriptions.create).not.toHaveBeenCalled();
-    expect(openaiMock.responses.create).not.toHaveBeenCalled();
-  });
-
   it("transcribes, creates tasks, and returns epoch-ms dates for a pro+ai role", async () => {
     role = "pro+ai";
     openaiMock.audio.transcriptions.create.mockResolvedValue({
@@ -180,5 +173,53 @@ describe("POST /tasks/voice", () => {
     const res = await app.request("/tasks/voice", { method: "POST", body: form }, env);
     expect(res.status).toBe(413);
     expect(openaiMock.audio.transcriptions.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /tasks/voice — quota e tamanho", () => {
+  it("recusa áudio acima de 512 KB sem chamar a OpenAI", async () => {
+    role = "pro+ai";
+    userId = "vq1";
+    const form = new FormData();
+    form.append(
+      "audio",
+      new File([new Uint8Array(512 * 1024 + 1)], "audio.ogg", { type: "audio/ogg" }),
+    );
+    const res = await app.request("/tasks/voice", { method: "POST", body: form }, env);
+    expect(res.status).toBe(413);
+    expect(openaiMock.audio.transcriptions.create).not.toHaveBeenCalled();
+  });
+
+  it("429s quando a quota mensal de voz acabou", async () => {
+    role = "free";
+    userId = "vq2";
+    getUserMock.mockResolvedValue({ id: "vq2", unsafeMetadata: { timezone: "UTC" } });
+    for (let i = 0; i < 3; i++) {
+      await bumpStoredUsage(env.DB, "vq2", "voice", periodFor("voice", new Date()));
+    }
+    const res = await audioRequest();
+    expect(res.status).toBe(429);
+    const body = await res.json<{ error: string }>();
+    expect(body.error).toBe("Voice Limit Reached");
+    expect(openaiMock.audio.transcriptions.create).not.toHaveBeenCalled();
+  });
+
+  it("conta o comando mesmo quando a geração não cria tarefa", async () => {
+    role = "free";
+    userId = "vq3";
+    getUserMock.mockResolvedValue({ id: "vq3", unsafeMetadata: { timezone: "UTC" } });
+    openaiMock.audio.transcriptions.create.mockResolvedValue({ text: "quais sao minhas tarefas" });
+    openaiMock.responses.create.mockResolvedValue({
+      output_text: JSON.stringify({
+        response: "ok",
+        type: "list",
+        listDate: "2026-08-01T00:00:00",
+      }),
+    });
+
+    const res = await audioRequest();
+    expect(res.status).toBe(200);
+    const period = periodFor("voice", new Date());
+    expect(await readStoredUsage(env.DB, "vq3", "voice", period)).toBe(1);
   });
 });
