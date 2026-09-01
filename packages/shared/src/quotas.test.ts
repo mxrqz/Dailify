@@ -88,7 +88,10 @@ describe("quotaState", () => {
 
 describe("computeQuotas", () => {
   it("combina limites e uso por chave", () => {
-    const q = computeQuotas({ tasks: 30, recurring: 3, voice: 3 }, { tasks: 12, recurring: 1, voice: 0 });
+    const q = computeQuotas(
+      { tasks: 30, recurring: 3, voice: 3 },
+      { tasks: 12, recurring: 1, voice: 0 },
+    );
     expect(q.loading).toBe(false);
     expect(q.states.tasks.remaining).toBe(18);
     expect(q.states.recurring.remaining).toBe(2);
