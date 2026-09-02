@@ -4,7 +4,7 @@ import { applyD1Migrations } from "cloudflare:test";
 import { limitsFor } from "@dailify/shared";
 import { enforce, readAllUsage } from "../src/db/limits";
 import { insertTask } from "../src/db/tasks";
-import { bumpStoredUsage } from "../src/db/usage";
+import { bumpStoredUsage, periodFor } from "../src/db/usage";
 import type { Task } from "@dailify/shared";
 
 beforeAll(async () => {
@@ -42,14 +42,23 @@ describe("enforce", () => {
     expect(err).toBe("Recurring Tasks Limit Reached");
   });
 
-  it("conta voz do armazenamento, por mês", async () => {
-    for (let i = 0; i < 3; i++) await bumpStoredUsage(env.DB, "le4", "voice", "2026-06");
-    expect(await enforce(env.DB, "le4", limitsFor("free"), "voice", new Date(2026, 5, 20))).toBe(
-      "Voice Limit Reached",
-    );
-    // Julho é outro período: a quota reinicia.
+  it("conta voz do período corrente do servidor, seja qual for a data recebida", async () => {
+    for (let i = 0; i < 3; i++) {
+      await bumpStoredUsage(env.DB, "le4", "voice", periodFor("voice", new Date()));
+    }
+    // Voz é ancorada em AGORA: o mês que o cliente pede não muda o período lido, senão navegar pro
+    // mês que vem "devolveria" comandos que o servidor vai recusar.
+    for (const at of [new Date(2026, 5, 20), new Date(2026, 6, 1), new Date(2030, 0, 1)]) {
+      expect(await enforce(env.DB, "le4", limitsFor("free"), "voice", at)).toBe(
+        "Voice Limit Reached",
+      );
+    }
+  });
+
+  it("uso de voz gravado em outro período não conta no corrente", async () => {
+    for (let i = 0; i < 3; i++) await bumpStoredUsage(env.DB, "le6", "voice", "2000-01");
     expect(
-      await enforce(env.DB, "le4", limitsFor("free"), "voice", new Date(2026, 6, 1)),
+      await enforce(env.DB, "le6", limitsFor("free"), "voice", new Date(2000, 0, 15)),
     ).toBeNull();
   });
 });
@@ -58,8 +67,9 @@ describe("readAllUsage", () => {
   it("devolve as três chaves", async () => {
     await insertTask(env.DB, "le5", task({ id: "le5-a" }));
     await insertTask(env.DB, "le5", task({ id: "le5-b", repeat: "Daily" }));
-    await bumpStoredUsage(env.DB, "le5", "voice", "2026-06");
+    await bumpStoredUsage(env.DB, "le5", "voice", periodFor("voice", new Date()));
 
+    // O `at` é o mês pedido pelo cliente: vale pra `tasks`, mas voz lê sempre o mês do servidor.
     const usage = await readAllUsage(env.DB, "le5", new Date(2026, 5, 15));
     expect(usage).toEqual({ tasks: 2, recurring: 1, voice: 1 });
   });

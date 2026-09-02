@@ -1,4 +1,4 @@
-import { ReactNode, useEffect, useCallback, useRef } from "react";
+import { ReactNode, useEffect, useCallback, useRef, useState } from "react";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { Navigate, useLocation } from "react-router-dom";
 import { Loader2Icon } from "lucide-react";
@@ -60,20 +60,28 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   // A chave é só o MÊS: andar de dia dentro dele não muda a resposta e não deve refazer o fetch.
   // `quotas` fica undefined se a API falhou — `computeQuotas` trata isso como "ainda carregando",
   // que é o comportamento seguro: a UI se esconde e a criação não é bloqueada.
+  // Relê também no `quotaNonce`, que a revalidação lá embaixo incrementa: `bumpUsage` só sobe,
+  // então sem uma releitura quem cria 30 tarefas e apaga 20 fica travado no 30 a sessão inteira.
   const quotaMonth = `${selectedDay.getFullYear()}-${selectedDay.getMonth()}`;
+  const [quotaNonce, setQuotaNonce] = useState(0);
   useEffect(() => {
     if (!isLoaded || !userId) return;
+    // Trocar de mês rápido põe duas respostas correndo: a do mês que saiu de tela não vale mais.
+    let current = true;
     (async () => {
       try {
         const token = await getToken();
         if (!token) return;
         const snapshot = await getQuotas(token, selectedDay);
-        if (snapshot) setQuotas(snapshot);
+        if (current && snapshot) setQuotas(snapshot);
       } catch {
         /* sem sessão utilizável */
       }
     })();
-  }, [isLoaded, userId, quotaMonth]);
+    return () => {
+      current = false;
+    };
+  }, [isLoaded, userId, quotaMonth, quotaNonce]);
 
   // 🌐 Salvar timezone no metadata do usuário
   useEffect(() => {
@@ -176,6 +184,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       if (!force && Date.now() - lastFetch.current < REVALIDATE_AFTER_MS) return;
       lastFetch.current = Date.now();
       getTasks();
+      setQuotaNonce((n) => n + 1);
     };
 
     const onVisible = () => revalidate();

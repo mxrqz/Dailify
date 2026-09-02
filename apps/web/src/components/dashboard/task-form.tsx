@@ -274,7 +274,7 @@ export function TaskForm({
             }
             options={REPEAT_MODES.map(({ value, label }) => ({
               value,
-              label: label + (value !== "Off" && !recurrence ? " (Pro)" : ""),
+              label: label + (value !== "Off" && !recurrence ? copy.form.repeatLimit : ""),
               disabled: value !== "Off" && !recurrence,
             }))}
           />
