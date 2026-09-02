@@ -2,7 +2,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
-import type { Permissions } from "@dailify/shared";
+import { limitsFor, type QuotaUsage } from "@dailify/shared";
 
 const { useUser, useAuth, dailify } = vi.hoisted(() => ({
   useUser: vi.fn(),
@@ -16,21 +16,17 @@ vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
 import BillingPage from "./billing";
 import { copy } from "@/components/dashboard/copy";
 
-const FREE: Permissions = {
-  taskLimits: { monthly: 30, recurring: 0 },
-  features: { voiceCreation: false },
-};
-const PRO_AI: Permissions = {
-  taskLimits: { monthly: -1, recurring: -1 },
-  features: { voiceCreation: true },
-};
+const NO_USAGE: QuotaUsage = { tasks: 0, recurring: 0, voice: 0 };
+
+const FREE = { limits: limitsFor("free"), usage: NO_USAGE };
+const PRO_AI = { limits: limitsFor("pro+ai"), usage: NO_USAGE };
 
 /** Só o que a página lê do contexto — o resto do provider não participa da renderização. */
 function context(over: Record<string, unknown> = {}) {
   return {
     invoices: undefined,
     paymentDetails: undefined,
-    permissions: undefined,
+    quotas: undefined,
     tasks: [],
     ...over,
   };
@@ -66,7 +62,7 @@ function currentPlanCard(): HTMLElement {
 describe("<BillingPage>", () => {
   // O bug de 2026-08: a página inteira sumia para o usuário Free por um gate booleano.
   it("renderiza para usuário Free sem assinatura", () => {
-    dailify.mockReturnValue(context({ permissions: FREE }));
+    dailify.mockReturnValue(context({ quotas: FREE }));
     renderPage();
 
     expect(screen.getByText(copy.profile.billingTitle)).toBeInTheDocument();
@@ -75,33 +71,42 @@ describe("<BillingPage>", () => {
     expect(screen.queryByText(copy.profile.billingManage)).not.toBeInTheDocument();
   });
 
-  // O segundo bug: computeEntitlements(undefined) devolvia unlimited, e quem tinha 30/mês lia
-  // "Tarefas ilimitadas".
-  it("Free não anuncia tarefas ilimitadas", () => {
-    dailify.mockReturnValue(context({ permissions: FREE }));
+  // O segundo bug: a derivação sem dados devolvia unlimited, e quem tinha 30/mês lia "ilimitado".
+  it("Free não anuncia nada de ilimitado", () => {
+    dailify.mockReturnValue(context({ quotas: FREE }));
     renderPage();
 
     const card = within(currentPlanCard());
-    expect(card.getByText(copy.profile.billingTasksUsed)).toBeInTheDocument();
-    expect(card.queryByText(copy.profile.billingUnlimitedTasks)).not.toBeInTheDocument();
+    expect(card.getByText(copy.quota.names.tasks)).toBeInTheDocument();
     expect(card.getByText("0 / 30")).toBeInTheDocument();
+    // nenhuma das três quotas do Free é ilimitada
+    expect(card.queryByText(new RegExp(copy.quota.unlimited))).not.toBeInTheDocument();
   });
 
-  it("com permissões ainda carregando, não mostra número de tarefa nenhum", () => {
-    dailify.mockReturnValue(context({ permissions: undefined }));
+  it("as três quotas aparecem, não só tarefas", () => {
+    dailify.mockReturnValue(context({ quotas: FREE }));
+    renderPage();
+
+    const card = within(currentPlanCard());
+    expect(card.getByText(copy.quota.names.recurring)).toBeInTheDocument();
+    expect(card.getByText(copy.quota.names.voice)).toBeInTheDocument();
+  });
+
+  it("com quotas ainda carregando, não mostra número nenhum", () => {
+    dailify.mockReturnValue(context({ quotas: undefined }));
     renderPage();
 
     const card = within(currentPlanCard());
     expect(screen.getByText(copy.profile.billingTitle)).toBeInTheDocument();
-    expect(card.queryByText(copy.profile.billingTasksUsed)).not.toBeInTheDocument();
-    expect(card.queryByText(copy.profile.billingUnlimitedTasks)).not.toBeInTheDocument();
+    expect(card.queryByText(copy.quota.names.tasks)).not.toBeInTheDocument();
+    expect(card.queryByText(new RegExp(copy.quota.unlimited))).not.toBeInTheDocument();
   });
 
   it("assinante vê o plano, a próxima cobrança e o botão de gerenciar", () => {
     useUser.mockReturnValue({ user: { publicMetadata: { plan: "pro+ai" } } });
     dailify.mockReturnValue(
       context({
-        permissions: PRO_AI,
+        quotas: PRO_AI,
         paymentDetails: {
           amount: 1990,
           currency: "brl",
@@ -114,8 +119,10 @@ describe("<BillingPage>", () => {
 
     expect(screen.getByRole("heading", { name: "Plano Pro + AI" })).toBeInTheDocument();
     expect(screen.getByText(copy.profile.billingManage)).toBeInTheDocument();
-    expect(
-      within(currentPlanCard()).getByText(copy.profile.billingUnlimitedTasks),
-    ).toBeInTheDocument();
+
+    const card = within(currentPlanCard());
+    // tarefas e recorrentes são ilimitadas no Pro+AI; a voz TEM teto mesmo no plano de cima.
+    expect(card.getAllByText(`0 / ${copy.quota.unlimited}`)).toHaveLength(2);
+    expect(card.getByText("0 / 200")).toBeInTheDocument();
   });
 });
