@@ -101,6 +101,9 @@ export const copy = {
     repeatWeekly: "Semanal",
     repeatMonthly: "Mensal",
     repeatYearly: "Anual",
+    // Sufixo dos modos de repetição sem vaga. Não é upsell: Pro tem 30 recorrentes e também
+    // esgota — dizer "(Pro)" aqui manda o assinante comprar o plano que ele já tem.
+    repeatLimit: " (limite atingido)",
     // Ordem de `weekDays` do shared (domingo primeiro) — o índice vem do `dayMap`.
     repeatDays: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
     back: "Voltar",

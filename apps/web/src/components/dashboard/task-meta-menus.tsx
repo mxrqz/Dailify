@@ -136,7 +136,7 @@ export function RepeatMenu({
               disabled={option !== "Off" && !recurrence}
             >
               {label}
-              {option !== "Off" && !recurrence && " (Pro)"}
+              {option !== "Off" && !recurrence && copy.form.repeatLimit}
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>
