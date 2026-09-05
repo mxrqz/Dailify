@@ -14,7 +14,7 @@ import { Sidebar } from "@/components/dashboard/sidebar";
 export function AppLayout(): JSX.Element {
   return (
     <div className="flex min-h-dvh flex-col bg-surface-page text-foreground">
-      <AppHeader className="px-3" />
+      <AppHeader className="pl-3 pr-gutter" />
 
       <div className="flex flex-1">
         <Sidebar />

@@ -1,33 +1,27 @@
-import { ListTodoIcon, RepeatIcon, SparklesIcon } from "lucide-react";
 import { Link } from "react-router-dom";
-import { QUOTA_KEYS, type QuotaKey } from "@dailify/shared";
+import { QUOTA_KEYS } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
-import { Progress } from "@/components/ui/progress";
 import { quotaLabel } from "@/functions/quota-label";
 import { useQuotas } from "@/hooks/useQuotas";
 import { cn } from "@/lib/utils";
 
-/** Um ícone por quota — quota nova sem ícone não compila. */
-const ICONS: Record<QuotaKey, typeof ListTodoIcon> = {
-  tasks: ListTodoIcon,
-  recurring: RepeatIcon,
-  voice: SparklesIcon,
-};
-
 /**
- * As três quotas na barra do app. `ratio === null` (ilimitado) vira `value={null}` no Radix, que
- * deixa o trilho vazio: não existe fração de um teto que não existe, e desenhar 0% ou 100% mentiria.
+ * As três quotas como pilhas em pé, lado a lado, enchendo de baixo pra cima. `ratio === null`
+ * (ilimitado) deixa a pilha vazia — não existe fração de um teto que não existe, e desenhar 100%
+ * mentiria dizendo "no limite". Quem diz o número continua sendo o `title`.
+ *
+ * Saiu o `<Progress>`: o Radix só sabe crescer no eixo X. Não custou semântica porque a barra já
+ * era `aria-hidden` — quem carrega o nome acessível é o link em volta.
  */
 export function QuotaBar(): JSX.Element | null {
   const quotas = useQuotas();
   if (quotas.loading) return null;
 
   return (
-    <div className="hidden items-center gap-3 md:flex">
+    <div className="hidden items-center gap-1 md:flex">
       {QUOTA_KEYS.map((key) => {
         const state = quotas.states[key];
-        const Icon = ICONS[key];
         const label = quotaLabel(state, copy.quota.names[key], copy.quota.unlimited);
 
         return (
@@ -36,17 +30,32 @@ export function QuotaBar(): JSX.Element | null {
             to="/premium"
             title={label}
             aria-label={label}
-            className="inline-flex items-center gap-1.5"
+            className="flex flex-col items-center"
           >
-            <Icon
-              className={cn("size-3 text-muted-foreground", state.exhausted && "text-destructive")}
+            {/* O terminal: é a pontinha que faz ler como pilha em vez de barrinha em pé. */}
+            <span
+              className={cn(
+                "h-0.5 w-1 rounded-t-xs",
+                state.exhausted ? "bg-destructive" : "bg-highlight",
+              )}
               aria-hidden="true"
             />
-            <Progress
-              value={state.ratio === null ? null : state.ratio * 100}
-              className="h-1 w-8"
+
+            <span
+              className={cn(
+                "relative block h-5 w-2 overflow-hidden rounded-xs border",
+                state.exhausted ? "border-destructive" : "border-highlight",
+              )}
               aria-hidden="true"
-            />
+            >
+              <span
+                className={cn(
+                  "absolute inset-x-0 bottom-0 transition-all",
+                  state.exhausted ? "bg-destructive" : "bg-accent-primary",
+                )}
+                style={{ height: `${(state.ratio ?? 0) * 100}%` }}
+              />
+            </span>
           </Link>
         );
       })}
