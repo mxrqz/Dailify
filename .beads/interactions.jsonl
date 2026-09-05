@@ -98,3 +98,5 @@
 {"id":"int-bb3f0946","kind":"field_change","created_at":"2026-09-01T00:08:09.850046332Z","actor":"mxrqz","issue_id":"Dailify-3uv","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}
 {"id":"int-7cacd092","kind":"field_change","created_at":"2026-09-01T00:08:09.967460938Z","actor":"mxrqz","issue_id":"Dailify-bv7","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}
 {"id":"int-120b3728","kind":"field_change","created_at":"2026-09-01T00:14:53.668972692Z","actor":"mxrqz","issue_id":"Dailify-040","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}
+{"id":"int-9ad49abc","kind":"field_change","created_at":"2026-09-01T03:10:35.884690202Z","actor":"mxrqz","issue_id":"Dailify-jp0","extra":{"field":"priority","new_value":"1","old_value":"2"}}
+{"id":"int-3f1384a0","kind":"field_change","created_at":"2026-09-02T01:19:34.545637021Z","actor":"mxrqz","issue_id":"Dailify-5v4","extra":{"field":"status","new_value":"closed","old_value":"open","reason":"Closed"}}

@@ -17,10 +17,10 @@ import { cn } from "@/lib/utils";
  * como qualquer flutuante do projeto — o `PopoverContent` ao lado já era assim. Quem separa do
  * fundo é a borda mais a sombra, não o contraste.
  *
- * E foi embora a seta que vinha junto. Ela é um quadrado girado 45° que se sobrepõe ao conteúdo pra
- * esconder a emenda, truque que só fecha enquanto o balão não tem borda: com uma, a linha passa por
- * dentro da seta, e no tema claro a seta ainda ficaria branca sobre branco, sem contorno nenhum. O
- * popover daqui também não tem seta.
+ * A seta é um quadrado girado 45° que o `translate-y` mete meio corpo pra dentro do balão — é assim
+ * que ela cobre o trecho de borda que passaria atrás dela. Por isso ela leva borda em dois lados
+ * só: os outros dois ficam enterrados no conteúdo. Quais dois nunca muda, porque o Radix gira o
+ * invólucro inteiro conforme o lado que escolheu, e `border-r`/`border-b` giram junto.
  */
 function TooltipProvider({
   delayDuration = 400,
@@ -61,6 +61,7 @@ function TooltipContent({
         {...props}
       >
         {children}
+        <TooltipPrimitive.Arrow className="bg-surface-panel fill-surface-panel border-surface-line z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-xs border-r border-b" />
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   );
