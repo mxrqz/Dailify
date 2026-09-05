@@ -18,6 +18,7 @@ import { Badge } from "@/components/ui/badge";
 import { TASK_LIMITS } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
+import { Tip } from "@/components/tip";
 import { priorityText, priorityTextColor } from "@/consts/conts";
 import { linkLabel } from "@/functions/link-label";
 import { cn } from "@/lib/utils";
@@ -198,16 +199,22 @@ const ToolbarButton = forwardRef<
   HTMLButtonElement,
   { label: string; children: ReactNode } & ComponentPropsWithoutRef<"button">
 >(function ToolbarButton({ label, children, ...props }, ref) {
+  // O `Tip` mora aqui dentro, e não em volta de cada uso, porque o botão já é quem carrega o
+  // `label`. Funciona apesar do menu envolver isto num `asChild`: o `{...props}` do gatilho pousa
+  // no `<button>`, não no `Tip` — que não repassa nada. Um `<Tip>` colado direto num
+  // `asChild` (sem este espalhamento no meio) engoliria o clique em silêncio.
   return (
-    <button
-      ref={ref}
-      type="button"
-      aria-label={label}
-      className="flex size-7 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
-      {...props}
-    >
-      {children}
-    </button>
+    <Tip content={label} side="top">
+      <button
+        ref={ref}
+        type="button"
+        aria-label={label}
+        className="flex size-7 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        {...props}
+      >
+        {children}
+      </button>
+    </Tip>
   );
 });
 
