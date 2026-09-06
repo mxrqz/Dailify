@@ -29,11 +29,18 @@ export type Cycle = "monthly" | "yearly";
 export function PlanCards({
   roles,
   recommended,
+  currentPlan,
   renderCta,
   className,
 }: {
   roles: readonly PlanRole[];
   recommended?: PlanRole;
+  /**
+   * O plano que o usuário assina, pra marcar o card. `string` e não `PlanRole` de propósito: o valor
+   * vem do `publicMetadata` do Clerk, que é texto livre — quem escreve lá é o webhook do Stripe, e
+   * um id desconhecido tem que simplesmente não casar com card nenhum, não virar erro de tipo aqui.
+   */
+  currentPlan?: string;
   renderCta: (role: PlanRole, cycle: Cycle) => ReactNode;
   className?: string;
 }): JSX.Element {
@@ -75,7 +82,10 @@ export function PlanCards({
       >
         {roles.map((role) => {
           const pricing = role === "free" ? null : PLAN_PRICING[role];
-          const isRecommended = role === recommended;
+          const isCurrent = role === currentPlan;
+          // Não se recomenda a alguém o que ela já assina: ser o plano atual ganha do selo de
+          // recomendado, senão o card do Pro + AI anunciaria "Recomendado" pra quem já o tem.
+          const isRecommended = role === recommended && !isCurrent;
 
           return (
             <motion.div
@@ -87,12 +97,19 @@ export function PlanCards({
               className={cn(
                 "flex flex-col gap-6 rounded-xl border border-surface-line bg-surface-page p-6",
                 isRecommended && "border-accent-primary shadow-[0_0_40px_-16px_var(--accent-glow)]",
+                // Borda sim, brilho não: o glow é chamariz de venda, e não se vende o que já é seu.
+                isCurrent && "border-accent-primary",
               )}
             >
               <div className="flex items-center justify-between gap-2">
                 <h3 className="text-lg font-semibold tracking-[-0.01em] text-foreground">
                   {copy.plans[role].name}
                 </h3>
+                {isCurrent && (
+                  <span className="font-mono text-2xs uppercase tracking-[0.04em] text-accent-primary">
+                    {copy.billing.currentBadge}
+                  </span>
+                )}
                 {isRecommended && (
                   <span className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
                     {copy.billing.recommendedBadge}

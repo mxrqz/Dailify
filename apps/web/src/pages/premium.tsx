@@ -1,4 +1,4 @@
-import { useAuth } from "@clerk/clerk-react";
+import { useAuth, useUser } from "@clerk/clerk-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -14,6 +14,7 @@ import { PLAN_ID } from "@/consts/conts";
 import type { PlanRole } from "@/consts/pricing";
 import { copy } from "@/components/pricing/copy";
 import { checkout } from "@/functions/api";
+import { toText } from "@/lib/utils";
 
 const PAID_ROLES: readonly PlanRole[] = [PLAN_ID.pro, PLAN_ID.proAi];
 
@@ -23,6 +24,10 @@ const PAID_ROLES: readonly PlanRole[] = [PLAN_ID.pro, PLAN_ID.proAi];
  */
 export default function PremiumPage(): JSX.Element {
   const { getToken } = useAuth();
+  const { user } = useUser();
+  // Deslogado cai em "free", que não é um dos cards aqui — então ninguém fica marcado, que é o certo
+  // pra uma página de venda pública.
+  const currentPlan = toText(user?.publicMetadata?.plan, PLAN_ID.free);
 
   const handleSelectPlan = async (role: PlanRole, cycle: Cycle) => {
     const token = await getToken();
@@ -51,15 +56,22 @@ export default function PremiumPage(): JSX.Element {
       <PlanCards
         roles={PAID_ROLES}
         recommended={PLAN_ID.proAi}
-        renderCta={(role, cycle) => (
-          <Button
-            className="w-full"
-            variant={role === PLAN_ID.proAi ? "default" : "outline"}
-            onClick={() => handleSelectPlan(role, cycle)}
-          >
-            {copy.page.choosePlan}
-          </Button>
-        )}
+        currentPlan={currentPlan}
+        renderCta={(role, cycle) =>
+          role === currentPlan ? (
+            <Button className="w-full" variant="outline" disabled>
+              {copy.page.currentPlan}
+            </Button>
+          ) : (
+            <Button
+              className="w-full"
+              variant={role === PLAN_ID.proAi ? "default" : "outline"}
+              onClick={() => handleSelectPlan(role, cycle)}
+            >
+              {copy.page.choosePlan}
+            </Button>
+          )
+        }
       />
 
       <section className="mx-auto flex w-full max-w-3xl flex-col gap-6">

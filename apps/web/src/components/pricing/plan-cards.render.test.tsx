@@ -47,4 +47,37 @@ describe("<PlanCards>", () => {
     expect(screen.getByText(copy.billing.recommendedBadge)).toBeInTheDocument();
     expect(screen.getAllByRole("button", { name: /^assinar/ })).toHaveLength(3);
   });
+
+  /**
+   * O caso que motivou isto: um assinante do Pro + AI abria /premium e via o proprio plano
+   * anunciado como "Recomendado", com um botao de comprar o que ja tinha.
+   */
+  it("marca o plano atual e cala o selo de recomendado nele", () => {
+    render(
+      <PlanCards
+        roles={["pro", "pro+ai"]}
+        recommended="pro+ai"
+        currentPlan="pro+ai"
+        renderCta={(role) => <button>assinar {role}</button>}
+      />,
+    );
+
+    expect(screen.getByText(copy.billing.currentBadge)).toBeInTheDocument();
+    expect(screen.queryByText(copy.billing.recommendedBadge)).not.toBeInTheDocument();
+  });
+
+  /** Id que nao existe (publicMetadata e texto livre do Clerk) nao pode marcar card nenhum. */
+  it("ignora um plano desconhecido em vez de quebrar", () => {
+    render(
+      <PlanCards
+        roles={["pro", "pro+ai"]}
+        recommended="pro+ai"
+        currentPlan="enterprise-2027"
+        renderCta={(role) => <button>assinar {role}</button>}
+      />,
+    );
+
+    expect(screen.queryByText(copy.billing.currentBadge)).not.toBeInTheDocument();
+    expect(screen.getByText(copy.billing.recommendedBadge)).toBeInTheDocument();
+  });
 });

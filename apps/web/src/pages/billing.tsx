@@ -52,7 +52,8 @@ export default function BillingPage(): JSX.Element {
 
   const sections = billingSections(paymentDetails, invoices);
 
-  const plan = planMap[toText(user?.publicMetadata.plan, PLAN_ID.free)];
+  const currentPlan = toText(user?.publicMetadata.plan, PLAN_ID.free);
+  const plan = planMap[currentPlan];
   const quotas = useQuotas();
 
   const brandIcons: Record<string, JSX.Element> = {
@@ -180,15 +181,22 @@ export default function BillingPage(): JSX.Element {
             <PlanCards
               roles={PAID_ROLES}
               recommended={PLAN_ID.proAi}
-              renderCta={(role, cycle) => (
-                <Button
-                  className="w-full"
-                  variant={role === PLAN_ID.proAi ? "default" : "outline"}
-                  onClick={() => startCheckout(role, cycle)}
-                >
-                  {pricingCopy.page.choosePlan}
-                </Button>
-              )}
+              currentPlan={currentPlan}
+              renderCta={(role, cycle) =>
+                role === currentPlan ? (
+                  <Button className="w-full" variant="outline" disabled>
+                    {pricingCopy.page.currentPlan}
+                  </Button>
+                ) : (
+                  <Button
+                    className="w-full"
+                    variant={role === PLAN_ID.proAi ? "default" : "outline"}
+                    onClick={() => startCheckout(role, cycle)}
+                  >
+                    {pricingCopy.page.choosePlan}
+                  </Button>
+                )
+              }
             />
           </div>
 

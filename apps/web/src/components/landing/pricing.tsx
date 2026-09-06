@@ -1,9 +1,12 @@
+import { useUser } from "@clerk/clerk-react";
 import { Link } from "react-router-dom";
 
 import { PlanCards } from "@/components/pricing/plan-cards";
+import { copy as pricingCopy } from "@/components/pricing/copy";
 import { Button } from "@/components/ui/button";
 import { PLAN_ID } from "@/consts/conts";
 import type { PlanRole } from "@/consts/pricing";
+import { toText } from "@/lib/utils";
 import { copy } from "./copy";
 
 const ROLES: readonly PlanRole[] = [PLAN_ID.free, PLAN_ID.pro, PLAN_ID.proAi];
@@ -20,6 +23,12 @@ const CTA: Record<PlanRole, string> = {
  * quem dispara o checkout é o `/premium`.
  */
 export function Pricing(): JSX.Element {
+  const { user, isSignedIn } = useUser();
+  // A guarda do `isSignedIn` importa aqui e não em `/premium`: esta é a única das três tabelas que
+  // mostra o card do Free, e sem ela todo visitante anônimo — que cai no default "free" — veria o
+  // selo "Seu plano" nele.
+  const currentPlan = isSignedIn ? toText(user?.publicMetadata?.plan, PLAN_ID.free) : undefined;
+
   return (
     <section className="border-y border-surface-line bg-surface-slab px-gutter section-y">
       <div className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
@@ -34,16 +43,23 @@ export function Pricing(): JSX.Element {
       <PlanCards
         roles={ROLES}
         recommended={PLAN_ID.proAi}
+        currentPlan={currentPlan}
         className="mt-8"
-        renderCta={(role) => (
-          <Button
-            asChild
-            className="w-full"
-            variant={role === PLAN_ID.proAi ? "default" : "outline"}
-          >
-            <Link to="/premium">{CTA[role]}</Link>
-          </Button>
-        )}
+        renderCta={(role) =>
+          role === currentPlan ? (
+            <Button className="w-full" variant="outline" disabled>
+              {pricingCopy.page.currentPlan}
+            </Button>
+          ) : (
+            <Button
+              asChild
+              className="w-full"
+              variant={role === PLAN_ID.proAi ? "default" : "outline"}
+            >
+              <Link to="/premium">{CTA[role]}</Link>
+            </Button>
+          )
+        }
       />
     </section>
   );

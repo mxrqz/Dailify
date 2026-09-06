@@ -49,6 +49,7 @@ export const copy = {
     freePrice: "Grátis",
     freeNote: "pra sempre",
     recommendedBadge: "Recomendado",
+    currentBadge: "Seu plano",
   },
 
   /** Página `/premium` (escolher plano, pública). */
@@ -57,6 +58,7 @@ export const copy = {
     title: "Escolha o plano perfeito para você",
     subtitle: "Todos os planos têm tudo. O que muda é quanto cabe.",
     choosePlan: "Assinar",
+    currentPlan: "Seu plano atual",
     signInFirst: "Entre na sua conta pra assinar.",
     checkoutFailed: "Não foi possível abrir o checkout. Tente de novo.",
     checkoutSuccess: "Pagamento confirmado. Seu plano é atualizado em instantes.",
