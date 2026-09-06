@@ -33,8 +33,14 @@ export const copy = {
       recurring: "Recorrentes",
       voice: "Voz",
     } satisfies Record<QuotaKey, string>,
-    /** `{used} de {limit} {name}` — `{limit}` vira a palavra de ilimitado quando não há teto. */
     summary: "{used} de {limit} {name}",
+    /**
+     * Sem teto a frase muda de forma, não só de palavra: "0 de ilimitado Tarefas" é agramatical, e
+     * era o que a pilha anunciava justamente pra quem paga mais. Sem gênero no texto, que os três
+     * nomes de quota não compartilham.
+     */
+    summaryUnlimited: "{used} {name} · ilimitado",
+    /** A palavra sozinha, pro `/billing`, que a usa como valor num par ("0 / ilimitado"). */
     unlimited: "ilimitado",
   },
 

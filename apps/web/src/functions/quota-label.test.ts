@@ -4,14 +4,14 @@ import { quotaLabel } from "./quota-label";
 
 describe("quotaLabel", () => {
   it("finito mostra os dois números", () => {
-    expect(quotaLabel(quotaState(30, 12), "Tarefas", "ilimitado")).toBe("12 de 30 Tarefas");
+    expect(quotaLabel(quotaState(30, 12), "Tarefas")).toBe("12 de 30 Tarefas");
   });
 
   it("ilimitado troca o teto pela palavra, e ainda diz quanto foi usado", () => {
-    expect(quotaLabel(quotaState(-1, 47), "Tarefas", "ilimitado")).toBe("47 de ilimitado Tarefas");
+    expect(quotaLabel(quotaState(-1, 47), "Tarefas")).toBe("47 Tarefas · ilimitado");
   });
 
   it("bloqueado mostra zero de zero", () => {
-    expect(quotaLabel(quotaState(0, 0), "Voz", "ilimitado")).toBe("0 de 0 Voz");
+    expect(quotaLabel(quotaState(0, 0), "Voz")).toBe("0 de 0 Voz");
   });
 });

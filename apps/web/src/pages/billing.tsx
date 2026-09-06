@@ -153,7 +153,7 @@ export default function BillingPage(): JSX.Element {
                       <Progress
                         value={state.ratio === null ? null : state.ratio * 100}
                         className="h-2"
-                        aria-label={quotaLabel(state, copy.quota.names[key], copy.quota.unlimited)}
+                        aria-label={quotaLabel(state, copy.quota.names[key])}
                       />
                     </div>
                   );

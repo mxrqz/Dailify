@@ -125,4 +125,24 @@ describe("<BillingPage>", () => {
     expect(card.getAllByText(`0 / ${copy.quota.unlimited}`)).toHaveLength(2);
     expect(card.getByText("0 / 200")).toBeInTheDocument();
   });
+
+  /**
+   * O defeito do bd `iil` era mudo: o preenchimento vem de um translateX manual, entao a barra
+   * parecia certa na tela enquanto o Root nunca recebia `value` -- role="progressbar" sem valor
+   * nenhum, `data-state` eternamente "indeterminate". So um teste que le ARIA pega isso de volta.
+   */
+  it("as barras de quota expoem o valor pra leitor de tela", () => {
+    useUser.mockReturnValue({ user: { publicMetadata: { plan: "free" } } });
+    dailify.mockReturnValue(
+      context({ quotas: { limits: limitsFor("free"), usage: { ...NO_USAGE, tasks: 15 } } }),
+    );
+    renderPage();
+
+    const bars = within(currentPlanCard()).getAllByRole("progressbar");
+
+    // 15 de 30 tarefas = 50%
+    expect(bars[0]).toHaveAttribute("aria-valuenow", "50");
+    expect(bars[0]).toHaveAttribute("aria-valuemax", "100");
+    expect(bars[0]).toHaveAttribute("data-state", "loading");
+  });
 });

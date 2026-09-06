@@ -9,8 +9,13 @@ function Progress({
   ...props
 }: React.ComponentProps<typeof ProgressPrimitive.Root>) {
   return (
+    // `value` no Root não é redundante com o `translateX` abaixo: o transform desenha, o Root é
+    // quem emite `aria-valuenow`/`valuemin`/`valuemax` e o `data-state`. Sem ele o gerado pelo CLI
+    // ficava com `role="progressbar"` e nenhum valor, sempre "indeterminate" — defeito invisível na
+    // tela e só audível em leitor de tela. `null` continua significando indeterminado de verdade.
     <ProgressPrimitive.Root
       data-slot="progress"
+      value={value}
       className={cn("bg-primary/20 relative h-2 w-full overflow-hidden rounded-full", className)}
       {...props}
     >

@@ -34,7 +34,7 @@ export function QuotaBar(): JSX.Element | null {
     <div className="hidden items-center gap-1 md:flex">
       {QUOTA_KEYS.map((key) => {
         const state = quotas.states[key];
-        const label = quotaLabel(state, copy.quota.names[key], copy.quota.unlimited);
+        const label = quotaLabel(state, copy.quota.names[key]);
         const fill = state.unlimited ? 1 : (state.ratio ?? 0);
 
         return (
