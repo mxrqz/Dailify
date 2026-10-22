@@ -1,5 +1,8 @@
 import type { Task } from "@dailify/shared";
 
+/** O período (dia/semana/mês) é do fuso do usuário, não do UTC do Worker. */
+export const browserTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone;
+
 export const upsertUndated = (list: Task[], task: Task): Task[] =>
   list.some((t) => t.id === task.id)
     ? list.map((t) => (t.id === task.id ? task : t))

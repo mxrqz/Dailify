@@ -82,7 +82,7 @@ function TaskActions({
  * `max-width` cobre a janela estreita com mouse, onde a linha de metadados já está apertada demais
  * pra editar em cima dela.
  */
-const SHEET_EDITING = "(hover: none), (max-width: 639px)";
+export const SHEET_EDITING = "(hover: none), (max-width: 639px)";
 
 /**
  * Uma linha da coluna do dia: o cartão + suas ações + a folha de edição, que no toque abre por

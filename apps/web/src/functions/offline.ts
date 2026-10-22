@@ -1,6 +1,13 @@
 import type { Task, TaskInput } from "@dailify/shared";
 
-import { completeTask, createTask, deleteTask, uncompleteTask, updateTask } from "./api";
+import {
+  completeTask,
+  createTask,
+  deleteTask,
+  uncompleteTask,
+  uncompleteTaskRange,
+  updateTask,
+} from "./api";
 import type { ApiError } from "./api";
 
 /**
@@ -11,7 +18,8 @@ export type Mutation =
   | { op: "create"; taskId: string; input: TaskInput; at: number }
   | { op: "patch"; taskId: string; patch: Partial<TaskInput>; at: number }
   | { op: "complete"; taskId: string; at: number }
-  | { op: "uncomplete"; taskId: string; day: number; at: number }
+  // `until` = desfazer o intervalo [day, until] (período de recorrência da Sem data), não o dia.
+  | { op: "uncomplete"; taskId: string; day: number; at: number; until?: number }
   | { op: "delete"; taskId: string; at: number }
   // Op própria, não um `delete` com campo extra: excluir a terça de uma série não pode colapsar
   // como exclusão da tarefa (o colapso do `delete` engole o create e os patches pendentes dela).
@@ -184,7 +192,9 @@ async function send(token: string, mutation: Mutation): Promise<ApiError | undef
     case "complete":
       return (await completeTask(token, mutation.taskId, mutation.at)).error;
     case "uncomplete":
-      return (await uncompleteTask(token, mutation.taskId, new Date(mutation.day))).error;
+      return mutation.until === undefined
+        ? (await uncompleteTask(token, mutation.taskId, new Date(mutation.day))).error
+        : (await uncompleteTaskRange(token, mutation.taskId, mutation.day, mutation.until)).error;
     case "delete":
       return (await deleteTask(token, mutation.taskId)).error;
     case "delete-occurrence":

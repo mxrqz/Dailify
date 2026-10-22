@@ -204,6 +204,28 @@ export const copy = {
     missingRepeat: "repete?",
   },
 
+  undated: {
+    title: "Sem data",
+    onePending: "1 pendente",
+    manyPending: "{n} pendentes",
+    capture: "Anotar uma coisa…",
+    recurring: "Recorrentes",
+    todo: "Afazeres",
+    // Quando a marcação das recorrentes semanais zera: "semana vira dom 06:00".
+    rollover: "semana vira {day} {hour}",
+    empty: "Nada sem data por aqui.",
+    doneDaily: "feito hoje",
+    doneWeekly: "feito nesta semana",
+    doneMonthly: "feito neste mês",
+    doneYearly: "feito neste ano",
+    reminder: "Lembrete",
+    history: "Feito em {done} de {total} {unit}",
+    unitDaily: "dias",
+    unitWeekly: "semanas",
+    unitMonthly: "meses",
+    unitYearly: "anos",
+  },
+
   voice: {
     title: "Criar tarefa por voz",
     description: "Grave sua voz dizendo a tarefa, a data, o horário e a duração.",

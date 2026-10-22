@@ -122,6 +122,8 @@
   --accent-hover: oklch(54% 0.222 17.6);
   --accent-subtle: color-mix(in oklch, var(--primary) 10%, transparent);
   --accent-glow: color-mix(in oklch, var(--primary) 20%, transparent);
+  /* Borda crimson suave do chip de lembrete: a hairline puxada pro crimson, sem gritar como ação. */
+  --accent-line: color-mix(in oklch, var(--primary) 35%, var(--surface-line));
   --border-highlight: light-dark(oklch(90% 0.004 286.3), oklch(30% 0.005 286));
   --radius-panel: 1.375rem;
   /* Miolo de um painel com p-1: 22px do panel menos os 4px do padding, pra o canto de dentro ficar
@@ -237,6 +239,7 @@
   --color-accent-hover: var(--accent-hover);
   --color-accent-subtle: var(--accent-subtle);
   --color-accent-glow: var(--accent-glow);
+  --color-accent-line: var(--accent-line);
   --color-highlight: var(--border-highlight);
   --radius-panel: var(--radius-panel);
   --radius-field: var(--radius-field);
