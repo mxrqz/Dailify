@@ -8,11 +8,11 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
 - **`src/index.ts`** — app root: CORS (`ALLOWED_ORIGIN`), `/health` (before auth), `clerkMiddleware`,
   route mounts, and the `app.onError` JSON envelope (`{ error }`, 500). `Env` (the bindings +
   secrets interface) lives here — import `Env` from `../index`, don't redeclare it.
-- **`src/routes/`** — `tasks.ts` (CRUD + month read), `voice.ts` (also mounted under `/tasks`),
+- **`src/routes/`** — `tasks.ts` (CRUD + month read + `GET /tasks/undated`), `settings.ts` (`GET`/`PUT /settings`, `weekStart`), `voice.ts` (also mounted under `/tasks`),
   `billing.ts` (checkout, portal, payment details, invoices, `POST /webhooks/stripe`),
   `push.ts` (VAPID key + subscriptions), `clerk-webhook.ts` (`user.deleted` → wipe).
 - **`src/alerts.ts`** — `dispatchAlerts`, the Cron Trigger pass that sends due task alerts.
-- **`src/db/`** — `tasks.ts` (all D1 queries), `limits.ts` (`enforceCreate` tier gate),
+- **`src/db/`** — `tasks.ts` (all D1 queries), `settings.ts` (`weekStart` por usuário), `limits.ts` (`enforceCreate` tier gate),
   `push.ts` (subscriptions + due-alert query).
 - **`src/lib/`** — `clerk.ts` (client + `getUserRole` from `privateMetadata.plan`), `stripe.ts`,
   `openai.ts` (`transcribe` = `gpt-4o-mini-transcribe`), `errors.ts` (`fail`),
@@ -41,6 +41,7 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
   edição, não a do envio. `stampUpdatedAt` (`@dailify/shared`) recusa relógio adiantado além de 5min.
 - **Dates are epoch-ms `number`s** in/out (same `Task` as the web). The month read expands recurring
   server-side (`expandRecurringTask`) and dedupes by `` `${id}-${date}` `` before returning.
+- **Sem data = flag `undated`**: `date` vira só âncora e a tarefa fica fora da leitura do mês; lista via `GET /tasks/undated`.
 - **Fuso vem do cliente, nunca do runtime.** O Worker roda em UTC, então `GET /tasks` aceita `?tz=`
   (IANA, validado com `IANAZone`) e repassa para `expandRecurringTask`/`startOfMonthMs` — sem isso a
   recorrência sai na hora errada e a tarefa perto da meia-noite cai no mês vizinho. Mesmo motivo do

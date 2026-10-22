@@ -10,7 +10,7 @@ import { DayList } from "@/components/dashboard/day-list";
 import { WeekStrip } from "@/components/dashboard/week-strip";
 import { TaskComposer, type ComposerValues } from "@/components/dashboard/task-composer";
 import { createTask } from "@/functions/api";
-import { upsertTaskById } from "@/functions/functions";
+import { upsertTaskWithRecurrence } from "@/functions/functions";
 import { enqueue, newTaskId } from "@/functions/offline";
 import type { ParsedTask } from "@/functions/parse-task";
 import { useQuotas } from "@/hooks/useQuotas";
@@ -72,7 +72,7 @@ function composerTaskInput(parsed: ParsedTask): TaskInput {
  */
 export default function Home() {
   const { getToken, userId } = useAuth();
-  const { tasks, setTasks, bumpUsage } = useDailify();
+  const { tasks, setTasks, bumpUsage, selectedDay } = useDailify();
   const quotas = useQuotas();
   const canCreateTask = !quotas.states.tasks.exhausted;
   const navigate = useNavigate();
@@ -106,7 +106,7 @@ export default function Home() {
     const input = { ...composerTaskInput(parsed), id: newTaskId(), updatedAt: at };
     const previous = tasks ?? [];
     const optimistic = { ...input, id: input.id, completed: [] };
-    setTasks(upsertTaskById(previous, optimistic));
+    setTasks(upsertTaskWithRecurrence(previous, optimistic, selectedDay));
 
     try {
       const token = await getToken().catch(() => null);
@@ -130,7 +130,7 @@ export default function Home() {
         return;
       }
 
-      setTasks(upsertTaskById(previous, task));
+      setTasks(upsertTaskWithRecurrence(previous, task, selectedDay));
       bumpUsage("tasks");
       if (task.repeat !== "Off") bumpUsage("recurring");
       toast.message(copy.form.created, { description: task.title });

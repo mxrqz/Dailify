@@ -45,6 +45,29 @@ describe("periodStart", () => {
   });
 });
 
+describe("periodStart com DST (America/New_York)", () => {
+  const ny = "America/New_York";
+  // EST = UTC-5, EDT = UTC-4.
+  const edt = (y: number, m: number, d: number, h: number, min = 0) =>
+    Date.UTC(y, m - 1, d, h + 4, min);
+  const est = (y: number, m: number, d: number, h: number, min = 0) =>
+    Date.UTC(y, m - 1, d, h + 5, min);
+
+  it("dia de 23h (spring forward): 6h30 já é o período de hoje", () => {
+    expect(periodStart("Daily", edt(2026, 3, 8, 6, 30), 1, ny)).toBe(edt(2026, 3, 8, 6));
+  });
+
+  it("dia de 25h (fall back): 5h30 ainda é o período de ontem", () => {
+    expect(periodStart("Daily", est(2026, 11, 1, 5, 30), 1, ny)).toBe(edt(2026, 10, 31, 6));
+  });
+
+  it("Weekly em dia de spring forward", () => {
+    expect(periodStart({ Weekly: ["Monday"] }, edt(2026, 3, 8, 6, 30), 0, ny)).toBe(
+      edt(2026, 3, 8, 6),
+    );
+  });
+});
+
 describe("doneThisPeriod", () => {
   const task = { repeat: weekly, completed: [sp(2026, 10, 19, 8)] };
   it("vale dentro do período e expira na virada", () => {

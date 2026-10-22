@@ -18,7 +18,6 @@ export function isWeekStart(value: unknown): value is WeekStart {
   );
 }
 
-const HOUR_MS = 3_600_000;
 
 /** Início (às 6h, no fuso) do período de recorrência que contém `now`. */
 export function periodStart(
@@ -27,10 +26,13 @@ export function periodStart(
   weekStart: WeekStart,
   timeZone: string,
 ): number {
-  const { year, month, day } = zonedParts(
-    now - PERIOD_ROLLOVER_HOUR * HOUR_MS,
-    timeZone,
-  );
+  const parts = zonedParts(now, timeZone);
+  // Antes das 6h o período ainda é o de ontem; recuar o dia civil (não 6h) respeita DST.
+  const back = parts.hour < PERIOD_ROLLOVER_HOUR ? 1 : 0;
+  const d0 = new Date(Date.UTC(parts.year, parts.month, parts.day - back));
+  const year = d0.getUTCFullYear();
+  const month = d0.getUTCMonth();
+  const day = d0.getUTCDate();
   let start = { year, month, day };
   if (repeat === "Monthly") start = { year, month, day: 1 };
   else if (repeat === "Yearly") start = { year, month: 0, day: 1 };

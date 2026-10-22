@@ -94,6 +94,7 @@ describe("parseTaskFields — undated", () => {
 
   it("null = campo ausente", () => {
     const r = parseTaskFields({ undated: null }, { partial: true });
+    expect("fields" in r).toBe(true);
     if ("fields" in r) expect("undated" in r.fields).toBe(false);
   });
 });
