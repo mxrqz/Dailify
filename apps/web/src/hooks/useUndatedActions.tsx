@@ -55,37 +55,48 @@ export function useUndatedActions(task: Task) {
     return false;
   };
 
-  const toggle = async () => {
+  /** Desmarca `current` em `list`. Recorrente: só o período corrente; avulsa: tudo. */
+  const reopen = async (list: Task[], current: Task) => {
     const at = Date.now();
-    const previous = undatedTasks ?? [];
-
-    if (!done) {
-      setUndatedTasks(
-        upsertUndated(previous, { ...task, completed: [...task.completed, at], updatedAt: at }),
-      );
-      await run(previous, { op: "complete", taskId: task.id, at }, copy.task.completeError, (t) =>
-        completeTask(t, task.id, at),
-      );
-      return;
-    }
-
-    // Recorrente: desfaz só o período corrente (uma conclusão de segunda some no desmarcar de
-    // sexta). Avulsa: desfaz tudo.
     const from =
-      task.repeat === "Off" ? 0 : periodStart(task.repeat, at, weekStart, browserTimeZone());
+      current.repeat === "Off" ? 0 : periodStart(current.repeat, at, weekStart, browserTimeZone());
     setUndatedTasks(
-      upsertUndated(previous, {
-        ...task,
-        completed: task.completed.filter((c) => c < from || c > at),
+      upsertUndated(list, {
+        ...current,
+        completed: current.completed.filter((c) => c < from || c > at),
         updatedAt: at,
       }),
     );
     await run(
-      previous,
-      { op: "uncomplete", taskId: task.id, day: from, until: at, at },
+      list,
+      { op: "uncomplete", taskId: current.id, day: from, until: at, at },
       copy.task.uncompleteError,
-      (t) => uncompleteTaskRange(t, task.id, from, at),
+      (t) => uncompleteTaskRange(t, current.id, from, at),
     );
+  };
+
+  const toggle = async () => {
+    const at = Date.now();
+    const previous = undatedTasks ?? [];
+    if (done) return reopen(previous, task);
+
+    const completed = { ...task, completed: [...task.completed, at], updatedAt: at };
+    const next = upsertUndated(previous, completed);
+    setUndatedTasks(next);
+    const ok = await run(
+      previous,
+      { op: "complete", taskId: task.id, at },
+      copy.task.completeError,
+      (t) => completeTask(t, task.id, at),
+    );
+    // Avulsa concluída some da lista: sem o desfazer, um toque errado não tem volta.
+    if (ok && task.repeat === "Off") {
+      toast.success(copy.task.completed, {
+        description: task.title,
+        duration: 6000,
+        action: { label: copy.task.undo, onClick: () => void reopen(next, completed) },
+      });
+    }
   };
 
   /** Recria com o MESMO id — desfazer a exclusão. */

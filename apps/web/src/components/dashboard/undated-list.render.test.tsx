@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Task } from "@dailify/shared";
+import { Toaster, toast } from "sonner";
 
 const { dailify, api } = vi.hoisted(() => ({
   dailify: vi.fn(),
@@ -25,11 +26,13 @@ import { copy } from "./copy";
 import { CheckHistory } from "./check-history";
 import { UndatedList } from "./undated-list";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
+import { readQueue } from "@/functions/offline";
 
 // Sexta, 23/out/2026 12:00 local; semana começa na segunda (19/out 06:00).
 const FRIDAY = new Date(2026, 9, 23, 12).getTime();
 const MONDAY = new Date(2026, 9, 19, 10).getTime();
 const MONDAY_6H = new Date(2026, 9, 19, 6).getTime();
+const MONDAY_9H = new Date(2026, 9, 19, 9).getTime();
 const WEEK = 7 * 24 * 60 * 60 * 1000;
 
 const task = (patch: Partial<Task>): Task => ({
@@ -75,6 +78,9 @@ beforeEach(() => {
 afterEach(() => {
   vi.useRealTimers();
   vi.clearAllMocks();
+  vi.restoreAllMocks();
+  toast.dismiss();
+  localStorage.clear();
 });
 
 describe("<UndatedList>", () => {
@@ -152,6 +158,43 @@ describe("<UndatedList>", () => {
       undefined,
     );
   });
+
+  // Ruling 8: o que a folha mostra é o que o salvar grava (09:00 de segunda já passou na sexta).
+  const openEdit = (patch: Partial<Task>) => {
+    renderList([task({ id: "a", title: "Pagar", alert: MONDAY_9H, tags: [], ...patch })]);
+    api.updateTask.mockResolvedValue({ task: task({ id: "a", title: "Pagar" }) });
+    act(() => screen.getByRole("button", { name: /Pagar/ }).click());
+    return within(screen.getByRole("dialog"));
+  };
+
+  it("avulsa com 09:00 passado mostra e salva sem lembrete", async () => {
+    const sheet = openEdit({});
+    expect(sheet.getByText(copy.form.noReminder)).toBeInTheDocument();
+    expect(sheet.getByLabelText(copy.form.reminder)).toHaveValue("");
+    expect(sheet.getByLabelText(copy.form.reminder)).toHaveAttribute("min", "2026-10-23");
+
+    await act(async () => sheet.getByRole("button", { name: copy.form.save }).click());
+    expect(api.updateTask).toHaveBeenCalledWith(
+      "token",
+      "a",
+      expect.objectContaining({ alert: null, undated: true }),
+      undefined,
+    );
+  });
+
+  it("série com 09:00 passado mostra e salva a próxima ocorrência", async () => {
+    const sheet = openEdit({ repeat: { Weekly: ["Monday"] } });
+    expect(sheet.getByLabelText(copy.form.reminder)).toHaveValue("2026-10-26");
+
+    await act(async () => sheet.getByRole("button", { name: copy.form.save }).click());
+    const next = MONDAY_9H + WEEK;
+    expect(api.updateTask).toHaveBeenCalledWith(
+      "token",
+      "a",
+      expect.objectContaining({ alert: next, undated: true }),
+      undefined,
+    );
+  });
 });
 
 describe("<CheckHistory>", () => {
@@ -223,5 +266,54 @@ describe("useUndatedActions", () => {
     await act(() => result.current.remove());
 
     expect(setUndatedTasks).toHaveBeenLastCalledWith([single]);
+  });
+
+  // Avulsa concluída some da lista: o toast é o único caminho de volta.
+  const undo = async () => {
+    await act(async () => (await screen.findByRole("button", { name: copy.task.undo })).click());
+  };
+
+  it("concluir avulsa oferece desfazer, que reabre", async () => {
+    const single = task({ id: "x", title: "Pagar boleto" });
+    const setUndatedTasks = context([single]);
+    api.completeTask.mockResolvedValue({});
+    api.uncompleteTaskRange.mockResolvedValue({});
+    render(<Toaster />);
+
+    const { result } = renderHook(() => useUndatedActions(single));
+    await act(() => result.current.toggle());
+    expect(await screen.findByText(copy.task.completed)).toBeInTheDocument();
+    await undo();
+
+    expect(api.uncompleteTaskRange).toHaveBeenCalledWith("token", "x", 0, FRIDAY);
+    expect(setUndatedTasks.mock.lastCall?.[0][0].completed).toEqual([]);
+  });
+
+  it("desfazer offline cancela a conclusão na fila", async () => {
+    const single = task({ id: "x" });
+    context([single]);
+    const offline = { error: { message: "rede", offline: true } };
+    api.completeTask.mockResolvedValue(offline);
+    api.uncompleteTaskRange.mockResolvedValue(offline);
+    render(<Toaster />);
+
+    const { result } = renderHook(() => useUndatedActions(single));
+    await act(() => result.current.toggle());
+    await undo();
+
+    expect(readQueue("u1")).toEqual([
+      { op: "uncomplete", taskId: "x", day: 0, until: FRIDAY, at: FRIDAY },
+    ]);
+  });
+
+  it("série concluída não oferece desfazer (continua na lista)", async () => {
+    const series = task({ id: "s", repeat: "Daily" });
+    context([series]);
+    api.completeTask.mockResolvedValue({});
+    const success = vi.spyOn(toast, "success");
+
+    const { result } = renderHook(() => useUndatedActions(series));
+    await act(() => result.current.toggle());
+    expect(success).not.toHaveBeenCalled();
   });
 });
