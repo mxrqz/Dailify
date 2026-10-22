@@ -158,6 +158,10 @@ describe("período pela próxima ocorrência", () => {
     ["amanhã às 9", [13, 9, 0]], // outro dia: leitura literal
     ["amanhã às 9 da noite", [13, 21, 0]],
     ["amanhã às 3", [13, 15, 0]], // 1h–7h em outro dia ainda vira tarde
+    ["amanhã 7h", [13, 7, 0]], // notação de relógio é literal (Dailify-9g0)
+    ["amanhã às 7 horas", [13, 7, 0]],
+    ["amanhã às 7h30", [13, 7, 30]],
+    ["amanhã às 7:30", [13, 7, 30]],
   ])("às 14h: %s", (input, expected) => {
     expect(hhmm(input, twoPM)).toEqual(expected);
   });
@@ -596,6 +600,20 @@ describe("recorrência no texto", () => {
       false,
     ],
     ["reunião de quarta 16h", "Off", "reunião", new Date(2026, 9, 21, 16), true],
+    [
+      "academia toda segunda 7h",
+      { Weekly: ["Monday"] },
+      "academia",
+      new Date(2026, 9, 26, 7),
+      true,
+    ],
+    [
+      "academia toda segunda às 7",
+      { Weekly: ["Monday"] },
+      "academia",
+      new Date(2026, 9, 26, 7),
+      true,
+    ],
   ])("%s", (input, repeat, text, date, hasTime) => {
     const parsed = parseTaskText(input, WED);
     expect(parsed.repeat).toEqual(repeat);

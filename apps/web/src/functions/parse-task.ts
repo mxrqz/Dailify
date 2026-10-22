@@ -269,7 +269,14 @@ interface Time {
  * - **Outro dia**: leitura literal, que é o que "amanhã às 9" quer dizer (9h da manhã) — exceto
  *   1h–7h, que viram tarde/noite, porque tarefa de madrugada é rara.
  */
-function applyMeridiem(time: Time, text: string, now: Date, baseIsToday: boolean): Hit<Time> {
+// `literal`: notação de relógio ("7h", "7:30") ou recorrência — 7h é 7h, não 19h (Dailify-9g0).
+function applyMeridiem(
+  time: Time,
+  text: string,
+  now: Date,
+  baseIsToday: boolean,
+  literal = false,
+): Hit<Time> {
   const pm = text.match(
     /\b(da|de|a|na|at|in|this)\s+(tarde|noite|afternoon|evening|night)\b|\d\s*pm\b|\bpm\b|\btonight\b/,
   );
@@ -301,7 +308,7 @@ function applyMeridiem(time: Time, text: string, now: Date, baseIsToday: boolean
       if (asIsAhead && altAhead) hour = asIs <= alt ? hour : alternative;
       else if (altAhead) hour = alternative;
       else if (!asIsAhead && !altAhead) hour = asIs >= alt ? hour : alternative;
-    } else if (hour <= 7) {
+    } else if (hour <= 7 && !literal) {
       hour = alternative;
     }
   }
@@ -332,7 +339,12 @@ function periodHour(text: string): Hit<number> | null {
   return null;
 }
 
-function parseTime(text: string, now: Date, baseIsToday: boolean): Hit<Time> | null {
+function parseTime(
+  text: string,
+  now: Date,
+  baseIsToday: boolean,
+  literalTime = false,
+): Hit<Time> | null {
   // daqui a 2 horas · in 90 minutes
   const relative = text.match(
     /\b(?:daqui\s+a|em|in)\s+(\d{1,3})\s*(h|hs|horas?|hours?|min|minutos?|minutes?)\b/,
@@ -363,7 +375,7 @@ function parseTime(text: string, now: Date, baseIsToday: boolean): Hit<Time> | n
     const hour = Number(withMinutes[1]);
     const minute = Number(withMinutes[2]);
     if (hour <= 24 && minute < 60) {
-      const meridiem = applyMeridiem({ hour, minute }, text, now, baseIsToday);
+      const meridiem = applyMeridiem({ hour, minute }, text, now, baseIsToday, true);
       return hit(withMinutes, meridiem.value, meridiem.spans);
     }
   }
@@ -377,7 +389,7 @@ function parseTime(text: string, now: Date, baseIsToday: boolean): Hit<Time> | n
     const raw = withSpelledMinutes[2].replace(/\s+/g, " ");
     const minute = /^\d+$/.test(raw) ? Number(raw) : MINUTE_WORDS[raw];
     if (hour <= 24 && minute !== undefined && minute < 60) {
-      const meridiem = applyMeridiem({ hour, minute }, text, now, baseIsToday);
+      const meridiem = applyMeridiem({ hour, minute }, text, now, baseIsToday, literalTime);
       return hit(withSpelledMinutes, meridiem.value, meridiem.spans);
     }
   }
@@ -395,8 +407,14 @@ function parseTime(text: string, now: Date, baseIsToday: boolean): Hit<Time> | n
     if (offset !== undefined && hour !== undefined) {
       const meridiem =
         past[2] === "past"
-          ? applyMeridiem({ hour, minute: offset }, text, now, baseIsToday)
-          : applyMeridiem({ hour: (hour + 23) % 24, minute: 60 - offset }, text, now, baseIsToday);
+          ? applyMeridiem({ hour, minute: offset }, text, now, baseIsToday, literalTime)
+          : applyMeridiem(
+              { hour: (hour + 23) % 24, minute: 60 - offset },
+              text,
+              now,
+              baseIsToday,
+              literalTime,
+            );
       return hit(past, meridiem.value, meridiem.spans);
     }
   }
@@ -413,7 +431,14 @@ function parseTime(text: string, now: Date, baseIsToday: boolean): Hit<Time> | n
     const digits = wholeHour.slice(1).find((group) => group !== undefined);
     const hour = Number(digits);
     if (hour <= 24) {
-      const meridiem = applyMeridiem({ hour, minute: 0 }, text, now, baseIsToday);
+      const clock = /\d\s*(?:h|hs|horas?)\b/.test(wholeHour[0]);
+      const meridiem = applyMeridiem(
+        { hour, minute: 0 },
+        text,
+        now,
+        baseIsToday,
+        literalTime || clock,
+      );
       return hit(wholeHour, meridiem.value, meridiem.spans);
     }
   }
@@ -426,7 +451,7 @@ function parseTime(text: string, now: Date, baseIsToday: boolean): Hit<Time> | n
     const hour = HOUR_WORDS[spelled[1].replace(/\s+/g, " ")];
     const minute = spelled[2] ? MINUTE_WORDS[spelled[2].replace(/\s+/g, " ")] : 0;
     if (hour !== undefined) {
-      const meridiem = applyMeridiem({ hour, minute }, text, now, baseIsToday);
+      const meridiem = applyMeridiem({ hour, minute }, text, now, baseIsToday, literalTime);
       return hit(spelled, meridiem.value, meridiem.spans);
     }
   }
@@ -618,7 +643,7 @@ export function parseWhen(
   const base = day?.value ?? startOfDay(now);
   const baseIsToday = !literalTime && base.getTime() === startOfDay(now).getTime();
 
-  const time = parseTime(text, now, baseIsToday);
+  const time = parseTime(text, now, baseIsToday, literalTime);
   if (!day && !time) return null;
   const date = new Date(
     base.getFullYear(),
