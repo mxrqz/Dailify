@@ -17,7 +17,7 @@ export type Mutation =
   // como exclusão da tarefa (o colapso do `delete` engole o create e os patches pendentes dela).
   | { op: "delete-occurrence"; taskId: string; occurrence: number; at: number };
 
-const key = (userId: string, what: "tasks" | "outbox") => `dailify:${what}:${userId}`;
+const key = (userId: string, what: "tasks" | "outbox" | "undated") => `dailify:${what}:${userId}`;
 
 /**
  * Id da tarefa nascido no cliente. `crypto.randomUUID` só existe em contexto seguro — testar no
@@ -56,6 +56,12 @@ export const readCachedTasks = (userId: string): Task[] | undefined =>
 
 export const cacheTasks = (userId: string, tasks: Task[]): void =>
   write(key(userId, "tasks"), tasks);
+
+export const readCachedUndated = (userId: string): Task[] | undefined =>
+  read<Task[]>(key(userId, "undated"));
+
+export const cacheUndated = (userId: string, tasks: Task[]): void =>
+  write(key(userId, "undated"), tasks);
 
 export const readQueue = (userId: string): Mutation[] =>
   read<Mutation[]>(key(userId, "outbox")) ?? [];
@@ -132,6 +138,7 @@ export function clearLocal(userId: string): void {
   try {
     localStorage.removeItem(key(userId, "tasks"));
     localStorage.removeItem(key(userId, "outbox"));
+    localStorage.removeItem(key(userId, "undated"));
   } catch {
     /* sem acesso ao storage: não havia o que limpar */
   }

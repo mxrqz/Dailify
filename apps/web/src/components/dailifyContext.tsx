@@ -1,6 +1,7 @@
 import { InvoicesProps, PaymentDetailsProps, TaskProps } from "@/types/types";
 import { createContext, useContext, useState, ReactNode } from "react";
-import type { QuotaKey } from "@dailify/shared";
+import { DEFAULT_WEEK_START } from "@dailify/shared";
+import type { QuotaKey, WeekStart } from "@dailify/shared";
 import type { QuotaSnapshot } from "@/functions/api";
 
 interface DailifyContextType {
@@ -20,6 +21,10 @@ interface DailifyContextType {
   setInvoices: (invoices: InvoicesProps[]) => void;
   quotas: QuotaSnapshot | undefined;
   setQuotas: (quotas: QuotaSnapshot) => void;
+  undatedTasks: TaskProps[] | undefined;
+  setUndatedTasks: (tasks: TaskProps[]) => void;
+  weekStart: WeekStart;
+  setWeekStart: (weekStart: WeekStart) => void;
   /** Incremento otimista: sem ele a barra só se moveria no próximo fetch. */
   bumpUsage: (key: QuotaKey) => void;
 }
@@ -37,6 +42,9 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsProps | null>();
   const [quotas, setQuotas] = useState<QuotaSnapshot>();
   const [invoices, setInvoices] = useState<InvoicesProps[]>();
+
+  const [undatedTasks, setUndatedTasks] = useState<TaskProps[]>();
+  const [weekStart, setWeekStart] = useState<WeekStart>(DEFAULT_WEEK_START);
 
   const bumpUsage = (key: QuotaKey) =>
     setQuotas((current) =>
@@ -64,6 +72,10 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
         setPaymentDetails,
         quotas,
         setQuotas,
+        undatedTasks,
+        setUndatedTasks,
+        weekStart,
+        setWeekStart,
         bumpUsage,
       }}
     >
