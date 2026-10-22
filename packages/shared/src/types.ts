@@ -17,6 +17,8 @@ export interface Task {
   hash?: string;
   /** Ocorrências da série que viraram tarefa própria: a expansão pula estas datas. Só o servidor escreve. */
   exdates?: number[]; // epoch ms
+  /** `true` = Sem data (fora da agenda); ausente/`false` = tarefa de agenda. */
+  undated?: boolean;
 }
 
 export type TaskInput = Omit<Task, "id" | "completed" | "hash"> & {

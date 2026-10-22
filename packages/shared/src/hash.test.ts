@@ -12,6 +12,11 @@ const base: Omit<Task, "id" | "updatedAt" | "hash"> = {
 };
 
 describe("taskHash", () => {
+  it("counts undated: true, but false equals absent", () => {
+    expect(taskHash({ ...base, undated: true })).not.toBe(taskHash(base));
+    expect(taskHash({ ...base, undated: false })).toBe(taskHash(base));
+  });
+
   it("is stable for the same content", () => {
     expect(taskHash(base)).toBe(taskHash({ ...base }));
   });
