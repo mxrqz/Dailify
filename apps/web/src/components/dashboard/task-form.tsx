@@ -181,17 +181,22 @@ const reminderHour = `${String(DEFAULT_HOUR).padStart(2, "0")}:00`;
 /** `date` só-dia, mesmo padrão do DateRow; limpar no seletor nativo tira o lembrete. */
 function ReminderRow({
   value,
+  repeat,
   onChange,
 }: {
   value?: Date;
+  repeat: Repeat;
   onChange: (date?: Date) => void;
 }): JSX.Element {
+  const now = new Date();
+  // Mostra o que o salvar grava: 09:00 passado avança na série e some na avulsa.
+  const shown = value && undatedReminder(value, repeat, now);
   return (
     <div className={rowClass}>
       <span className={rowLabelClass}>{copy.form.reminder}</span>
       <span className="ml-auto min-w-0 truncate text-sm text-foreground">
-        {value
-          ? `${format(value, "EEEEEE · d MMM", { locale: ptBR })} · ${reminderHour}`
+        {shown
+          ? `${format(shown, "EEEEEE · d MMM", { locale: ptBR })} · ${reminderHour}`
           : copy.form.noReminder}
       </span>
       <BellIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
@@ -199,7 +204,8 @@ function ReminderRow({
       <input
         type="date"
         aria-label={copy.form.reminder}
-        value={value ? format(value, "yyyy-MM-dd") : ""}
+        min={format(now, "yyyy-MM-dd")}
+        value={shown ? format(shown, "yyyy-MM-dd") : ""}
         onChange={(e) => {
           // "2026-10-23" puro é lido como UTC; com "T00:00" vira meia-noite LOCAL.
           const next = new Date(`${e.target.value}T00:00`);
@@ -335,7 +341,7 @@ export function TaskForm({
             />
           </div>
           {undated ? (
-            <ReminderRow value={reminder} onChange={setReminder} />
+            <ReminderRow value={reminder} repeat={repeat} onChange={setReminder} />
           ) : (
             <DateRow label={copy.form.date} value={date} onChange={setDate} />
           )}
