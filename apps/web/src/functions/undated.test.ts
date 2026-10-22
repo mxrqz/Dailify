@@ -38,7 +38,7 @@ describe("undated", () => {
       t("done", { completed: [now] }),
       t("serie", { repeat: "Daily", completed: [now] }),
     ];
-    const { recurring, todo } = splitUndated(list, now, 1, "UTC");
+    const { recurring, todo } = splitUndated(list);
     expect(recurring.map((x) => x.id)).toEqual(["serie"]);
     expect(todo.map((x) => x.id)).toEqual(["todo1", "todo2"]);
   });
