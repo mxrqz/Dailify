@@ -1,5 +1,17 @@
-import { describe, test, expect } from "vitest";
-import { collapseQueue, type Mutation } from "./offline";
+/** @vitest-environment jsdom */
+import { describe, test, expect, vi, afterEach } from "vitest";
+
+const api = vi.hoisted(() => ({
+  createTask: vi.fn(),
+  updateTask: vi.fn(),
+  completeTask: vi.fn(),
+  uncompleteTask: vi.fn(),
+  uncompleteTaskRange: vi.fn(),
+  deleteTask: vi.fn(),
+}));
+vi.mock("./api", () => api);
+
+import { collapseQueue, enqueue, flushQueue, readQueue, type Mutation } from "./offline";
 
 const input = {
   title: "Dentista",
@@ -102,5 +114,31 @@ describe("delete-occurrence", () => {
   test("duas ocorrências diferentes continuam sendo duas", () => {
     const queue = [removeOccurrence("a", 111), removeOccurrence("a", 222)];
     expect(collapseQueue(queue)).toHaveLength(2);
+  });
+});
+
+describe("flushQueue", () => {
+  afterEach(() => {
+    localStorage.clear();
+    vi.clearAllMocks();
+  });
+
+  test("uncomplete com until sobe como intervalo", async () => {
+    api.uncompleteTaskRange.mockResolvedValue({});
+    enqueue("u", { op: "uncomplete", taskId: "a", day: 100, until: 200, at: 200 });
+
+    await expect(flushQueue("u", "tk")).resolves.toEqual({ sent: 1, dropped: 0, offline: false });
+    expect(api.uncompleteTaskRange).toHaveBeenCalledWith("tk", "a", 100, 200);
+    expect(api.uncompleteTask).not.toHaveBeenCalled();
+    expect(readQueue("u")).toEqual([]);
+  });
+
+  test("duas chamadas juntas sobem a fila uma vez só", async () => {
+    api.completeTask.mockResolvedValue({});
+    enqueue("u", { op: "complete", taskId: "a", at: 1 });
+
+    const [first, second] = await Promise.all([flushQueue("u", "tk"), flushQueue("u", "tk")]);
+    expect(first).toBe(second);
+    expect(api.completeTask).toHaveBeenCalledTimes(1);
   });
 });

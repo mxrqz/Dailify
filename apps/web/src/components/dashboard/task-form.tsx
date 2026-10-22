@@ -1,7 +1,7 @@
 import { FormEvent, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon, ChevronDownIcon, ChevronRightIcon, XIcon } from "lucide-react";
+import { BellIcon, CalendarIcon, ChevronDownIcon, ChevronRightIcon, XIcon } from "lucide-react";
 import { toast } from "sonner";
 import { dayMap, weekDays, type Repeat } from "@dailify/shared";
 
@@ -16,6 +16,7 @@ import { bareFieldClass } from "@/components/dashboard/styles";
 import { priorityText } from "@/consts/conts";
 import { useDailify } from "@/components/dailifyContext";
 import { useQuotas } from "@/hooks/useQuotas";
+import { DEFAULT_HOUR, undatedReminder } from "@/functions/compose-input";
 import { linkLabel } from "@/functions/link-label";
 import { cn } from "@/lib/utils";
 import type { TaskProps } from "@/types/types";
@@ -28,6 +29,10 @@ export interface TaskFormValues {
   tags?: string[];
   repeat: Repeat;
   links?: string[];
+  /** Sem horário: vai para Sem data, e `date` é ignorada. */
+  undated: boolean;
+  /** Dia do lembrete (às 09:00) de quem está em Sem data; ausente = sem lembrete. */
+  reminder?: Date;
 }
 
 /**
@@ -171,6 +176,47 @@ function DateRow({
   );
 }
 
+const reminderHour = `${String(DEFAULT_HOUR).padStart(2, "0")}:00`;
+
+/** `date` só-dia, mesmo padrão do DateRow; limpar no seletor nativo tira o lembrete. */
+function ReminderRow({
+  value,
+  repeat,
+  onChange,
+}: {
+  value?: Date;
+  repeat: Repeat;
+  onChange: (date?: Date) => void;
+}): JSX.Element {
+  const now = new Date();
+  // Mostra o que o salvar grava: 09:00 passado avança na série e some na avulsa.
+  const shown = value && undatedReminder(value, repeat, now);
+  return (
+    <div className={rowClass}>
+      <span className={rowLabelClass}>{copy.form.reminder}</span>
+      <span className="ml-auto min-w-0 truncate text-sm text-foreground">
+        {shown
+          ? `${format(shown, "EEEEEE · d MMM", { locale: ptBR })} · ${reminderHour}`
+          : copy.form.noReminder}
+      </span>
+      <BellIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
+
+      <input
+        type="date"
+        aria-label={copy.form.reminder}
+        min={format(now, "yyyy-MM-dd")}
+        value={shown ? format(shown, "yyyy-MM-dd") : ""}
+        onChange={(e) => {
+          // "2026-10-23" puro é lido como UTC; com "T00:00" vira meia-noite LOCAL.
+          const next = new Date(`${e.target.value}T00:00`);
+          onChange(Number.isNaN(next.getTime()) ? undefined : next);
+        }}
+        className={nativeControlClass}
+      />
+    </div>
+  );
+}
+
 export function TaskForm({
   id,
   task,
@@ -186,9 +232,19 @@ export function TaskForm({
   const recurrence = !useQuotas().states.recurring.exhausted || (task?.repeat ?? "Off") !== "Off";
 
   const [title, setTitle] = useState(task?.title ?? "");
-  const [date, setDate] = useState<Date>(() =>
-    task ? new Date(task.date) : (defaultDate ?? new Date()),
+  const [undated, setUndated] = useState(task?.undated === true);
+  const [reminder, setReminder] = useState<Date | undefined>(() =>
+    task?.undated && task.alert ? new Date(task.alert) : undefined,
   );
+  // Em Sem data a `date` só ordena a lista: a agenda parte do lembrete, ou do próximo 09:00
+  // ("Daily" = hoje se ainda não passou, senão amanhã).
+  const [date, setDate] = useState<Date>(() => {
+    if (!task) return defaultDate ?? new Date();
+    if (!task.undated) return new Date(task.date);
+    if (task.alert) return new Date(task.alert);
+    const now = new Date();
+    return undatedReminder(now, "Daily", now) ?? now;
+  });
   const [duration, setDuration] = useState(task?.duration ?? "10m");
   const [priority, setPriority] = useState(task?.priority ?? 0);
   const [repeat, setRepeat] = useState<Repeat>(task?.repeat ?? "Off");
@@ -233,7 +289,17 @@ export function TaskForm({
       onView("title");
       return;
     }
-    onSubmit({ title: title.trim(), date, duration, priority, tags, repeat, links });
+    onSubmit({
+      title: title.trim(),
+      date,
+      duration,
+      priority,
+      tags,
+      repeat,
+      links,
+      undated,
+      reminder: undated ? reminder : undefined,
+    });
   };
 
   // Escolha única fecha a página: escolher JÁ é confirmar, e um botão "pronto" só somaria um toque.
@@ -246,7 +312,39 @@ export function TaskForm({
             value={title || copy.form.titlePlaceholder}
             onClick={() => onView("title")}
           />
-          <DateRow label={copy.form.date} value={date} onChange={setDate} />
+          <div className={rowClass}>
+            <span className={rowLabelClass}>{copy.form.undated}</span>
+            <span className="ml-auto text-sm text-foreground">
+              {undated ? copy.form.undatedOn : copy.form.undatedOff}
+            </span>
+            <input
+              type="checkbox"
+              role="switch"
+              aria-label={copy.form.undated}
+              checked={undated}
+              onChange={(e) => {
+                setUndated(e.target.checked);
+                // O dia escolhido de um lado vira o do outro; a hora da agenda fica.
+                if (e.target.checked) setReminder(date);
+                else if (reminder)
+                  setDate(
+                    new Date(
+                      reminder.getFullYear(),
+                      reminder.getMonth(),
+                      reminder.getDate(),
+                      date.getHours(),
+                      date.getMinutes(),
+                    ),
+                  );
+              }}
+              className={nativeControlClass}
+            />
+          </div>
+          {undated ? (
+            <ReminderRow value={reminder} repeat={repeat} onChange={setReminder} />
+          ) : (
+            <DateRow label={copy.form.date} value={date} onChange={setDate} />
+          )}
           <SelectRow
             label={copy.form.duration}
             value={duration}

@@ -5,6 +5,7 @@ import type {
   QuotaUsage,
   PaymentDetails,
   Invoice,
+  WeekStart,
 } from "@dailify/shared";
 import { apiURL } from "@/consts/conts";
 
@@ -81,6 +82,29 @@ export async function getTasksForMonth(
   return { tasks: data?.tasks ?? [], error };
 }
 
+export async function getUndatedTasks(token: string): Promise<{ tasks: Task[]; error?: ApiError }> {
+  const { data, error } = await request<{ tasks?: Task[] }>("/tasks/undated", token);
+  return { tasks: data?.tasks ?? [], error };
+}
+
+export async function getSettings(
+  token: string,
+): Promise<{ weekStart?: WeekStart; error?: ApiError }> {
+  const { data, error } = await request<{ weekStart?: WeekStart }>("/settings", token);
+  return { weekStart: data?.weekStart, error };
+}
+
+export async function saveSettings(
+  token: string,
+  weekStart: WeekStart,
+): Promise<{ weekStart?: WeekStart; error?: ApiError }> {
+  const { data, error } = await request<{ weekStart?: WeekStart }>("/settings", token, {
+    method: "PUT",
+    body: JSON.stringify({ weekStart }),
+  });
+  return { weekStart: data?.weekStart, error };
+}
+
 export async function createTask(
   token: string,
   input: TaskInput,
@@ -99,7 +123,8 @@ export async function createTask(
 export async function updateTask(
   token: string,
   id: string,
-  patch: Partial<TaskInput>,
+  /** `alert: null` limpa o lembrete. */
+  patch: Partial<Omit<TaskInput, "alert">> & { alert?: number | null },
   /** Epoch-ms da ocorrência quando a edição vale só pra ela (o servidor destaca da série). */
   occurrence?: number,
 ): Promise<{ task?: Task; series?: Task; error?: ApiError }> {
@@ -135,8 +160,20 @@ export async function uncompleteTask(
   id: string,
   day: Date,
 ): Promise<{ task?: Task; error?: ApiError }> {
-  const from = new Date(day).setHours(0, 0, 0, 0);
-  const to = new Date(day).setHours(23, 59, 59, 999);
+  return uncompleteTaskRange(
+    token,
+    id,
+    new Date(day).setHours(0, 0, 0, 0),
+    new Date(day).setHours(23, 59, 59, 999),
+  );
+}
+
+export async function uncompleteTaskRange(
+  token: string,
+  id: string,
+  from: number,
+  to: number,
+): Promise<{ task?: Task; error?: ApiError }> {
   const { data, error } = await request<{ task?: Task }>(
     `/tasks/${id}/complete?from=${from}&to=${to}`,
     token,

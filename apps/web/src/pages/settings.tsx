@@ -1,5 +1,6 @@
 import { copy } from "@/components/dashboard/copy";
 import { ThemeSelect } from "@/components/mode-toggle";
+import { WeekStartSelect } from "@/components/week-start-select";
 import { PushToggle } from "@/components/dashboard/push-toggle";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 
@@ -20,6 +21,19 @@ export default function SettingsPage(): JSX.Element {
 
           <CardContent>
             <ThemeSelect />
+          </CardContent>
+        </Card>
+
+        <Card className="rounded-2xl border-surface-line bg-surface-card">
+          <CardHeader>
+            <CardTitle>{copy.profile.weekStartTitle}</CardTitle>
+            <CardDescription className="text-content-secondary">
+              {copy.profile.weekStartDescription}
+            </CardDescription>
+          </CardHeader>
+
+          <CardContent>
+            <WeekStartSelect />
           </CardContent>
         </Card>
 

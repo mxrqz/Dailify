@@ -332,7 +332,8 @@ export async function updateTask(
   const { kind, days } = repeatToCols(next.repeat);
   await db
     .prepare(
-      `UPDATE tasks SET title=?,date=?,alert=?,duration=?,priority=?,repeat_kind=?,repeat_days=?,tags=?,links=?,updated_at=?,undated=? WHERE user_id=? AND id=?`,
+      // Lembrete novo/mudado precisa poder disparar: o envio avulso exige `alert_sent IS NULL`.
+      `UPDATE tasks SET title=?,date=?,alert=?,duration=?,priority=?,repeat_kind=?,repeat_days=?,tags=?,links=?,updated_at=?,undated=?,alert_sent=CASE WHEN ? THEN NULL ELSE alert_sent END WHERE user_id=? AND id=?`,
     )
     .bind(
       next.title,
@@ -346,6 +347,7 @@ export async function updateTask(
       next.links ? JSON.stringify(next.links) : null,
       updatedAt,
       next.undated ? 1 : 0,
+      next.alert !== cur.alert ? 1 : 0,
       userId,
       id,
     )

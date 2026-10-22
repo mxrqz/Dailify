@@ -4,8 +4,21 @@ import { Navigate, useLocation } from "react-router-dom";
 import { Loader2Icon } from "lucide-react";
 import { useDailify } from "./dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { getTasksForMonth, getQuotas, getPaymentDetails, getInvoices } from "@/functions/api";
-import { cacheTasks, flushQueue, readCachedTasks } from "@/functions/offline";
+import {
+  getTasksForMonth,
+  getQuotas,
+  getPaymentDetails,
+  getInvoices,
+  getUndatedTasks,
+  getSettings,
+} from "@/functions/api";
+import {
+  cacheTasks,
+  cacheUndated,
+  flushQueue,
+  readCachedTasks,
+  readCachedUndated,
+} from "@/functions/offline";
 import { isSameMonth } from "date-fns";
 import { motion } from "framer-motion";
 import { toast } from "sonner";
@@ -27,10 +40,34 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     setInvoices,
     setPaymentDetails,
     setQuotas,
+    undatedTasks,
+    setUndatedTasks,
+    setWeekStart,
   } = useDailify();
 
   const location = useLocation();
   const { getToken, userId } = useAuth();
+
+  // Sem dependência de mês: Sem data e preferências valem para a conta toda.
+  const loadUndated = useCallback(async () => {
+    if (!userId) return;
+    try {
+      const token = await getToken();
+      if (!token) return;
+      const [undated, settings] = await Promise.allSettled([
+        getUndatedTasks(token),
+        getSettings(token),
+      ]);
+      if (undated.status === "fulfilled" && !undated.value.error) {
+        setUndatedTasks(undated.value.tasks);
+      }
+      if (settings.status === "fulfilled" && settings.value.weekStart !== undefined) {
+        setWeekStart(settings.value.weekStart);
+      }
+    } catch {
+      /* sem sessão utilizável */
+    }
+  }, [userId]);
 
   // Depende de `isLoaded`/`userId`: com deps `[]` o efeito rodava uma vez só, antes do Clerk ficar
   // pronto, e o `getToken()` nulo deixava os dados de cobrança undefined pelo resto da sessão.
@@ -99,6 +136,16 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   // O boot pinta o que estava salvo antes de tocar na rede: sem isso, abrir sem conexão dá tela
   // vazia mesmo com a agenda inteira em mãos.
   useEffect(() => {
+    if (!userId || undatedTasks) return;
+    const cached = readCachedUndated(userId);
+    if (cached) setUndatedTasks(cached);
+  }, [userId]);
+
+  useEffect(() => {
+    if (userId && undatedTasks) cacheUndated(userId, undatedTasks);
+  }, [userId, undatedTasks]);
+
+  useEffect(() => {
     if (!userId || tasks) return;
     const cached = readCachedTasks(userId);
     if (cached?.length) {
@@ -132,6 +179,8 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
           toast.error(copy.sync.dropped.replace("{n}", String(dropped)));
         }
       }
+      // Depois da fila, nunca junto: lida antes, a Sem data voltava sem o que foi feito offline.
+      loadUndated();
 
       const { tasks: fetched, error } = await getTasksForMonth(token, selectedDay);
 
@@ -159,7 +208,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(null);
     }
-  }, [userId, user, selectedDay, tasks]);
+  }, [userId, user, selectedDay, tasks, loadUndated]);
 
   // 🗓️ Atualizar tarefas se mudar de mês (também cobre a carga inicial, já que currentMonth começa undefined)
   useEffect(() => {

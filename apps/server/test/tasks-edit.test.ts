@@ -48,6 +48,50 @@ describe("PATCH /tasks/:id", () => {
     expect(body.task.title).toBe("New title");
   });
 
+  it("alert: null clears the reminder (Sem data sem lembrete)", async () => {
+    const at = new Date(2026, 9, 23, 9).getTime();
+    await insertTask(env.DB, "u3", {
+      id: "edit-alert-null",
+      title: "Lembrar",
+      date: at,
+      alert: at,
+      duration: "10m",
+      priority: 0,
+      repeat: "Off",
+      completed: [],
+      undated: true,
+    });
+    const res = await patch("edit-alert-null", { alert: null });
+    expect(res.status).toBe(200);
+    expect((await getTask(env.DB, "u3", "edit-alert-null"))?.alert).toBeUndefined();
+  });
+
+  it("alert changed resets alert_sent; unchanged alert keeps it", async () => {
+    const at = new Date(2026, 9, 23, 9).getTime();
+    for (const id of ["edit-sent-new", "edit-sent-same"]) {
+      await insertTask(env.DB, "u3", {
+        id,
+        title: "Lembrar",
+        date: at,
+        alert: at,
+        duration: "10m",
+        priority: 0,
+        repeat: "Off",
+        completed: [],
+      });
+      await env.DB.prepare("UPDATE tasks SET alert_sent=? WHERE id=?").bind(at, id).run();
+    }
+    const sent = (id: string) =>
+      env.DB.prepare("SELECT alert_sent FROM tasks WHERE id=?")
+        .bind(id)
+        .first<{ alert_sent: number | null }>();
+
+    await patch("edit-sent-new", { alert: at + 86_400_000 });
+    await patch("edit-sent-same", { alert: at, title: "Outro" });
+    expect((await sent("edit-sent-new"))?.alert_sent).toBeNull();
+    expect((await sent("edit-sent-same"))?.alert_sent).toBe(at);
+  });
+
   it("404s for a missing task", async () => {
     const res = await patch("nope", { title: "x" });
     expect(res.status).toBe(404);

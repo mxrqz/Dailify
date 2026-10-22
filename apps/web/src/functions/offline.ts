@@ -1,6 +1,13 @@
 import type { Task, TaskInput } from "@dailify/shared";
 
-import { completeTask, createTask, deleteTask, uncompleteTask, updateTask } from "./api";
+import {
+  completeTask,
+  createTask,
+  deleteTask,
+  uncompleteTask,
+  uncompleteTaskRange,
+  updateTask,
+} from "./api";
 import type { ApiError } from "./api";
 
 /**
@@ -11,13 +18,14 @@ export type Mutation =
   | { op: "create"; taskId: string; input: TaskInput; at: number }
   | { op: "patch"; taskId: string; patch: Partial<TaskInput>; at: number }
   | { op: "complete"; taskId: string; at: number }
-  | { op: "uncomplete"; taskId: string; day: number; at: number }
+  // `until` = desfazer o intervalo [day, until] (período de recorrência da Sem data), não o dia.
+  | { op: "uncomplete"; taskId: string; day: number; at: number; until?: number }
   | { op: "delete"; taskId: string; at: number }
   // Op própria, não um `delete` com campo extra: excluir a terça de uma série não pode colapsar
   // como exclusão da tarefa (o colapso do `delete` engole o create e os patches pendentes dela).
   | { op: "delete-occurrence"; taskId: string; occurrence: number; at: number };
 
-const key = (userId: string, what: "tasks" | "outbox") => `dailify:${what}:${userId}`;
+const key = (userId: string, what: "tasks" | "outbox" | "undated") => `dailify:${what}:${userId}`;
 
 /**
  * Id da tarefa nascido no cliente. `crypto.randomUUID` só existe em contexto seguro — testar no
@@ -56,6 +64,12 @@ export const readCachedTasks = (userId: string): Task[] | undefined =>
 
 export const cacheTasks = (userId: string, tasks: Task[]): void =>
   write(key(userId, "tasks"), tasks);
+
+export const readCachedUndated = (userId: string): Task[] | undefined =>
+  read<Task[]>(key(userId, "undated"));
+
+export const cacheUndated = (userId: string, tasks: Task[]): void =>
+  write(key(userId, "undated"), tasks);
 
 export const readQueue = (userId: string): Mutation[] =>
   read<Mutation[]>(key(userId, "outbox")) ?? [];
@@ -132,20 +146,31 @@ export function clearLocal(userId: string): void {
   try {
     localStorage.removeItem(key(userId, "tasks"));
     localStorage.removeItem(key(userId, "outbox"));
+    localStorage.removeItem(key(userId, "undated"));
   } catch {
     /* sem acesso ao storage: não havia o que limpar */
   }
 }
+
+type FlushResult = { sent: number; dropped: number; offline: boolean };
+
+// Duas subidas juntas reenviariam a mesma entrada; a segunda chamada espera a que já está no ar.
+const flushing = new Map<string, Promise<FlushResult>>();
 
 /**
  * Sobe a fila em ordem. Para no primeiro erro de REDE (a ordem importa: criar antes de editar), e
  * descarta a entrada num erro de servidor — quota estourada, tarefa que não existe mais. Retentar
  * pra sempre o que o servidor recusa é como uma fila entope.
  */
-export async function flushQueue(
-  userId: string,
-  token: string,
-): Promise<{ sent: number; dropped: number; offline: boolean }> {
+export function flushQueue(userId: string, token: string): Promise<FlushResult> {
+  const running = flushing.get(userId);
+  if (running) return running;
+  const flush = drainQueue(userId, token).finally(() => flushing.delete(userId));
+  flushing.set(userId, flush);
+  return flush;
+}
+
+async function drainQueue(userId: string, token: string): Promise<FlushResult> {
   const queue = readQueue(userId);
   let sent = 0;
   let dropped = 0;
@@ -177,7 +202,9 @@ async function send(token: string, mutation: Mutation): Promise<ApiError | undef
     case "complete":
       return (await completeTask(token, mutation.taskId, mutation.at)).error;
     case "uncomplete":
-      return (await uncompleteTask(token, mutation.taskId, new Date(mutation.day))).error;
+      return mutation.until === undefined
+        ? (await uncompleteTask(token, mutation.taskId, new Date(mutation.day))).error
+        : (await uncompleteTaskRange(token, mutation.taskId, mutation.day, mutation.until)).error;
     case "delete":
       return (await deleteTask(token, mutation.taskId)).error;
     case "delete-occurrence":

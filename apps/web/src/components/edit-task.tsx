@@ -26,6 +26,9 @@ import {
 } from "@/components/dashboard/task-form";
 import { copy } from "@/components/dashboard/copy";
 import { useTaskActions } from "@/hooks/useTaskActions";
+import { useUndatedActions } from "@/hooks/useUndatedActions";
+import { editTaskInput } from "@/functions/edit-input";
+import { removeUndated, upsertUndated } from "@/functions/undated";
 
 type EditTaskProps = Record<string, never>;
 
@@ -61,6 +64,17 @@ export function EditTaskTrigger({ children }: { children: ReactNode }) {
   return <SheetTrigger asChild>{children}</SheetTrigger>;
 }
 
+/** Sem data marca por período e exclui sem diálogo de escopo; só quem é Sem data paga o hook. */
+function WithUndatedActions({
+  task,
+  children,
+}: {
+  task: TaskProps;
+  children: (actions: ReturnType<typeof useUndatedActions>) => JSX.Element;
+}): JSX.Element {
+  return children(useUndatedActions(task));
+}
+
 export function EditTaskContent({
   task,
   day,
@@ -73,7 +87,7 @@ export function EditTaskContent({
   open?: boolean;
   onClose: () => void;
 }) {
-  const { tasks, setTasks, selectedDay } = useDailify();
+  const { tasks, setTasks, undatedTasks, setUndatedTasks, selectedDay } = useDailify();
   const { getToken } = useAuth();
   const { user } = useUser();
   const navigate = useNavigate();
@@ -91,12 +105,13 @@ export function EditTaskContent({
   const { onComplete, onUncomplete, onDelete, deleteDialog } = useTaskActions(task, day, {
     onDeleted: onClose,
   });
-  const completed = getCompletionDate(task, day) === true;
+  const wasUndated = task.undated === true;
 
   // Tarefa recorrente não tem um "salvar" óbvio: editar a série move todos os dias, editar o dia
   // clicado não é o que o PATCH fazia. Quem decide é o usuário, no diálogo abaixo.
   const handleSubmit = async (values: TaskFormValues) => {
-    if (task.repeat !== "Off") {
+    // Série em Sem data não tem ocorrência para destacar: a edição é sempre da série.
+    if (task.repeat !== "Off" && !wasUndated) {
       setPendingValues(values);
       return;
     }
@@ -124,28 +139,34 @@ export function EditTaskContent({
       return;
     }
 
-    const taskData = {
-      date: values.date.getTime(),
-      id: task.id,
-      title: values.title,
-      completed: task.completed,
-      duration: values.duration,
-      tags: values.tags,
-      priority: values.priority,
-      repeat: values.repeat,
-      alert: task.alert ?? values.date.getTime(),
-      links: values.links,
-    };
+    const input = editTaskInput(values, new Date());
+    // Sem data sem lembrete mantém a `date` (é a ordem da lista); salvar não a joga pro fim.
+    const date =
+      values.undated && !input.alert && wasUndated ? task.date : (input.date ?? task.date);
+    // Agenda: o alerta acompanha a tarefa; o lembrete das 09:00 de Sem data não vale lá.
+    const alert = values.undated ? input.alert : wasUndated ? date : (task.alert ?? date);
+    const taskData = { ...task, ...input, date, alert };
 
     // Salvar sem mexer em nada ainda é "terminei aqui": a folha fecha do mesmo jeito.
-    if (!isTaskModified(task, taskData)) {
+    // `isTaskModified` compara `alert ?? date`: em Sem data limpar o lembrete (date === alert)
+    // passaria por "sem alterações".
+    const unchanged =
+      !isTaskModified(task, taskData) &&
+      wasUndated === values.undated &&
+      (!values.undated || task.alert === alert);
+    if (unchanged) {
       toast.info(copy.form.noChanges);
       setLoading(false);
       onClose();
       return;
     }
 
-    const { task: updated, series, error } = await updateTask(token, task.id, taskData, occurrence);
+    // `alert: null` limpa o lembrete no servidor; ausente ele manteria o antigo.
+    const {
+      task: updated,
+      series,
+      error,
+    } = await updateTask(token, task.id, { ...input, date, alert: alert ?? null }, occurrence);
 
     if (error || !updated) {
       toast(copy.form.createError, {
@@ -162,12 +183,45 @@ export function EditTaskContent({
       const base = series
         ? upsertTaskWithRecurrence(tasks ?? [], series, selectedDay)
         : (tasks ?? []);
-      setTasks(upsertTaskWithRecurrence(base, updated, selectedDay));
+      // Mudar de lado tira de uma lista e põe na outra; série só expande na agenda.
+      if (updated.undated) {
+        setTasks(occurrence === undefined ? base.filter((t) => t.id !== updated.id) : base);
+        setUndatedTasks(upsertUndated(undatedTasks ?? [], updated));
+      } else {
+        setTasks(upsertTaskWithRecurrence(base, updated, selectedDay));
+        if (wasUndated) setUndatedTasks(removeUndated(undatedTasks ?? [], updated.id));
+      }
       onClose();
     }
 
     setLoading(false);
   };
+
+  const completedOnDay = getCompletionDate(task, day) === true;
+  const completeButton = (done: boolean, toggle: () => Promise<unknown>) => (
+    <Button
+      variant="ghost"
+      className="h-12 flex-1 cursor-pointer gap-2 rounded-full"
+      onClick={() => {
+        void toggle();
+        onClose();
+      }}
+    >
+      {done ? <RotateCcwIcon className="size-4" /> : <CheckIcon className="size-4" />}
+      {done ? copy.task.uncomplete : copy.task.complete}
+    </Button>
+  );
+  const deleteButton = (onClick: () => void) => (
+    <Button
+      variant="ghost"
+      size="icon"
+      aria-label={copy.task.delete}
+      onClick={onClick}
+      className="absolute top-3 right-12 size-8 cursor-pointer text-muted-foreground hover:text-destructive"
+    >
+      <Trash2Icon className="size-4" />
+    </Button>
+  );
 
   return (
     // Folha de BAIXO: no desktop a edição acontece no próprio cartão, então o painel lateral perdeu
@@ -221,17 +275,13 @@ export function EditTaskContent({
         <SheetFooter className="flex-row items-center gap-2 pt-4">
           {/* Concluída não desabilita mais o botão: ele vira a saída — errar o toque não pode
               custar a tarefa. */}
-          <Button
-            variant="ghost"
-            className="h-12 flex-1 cursor-pointer gap-2 rounded-full"
-            onClick={() => {
-              void (completed ? onUncomplete() : onComplete());
-              onClose();
-            }}
-          >
-            {completed ? <RotateCcwIcon className="size-4" /> : <CheckIcon className="size-4" />}
-            {completed ? copy.task.uncomplete : copy.task.complete}
-          </Button>
+          {wasUndated ? (
+            <WithUndatedActions task={task}>
+              {({ done, toggle }) => completeButton(done, toggle)}
+            </WithUndatedActions>
+          ) : (
+            completeButton(completedOnDay, completedOnDay ? onUncomplete : onComplete)
+          )}
 
           <Button
             type="submit"
@@ -258,17 +308,18 @@ export function EditTaskContent({
       {/* Fica no fim do DOM de propósito, ainda que apareça no topo: o Radix foca o primeiro
           elemento focável ao abrir, e um botão de excluir nessa posição significa abrir o painel
           e apertar Enter pra perder a tarefa. Aqui, quem recebe o foco é o texto da tarefa. */}
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label={copy.task.delete}
-        onClick={() => {
-          void onDelete();
-        }}
-        className="absolute top-3 right-12 size-8 cursor-pointer text-muted-foreground hover:text-destructive"
-      >
-        <Trash2Icon className="size-4" />
-      </Button>
+      {wasUndated ? (
+        <WithUndatedActions task={task}>
+          {({ remove }) =>
+            deleteButton(() => {
+              void remove();
+              onClose();
+            })
+          }
+        </WithUndatedActions>
+      ) : (
+        deleteButton(() => void onDelete())
+      )}
     </SheetContent>
   );
 }
