@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export function MiniCalendar() {
-  const { setSelectedDay, selectedDay } = useDailify();
+  const { setSelectedDay, selectedDay, weekStart } = useDailify();
 
   const goToPreviousMonth = () => {
     // setIsLoading(true)
@@ -40,8 +40,8 @@ export function MiniCalendar() {
   const generateCalendarDays = () => {
     const monthStart = startOfMonth(selectedDay);
     const monthEnd = endOfMonth(selectedDay);
-    const calendarStart = startOfWeek(monthStart);
-    const calendarEnd = endOfWeek(monthEnd);
+    const calendarStart = startOfWeek(monthStart, { weekStartsOn: weekStart });
+    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: weekStart });
     return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
   };
 
@@ -50,7 +50,7 @@ export function MiniCalendar() {
   useEffect(() => {
     const calendarDays = generateCalendarDays();
     setCalendarDays(calendarDays);
-  }, [selectedDay]);
+  }, [selectedDay, weekStart]);
 
   return (
     <div className="flex flex-col gap-4">
@@ -86,14 +86,16 @@ export function MiniCalendar() {
 
       <div className="flex flex-col gap-1">
         <ul className="grid w-full grid-cols-7 justify-items-center gap-1">
-          {copy.aside.weekDayInitials.map((day, index) => (
-            <li
-              key={index}
-              className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground"
-            >
-              {day}
-            </li>
-          ))}
+          {copy.aside.weekDayInitials
+            .map((_, index) => copy.aside.weekDayInitials[(index + weekStart) % 7])
+            .map((day, index) => (
+              <li
+                key={index}
+                className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground"
+              >
+                {day}
+              </li>
+            ))}
         </ul>
 
         <ul className="grid grid-cols-7 justify-items-center gap-1">
