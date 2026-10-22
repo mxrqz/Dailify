@@ -731,6 +731,8 @@ export interface ParsedTask {
   date: Date | null;
   /** Falso quando `date` só tem dia (hora ficou 00:00 por padrão) — quem consome decide o default. */
   hasTime: boolean;
+  /** Dia explícito ("qui", "dia 5") ou recorrência semanal com dias citados ("toda quarta"). */
+  hasDay: boolean;
   duration: string | null;
   links: string[];
   repeat: Repeat;
@@ -861,10 +863,17 @@ export function parseTaskText(input: string, now: Date = new Date()): ParsedTask
     ? nextOccurrence(repeat.value, explicitDate ?? startOfDay(now), hasTime, now)
     : explicitDate;
 
+  const citesWeekday =
+    typeof repeat?.value === "object" &&
+    repeat.spans.some(([start, end]) =>
+      new RegExp(`\\b(?:${WEEKDAY_RE})s?\\b`).test(forWhen.slice(start, end)),
+    );
+
   return {
     text: cut(input, spans),
     date,
     hasTime,
+    hasDay: Boolean(when?.hasDay) || citesWeekday,
     duration: duration?.duration ?? null,
     links: links.urls,
     repeat: repeat?.value ?? "Off",

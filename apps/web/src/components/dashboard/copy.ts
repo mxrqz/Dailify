@@ -122,6 +122,7 @@ export const copy = {
     titleRequired: "O título é obrigatório",
     fieldsRequired: "Preencha todos os campos",
     created: "Tarefa criada",
+    createdUndated: "Anotado em Sem data",
     updated: "Tarefa atualizada",
     noChanges: "Nenhuma alteração para salvar",
     createError: "Não foi possível salvar a tarefa",

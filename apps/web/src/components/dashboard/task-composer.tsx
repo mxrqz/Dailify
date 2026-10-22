@@ -15,11 +15,14 @@ import { cn } from "@/lib/utils";
 
 export interface ComposerValues {
   parsed: ParsedTask;
+  undatedOnly: boolean;
 }
 
 interface TaskComposerProps {
   submitting?: boolean;
   className?: string;
+  /** Composer da coluna Sem data: a regra de destino ignora a data/hora do parser. */
+  undatedOnly?: boolean;
   onSubmit: (values: ComposerValues) => void;
 }
 
@@ -27,7 +30,12 @@ interface TaskComposerProps {
  * Barra de captura rápida: uma frase só. O que o parser tirou dela aparece em chips no topo — sem
  * esse eco o usuário digita no escuro e só descobre no envio que a data não foi entendida.
  */
-export function TaskComposer({ submitting, className, onSubmit }: TaskComposerProps): JSX.Element {
+export function TaskComposer({
+  submitting,
+  className,
+  undatedOnly = false,
+  onSubmit,
+}: TaskComposerProps): JSX.Element {
   const [input, setInput] = useState("");
   const [focused, setFocused] = useState(false);
   const field = useRef<HTMLInputElement>(null);
@@ -61,7 +69,7 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
   }, []);
 
   const parsed = useMemo(() => parseTaskText(input), [input]);
-  const canSubmit = Boolean(parsed.text && parsed.date) && !submitting;
+  const canSubmit = Boolean(parsed.text) && !submitting;
 
   /**
    * Os cinco slots ficam sempre montados, na mesma ordem: chip que some/aparece pisca e mexe o
@@ -85,7 +93,7 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
           })
         : copy.composer.missingWhen,
       filled: Boolean(parsed.date),
-      required: true,
+      required: false,
     },
     {
       key: "duration",
@@ -104,7 +112,7 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
     if (!canSubmit) return;
-    onSubmit({ parsed });
+    onSubmit({ parsed, undatedOnly });
     setInput("");
   };
 
