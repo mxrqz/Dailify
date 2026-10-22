@@ -137,6 +137,10 @@
   --width-undated: 20rem;
   /* Puxador aberto: centro no gap entre agenda e coluna (largura + p-1 do shell + meio gap-1). */
   --undated-handle-x: calc(50% - var(--width-undated) - 0.375rem);
+  /* Folha de criação no desktop: frase + quatro chips numa linha, sem passar da agenda estreita. */
+  --width-sheet: 27.5rem;
+  /* Atrás da folha no mobile: escurece a tela o bastante pra folha ser o assunto, sem apagá-la. */
+  --surface-scrim: oklch(0% 0 0 / 45%);
   --layout-content: 1380px; /* teto de largura do conteúdo (mastra-like) */
 }
 
@@ -253,6 +257,10 @@
   --radius-panel: var(--radius-panel);
   --radius-field: var(--radius-field);
   --width-undated: var(--width-undated);
+  --width-sheet: var(--width-sheet);
+  --color-surface-scrim: var(--surface-scrim);
+  /* O botão + flutua em cima da agenda: a sombra é o brilho crimson dele, não um cinza. */
+  --shadow-fab: 0 8px 24px var(--accent-glow);
   --shadow-panel: 0 24px 60px -20px light-dark(oklch(0% 0 0 / 0.18), oklch(0% 0 0 / 0.55));
   /* Elevação 1 — o degrau mais baixo: o que flutua encostado na superfície (a toolbar do cartão).
      Duas camadas de BOX-shadow, contato + difusa; nunca `drop-shadow`, que é filtro e se empilha
@@ -323,6 +331,11 @@
  * landing — o hero é a exceção, com `pt-20` e altura fixa. Centralizar aqui torna o respiro da
  * página inteira ajustável numa linha. O valor é o mesmo de antes: refator, não mudança de layout.
  */
+/* Respiro do rodapé que cresce com a barra de gestos do iOS; sem ela, o p-1 de sempre. */
+@utility pb-safe {
+  padding-bottom: max(--spacing(1), env(safe-area-inset-bottom));
+}
+
 @utility section-y {
   padding-block: --spacing(20);
   @variant md {
