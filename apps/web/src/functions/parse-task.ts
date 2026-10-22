@@ -1,3 +1,4 @@
+import { weekDays, type Repeat } from "@dailify/shared";
 import { parseLinks } from "./parse-links";
 
 /**
@@ -604,13 +605,18 @@ export function parseDuration(text: string): (ParsedDuration & { spans: Span[] }
   return null;
 }
 
-export function parseWhen(input: string, now: Date = new Date()): ParsedWhen | null {
+// Recorrência lê a hora literal: o "9h" de uma série é 9h, não as 21h que seriam a próxima "9" de hoje.
+export function parseWhen(
+  input: string,
+  now: Date = new Date(),
+  literalTime = false,
+): ParsedWhen | null {
   const text = normalize(input);
   if (!text.trim()) return null;
 
   const day = parseDay(text, now);
   const base = day?.value ?? startOfDay(now);
-  const baseIsToday = base.getTime() === startOfDay(now).getTime();
+  const baseIsToday = !literalTime && base.getTime() === startOfDay(now).getTime();
 
   const time = parseTime(text, now, baseIsToday);
   if (!day && !time) return null;
@@ -630,6 +636,71 @@ export function parseWhen(input: string, now: Date = new Date()): ParsedWhen | n
   };
 }
 
+const WEEKDAY_ITEM = `(?:${WEEKDAY_RE})s?(?:\\s*feiras?)?`;
+const RECURRENCES: [RegExp, (match: RegExpMatchArray, now: Date) => Exclude<Repeat, "Off">][] = [
+  [
+    new RegExp(
+      `\\b(?:tod[ao]s?\\s+(?:[ao]s\\s+)?|every\\s+)${WEEKDAY_ITEM}(?:(?:\\s*,\\s*|\\s+(?:e|and)\\s+)${WEEKDAY_ITEM})*\\b`,
+    ),
+    (match) => {
+      const days = [...match[0].matchAll(new RegExp(`\\b(${WEEKDAY_RE})s?\\b`, "g"))];
+      const indexes = [...new Set(days.map((day) => WEEKDAYS[day[1]]))].sort((a, b) => a - b);
+      return { Weekly: indexes.map((i) => weekDays[i]) };
+    },
+  ],
+  [
+    /\b(?:(?:tod[ao]s\s+os\s+)?dias\s+uteis|every\s+weekday)\b/,
+    () => ({ Weekly: weekDays.slice(1, 6) }),
+  ],
+  // "todo dia 5" é mensal; o span pega só o "todo" pro parseWhen ainda ler o "dia 5". "22h" é hora.
+  [/\btod[ao](?=\s+dia\s+\d{1,2}\b(?!\s*(?:h|:|am|pm)))/, () => "Monthly"],
+  [/\b(?:tod[ao]s?\s+(?:os\s+)?dias?|diariamente|every\s*day)\b/, () => "Daily"],
+  [
+    /\b(?:tod[ao]s?\s+(?:as\s+)?semanas?|semanalmente|every\s+week)\b/,
+    (_, now) => ({ Weekly: [weekDays[now.getDay()]] }),
+  ],
+  [/\b(?:tod[ao]s?\s+(?:os\s+)?mes(?:es)?|mensalmente|every\s+month)\b/, () => "Monthly"],
+  [/\b(?:tod[ao]s?\s+(?:os\s+)?anos?|anualmente|every\s+year)\b/, () => "Yearly"],
+];
+
+/** Recorrência no texto já normalizado; sem gatilho ("toda", "every", "diariamente"…) é `null`. */
+export function parseRepeat(
+  text: string,
+  now: Date = new Date(),
+): { value: Exclude<Repeat, "Off">; spans: Span[] } | null {
+  for (const [re, toRepeat] of RECURRENCES) {
+    const match = text.match(re);
+    if (match) return hit(match, toRepeat(match, now));
+  }
+  return null;
+}
+
+/** A primeira ocorrência da série a partir de `date` — hoje vale se a hora não passou (ou não há hora). */
+function nextOccurrence(repeat: Exclude<Repeat, "Off">, date: Date, hasTime: boolean, now: Date) {
+  const passed = (d: Date) => (hasTime ? d < now : d < startOfDay(now));
+  const shift = (days: number, months = 0, years = 0) =>
+    new Date(
+      date.getFullYear() + years,
+      date.getMonth() + months,
+      date.getDate() + days,
+      date.getHours(),
+      date.getMinutes(),
+    );
+
+  if (typeof repeat === "object") {
+    for (let i = 0; i <= 7; i++) {
+      const candidate = shift(i);
+      if (repeat.Weekly.includes(weekDays[candidate.getDay()]) && !passed(candidate)) {
+        return candidate;
+      }
+    }
+    return date;
+  }
+  if (!passed(date)) return date;
+  if (repeat === "Daily") return shift(1);
+  return repeat === "Monthly" ? shift(0, 1) : shift(0, 0, 1);
+}
+
 export interface ParsedTask {
   text: string;
   date: Date | null;
@@ -637,6 +708,7 @@ export interface ParsedTask {
   hasTime: boolean;
   duration: string | null;
   links: string[];
+  repeat: Repeat;
 }
 
 /** Tira os spans do texto, do fim pro começo — cortar de frente invalidaria os índices seguintes. */
@@ -729,14 +801,24 @@ export function parseTaskText(input: string, now: Date = new Date()): ParsedTask
 
   // A duração também sai da vista do parseWhen: o "1h" de "call de 1h hoje às 16h" casa como hora
   // e, por ter o span maior, ganhava do horário de verdade.
-  const when = parseWhen(mask(forDuration, duration?.spans ?? []), now);
+  const forWhen = mask(forDuration, duration?.spans ?? []);
 
-  const spans = mergeSpans([...links.spans, ...(duration?.spans ?? []), ...(when?.spans ?? [])]);
+  // "toda quarta" sai da vista do parseWhen, que leria "quarta" como dia; "dia 5"/"3 de março"
+  // ficam fora do span da recorrência e ele ainda lê.
+  const repeat = parseRepeat(forWhen, now);
+  const when = parseWhen(mask(forWhen, repeat?.spans ?? []), now, repeat !== null);
+
+  const spans = mergeSpans([
+    ...links.spans,
+    ...(duration?.spans ?? []),
+    ...(repeat?.spans ?? []),
+    ...(when?.spans ?? []),
+  ]);
 
   // O intervalo manda no horário: "das 15 às 16" começa 15:00 — e é a única fonte de hora agora que
   // o parseWhen não enxerga mais o trecho da duração.
   const base = when?.date ?? startOfDay(now);
-  const date = duration?.start
+  const explicitDate = duration?.start
     ? new Date(
         base.getFullYear(),
         base.getMonth(),
@@ -750,11 +832,16 @@ export function parseTaskText(input: string, now: Date = new Date()): ParsedTask
   // É uma hora — sem isso o home.tsx sobrescreveria 15:00 com o DEFAULT_HOUR.
   const hasTime = Boolean(duration?.start) || (when?.hasTime ?? false);
 
+  const date = repeat
+    ? nextOccurrence(repeat.value, explicitDate ?? startOfDay(now), hasTime, now)
+    : explicitDate;
+
   return {
     text: cut(input, spans),
     date,
     hasTime,
     duration: duration?.duration ?? null,
     links: links.urls,
+    repeat: repeat?.value ?? "Off",
   };
 }

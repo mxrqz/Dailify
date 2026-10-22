@@ -1,3 +1,4 @@
+import { doneThisPeriod } from "@dailify/shared";
 import type { Env } from "./index";
 import {
   deleteSubscriptionByEndpoint,
@@ -82,9 +83,15 @@ async function dueRecurring(
   const candidates = await recurringAlertCandidates(env.DB);
   const out: { taskId: string; alertAt: number; outgoing: Outgoing }[] = [];
 
-  for (const { task, userId, alertSent, timeZone } of candidates) {
+  for (const { task, userId, alertSent, timeZone, weekStart } of candidates) {
     const alertAt = dueOccurrenceAlert(task, alertSent, timeZone, now, GRACE_MS);
     if (alertAt === null) continue;
+
+    // Sem data já feita no período: não avisa, mas marca para não reavaliar a cada passada.
+    if (task.undated && doneThisPeriod(task, now, weekStart, timeZone)) {
+      await markOccurrenceAlerted(env.DB, task.id, alertAt);
+      continue;
+    }
 
     const offset = (task.alert ?? task.date) - task.date;
     out.push({

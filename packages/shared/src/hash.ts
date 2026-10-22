@@ -24,6 +24,7 @@ export function taskHash(task: Omit<Task, "id" | "updatedAt" | "hash">): string 
     task.tags ? [...task.tags].sort() : null,
     task.links ? [...task.links].sort() : null,
     [...task.completed].sort((a, b) => a - b),
+    task.undated === true,
   ]);
 
   let hash = 0x811c9dc5;

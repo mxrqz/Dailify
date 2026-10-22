@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cut, normalize, parseDuration, parseTaskText, parseWhen } from "./parse-task";
+import { cut, normalize, parseDuration, parseRepeat, parseTaskText, parseWhen } from "./parse-task";
 
 // Quarta-feira, 12 de agosto de 2026, 09:00.
 const NOW = new Date(2026, 7, 12, 9, 0);
@@ -545,5 +545,70 @@ describe("preposição órfã na fronteira do corte", () => {
     ["deixar com o porteiro hoje", "deixar com o porteiro"],
   ])("%j → %j (não mexe no que não foi recortado)", (input, expected) => {
     expect(parseTaskText(input, NOW).text).toBe(expected);
+  });
+});
+
+describe("recorrência no texto", () => {
+  // Quarta-feira, 21 de outubro de 2026, 10:00.
+  const WED = new Date(2026, 9, 21, 10, 0);
+  const WEEKDAYS_MON_FRI = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
+
+  it.each([
+    [
+      "reunião toda quarta 16h",
+      { Weekly: ["Wednesday"] },
+      "reunião",
+      new Date(2026, 9, 21, 16),
+      true,
+    ],
+    [
+      "academia todas as segundas e sextas",
+      { Weekly: ["Monday", "Friday"] },
+      "academia",
+      new Date(2026, 9, 23),
+      false,
+    ],
+    [
+      "stand-up dias úteis 9h",
+      { Weekly: WEEKDAYS_MON_FRI },
+      "stand-up",
+      new Date(2026, 9, 22, 9),
+      true,
+    ],
+    ["remédio todo dia 22h", "Daily", "remédio", new Date(2026, 9, 21, 22), true],
+    ["remédio todos os dias 22h", "Daily", "remédio", new Date(2026, 9, 21, 22), true],
+    ["remédio diariamente 22h", "Daily", "remédio", new Date(2026, 9, 21, 22), true],
+    ["remédio every day 22h", "Daily", "remédio", new Date(2026, 9, 21, 22), true],
+    [
+      "regar plantas toda quarta-feira",
+      { Weekly: ["Wednesday"] },
+      "regar plantas",
+      new Date(2026, 9, 21),
+      false,
+    ],
+    ["aluguel todo mês dia 5", "Monthly", "aluguel", new Date(2026, 10, 5), false],
+    ["pagar boleto todo dia 5", "Monthly", "pagar boleto", new Date(2026, 10, 5), false],
+    [
+      "aniversário da Ana todo ano 3 de março",
+      "Yearly",
+      "aniversário da Ana",
+      new Date(2027, 2, 3),
+      false,
+    ],
+    ["reunião de quarta 16h", "Off", "reunião", new Date(2026, 9, 21, 16), true],
+  ])("%s", (input, repeat, text, date, hasTime) => {
+    const parsed = parseTaskText(input, WED);
+    expect(parsed.repeat).toEqual(repeat);
+    expect(parsed.text).toBe(text);
+    expect(parsed.date).toEqual(date);
+    expect(parsed.hasTime).toBe(hasTime);
+  });
+
+  it.each([
+    ["toda semana", { Weekly: ["Wednesday"] }], // sem dia: o de hoje
+    ["every monday", { Weekly: ["Monday"] }],
+  ])("%s", (input, repeat) => {
+    expect(parseTaskText(input, WED).repeat).toEqual(repeat);
+    expect(parseRepeat(normalize(input), WED)?.value).toEqual(repeat);
   });
 });
