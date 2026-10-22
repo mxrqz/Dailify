@@ -1,12 +1,13 @@
 import { useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { LayoutGroup, motion, useReducedMotion, type Transition } from "motion/react";
+import { LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { Minimize2, Pin, PlusIcon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
 import { TaskComposer, type ComposerValues } from "@/components/dashboard/task-composer";
 import { Dialog, DialogTitle } from "@/components/ui/dialog";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { reveal, spring } from "@/consts/motion";
 import { useStoredFlag } from "@/hooks/useStoredFlag";
 import { cn } from "@/lib/utils";
 
@@ -44,14 +45,9 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
   const fabRef = useRef<HTMLButtonElement>(null);
   const label = undatedOnly ? copy.composer.openUndated : copy.composer.open;
 
-  const morph: Transition = reduce
-    ? { duration: 0 }
-    : { type: "spring", visualDuration: 0.24, bounce: 0 };
+  const morph = reduce ? { duration: 0 } : spring.soft;
   // O conteúdo só aparece depois que a superfície já tomou forma, e sai antes de ela encolher.
-  const content = {
-    initial: { opacity: 0 },
-    animate: { opacity: 1, transition: { duration: reduce ? 0 : 0.14, delay: reduce ? 0 : 0.06 } },
-  };
+  const content = reduce ? { initial: false } : reveal;
 
   // "n" e "/" abrem a folha de qualquer lugar da página, menos de quem já está escrevendo ou de
   // outro diálogo ou menu aberto.

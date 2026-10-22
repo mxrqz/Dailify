@@ -287,6 +287,22 @@
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
 
+  /* Motion — escala do estudo de microanimações §1; espelhada em consts/motion.ts (há teste). */
+  /* Instantâneo: troca de estado sem transição. */
+  --duration-instant: 0ms;
+  /* Feedback de hover/press (estudo §1: 100-150ms). */
+  --duration-fast: 120ms;
+  /* Padrão de UI: entrada, fade, colapso (estudo §1: 150-250ms). */
+  --duration-base: 200ms;
+  /* Maior deslocamento ou troca de painel (estudo §1: até 300ms). */
+  --duration-slow: 300ms;
+  /* Entrada: começa rápido e assenta (estudo §1, ease-out forte). */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  /* Elemento que já está na tela e se move (estudo §1, ease-in-out). */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  /* Saída: acelera e some (estudo §1, ease-in curto). */
+  --ease-exit: cubic-bezier(0.3, 0, 1, 1);
+
   /* Font sizes — Tailwind's text-xs..text-9xl scale plus a project 2xs (was text-[0.6rem]). */
   --text-2xs: 0.625rem;
   --text-2xs--line-height: 0.875rem;

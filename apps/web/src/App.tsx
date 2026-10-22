@@ -1,5 +1,6 @@
 import { AuthenticateWithRedirectCallback } from "@clerk/clerk-react";
 import { Loader2Icon } from "lucide-react";
+import { MotionConfig } from "motion/react";
 import { BrowserRouter as Router, Navigate, Routes, Route } from "react-router-dom";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { ThemeProvider } from "./components/theme-provider";
@@ -33,145 +34,147 @@ export default function App() {
         <Router>
           <ThemeProvider>
             <TooltipProvider>
-              <ErrorBoundary>
-                <Routes>
-                  <Route path="/" element={<LandingPage />} />
+              <MotionConfig reducedMotion="user">
+                <ErrorBoundary>
+                  <Routes>
+                    <Route path="/" element={<LandingPage />} />
 
-                  {/* Tudo que é "o app" divide a mesma top bar (components/app-layout.tsx). */}
-                  <Route element={<AppLayout />}>
+                    {/* Tudo que é "o app" divide a mesma top bar (components/app-layout.tsx). */}
+                    <Route element={<AppLayout />}>
+                      <Route
+                        path="/dashboard"
+                        element={
+                          <ProtectedRoute>
+                            <Helmet>
+                              <title>Dailify - Dashboard</title>
+                            </Helmet>
+
+                            <Home />
+                          </ProtectedRoute>
+                        }
+                      />
+
+                      <Route
+                        path="/profile"
+                        element={
+                          <ProtectedRoute>
+                            <Helmet>
+                              <title>Dailify - Profile</title>
+                            </Helmet>
+
+                            <ProfilePage />
+                          </ProtectedRoute>
+                        }
+                      />
+
+                      <Route
+                        path="/settings"
+                        element={
+                          <ProtectedRoute>
+                            <Helmet>
+                              <title>Dailify - Configurações</title>
+                            </Helmet>
+
+                            <SettingsPage />
+                          </ProtectedRoute>
+                        }
+                      />
+
+                      <Route
+                        path="/security"
+                        element={
+                          <ProtectedRoute>
+                            <Helmet>
+                              <title>Dailify - Segurança</title>
+                            </Helmet>
+
+                            <SecurityPage />
+                          </ProtectedRoute>
+                        }
+                      />
+
+                      <Route
+                        path="/billing"
+                        element={
+                          <ProtectedRoute>
+                            <Helmet>
+                              <title>Dailify - Premium</title>
+                            </Helmet>
+
+                            <BillingPage />
+                          </ProtectedRoute>
+                        }
+                      />
+
+                      <Route path="/premium" element={<PremiumPage />} />
+                    </Route>
+
                     <Route
-                      path="/dashboard"
+                      path="/login"
                       element={
-                        <ProtectedRoute>
+                        <>
                           <Helmet>
-                            <title>Dailify - Dashboard</title>
+                            <title>{copy.signIn.pageTitle}</title>
                           </Helmet>
 
-                          <Home />
-                        </ProtectedRoute>
+                          <Login />
+                        </>
                       }
                     />
 
                     <Route
-                      path="/profile"
+                      path="/signup"
                       element={
-                        <ProtectedRoute>
+                        <>
                           <Helmet>
-                            <title>Dailify - Profile</title>
+                            <title>{copy.signUp.pageTitle}</title>
                           </Helmet>
 
-                          <ProfilePage />
-                        </ProtectedRoute>
+                          <SignUp />
+                        </>
                       }
                     />
 
-                    <Route
-                      path="/settings"
-                      element={
-                        <ProtectedRoute>
-                          <Helmet>
-                            <title>Dailify - Configurações</title>
-                          </Helmet>
-
-                          <SettingsPage />
-                        </ProtectedRoute>
-                      }
-                    />
-
-                    <Route
-                      path="/security"
-                      element={
-                        <ProtectedRoute>
-                          <Helmet>
-                            <title>Dailify - Segurança</title>
-                          </Helmet>
-
-                          <SecurityPage />
-                        </ProtectedRoute>
-                      }
-                    />
-
-                    <Route
-                      path="/billing"
-                      element={
-                        <ProtectedRoute>
-                          <Helmet>
-                            <title>Dailify - Premium</title>
-                          </Helmet>
-
-                          <BillingPage />
-                        </ProtectedRoute>
-                      }
-                    />
-
-                    <Route path="/premium" element={<PremiumPage />} />
-                  </Route>
-
-                  <Route
-                    path="/login"
-                    element={
-                      <>
-                        <Helmet>
-                          <title>{copy.signIn.pageTitle}</title>
-                        </Helmet>
-
-                        <Login />
-                      </>
-                    }
-                  />
-
-                  <Route
-                    path="/signup"
-                    element={
-                      <>
-                        <Helmet>
-                          <title>{copy.signUp.pageTitle}</title>
-                        </Helmet>
-
-                        <SignUp />
-                      </>
-                    }
-                  />
-
-                  {/* O round-trip do Google não pode ser uma página branca: a mesma casca das
+                    {/* O round-trip do Google não pode ser uma página branca: a mesma casca das
                       outras telas de auth, com o spinner, enquanto o Clerk resolve. */}
-                  <Route
-                    path="/sso-callback"
-                    element={
-                      <AuthShell>
-                        <div className="flex justify-center">
-                          <Loader2Icon className="size-6 animate-spin text-primary" />
-                        </div>
-                        <AuthenticateWithRedirectCallback />
-                      </AuthShell>
-                    }
-                  />
+                    <Route
+                      path="/sso-callback"
+                      element={
+                        <AuthShell>
+                          <div className="flex justify-center">
+                            <Loader2Icon className="size-6 animate-spin text-primary" />
+                          </div>
+                          <AuthenticateWithRedirectCallback />
+                        </AuthShell>
+                      }
+                    />
 
-                  <Route
-                    path="/verify"
-                    element={
-                      <>
-                        <Helmet>
-                          <title>{copy.verify.pageTitle}</title>
-                        </Helmet>
+                    <Route
+                      path="/verify"
+                      element={
+                        <>
+                          <Helmet>
+                            <title>{copy.verify.pageTitle}</title>
+                          </Helmet>
 
-                        <Verify />
-                      </>
-                    }
-                  />
+                          <Verify />
+                        </>
+                      }
+                    />
 
-                  <Route path="/task/:id" element={<TaskPreview />} />
+                    <Route path="/task/:id" element={<TaskPreview />} />
 
-                  <Route path="/privacidade" element={<PrivacyPage />} />
+                    <Route path="/privacidade" element={<PrivacyPage />} />
 
-                  <Route path="/termos" element={<TermsPage />} />
+                    <Route path="/termos" element={<TermsPage />} />
 
-                  {/* Sem isto, path inexistente renderiza tela branca — já custou o bug /prices. */}
-                  <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                </Routes>
-              </ErrorBoundary>
+                    {/* Sem isto, path inexistente renderiza tela branca — já custou o bug /prices. */}
+                    <Route path="*" element={<Navigate to="/dashboard" replace />} />
+                  </Routes>
+                </ErrorBoundary>
 
-              <Toaster />
+                <Toaster />
+              </MotionConfig>
             </TooltipProvider>
           </ThemeProvider>
         </Router>

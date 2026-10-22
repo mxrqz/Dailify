@@ -83,3 +83,17 @@ passariam por qualquer suíte de função pura.
   `/premium`, not `/prices`.
 - `react-hooks/exhaustive-deps` is a warning here; several effects intentionally omit deps — think
   before "fixing" one (can cause refetch loops). See bd `0g7`.
+
+## Motion
+
+Estudo: `docs/research/2026-10-21-microanimacoes.md`. Valores sempre de `consts/motion.ts`.
+
+- Anime pela frequência: o que se repete o dia todo (hover, atalho de teclado) é rápido ou não anima.
+  Ação de teclado não anima.
+- CSS primeiro (hover, press, cor). `motion` para saída, layout, gesto e morph.
+- Só `transform`/`opacity`; nunca `transition-all`. Exceções: largura da coluna Sem data e o
+  `grid-template-rows` do colapso.
+- Durações e curvas: tokens `duration-fast|base|slow`, `ease-out|standard|exit` no CSS;
+  `duration`, `ease`, `spring`, `fade`, `reveal`, `slideX`, `collapse` no motion. Sem bounce.
+- Reduced motion: `<MotionConfig reducedMotion="user">` na raiz cobre transform e layout.
+  `useReducedMotion` só onde há `duration` manual ou altura customizada.
