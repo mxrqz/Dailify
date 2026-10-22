@@ -48,7 +48,8 @@ describe("GET/PUT /settings", () => {
   });
 
   it("sem auth -> 401", async () => {
-    vi.mocked(getAuth).mockReturnValueOnce(null);
+    const actual = await vi.importActual<typeof import("@clerk/hono")>("@clerk/hono");
+    vi.mocked(getAuth).mockImplementationOnce(actual.getAuth);
     expect((await app.request("/settings", {}, env)).status).toBe(401);
   });
 
