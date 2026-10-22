@@ -1,17 +1,26 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
+import { LayoutGroup, motion, useReducedMotion, type Transition } from "framer-motion";
 import { Minimize2, Pin, PlusIcon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
 import { TaskComposer, type ComposerValues } from "@/components/dashboard/task-composer";
-import { Dialog, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Dialog, DialogTitle } from "@/components/ui/dialog";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useStoredFlag } from "@/hooks/useStoredFlag";
 import { cn } from "@/lib/utils";
 
 const DOCKED_KEY = "dailify:composer-docked";
+// Botão, folha e campo fixo são a MESMA superfície: o framer morfa uma na outra pelo layoutId.
+const SURFACE = "composer-surface";
+
+// Espelham rounded-2xl e --radius-panel. Têm que ser números: o framer só corrige o raio durante a
+// escala do morph quando ele vem pelo style, não por classe.
+const RADIUS_FAB = 16;
+const RADIUS_PANEL = 22;
 
 const iconButton =
-  "flex size-7 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground";
+  "flex size-7 cursor-pointer items-center justify-center rounded-full border border-highlight bg-surface-panel text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground";
 
 interface CreateFabProps {
   onSubmit: (values: ComposerValues) => void;
@@ -28,7 +37,19 @@ interface CreateFabProps {
 export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const [docked, setDocked] = useStoredFlag(DOCKED_KEY);
+  const desktop = useMediaQuery("(min-width: 768px)");
+  const reduce = useReducedMotion();
+  const fabRef = useRef<HTMLButtonElement>(null);
   const label = undatedOnly ? copy.composer.openUndated : copy.composer.open;
+
+  const morph: Transition = reduce
+    ? { duration: 0 }
+    : { type: "spring", visualDuration: 0.38, bounce: 0.14 };
+  // O conteúdo só aparece depois que a superfície já tomou forma, e sai antes de ela encolher.
+  const content = {
+    initial: { opacity: 0 },
+    animate: { opacity: 1, transition: { duration: reduce ? 0 : 0.18, delay: reduce ? 0 : 0.12 } },
+  };
 
   // "n" e "/" abrem a folha de qualquer lugar da página, menos de quem já está escrevendo ou de
   // outro diálogo ou menu aberto.
@@ -55,87 +76,122 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [docked]);
 
-  if (docked) {
-    return (
-      // pb-16 no mobile: o campo para acima do indicador de páginas, que é fixed em bottom-6.
-      <div className="sticky bottom-0 z-40 mt-auto px-4 pb-16 md:px-6 md:pb-6">
-        <section
-          aria-label={label}
-          className="relative rounded-panel border border-highlight bg-surface-panel p-1 shadow-panel"
-        >
-          <TaskComposer
-            submitting={submitting}
-            undatedOnly={undatedOnly}
-            onSubmit={(values) => onSubmit(values)}
-          />
-          <button
-            type="button"
-            aria-label={copy.composer.minimize}
-            onClick={() => setDocked(false)}
-            className={cn(
-              iconButton,
-              "absolute -top-3.5 right-4 border border-highlight bg-surface-panel",
-            )}
-          >
-            <Minimize2 className="size-3.5" aria-hidden="true" />
-          </button>
-        </section>
-      </div>
-    );
-  }
+  const pin = () => {
+    setDocked(true);
+    setOpen(false);
+  };
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 h-0 md:sticky md:mt-auto">
-      <Dialog open={open} onOpenChange={setOpen}>
-        <DialogTrigger
-          aria-label={label}
-          className={cn(
-            "absolute right-4 bottom-4 flex size-12 cursor-pointer items-center justify-center md:right-6 md:bottom-6",
-            "rounded-2xl bg-accent-primary text-primary-foreground shadow-fab hover:bg-accent-hover",
-            "transition-[scale,opacity,background-color] duration-150 ease-out active:scale-96",
-            "motion-reduce:transition-[opacity,background-color]",
-            open && "pointer-events-none scale-90 opacity-0",
-          )}
-        >
-          <PlusIcon className="size-5" strokeWidth={2.2} aria-hidden="true" />
-        </DialogTrigger>
-
-        <DialogPrimitive.Overlay className="fixed inset-0 bg-surface-scrim md:hidden" />
-        <DialogPrimitive.Content
-          aria-describedby={undefined}
-          className={cn(
-            "fixed inset-x-0 bottom-0 rounded-t-panel border-t border-highlight bg-surface-panel px-2 pt-2 pb-safe shadow-panel",
-            "md:absolute md:inset-x-auto md:right-6 md:bottom-6 md:w-sheet md:rounded-panel md:border md:p-1",
-            // Entrada: cresce a partir do canto do botão (no mobile, do rodapé).
-            "origin-bottom transition-[scale,opacity] duration-200 ease-out-expo md:origin-bottom-right",
-            "starting:scale-95 starting:opacity-0 motion-reduce:starting:scale-100",
-          )}
-        >
-          <DialogTitle className="sr-only">{label}</DialogTitle>
-          <TaskComposer
-            submitting={submitting}
-            undatedOnly={undatedOnly}
-            onSubmit={(values, again) => {
-              onSubmit(values);
-              if (!again) setOpen(false);
-            }}
-          />
-          <button
-            type="button"
-            aria-label={copy.composer.pin}
-            onClick={() => {
-              setDocked(true);
-              setOpen(false);
-            }}
-            className={cn(
-              iconButton,
-              "absolute -top-3.5 right-4 border border-highlight bg-surface-panel",
-            )}
+    <LayoutGroup id="composer">
+      {docked ? (
+        // pb-16 no mobile: o campo para acima do indicador de páginas, que é fixed em bottom-6.
+        <div className="sticky bottom-0 z-40 mt-auto px-4 pb-16 md:px-6 md:pb-6">
+          <motion.section
+            layoutId={SURFACE}
+            transition={morph}
+            style={{ borderRadius: RADIUS_PANEL }}
+            aria-label={label}
+            className="relative border border-highlight bg-surface-panel p-1 shadow-panel"
           >
-            <Pin className="size-3.5" aria-hidden="true" />
-          </button>
-        </DialogPrimitive.Content>
-      </Dialog>
-    </div>
+            <motion.div {...content}>
+              <TaskComposer
+                submitting={submitting}
+                undatedOnly={undatedOnly}
+                onSubmit={(values) => onSubmit(values)}
+              />
+            </motion.div>
+            <motion.button
+              {...content}
+              type="button"
+              aria-label={copy.composer.minimize}
+              onClick={() => setDocked(false)}
+              className={cn(iconButton, "absolute -top-3.5 right-4")}
+            >
+              <Minimize2 className="size-3.5" aria-hidden="true" />
+            </motion.button>
+          </motion.section>
+        </div>
+      ) : (
+        <div className="fixed inset-x-0 bottom-0 z-40 h-0 md:sticky md:mt-auto">
+          {!open && (
+            <motion.button
+              ref={fabRef}
+              layoutId={SURFACE}
+              transition={morph}
+              style={{ borderRadius: RADIUS_FAB }}
+              type="button"
+              aria-label={label}
+              onClick={() => setOpen(true)}
+              whileTap={reduce ? undefined : { scale: 0.96 }}
+              className="absolute right-4 bottom-4 flex size-12 cursor-pointer items-center justify-center bg-accent-primary text-primary-foreground shadow-fab transition-colors hover:bg-accent-hover md:right-6 md:bottom-6"
+            >
+              <motion.span {...content} className="flex">
+                <PlusIcon className="size-5" strokeWidth={2.2} aria-hidden="true" />
+              </motion.span>
+            </motion.button>
+          )}
+
+          <Dialog open={open} onOpenChange={setOpen}>
+            <DialogPrimitive.Overlay asChild>
+              <motion.div
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ duration: reduce ? 0 : 0.2 }}
+                className="fixed inset-0 bg-surface-scrim md:hidden"
+              />
+            </DialogPrimitive.Overlay>
+            <DialogPrimitive.Content
+              asChild
+              aria-describedby={undefined}
+              // O "+" volta a existir só depois do fechamento; o foco vai pra ele, não pro body.
+              onCloseAutoFocus={(event) => {
+                event.preventDefault();
+                requestAnimationFrame(() => fabRef.current?.focus());
+              }}
+            >
+              <motion.div
+                layoutId={SURFACE}
+                transition={morph}
+                style={
+                  desktop
+                    ? { borderRadius: RADIUS_PANEL }
+                    : {
+                        borderTopLeftRadius: RADIUS_PANEL,
+                        borderTopRightRadius: RADIUS_PANEL,
+                        borderBottomLeftRadius: 0,
+                        borderBottomRightRadius: 0,
+                      }
+                }
+                className={cn(
+                  "fixed inset-x-0 bottom-0 border-t border-highlight bg-surface-panel px-2 pt-2 pb-safe shadow-panel",
+                  "md:absolute md:inset-x-auto md:right-6 md:bottom-6 md:w-sheet md:border md:p-1",
+                )}
+              >
+                <DialogTitle className="sr-only">{label}</DialogTitle>
+                <motion.div {...content}>
+                  <TaskComposer
+                    submitting={submitting}
+                    undatedOnly={undatedOnly}
+                    onSubmit={(values, again) => {
+                      onSubmit(values);
+                      if (!again) setOpen(false);
+                    }}
+                  />
+                </motion.div>
+                <motion.button
+                  {...content}
+                  type="button"
+                  aria-label={copy.composer.pin}
+                  onClick={pin}
+                  className={cn(iconButton, "absolute -top-3.5 right-4")}
+                >
+                  <Pin className="size-3.5" aria-hidden="true" />
+                </motion.button>
+              </motion.div>
+            </DialogPrimitive.Content>
+          </Dialog>
+        </div>
+      )}
+    </LayoutGroup>
   );
 }
