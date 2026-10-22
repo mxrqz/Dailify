@@ -30,12 +30,18 @@ describe("composeTaskInput", () => {
     expect(task).toMatchObject({ undated: true, date: at(22, 9), alert: at(22, 9) });
   });
 
+  it("dia de hoje sem horário avulso: Sem data sem lembrete", () => {
+    const task = compose("pagar boleto hoje");
+    expect(task).toMatchObject({ undated: true, date: NOW.getTime() });
+    expect(task.alert).toBeUndefined();
+  });
+
   it("toda quarta: série semanal com lembrete", () => {
     const task = compose("regar plantas toda quarta");
     expect(task).toMatchObject({
       undated: true,
-      date: at(21, 9),
-      alert: at(21, 9),
+      date: at(28, 9),
+      alert: at(28, 9),
       repeat: { Weekly: ["Wednesday"] },
     });
   });
@@ -47,7 +53,7 @@ describe("composeTaskInput", () => {
       Weekly: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
     });
     expect(task.alert).toBe(task.date);
-    expect(task.date).toBe(at(21, 9));
+    expect(task.date).toBe(at(22, 9));
   });
 
   it("todo dia: sem lembrete", () => {
