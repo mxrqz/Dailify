@@ -7,13 +7,13 @@ const token = (name: string) => css.match(new RegExp(`--${name}:\\s*([^;]+);`))?
 
 describe("consts/motion", () => {
   it.each(Object.entries(duration))("--duration-%s bate com o CSS", (name, seconds) => {
-    expect(token(`duration-${name}`)).toBe(`${seconds * 1000}ms`);
+    expect(token(`motion-duration-${name}`)).toBe(`${seconds * 1000}ms`);
   });
 
   it.each([
-    ["out", "ease-out"],
-    ["standard", "ease-standard"],
-    ["exit", "ease-exit"],
+    ["out", "motion-ease-out"],
+    ["standard", "motion-ease-standard"],
+    ["exit", "motion-ease-exit"],
     ["outExpo", "ease-out-expo"],
   ] as const)("ease.%s bate com --%s", (key, name) => {
     expect(token(name)).toBe(`cubic-bezier(${ease[key].join(", ")})`);
