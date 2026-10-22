@@ -110,7 +110,7 @@ export function MobilePager({
       {index === 0 && (
         <span
           aria-hidden
-          className="fixed top-1/2 right-0 z-30 size-7 translate-x-1/2 -translate-y-1/2 rounded-lg border border-highlight bg-surface-panel"
+          className="fixed top-1/2 right-0 z-30 size-7 translate-x-1/2 -translate-y-1/2 rounded-lg border border-pager-mark bg-surface-panel"
         />
       )}
 
@@ -135,7 +135,7 @@ export function MobilePager({
             <span
               className={cn(
                 "block h-1.5 rounded-full",
-                i === index ? "w-4.5 bg-content-secondary" : "w-1.5 bg-highlight",
+                i === index ? "w-4.5 bg-content-secondary" : "w-1.5 bg-pager-mark",
               )}
             />
           </button>
