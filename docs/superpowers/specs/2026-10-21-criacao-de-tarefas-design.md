@@ -96,7 +96,7 @@ lembrete, não data.
 ## Não-objetivos
 
 - Projetos, listas múltiplas, subtarefas, prioridade nova.
-- Visual final (cores, espaçamentos, ícones) — fica para o design final; os mockups são estrutura.
+- ~~Visual final~~ — definido em 2026-10-22: ver `docs/superpowers/specs/2026-10-22-sem-data-visual.html` e a seção Visual do plano B.
 - Voz (depende de Dailify-2gb).
 
 ## Anti-objetivos

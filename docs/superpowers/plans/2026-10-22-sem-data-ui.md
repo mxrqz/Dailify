@@ -22,6 +22,19 @@
 - Toda animação: ≤300ms, só `transform`/`opacity`, respeita `prefers-reduced-motion` (vira fade/instantâneo). Ver `docs/research/2026-10-21-microanimacoes.md`.
 - Gate final: `bun run check` verde. Verificação visual no navegador fica para o usuário.
 
+## Visual (aprovado em 2026-10-22, mockup: `docs/superpowers/specs/2026-10-22-sem-data-visual.html`)
+
+Abrir o mockup no navegador antes de implementar qualquer task de UI; ele é a referência de aparência.
+
+- **Shell do dashboard** (só `/dashboard`): a área ao lado da sidebar vira um container de fundo **preto puro** (token novo `--surface-shell: oklch(0% 0 0)`), colado nas bordas (sem margem, sem canto), `p-1`. Dentro, agenda e coluna são **painéis** `bg-surface-card rounded-field` (18px = `radius-panel` − `p-1`). Entre eles `gap` de `1` (4px) que abre junto com a coluna (fechada: sem fresta).
+- **Puxador**: quadrado **36×36** (`size-9`), `rounded-xl`, `bg-surface-panel` + borda `border-highlight`, centralizado na vertical, metade para fora da borda direita. Fechado: a seta fica deslocada para a metade visível (`translateX(-9px)`) e um badge crimson com a contagem de pendentes no canto superior esquerdo. Aberto: o botão vai para o **centro do gap** entre os painéis (montado na emenda), a seta anima por `translate` até o centro e gira 180° (vira "fechar"), badge some.
+- **Botão +**: 48×48 (`size-12`), `rounded-2xl`, `bg-accent-primary` (hover `accent-hover`), sombra com `--accent-glow`; posicionado **dentro do painel da agenda** (`absolute right-6 bottom-6`), então desliza junto quando a coluna abre — nunca soma a largura da coluna. Press: `scale(0.96)`.
+- **Folha de criação**: `bg-surface-panel`, borda `border-highlight`, `rounded-panel`, `p-1`, sombra grande; campo interno `bg-surface-page rounded-field`; trechos reconhecidos sublinhados em crimson no texto; **chips**: reconhecido = preenchido (`bg-surface-hover`), faltando = tracejado "+ horário/+ duração/+ lembrete"; linha **"Vai para Agenda | Sem data | Sem data · Recorrentes"** antes de enviar; envio 34×34 crimson; dica "⏎ criar · ⇧⏎ criar e continuar" (**⇧⏎ cria e mantém a folha aberta, limpa o campo**). Desktop: ancorada acima do botão (canto inferior direito do painel da agenda), `transform-origin` no canto do botão. Mobile: colada ao teclado, largura total, cantos de cima `rounded-panel`, scrim escuro atrás.
+- **Lista Sem data**: cabeçalho "Sem data" + "N pendentes"; campo inline **"Anotar uma coisa…"** no topo (Enter cria Sem data sem abrir a folha; mesmo fluxo de `composeTaskInput` com `undatedOnly`); seção **Recorrentes** com dica "semana vira <dia> 06:00"; separador; seção **Afazeres**.
+- **Cores com significado**: verde (`--success`) **só** para "feito neste período" (check preenchido verde + texto "feito nesta semana/hoje/neste mês") e bolinhas cheias do histórico. Crimson só para ação (+, envio, badge) e **lembrete** (chip `🔔 qui 09:00` com fundo `--accent-subtle` e borda crimson suave — token novo se preciso). Item feito: título em `text-muted-foreground`.
+- **Histórico**: 8 bolinhas de 6px (`size-1.5`), cheias = período com conclusão, a do período atual com anel.
+- **Mobile**: tela "Sem data" com o mesmo conteúdo; indicador de páginas (pílula ativa 18px, inativa 6px) acima do rodapé; peek do puxador (28×28) na borda direita da tela Hoje como dica do swipe.
+
 ## Review Focus
 
 1. Série Sem data **não** pode aparecer na agenda depois de qualquer ação (completar, editar, criar offline, recarregar do cache). → testes Tasks 1, 2 e 6.
