@@ -587,6 +587,7 @@ describe("recorrência no texto", () => {
       false,
     ],
     ["aluguel todo mês dia 5", "Monthly", "aluguel", new Date(2026, 10, 5), false],
+    ["pagar boleto todo dia 5", "Monthly", "pagar boleto", new Date(2026, 10, 5), false],
     [
       "aniversário da Ana todo ano 3 de março",
       "Yearly",

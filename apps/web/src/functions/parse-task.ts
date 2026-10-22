@@ -652,6 +652,8 @@ const RECURRENCES: [RegExp, (match: RegExpMatchArray, now: Date) => Exclude<Repe
     /\b(?:(?:tod[ao]s\s+os\s+)?dias\s+uteis|every\s+weekday)\b/,
     () => ({ Weekly: weekDays.slice(1, 6) }),
   ],
+  // "todo dia 5" é mensal; o span pega só o "todo" pro parseWhen ainda ler o "dia 5". "22h" é hora.
+  [/\btod[ao](?=\s+dia\s+\d{1,2}\b(?!\s*(?:h|:|am|pm)))/, () => "Monthly"],
   [/\b(?:tod[ao]s?\s+(?:os\s+)?dias?|diariamente|every\s*day)\b/, () => "Daily"],
   [
     /\b(?:tod[ao]s?\s+(?:as\s+)?semanas?|semanalmente|every\s+week)\b/,
