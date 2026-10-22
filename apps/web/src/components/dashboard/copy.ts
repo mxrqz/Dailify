@@ -200,6 +200,7 @@ export const copy = {
     missingText: "o que é a tarefa?",
     missingDuration: "quanto tempo?",
     missingLink: "link?",
+    missingRepeat: "repete?",
   },
 
   voice: {

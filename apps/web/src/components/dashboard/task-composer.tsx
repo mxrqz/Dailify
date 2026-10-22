@@ -9,6 +9,7 @@ import { copy } from "@/components/dashboard/copy";
 import { chipClass } from "@/components/dashboard/styles";
 import { Label } from "@/components/ui/label";
 import { parseTaskText, type ParsedTask } from "@/functions/parse-task";
+import { repeatLabel } from "@/functions/repeat-label";
 import { linkLabel } from "@/functions/link-label";
 import { cn } from "@/lib/utils";
 
@@ -63,7 +64,7 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
   const canSubmit = Boolean(parsed.text && parsed.date) && !submitting;
 
   /**
-   * Os quatro slots ficam sempre montados, na mesma ordem: chip que some/aparece pisca e mexe o
+   * Os cinco slots ficam sempre montados, na mesma ordem: chip que some/aparece pisca e mexe o
    * layout a cada tecla. Pendente aparece em destaque; respondido cai pro muted do `chipClass` —
    * o que já foi entendido não precisa mais de atenção. O título nunca vira chip: ele já está
    * inteiro no campo logo abaixo.
@@ -90,6 +91,12 @@ export function TaskComposer({ submitting, className, onSubmit }: TaskComposerPr
       key: "duration",
       chip: parsed.duration ?? copy.composer.missingDuration,
       filled: Boolean(parsed.duration),
+      required: false,
+    },
+    {
+      key: "repeat",
+      chip: repeatLabel(parsed.repeat) || copy.composer.missingRepeat,
+      filled: parsed.repeat !== "Off",
       required: false,
     },
   ];

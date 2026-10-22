@@ -57,7 +57,7 @@ function composerTaskInput(parsed: ParsedTask): TaskInput {
     date: date.getTime(),
     duration: parsed.duration ?? DEFAULT_DURATION,
     priority: 0,
-    repeat: "Off",
+    repeat: parsed.repeat,
     links: parsed.links.length ? parsed.links : undefined,
   };
 }
