@@ -1,10 +1,17 @@
 /** @vitest-environment jsdom */
 import { useState } from "react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
 import { MobilePager } from "./mobile-pager";
 import { SwipeActions } from "./swipe-actions";
+
+// jsdom não implementa `scrollTo`, e o pager rola a janela a cada troca de página.
+const scrollTo = vi.fn();
+beforeEach(() => {
+  scrollTo.mockClear();
+  window.scrollTo = scrollTo;
+});
 
 function Harness(): JSX.Element {
   const [index, setIndex] = useState<0 | 1>(0);
@@ -96,5 +103,36 @@ describe("<MobilePager> arrasto", () => {
     render(<DragHarness />);
     await swipeLeft(screen.getByText("cartão"));
     expect(screen.getByRole("button", { name: "Hoje" })).toHaveAttribute("aria-current", "true");
+  });
+});
+
+describe("<MobilePager> como telas", () => {
+  it("a página de fora fica inert e presa à altura da tela", () => {
+    render(<Harness />);
+    const hidden = screen.getByText("lista").parentElement;
+    expect(hidden?.inert).toBe(true);
+    expect(hidden).toHaveClass("max-h-dvh");
+    expect(screen.getByText("agenda").parentElement?.inert).toBe(false);
+
+    fireEvent.click(screen.getByRole("button", { name: "Sem data" }));
+    expect(screen.getByText("agenda").parentElement?.inert).toBe(true);
+    expect(screen.getByText("lista").parentElement).not.toHaveClass("max-h-dvh");
+  });
+
+  it("cada página guarda a própria rolagem; Sem data começa no topo", () => {
+    render(<Harness />);
+    expect(scrollTo).not.toHaveBeenCalled();
+
+    window.scrollY = 500;
+    fireEvent.click(screen.getByRole("button", { name: "Sem data" }));
+    expect(scrollTo).toHaveBeenLastCalledWith(0, 0);
+
+    window.scrollY = 40;
+    fireEvent.click(screen.getByRole("button", { name: "Hoje" }));
+    expect(scrollTo).toHaveBeenLastCalledWith(0, 500);
+
+    fireEvent.click(screen.getByRole("button", { name: "Sem data" }));
+    expect(scrollTo).toHaveBeenLastCalledWith(0, 40);
+    window.scrollY = 0;
   });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { animate, motion, useMotionValue, useReducedMotion } from "framer-motion";
 
 import { copy } from "@/components/dashboard/copy";
@@ -31,6 +31,20 @@ export function MobilePager({
   const [width, setWidth] = useState(0);
   const x = useMotionValue(0);
   const reduced = useReducedMotion();
+  const pageRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const scrolls = useRef([0, 0]);
+  const shown = useRef(index);
+
+  // Cada página é uma tela: guarda a rolagem da que sai e devolve a da que entra.
+  useLayoutEffect(() => {
+    pageRefs.current.forEach((element, i) => {
+      if (element) element.inert = i !== index;
+    });
+    if (shown.current === index) return;
+    scrolls.current[shown.current] = window.scrollY;
+    shown.current = index;
+    window.scrollTo(0, scrolls.current[index]);
+  }, [index]);
 
   useEffect(() => {
     const element = viewport.current;
@@ -55,7 +69,7 @@ export function MobilePager({
   };
 
   return (
-    <div ref={viewport} className="overflow-hidden">
+    <div ref={viewport} className="overflow-x-clip">
       <motion.div
         drag="x"
         dragDirectionLock
@@ -75,7 +89,18 @@ export function MobilePager({
         className="flex touch-pan-y items-start"
       >
         {pages.map((page, i) => (
-          <div key={i} aria-hidden={i !== index || undefined} className="w-full shrink-0">
+          <div
+            key={i}
+            ref={(element) => {
+              pageRefs.current[i] = element;
+            }}
+            aria-hidden={i !== index || undefined}
+            // A de fora não estica o trilho; sticky pra espiar no topo da tela durante o arrasto.
+            className={cn(
+              "w-full shrink-0 pb-12",
+              i !== index && "sticky top-0 max-h-dvh overflow-hidden",
+            )}
+          >
             {page}
           </div>
         ))}
