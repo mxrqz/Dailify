@@ -1,4 +1,4 @@
-import { AnimatePresence, motion, type Variants } from "framer-motion";
+import { AnimatePresence, motion, type Variants } from "motion/react";
 
 import { RadialGlow, Noise } from "./panel-fx";
 import { TaskOptions } from "./task-options";

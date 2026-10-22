@@ -1,4 +1,4 @@
-import { useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "motion/react";
 import { Link } from "react-router-dom";
 
 import { Button } from "@/components/ui/button";

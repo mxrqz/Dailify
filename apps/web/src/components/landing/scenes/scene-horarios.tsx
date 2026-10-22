@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { motion, type Variants } from "framer-motion";
+import { motion, type Variants } from "motion/react";
 
 import { cn } from "@/lib/utils";
 import { CROSSFADE_S, RESOLVE_STAGGER_MS, SKELETON_MS } from "./timing";

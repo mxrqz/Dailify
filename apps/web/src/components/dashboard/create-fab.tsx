@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { LayoutGroup, motion, useReducedMotion, type Transition } from "framer-motion";
+import { LayoutGroup, motion, useReducedMotion, type Transition } from "motion/react";
 import { Minimize2, Pin, PlusIcon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";

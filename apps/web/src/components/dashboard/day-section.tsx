@@ -1,6 +1,6 @@
 import { format, isSameWeek, isToday, isTomorrow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { motion, useReducedMotion, type Variants } from "framer-motion";
+import { motion, useReducedMotion, type Variants } from "motion/react";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";

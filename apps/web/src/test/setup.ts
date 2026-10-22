@@ -11,7 +11,7 @@ if (typeof window !== "undefined") {
   // Sem isto cada teste herda o DOM do anterior e um getByText passa a achar dois elementos.
   afterEach(() => cleanup());
 
-  // jsdom não implementa nenhuma das três, e elas não são opcionais no app: framer-motion observa o
+  // jsdom não implementa nenhuma das três, e elas não são opcionais no app: motion observa o
   // viewport (`whileInView`), o Radix mede elementos, e `useMediaQuery` decide o layout inteiro.
   class NoopIntersectionObserver implements IntersectionObserver {
     readonly root = null;

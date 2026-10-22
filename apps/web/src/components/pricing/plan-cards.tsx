@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "motion/react";
 import { limitsFor, QUOTA_KEYS, formatPrice, yearlySavings } from "@dailify/shared";
 
 import { PLAN_PRICING, type PlanRole } from "@/consts/pricing";

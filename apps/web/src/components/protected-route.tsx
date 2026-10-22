@@ -20,7 +20,7 @@ import {
   readCachedUndated,
 } from "@/functions/offline";
 import { isSameMonth } from "date-fns";
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 import { toast } from "sonner";
 
 /** Piso entre revalidações: alternar de aba não pode virar rajada de fetch. */

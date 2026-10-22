@@ -1,5 +1,5 @@
 import { useRef, type ReactNode, type RefObject } from "react";
-import { motion, useInView, useReducedMotion } from "framer-motion";
+import { motion, useInView, useReducedMotion } from "motion/react";
 
 import { cn } from "@/lib/utils";
 

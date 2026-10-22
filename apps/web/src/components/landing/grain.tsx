@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState, type CSSProperties } from "react";
-import { useReducedMotion } from "framer-motion";
+import { useReducedMotion } from "motion/react";
 import { MeshGradient } from "@paper-design/shaders-react";
 
 import { cn } from "@/lib/utils";

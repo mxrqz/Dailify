@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { AnimatePresence, motion, type Variants } from "framer-motion";
+import { AnimatePresence, motion, type Variants } from "motion/react";
 import { Bell, Check, CheckCircle, Edit, Repeat, Trash2, type LucideIcon } from "lucide-react";
 
 import { cn } from "@/lib/utils";

@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 
 /**
  * Orbit — anel tracejado com um "comet" (bolinha maior à frente + rastro menor colado atrás)

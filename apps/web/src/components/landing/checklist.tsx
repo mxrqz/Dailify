@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 
 /**
  * Checklist — ícone animado da família do <Orbit> (tarefas). Três itens de lista onde os checks

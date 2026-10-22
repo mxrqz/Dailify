@@ -6,7 +6,7 @@ import {
   type ComponentPropsWithoutRef,
   type ReactNode,
 } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { motion, useReducedMotion } from "motion/react";
 import { Check, Flag, LinkIcon, RepeatIcon, TimerIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";

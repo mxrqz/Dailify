@@ -68,7 +68,7 @@ passariam por qualquer suíte de função pura.
   projeto é `node` (a maioria dos testes é de lógica pura e não paga o custo do DOM), e
   `environmentMatchGlobs` não existe mais no vitest 4.
 - `src/test/setup.ts` faz `cleanup` entre testes e stuba `IntersectionObserver` / `ResizeObserver` /
-  `matchMedia`, que jsdom não tem e o app usa (framer-motion, Radix, `useMediaQuery`).
+  `matchMedia`, que jsdom não tem e o app usa (motion, Radix, `useMediaQuery`).
 - Mocke `@clerk/clerk-react` e `useDailify` por arquivo — montar os providers de verdade traria
   rede e sessão para dentro do teste. Envolva em `MemoryRouter` quem usa rota.
 - Prefira o contrato acessível ao detalhe visual: `aria-current="page"` para item de navegação

@@ -1,4 +1,4 @@
-import { motion } from "framer-motion";
+import { motion } from "motion/react";
 
 /**
  * NowLine — ícone animado da família do <Orbit> (horários). Um mini-eixo vertical com marcas de

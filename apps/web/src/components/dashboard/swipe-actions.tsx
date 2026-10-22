@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
-import { animate, motion, useMotionValue, useMotionValueEvent } from "framer-motion";
+import { animate, motion, useMotionValue, useMotionValueEvent } from "motion/react";
 import { CheckIcon, Trash2Icon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
