@@ -4,6 +4,7 @@ import { clerkMiddleware } from "./middleware/auth";
 import tasks from "./routes/tasks";
 import billing from "./routes/billing";
 import voice from "./routes/voice";
+import settings from "./routes/settings";
 import clerkWebhook from "./routes/clerk-webhook";
 import push from "./routes/push";
 import { dispatchAlerts } from "./alerts";
@@ -33,7 +34,10 @@ export interface Env {
 
 const app = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 app.use("*", (c, next) =>
-  cors({ origin: c.env.ALLOWED_ORIGIN, allowMethods: ["GET", "POST", "PATCH", "DELETE"] })(c, next),
+  cors({
+    origin: c.env.ALLOWED_ORIGIN,
+    allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+  })(c, next),
 );
 app.get("/health", (c) => c.json({ ok: true }));
 
@@ -43,6 +47,7 @@ app.route("/tasks", voice);
 app.route("/", billing);
 app.route("/", clerkWebhook);
 app.route("/", push);
+app.route("/", settings);
 
 app.onError((err, c) => {
   console.error(err);
