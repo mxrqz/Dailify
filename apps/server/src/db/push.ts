@@ -1,4 +1,4 @@
-import type { Task } from "@dailify/shared";
+import { DEFAULT_WEEK_START, isWeekStart, type Task, type WeekStart } from "@dailify/shared";
 import type { PushSubscriptionKeys } from "../lib/push";
 import { rowToTask, type Row } from "./tasks";
 
@@ -151,20 +151,22 @@ export async function recurringAlertCandidates(
     .prepare(
       `SELECT t.*, (
          SELECT p.timezone FROM push_subscriptions p WHERE p.user_id = t.user_id LIMIT 1
-       ) AS timezone
+       ) AS timezone, s.week_start AS week_start
        FROM tasks t
+       LEFT JOIN user_settings s ON s.user_id = t.user_id
        WHERE t.alert IS NOT NULL AND t.repeat_kind != 'Off'
          AND EXISTS (SELECT 1 FROM push_subscriptions p WHERE p.user_id = t.user_id)
        LIMIT ?`,
     )
     .bind(limit)
-    .all<Row & { alert_sent: number | null; timezone: string | null }>();
+    .all<Row & { alert_sent: number | null; timezone: string | null; week_start: number | null }>();
 
   return results.map((r) => ({
     task: rowToTask(r),
     userId: r.user_id,
     alertSent: r.alert_sent,
     timeZone: r.timezone ?? "UTC",
+    weekStart: isWeekStart(r.week_start) ? r.week_start : DEFAULT_WEEK_START,
   }));
 }
 
@@ -173,6 +175,7 @@ export interface RecurringCandidate {
   userId: string;
   alertSent: number | null;
   timeZone: string;
+  weekStart: WeekStart;
 }
 
 /** Marca até onde a série já foi avisada (o instante do alerta da ocorrência, não o do envio). */

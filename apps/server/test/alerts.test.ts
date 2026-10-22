@@ -184,4 +184,36 @@ describe("dispatchAlerts — séries recorrentes", () => {
     expect(await dispatchAlerts(env, Date.UTC(2026, 4, 20, 12, 1))).toBe(0);
     expect(sendPush).not.toHaveBeenCalled();
   });
+
+  describe("Sem data", () => {
+    // Semanal na quarta 09:00 SP; "agora" é quarta 20/05/2026, 09:01.
+    const wed = Date.UTC(2026, 4, 20, 12, 0);
+    const repeat = { Weekly: ["Wednesday"] };
+    const base = { ...daily, id: "sem-data", repeat, date: wed, alert: wed };
+    const now = wed + 60_000;
+    const mondayDone = Date.UTC(2026, 4, 18, 15, 0);
+
+    it("sem conclusão na semana, avisa", async () => {
+      await insertTask(env.DB, "pushuser", { ...base, undated: true });
+      await saveSubscription(env.DB, "pushuser", subscription);
+      expect(await dispatchAlerts(env, now)).toBe(1);
+    });
+
+    it("concluída na semana, não avisa e marca alert_sent", async () => {
+      await insertTask(env.DB, "pushuser", { ...base, undated: true, completed: [mondayDone] });
+      await saveSubscription(env.DB, "pushuser", subscription);
+      expect(await dispatchAlerts(env, now)).toBe(0);
+      expect(sendPush).not.toHaveBeenCalled();
+      const row = await env.DB.prepare("SELECT alert_sent FROM tasks WHERE id=?")
+        .bind("sem-data")
+        .first<{ alert_sent: number }>();
+      expect(row?.alert_sent).toBe(wed);
+    });
+
+    it("série de agenda concluída continua avisando", async () => {
+      await insertTask(env.DB, "pushuser", { ...base, completed: [mondayDone] });
+      await saveSubscription(env.DB, "pushuser", subscription);
+      expect(await dispatchAlerts(env, now)).toBe(1);
+    });
+  });
 });
