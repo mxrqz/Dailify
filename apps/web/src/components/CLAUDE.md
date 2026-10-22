@@ -93,7 +93,7 @@ Estudo: `docs/research/2026-10-21-microanimacoes.md`. Valores sempre de `consts/
 - CSS primeiro (hover, press, cor). `motion` para saída, layout, gesto e morph.
 - Só `transform`/`opacity`; nunca `transition-all`. Exceções: largura da coluna Sem data e o
   `grid-template-rows` do colapso.
-- Durações e curvas: tokens `duration-fast|base|slow`, `ease-out|standard|exit` no CSS;
+- Durações e curvas: utilitários `duration-fast|base|slow` e `ease-out|standard|exit` no CSS;
   `duration`, `ease`, `spring`, `fade`, `reveal`, `slideX`, `collapse` no motion. Sem bounce.
 - Reduced motion: `<MotionConfig reducedMotion="user">` na raiz cobre transform e layout.
   `useReducedMotion` só onde há `duration` manual ou altura customizada.

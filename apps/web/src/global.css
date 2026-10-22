@@ -11,6 +11,22 @@
 :root {
   color-scheme: light;
 
+  /* Motion — escala do estudo de microanimações §1; espelhada em consts/motion.ts (há teste). */
+  /* Instantâneo: troca de estado sem transição. */
+  --duration-instant: 0ms;
+  /* Feedback de hover/press (estudo §1: 100-150ms). */
+  --duration-fast: 120ms;
+  /* Padrão de UI: entrada, fade, colapso (estudo §1: 150-250ms). */
+  --duration-base: 200ms;
+  /* Maior deslocamento ou troca de painel (estudo §1: até 300ms). */
+  --duration-slow: 300ms;
+  /* Entrada: começa rápido e assenta (estudo §1, ease-out forte). */
+  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
+  /* Elemento que já está na tela e se move (estudo §1, ease-in-out). */
+  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
+  /* Saída: acelera e some (estudo §1, ease-in curto). */
+  --ease-exit: cubic-bezier(0.3, 0, 1, 1);
+
   --background: light-dark(oklch(100% 0 0), oklch(14.7% 0.004 49.3));
   --foreground: light-dark(oklch(14.1% 0.004 285.8), oklch(96.2% 0 0));
   --card: light-dark(oklch(100% 0 0), oklch(21.6% 0.006 56));
@@ -166,6 +182,15 @@
 }
 
 @theme inline {
+  --transition-duration-instant: var(--duration-instant);
+  --transition-duration-fast: var(--duration-fast);
+  --transition-duration-base: var(--duration-base);
+  --transition-duration-slow: var(--duration-slow);
+  /* `--ease-out` sobrescreve de propósito a curva padrão do Tailwind. */
+  --ease-out: var(--ease-out);
+  --ease-standard: var(--ease-standard);
+  --ease-exit: var(--ease-exit);
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -286,22 +311,6 @@
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
-
-  /* Motion — escala do estudo de microanimações §1; espelhada em consts/motion.ts (há teste). */
-  /* Instantâneo: troca de estado sem transição. */
-  --duration-instant: 0ms;
-  /* Feedback de hover/press (estudo §1: 100-150ms). */
-  --duration-fast: 120ms;
-  /* Padrão de UI: entrada, fade, colapso (estudo §1: 150-250ms). */
-  --duration-base: 200ms;
-  /* Maior deslocamento ou troca de painel (estudo §1: até 300ms). */
-  --duration-slow: 300ms;
-  /* Entrada: começa rápido e assenta (estudo §1, ease-out forte). */
-  --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
-  /* Elemento que já está na tela e se move (estudo §1, ease-in-out). */
-  --ease-standard: cubic-bezier(0.2, 0, 0, 1);
-  /* Saída: acelera e some (estudo §1, ease-in curto). */
-  --ease-exit: cubic-bezier(0.3, 0, 1, 1);
 
   /* Font sizes — Tailwind's text-xs..text-9xl scale plus a project 2xs (was text-[0.6rem]). */
   --text-2xs: 0.625rem;
