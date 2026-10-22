@@ -121,8 +121,8 @@ Todas *minha decisão*, salvo indicação:
   horário escolhido, a tarefa continua Sem data.
 - **Ordem com o offline-first:** este trabalho vai em cima do `api.ts` atual; o 1kz absorve o modelo
   novo depois (o foco agora é produto/UI).
-- **Quota de tarefas Sem data:** conta no mês de criação. Exige coluna `created_at` na mesma migration;
-  tarefas datadas continuam contando pelo mês de `date`.
+- **Quota de tarefas Sem data:** conta no mês da âncora (`date` = instante do lembrete, ou da criação
+  quando não há dia citado), igual às datadas. *Revisado no plano:* dispensa a coluna `created_at`.
 
 ## Fica com quem constrói
 
