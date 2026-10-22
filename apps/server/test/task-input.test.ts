@@ -86,3 +86,14 @@ describe("parseTaskFields (PATCH)", () => {
     if ("fields" in r) expect(r.fields.repeat).toBe("Off");
   });
 });
+
+describe("parseTaskFields — undated", () => {
+  it("recusa não-booleano", () => {
+    expect(errorOf(parseTaskFields({ undated: "yes" }, { partial: true }))).toBe("invalid undated");
+  });
+
+  it("null = campo ausente", () => {
+    const r = parseTaskFields({ undated: null }, { partial: true });
+    if ("fields" in r) expect("undated" in r.fields).toBe(false);
+  });
+});

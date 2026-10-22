@@ -7,6 +7,7 @@ import { rateLimit } from "../middleware/rate-limit";
 import {
   getMonthTasks,
   getRecurringTasks,
+  getUndatedTasks,
   insertTask,
   updateTask,
   appendCompletion,
@@ -61,6 +62,10 @@ tasks.get("/", async (c) => {
   for (const t of [...inRange, ...expanded]) byKey.set(`${t.id}-${t.date}`, t);
   return c.json({ tasks: [...byKey.values()] });
 });
+
+tasks.get("/undated", async (c) =>
+  c.json({ tasks: await getUndatedTasks(c.env.DB, c.get("userId")) }),
+);
 
 tasks.post("/", async (c) => {
   const userId = c.get("userId");

@@ -17,6 +17,7 @@ export interface Row {
   completed: string;
   updated_at: number;
   exdates: string | null;
+  undated: number;
 }
 
 function repeatToCols(repeat: Repeat): { kind: string; days: string | null } {
@@ -66,6 +67,7 @@ export function rowToTask(r: Row): Task {
     completed: numberArray(r.completed),
     exdates: r.exdates ? numberArray(r.exdates) : undefined,
     updatedAt: r.updated_at,
+    undated: r.undated === 1 ? true : undefined,
   };
   // O hash não é coluna: dado derivado guardado é dado que sai de sincronia com a linha.
   return { ...task, hash: taskHash(task) };
@@ -78,13 +80,13 @@ function insertStatement(db: D1Database, userId: string, task: Task): D1Prepared
   // OUTRO usuário (a PK é global) e deixar uma escrita velha sobrescrever uma nova (LWW).
   return db
     .prepare(
-      `INSERT INTO tasks (id,user_id,title,date,alert,duration,priority,repeat_kind,repeat_days,tags,links,completed,updated_at)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `INSERT INTO tasks (id,user_id,title,date,alert,duration,priority,repeat_kind,repeat_days,tags,links,completed,updated_at,undated)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)
      ON CONFLICT(id) DO UPDATE SET
        title=excluded.title, date=excluded.date, alert=excluded.alert, duration=excluded.duration,
        priority=excluded.priority, repeat_kind=excluded.repeat_kind, repeat_days=excluded.repeat_days,
        tags=excluded.tags, links=excluded.links, completed=excluded.completed,
-       updated_at=excluded.updated_at
+       updated_at=excluded.updated_at, undated=excluded.undated
      WHERE tasks.user_id=excluded.user_id AND tasks.updated_at<=excluded.updated_at`,
     )
     .bind(
@@ -101,6 +103,7 @@ function insertStatement(db: D1Database, userId: string, task: Task): D1Prepared
       task.links ? JSON.stringify(task.links) : null,
       JSON.stringify(task.completed),
       stampUpdatedAt(task.updatedAt),
+      task.undated ? 1 : 0,
     );
 }
 
@@ -119,7 +122,7 @@ export async function getMonthTasks(
   timeZone?: string,
 ): Promise<Task[]> {
   const { results } = await db
-    .prepare(`SELECT * FROM tasks WHERE user_id=? AND date>=? AND date<=?`)
+    .prepare(`SELECT * FROM tasks WHERE user_id=? AND undated=0 AND date>=? AND date<=?`)
     .bind(userId, startOfMonthMs(month, timeZone), endOfMonthMs(month, timeZone))
     .all<Row>();
   return results.map(rowToTask);
@@ -127,7 +130,15 @@ export async function getMonthTasks(
 
 export async function getRecurringTasks(db: D1Database, userId: string): Promise<Task[]> {
   const { results } = await db
-    .prepare(`SELECT * FROM tasks WHERE user_id=? AND repeat_kind!='Off'`)
+    .prepare(`SELECT * FROM tasks WHERE user_id=? AND undated=0 AND repeat_kind!='Off'`)
+    .bind(userId)
+    .all<Row>();
+  return results.map(rowToTask);
+}
+
+export async function getUndatedTasks(db: D1Database, userId: string): Promise<Task[]> {
+  const { results } = await db
+    .prepare(`SELECT * FROM tasks WHERE user_id=? AND undated=1`)
     .bind(userId)
     .all<Row>();
   return results.map(rowToTask);
@@ -170,6 +181,7 @@ export async function deleteUserData(db: D1Database, userId: string): Promise<vo
   await db.batch([
     db.prepare(`DELETE FROM tasks WHERE user_id=?`).bind(userId),
     db.prepare(`DELETE FROM push_subscriptions WHERE user_id=?`).bind(userId),
+    db.prepare(`DELETE FROM user_settings WHERE user_id=?`).bind(userId),
   ]);
 }
 
@@ -190,7 +202,12 @@ export async function appendCompletion(
     .prepare(`UPDATE tasks SET completed=?, updated_at=? WHERE user_id=? AND id=?`)
     .bind(JSON.stringify(completed), updatedAt, userId, id)
     .run();
-  return { ...task, completed, updatedAt, hash: taskHash({ ...task, completed }) };
+  return {
+    ...task,
+    completed,
+    updatedAt,
+    hash: taskHash({ ...task, completed }),
+  };
 }
 
 /**
@@ -212,7 +229,12 @@ export async function removeCompletions(
     .prepare(`UPDATE tasks SET completed=?, updated_at=? WHERE user_id=? AND id=?`)
     .bind(JSON.stringify(completed), updatedAt, userId, id)
     .run();
-  return { ...task, completed, updatedAt, hash: taskHash({ ...task, completed }) };
+  return {
+    ...task,
+    completed,
+    updatedAt,
+    hash: taskHash({ ...task, completed }),
+  };
 }
 
 function exdatesWith(master: Task, occurrence: number): number[] {
@@ -298,13 +320,19 @@ export async function updateTask(
   const updatedAt = stampUpdatedAt(patch.updatedAt);
   if (updatedAt < (cur.updatedAt ?? 0)) return cur;
 
-  const next: Task = { ...cur, ...patch, id, completed: cur.completed, updatedAt };
+  const next: Task = {
+    ...cur,
+    ...patch,
+    id,
+    completed: cur.completed,
+    updatedAt,
+  };
   // Mesmo conteúdo: não gasta escrita nem carimbo novo.
   if (taskHash(next) === taskHash(cur)) return cur;
   const { kind, days } = repeatToCols(next.repeat);
   await db
     .prepare(
-      `UPDATE tasks SET title=?,date=?,alert=?,duration=?,priority=?,repeat_kind=?,repeat_days=?,tags=?,links=?,updated_at=? WHERE user_id=? AND id=?`,
+      `UPDATE tasks SET title=?,date=?,alert=?,duration=?,priority=?,repeat_kind=?,repeat_days=?,tags=?,links=?,updated_at=?,undated=? WHERE user_id=? AND id=?`,
     )
     .bind(
       next.title,
@@ -317,9 +345,10 @@ export async function updateTask(
       next.tags ? JSON.stringify(next.tags) : null,
       next.links ? JSON.stringify(next.links) : null,
       updatedAt,
+      next.undated ? 1 : 0,
       userId,
       id,
     )
     .run();
-  return { ...next, hash: taskHash(next) };
+  return { ...next, undated: next.undated || undefined, hash: taskHash(next) };
 }

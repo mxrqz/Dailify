@@ -113,6 +113,12 @@ export function parseTaskFields(body: unknown, opts: { partial: boolean }): Pars
   if (links === "invalid") return { error: "invalid links" };
   if (rawLinks !== undefined) fields.links = links;
 
+  const undated = field(body, "undated");
+  if (undated !== undefined && undated !== null) {
+    if (typeof undated !== "boolean") return { error: "invalid undated" };
+    fields.undated = undated;
+  }
+
   // O carimbo do LWW vem do cliente (a edição offline aconteceu quando ele diz) e precisa
   // atravessar esta porta — sem isso a fila sobe sem `updatedAt` e toda reentrada vira escrita.
   // `stampUpdatedAt` no db é quem recusa relógio adiantado; aqui só se checa que é epoch-ms.
