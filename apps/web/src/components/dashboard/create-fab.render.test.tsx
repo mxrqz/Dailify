@@ -41,6 +41,15 @@ describe("<CreateFab>", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("n com um menu aberto não abre", async () => {
+    const { user } = setup();
+    render(<div role="menu" />);
+
+    await user.keyboard("n");
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
   it("⏎ cria e fecha", async () => {
     const { user, onSubmit } = setup();
 

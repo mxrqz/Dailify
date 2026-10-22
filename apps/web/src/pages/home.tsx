@@ -35,7 +35,7 @@ export default function Home() {
   return (
     // Shell (md+): fundo preto com a agenda e a coluna Sem data como painéis lado a lado.
     <div className="flex min-w-0 flex-1 md:bg-surface-shell md:p-1">
-      <div className="relative min-w-0 flex-1 md:rounded-field md:bg-surface-card">
+      <div className="relative min-w-0 flex-1 md:flex md:flex-col md:rounded-field md:bg-surface-card">
         {desktop ? (
           agenda
         ) : (

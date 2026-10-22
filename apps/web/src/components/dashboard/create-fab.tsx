@@ -23,12 +23,13 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
   const label = undatedOnly ? copy.composer.openUndated : copy.composer.open;
 
   // "n" e "/" abrem a folha de qualquer lugar da página, menos de quem já está escrevendo ou de
-  // outro diálogo aberto.
+  // outro diálogo ou menu aberto.
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key !== "/" && event.key !== "n") return;
-      if (event.metaKey || event.ctrlKey || event.altKey) return;
-      if (document.querySelector('[role="dialog"][data-state="open"]')) return;
+      if (event.metaKey || event.ctrlKey || event.altKey || event.isComposing || event.repeat)
+        return;
+      if (document.querySelector('[role="dialog"][data-state="open"], [role="menu"]')) return;
 
       const target = event.target;
       if (
@@ -46,7 +47,7 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
   }, []);
 
   return (
-    <div className="fixed inset-x-0 bottom-0 z-40 h-0 md:sticky">
+    <div className="fixed inset-x-0 bottom-0 z-40 h-0 md:sticky md:mt-auto">
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogTrigger
           aria-label={label}
