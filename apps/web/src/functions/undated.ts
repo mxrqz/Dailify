@@ -1,4 +1,4 @@
-import type { Task } from "@dailify/shared";
+import { doneThisPeriod, type Task, type WeekStart } from "@dailify/shared";
 
 /** O período (dia/semana/mês) é do fuso do usuário, não do UTC do Worker. */
 export const browserTimeZone = (): string => Intl.DateTimeFormat().resolvedOptions().timeZone;
@@ -17,4 +17,11 @@ export function splitUndated(list: Task[]): { recurring: Task[]; todo: Task[] } 
     recurring: byDate.filter((t) => t.repeat !== "Off"),
     todo: byDate.filter((t) => t.repeat === "Off" && t.completed.length === 0),
   };
+}
+
+/** O que ainda pede ação: avulsas abertas + séries não feitas neste período. */
+export function pendingUndated(list: Task[], now: number, weekStart: WeekStart): number {
+  const { recurring, todo } = splitUndated(list);
+  const tz = browserTimeZone();
+  return recurring.filter((t) => !doneThisPeriod(t, now, weekStart, tz)).length + todo.length;
 }

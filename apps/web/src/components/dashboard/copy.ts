@@ -208,6 +208,8 @@ export const copy = {
     title: "Sem data",
     onePending: "1 pendente",
     manyPending: "{n} pendentes",
+    openHandle: "Abrir Sem data ({pending})",
+    closeHandle: "Fechar Sem data",
     capture: "Anotar uma coisa…",
     recurring: "Recorrentes",
     todo: "Afazeres",

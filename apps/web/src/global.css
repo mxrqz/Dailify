@@ -129,6 +129,11 @@
   /* Miolo de um painel com p-1: 22px do panel menos os 4px do padding, pra o canto de dentro ficar
      concêntrico com o de fora. Usado pelo campo do composer e pelos chips do eco. */
   --radius-field: 1.125rem;
+  /* Fundo do shell do dashboard: preto puro pra os painéis (surface-card) se destacarem. */
+  --surface-shell: oklch(0% 0 0);
+  --width-undated: 20rem;
+  /* Puxador aberto: centro no gap entre agenda e coluna (largura + p-1 do shell + meio gap-1). */
+  --undated-handle-x: calc(50% - var(--width-undated) - 0.375rem);
   --layout-content: 1380px; /* teto de largura do conteúdo (mastra-like) */
 }
 
@@ -230,6 +235,7 @@
   --color-surface-hover: var(--surface-hover);
   --color-surface-header: var(--surface-header);
   --color-surface-line: var(--surface-line);
+  --color-surface-shell: var(--surface-shell);
   --color-surface-ink: var(--surface-ink);
   --color-surface-ink-foreground: var(--surface-ink-foreground);
   --color-surface-ink-muted: var(--surface-ink-muted);
@@ -243,6 +249,7 @@
   --color-highlight: var(--border-highlight);
   --radius-panel: var(--radius-panel);
   --radius-field: var(--radius-field);
+  --width-undated: var(--width-undated);
   --shadow-panel: 0 24px 60px -20px light-dark(oklch(0% 0 0 / 0.18), oklch(0% 0 0 / 0.55));
   /* Elevação 1 — o degrau mais baixo: o que flutua encostado na superfície (a toolbar do cartão).
      Duas camadas de BOX-shadow, contato + difusa; nunca `drop-shadow`, que é filtro e se empilha

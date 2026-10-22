@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from "react";
 import { Bell, Check, Plus } from "lucide-react";
-import { doneThisPeriod, PERIOD_ROLLOVER_HOUR, type Task } from "@dailify/shared";
+import { PERIOD_ROLLOVER_HOUR, type Task } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { CheckHistory, periodKind } from "@/components/dashboard/check-history";
@@ -9,7 +9,7 @@ import { SHEET_EDITING } from "@/components/dashboard/day-task-row";
 import { SwipeActions } from "@/components/dashboard/swipe-actions";
 import { parseTaskText } from "@/functions/parse-task";
 import { repeatLabel } from "@/functions/repeat-label";
-import { browserTimeZone, splitUndated } from "@/functions/undated";
+import { pendingUndated, splitUndated } from "@/functions/undated";
 import { useCreateTask } from "@/hooks/useCreateTask";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
@@ -124,6 +124,9 @@ function CaptureField(): JSX.Element {
   );
 }
 
+export const pendingLabel = (n: number): string =>
+  n === 1 ? copy.undated.onePending : copy.undated.manyPending.replace("{n}", String(n));
+
 function SectionHeader({ title, hint }: { title: string; hint?: string }): JSX.Element {
   return (
     <div className="mx-0.5 mt-1.5 mb-2 flex justify-between text-xs">
@@ -139,10 +142,7 @@ export function UndatedList({ className }: { className?: string }): JSX.Element 
   const swipe = useMediaQuery(SHEET_EDITING);
   const { recurring, todo } = splitUndated(undatedTasks ?? []);
 
-  const now = Date.now();
-  const tz = browserTimeZone();
-  const pending =
-    recurring.filter((t) => !doneThisPeriod(t, now, weekStart, tz)).length + todo.length;
+  const pending = pendingUndated(undatedTasks ?? [], Date.now(), weekStart);
   const hasWeekly = recurring.some((t) => typeof t.repeat === "object");
   const rollover = copy.undated.rollover
     .replace("{day}", weekday(weekStart))
@@ -157,11 +157,7 @@ export function UndatedList({ className }: { className?: string }): JSX.Element 
       <div className="mb-3 flex items-baseline justify-between">
         <h2 className="text-base font-semibold">{copy.undated.title}</h2>
         {undatedTasks && (
-          <span className="text-xs text-muted-foreground">
-            {pending === 1
-              ? copy.undated.onePending
-              : copy.undated.manyPending.replace("{n}", String(pending))}
-          </span>
+          <span className="text-xs text-muted-foreground">{pendingLabel(pending)}</span>
         )}
       </div>
 
