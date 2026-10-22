@@ -5,6 +5,7 @@ import { UndatedColumn, useUndatedOpen } from "@/components/dashboard/undated-co
 import { WeekStrip } from "@/components/dashboard/week-strip";
 import { TaskComposer, type ComposerValues } from "@/components/dashboard/task-composer";
 import { useCreateTask } from "@/hooks/useCreateTask";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 /** Altura viva de um elemento: CSS não enxerga a altura do irmão, e o piso do slot depende da faixa. */
 function useHeight(ref: RefObject<HTMLElement>): number {
@@ -37,7 +38,7 @@ const ECHO_HEIGHT = 42;
 /**
  * O dashboard. A faixa fica fora do fluxo pra não deslocar o composer, que fica no rodapé de um
  * slot de altura fixa terminando no centro da viewport — assim a lista vem 40px depois DELE, não
- * depois da dobra. 2.75rem = a top bar (h-10) + o p-1 do shell.
+ * depois da dobra. 2.5rem = a top bar (h-10); no md+ soma o p-1 do shell.
  *
  * O piso do `max()` existe justamente porque "fora do fluxo" quer dizer que ninguém reserva
  * espaço pra faixa: sem ele, em tela baixa o composer sobe por cima dela.
@@ -51,7 +52,8 @@ export default function Home() {
   // Alturas do SLOT, não do composer: ele termina meia altura de composer abaixo do centro da tela,
   // que é onde o rodapé dele fica cravado. O piso soma o eco pra que abrir pra cima em tela baixa
   // não invada a faixa.
-  const centered = `calc(50dvh - 2.75rem + ${COMPOSER_HEIGHT / 2}px)`;
+  const desktop = useMediaQuery("(min-width: 768px)");
+  const centered = `calc(50dvh - ${desktop ? "2.75rem" : "2.5rem"} + ${COMPOSER_HEIGHT / 2}px)`;
   const belowStrip = `${STRIP_TOP + stripHeight + STRIP_GAP + ECHO_HEIGHT + COMPOSER_HEIGHT}px`;
 
   const [undatedOpen, setUndatedOpen] = useUndatedOpen();

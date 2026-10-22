@@ -72,6 +72,9 @@ export default defineConfig(async ({ mode }) => ({
     // — `environmentMatchGlobs` deixou de existir no vitest 4.
     environment: "node",
     setupFiles: ["./src/test/setup.ts"],
+    // Node ≥ 25 define um `localStorage` global (vazio sem --localstorage-file) que sombreia o do
+    // jsdom nos testes de render.
+    execArgv: ["--no-experimental-webstorage"],
   },
 
   clearScreen: false,

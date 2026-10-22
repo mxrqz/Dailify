@@ -129,8 +129,11 @@
   /* Miolo de um painel com p-1: 22px do panel menos os 4px do padding, pra o canto de dentro ficar
      concêntrico com o de fora. Usado pelo campo do composer e pelos chips do eco. */
   --radius-field: 1.125rem;
-  /* Fundo do shell do dashboard: preto puro pra os painéis (surface-card) se destacarem. */
-  --surface-shell: oklch(0% 0 0);
+  /* Fundo do shell do dashboard, um degrau abaixo dos painéis (surface-card) pra eles se
+     destacarem: no dark é preto puro (o Visual aprovado); no light, preto gritaria, então é só um
+     cinza um passo mais escuro que os painéis claros. */
+  --surface-shell: light-dark(oklch(92% 0 0), oklch(0% 0 0));
+  /* Largura da coluna Sem data: cabe título + chips de lembrete/histórico sem quebrar. */
   --width-undated: 20rem;
   /* Puxador aberto: centro no gap entre agenda e coluna (largura + p-1 do shell + meio gap-1). */
   --undated-handle-x: calc(50% - var(--width-undated) - 0.375rem);

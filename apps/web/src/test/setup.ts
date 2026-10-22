@@ -31,16 +31,6 @@ if (typeof window !== "undefined") {
     disconnect(): void {}
   }
 
-  // Node ≥ 25 tem um `localStorage` global (undefined sem --localstorage-file) que o vitest não
-  // troca pelo do jsdom; o `jsdom` global é a instância que o ambiente expõe.
-  if (!globalThis.localStorage) {
-    const storage: unknown = Reflect.get(
-      Reflect.get(Reflect.get(globalThis, "jsdom"), "window"),
-      "localStorage",
-    );
-    Object.defineProperty(globalThis, "localStorage", { value: storage, configurable: true });
-  }
-
   window.IntersectionObserver ??= NoopIntersectionObserver;
   window.ResizeObserver ??= NoopResizeObserver;
 
