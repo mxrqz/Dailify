@@ -207,6 +207,9 @@ export const copy = {
     submit: "Criar tarefa",
     open: "Nova tarefa",
     openUndated: "Nova tarefa sem data",
+    // Modo da criação, lembrado por device: só o "+" ou o campo sempre aberto.
+    pin: "Manter aberto",
+    minimize: "Minimizar",
     addDay: "+ dia",
     addTime: "+ horário",
     addDuration: "+ duração",

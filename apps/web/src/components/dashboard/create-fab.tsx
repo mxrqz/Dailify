@@ -1,11 +1,17 @@
 import { useEffect, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
-import { PlusIcon } from "lucide-react";
+import { Minimize2, Pin, PlusIcon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
 import { TaskComposer, type ComposerValues } from "@/components/dashboard/task-composer";
 import { Dialog, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { useStoredFlag } from "@/hooks/useStoredFlag";
 import { cn } from "@/lib/utils";
+
+const DOCKED_KEY = "dailify:composer-docked";
+
+const iconButton =
+  "flex size-7 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground";
 
 interface CreateFabProps {
   onSubmit: (values: ComposerValues) => void;
@@ -15,11 +21,13 @@ interface CreateFabProps {
 }
 
 /**
- * O "+" e a folha de criação. Sem portal de propósito: no desktop a folha se ancora no próprio
- * botão (que mora no painel da agenda e desliza com ele); no mobile os dois são `fixed`.
+ * A criação, em dois modos lembrados por device: só o "+" que abre a folha, ou o campo sempre
+ * aberto no rodapé do painel (largura toda). Sem portal de propósito: no desktop a folha se ancora
+ * no próprio botão, que mora no painel da agenda e desliza com ele.
  */
 export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps): JSX.Element {
   const [open, setOpen] = useState(false);
+  const [docked, setDocked] = useStoredFlag(DOCKED_KEY);
   const label = undatedOnly ? copy.composer.openUndated : copy.composer.open;
 
   // "n" e "/" abrem a folha de qualquer lugar da página, menos de quem já está escrevendo ou de
@@ -39,12 +47,42 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
         return;
 
       event.preventDefault();
-      setOpen(true);
+      if (docked) document.getElementById("composer-text")?.focus();
+      else setOpen(true);
     };
 
     window.addEventListener("keydown", onKeyDown);
     return () => window.removeEventListener("keydown", onKeyDown);
-  }, []);
+  }, [docked]);
+
+  if (docked) {
+    return (
+      // pb-16 no mobile: o campo para acima do indicador de páginas, que é fixed em bottom-6.
+      <div className="sticky bottom-0 z-40 mt-auto px-4 pb-16 md:px-6 md:pb-6">
+        <section
+          aria-label={label}
+          className="relative rounded-panel border border-highlight bg-surface-panel p-1 shadow-panel"
+        >
+          <TaskComposer
+            submitting={submitting}
+            undatedOnly={undatedOnly}
+            onSubmit={(values) => onSubmit(values)}
+          />
+          <button
+            type="button"
+            aria-label={copy.composer.minimize}
+            onClick={() => setDocked(false)}
+            className={cn(
+              iconButton,
+              "absolute -top-3.5 right-4 border border-highlight bg-surface-panel",
+            )}
+          >
+            <Minimize2 className="size-3.5" aria-hidden="true" />
+          </button>
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-x-0 bottom-0 z-40 h-0 md:sticky md:mt-auto">
@@ -82,6 +120,20 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
               if (!again) setOpen(false);
             }}
           />
+          <button
+            type="button"
+            aria-label={copy.composer.pin}
+            onClick={() => {
+              setDocked(true);
+              setOpen(false);
+            }}
+            className={cn(
+              iconButton,
+              "absolute -top-3.5 right-4 border border-highlight bg-surface-panel",
+            )}
+          >
+            <Pin className="size-3.5" aria-hidden="true" />
+          </button>
         </DialogPrimitive.Content>
       </Dialog>
     </div>

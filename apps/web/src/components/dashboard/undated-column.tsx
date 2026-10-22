@@ -1,35 +1,16 @@
-import { useState } from "react";
 import { ChevronLeft } from "lucide-react";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { pendingLabel, UndatedList } from "@/components/dashboard/undated-list";
 import { pendingUndated } from "@/functions/undated";
+import { useStoredFlag } from "@/hooks/useStoredFlag";
 import { cn } from "@/lib/utils";
 
 const OPEN_KEY = "dailify:undated-open";
 
 /** Aberta ou fechada, lembrado por device. */
-export function useUndatedOpen(): [boolean, (open: boolean) => void] {
-  const [open, setOpen] = useState(() => {
-    try {
-      return localStorage.getItem(OPEN_KEY) === "1";
-    } catch {
-      return false;
-    }
-  });
-
-  const change = (next: boolean) => {
-    setOpen(next);
-    try {
-      localStorage.setItem(OPEN_KEY, next ? "1" : "0");
-    } catch {
-      // sem storage (aba privada) a coluna só não é lembrada
-    }
-  };
-
-  return [open, change];
-}
+export const useUndatedOpen = () => useStoredFlag(OPEN_KEY);
 
 const motion = "duration-200 ease-out-expo motion-reduce:transition-none";
 

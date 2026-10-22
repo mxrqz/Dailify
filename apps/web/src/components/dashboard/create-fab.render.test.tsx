@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
-import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { beforeEach, describe, expect, it, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { CreateFab } from "./create-fab";
@@ -12,6 +12,50 @@ const setup = (undatedOnly?: boolean) => {
 };
 
 describe("<CreateFab>", () => {
+  beforeEach(() => localStorage.clear());
+
+  it("Manter aberto fixa o campo, e o modo sobrevive a remontar", async () => {
+    const { user } = setup();
+
+    await user.click(screen.getByRole("button", { name: "Nova tarefa" }));
+    await user.click(screen.getByRole("button", { name: "Manter aberto" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("region", { name: "Nova tarefa" })).toContainElement(
+      screen.getByRole("textbox"),
+    );
+    expect(localStorage.getItem("dailify:composer-docked")).toBe("1");
+
+    cleanup();
+    setup();
+    expect(screen.getByRole("textbox")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Nova tarefa" })).not.toBeInTheDocument();
+  });
+
+  it("aberto: n foca o campo; Minimizar volta ao +", async () => {
+    localStorage.setItem("dailify:composer-docked", "1");
+    const { user } = setup();
+
+    await user.keyboard("n");
+    expect(screen.getByRole("textbox")).toHaveFocus();
+    expect(screen.getByRole("textbox")).toHaveValue("");
+
+    await user.click(screen.getByRole("button", { name: "Minimizar" }));
+    expect(screen.getByRole("button", { name: "Nova tarefa" })).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(localStorage.getItem("dailify:composer-docked")).toBe("0");
+  });
+
+  it("aberto: enviar não some com o campo", async () => {
+    localStorage.setItem("dailify:composer-docked", "1");
+    const { onSubmit, user } = setup();
+
+    await user.type(screen.getByRole("textbox"), "comprar pão{Enter}");
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(screen.getByRole("textbox")).toHaveValue("");
+  });
+
   it("clicar abre a folha com o campo focado", async () => {
     const { user } = setup();
 
