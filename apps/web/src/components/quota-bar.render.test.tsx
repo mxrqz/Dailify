@@ -23,9 +23,9 @@ const renderBar = (role: "free" | "pro+ai") => {
   );
 };
 
-const heights = (container: HTMLElement) =>
+const fills = (container: HTMLElement) =>
   Array.from(container.querySelectorAll<HTMLElement>('[data-slot="quota-fill"]')).map(
-    (el) => el.style.height,
+    (el) => el.style.transform,
   );
 
 describe("<QuotaBar>", () => {
@@ -36,16 +36,16 @@ describe("<QuotaBar>", () => {
   it("desenha a pilha cheia no ilimitado, nao vazia", () => {
     const { container } = renderBar("pro+ai");
 
-    const [tasks, recurring, voice] = heights(container);
-    expect(tasks).toBe("100%");
-    expect(recurring).toBe("100%");
+    const [tasks, recurring, voice] = fills(container);
+    expect(tasks).toBe("scaleY(1)");
+    expect(recurring).toBe("scaleY(1)");
     // voz tem teto de 200 no Pro + AI, entao segue a regra normal e comeca vazia
-    expect(voice).toBe("0%");
+    expect(voice).toBe("scaleY(0)");
   });
 
   it("quota com teto e sem uso continua vazia", () => {
     const { container } = renderBar("free");
 
-    expect(heights(container)).toEqual(QUOTA_KEYS.map(() => "0%"));
+    expect(fills(container)).toEqual(QUOTA_KEYS.map(() => "scaleY(0)"));
   });
 });

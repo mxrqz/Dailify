@@ -1,3 +1,4 @@
+import { duration, ease } from "@/consts/motion";
 import { format, isSameWeek, isToday, isTomorrow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, useReducedMotion, type Variants } from "motion/react";
@@ -16,7 +17,6 @@ import {
 import { useNow } from "@/hooks/useNow";
 import { cn } from "@/lib/utils";
 
-const EXPO = [0.16, 1, 0.3, 1] as const; // ease-out-expo, espelha o token do global.css
 const SKELETON_ROWS = 3;
 
 /** Id da seção de um dia — a `WeekStrip` usa isto pra rolar até ele. */
@@ -120,7 +120,11 @@ export function DaySection({ day }: { day: Date }): JSX.Element {
   };
   const rowVariants: Variants = {
     hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 8 },
-    visible: { opacity: 1, y: 0, transition: { duration: reduce ? 0 : 0.35, ease: EXPO } },
+    visible: {
+      opacity: 1,
+      y: 0,
+      transition: { duration: reduce ? 0 : duration.slow, ease: ease.out },
+    },
   };
 
   return (

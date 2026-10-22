@@ -1,3 +1,5 @@
+import { ENTER_S, EXIT_S } from "./scenes/timing";
+import { ease } from "@/consts/motion";
 import { AnimatePresence, motion, type Variants } from "motion/react";
 
 import { RadialGlow, Noise } from "./panel-fx";
@@ -13,12 +15,10 @@ import { SceneRecorrencia } from "./scenes/scene-recorrencia";
  * cada reativação, então cada uma replaya sua entrada. `reduce` congela no estado estático.
  */
 
-const EXPO = [0.16, 1, 0.3, 1] as const; // ease-out-expo, espelha o token do global.css
-
 const sceneVariants: Variants = {
   hidden: { opacity: 0, y: 8 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EXPO } },
-  exit: { opacity: 0, y: -8, transition: { duration: 0.25 } },
+  visible: { opacity: 1, y: 0, transition: { duration: ENTER_S, ease: ease.outExpo } },
+  exit: { opacity: 0, y: -8, transition: { duration: EXIT_S } },
 };
 
 export function HeroPanel({

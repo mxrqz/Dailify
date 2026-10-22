@@ -1,3 +1,4 @@
+import { duration, ease } from "@/consts/motion";
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, type Variants } from "motion/react";
 import { Bell, Check, CheckCircle, Edit, Repeat, Trash2, type LucideIcon } from "lucide-react";
@@ -26,15 +27,13 @@ const OPTIONS: { icon: LucideIcon; label: string; danger?: boolean }[] = [
   { icon: Trash2, label: "Excluir", danger: true },
 ];
 
-const EXPO = [0.16, 1, 0.3, 1] as const;
-
 // As cenas têm 4 itens (recorrência resolve junto em 1260) → o box cruza no mesmo instante.
 const BOX_SKELETON_MS = boxResolveMs(4);
 
 const contentVariants: Variants = {
   hidden: { opacity: 0, y: 6 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.3, ease: EXPO } },
-  exit: { opacity: 0, y: -6, transition: { duration: 0.2, ease: EXPO } },
+  visible: { opacity: 1, y: 0, transition: { duration: duration.slow, ease: ease.outExpo } },
+  exit: { opacity: 0, y: -6, transition: { duration: duration.base, ease: ease.outExpo } },
 };
 
 /**
@@ -65,7 +64,7 @@ function SceneBox({
         className="pointer-events-none col-start-1 row-start-1 flex items-center justify-center"
         initial={false}
         animate={{ opacity: resolved ? 0 : 1 }}
-        transition={{ duration: CROSSFADE_S, ease: EXPO }}
+        transition={{ duration: CROSSFADE_S, ease: ease.outExpo }}
       >
         {icon}
       </motion.div>
@@ -73,7 +72,7 @@ function SceneBox({
         className="col-start-1 row-start-1 flex flex-col"
         initial={false}
         animate={{ opacity: resolved ? 1 : 0 }}
-        transition={{ duration: CROSSFADE_S, ease: EXPO }}
+        transition={{ duration: CROSSFADE_S, ease: ease.outExpo }}
       >
         {children}
       </motion.div>

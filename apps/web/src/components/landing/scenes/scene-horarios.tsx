@@ -1,8 +1,9 @@
+import { ease } from "@/consts/motion";
 import { useEffect, useState } from "react";
 import { motion, type Variants } from "motion/react";
 
 import { cn } from "@/lib/utils";
-import { CROSSFADE_S, RESOLVE_STAGGER_MS, SKELETON_MS } from "./timing";
+import { CROSSFADE_S, RESOLVE_STAGGER_MS, SKELETON_MS, SLIDE_ROW_S } from "./timing";
 
 /**
  * Cena "horários" do painel do hero (activeWord===1): as MESMAS tarefas da cena de lista, agora
@@ -42,15 +43,13 @@ export const scheduleMeta = {
     : null,
 };
 
-const EXPO = [0.16, 1, 0.3, 1] as const; // ease-out-expo
-
 const trackVariants: Variants = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.1, delayChildren: 0.05 } },
 };
 const rowVariants: Variants = {
   hidden: { opacity: 0, x: -10 },
-  visible: { opacity: 1, x: 0, transition: { duration: 0.4, ease: EXPO } },
+  visible: { opacity: 1, x: 0, transition: { duration: SLIDE_ROW_S, ease: ease.outExpo } },
 };
 
 /**
@@ -89,7 +88,7 @@ function TimeBlock({
         className="pointer-events-none col-start-1 row-start-1 flex items-center justify-between gap-2"
         initial={false}
         animate={{ opacity: loading ? 1 : 0 }}
-        transition={{ duration: CROSSFADE_S, ease: EXPO }}
+        transition={{ duration: CROSSFADE_S, ease: ease.outExpo }}
       >
         <span className="skeleton h-3.5 w-24 rounded" />
         <span className="skeleton h-3 w-8 rounded" />
@@ -98,7 +97,7 @@ function TimeBlock({
         className="col-start-1 row-start-1 flex items-center justify-between gap-2"
         initial={false}
         animate={{ opacity: loading ? 0 : 1 }}
-        transition={{ duration: CROSSFADE_S, ease: EXPO }}
+        transition={{ duration: CROSSFADE_S, ease: ease.outExpo }}
       >
         <span
           className={cn(

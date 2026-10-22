@@ -1,3 +1,4 @@
+import { ease } from "@/consts/motion";
 import { useEffect, useState } from "react";
 import { motion } from "motion/react";
 
@@ -13,8 +14,6 @@ import { boxResolveMs, CROSSFADE_S } from "./timing";
  * (task-options) como skeleton dele. Conteúdo: card recorrente (ícone Orbit estático) + seletor de
  * cadência + preview das próximas ocorrências. `reduce` vai direto pro conteúdo.
  */
-
-const EXPO = [0.16, 1, 0.3, 1] as const;
 
 const CADENCES = ["Diário", "Semanal", "Mensal"] as const;
 const ACTIVE_CAD = 1; // "Semanal" selecionada
@@ -186,7 +185,7 @@ export function SceneRecorrencia({ reduce }: { reduce: boolean }): JSX.Element {
           className="pointer-events-none col-start-1 row-start-1"
           initial={false}
           animate={{ opacity: resolved ? 0 : 1 }}
-          transition={{ duration: CROSSFADE_S, ease: EXPO }}
+          transition={{ duration: CROSSFADE_S, ease: ease.outExpo }}
         >
           <ConfigSkeleton />
         </motion.div>
@@ -194,7 +193,7 @@ export function SceneRecorrencia({ reduce }: { reduce: boolean }): JSX.Element {
           className="col-start-1 row-start-1"
           initial={false}
           animate={{ opacity: resolved ? 1 : 0 }}
-          transition={{ duration: CROSSFADE_S, ease: EXPO }}
+          transition={{ duration: CROSSFADE_S, ease: ease.outExpo }}
         >
           <ConfigContent />
         </motion.div>

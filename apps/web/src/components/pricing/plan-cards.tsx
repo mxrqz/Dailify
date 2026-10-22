@@ -1,3 +1,4 @@
+import { duration, ease } from "@/consts/motion";
 import type { ReactNode } from "react";
 import { useState } from "react";
 import { motion, useReducedMotion } from "motion/react";
@@ -93,7 +94,7 @@ export function PlanCards({
               initial={reduce ? undefined : { opacity: 0, y: 16 }}
               whileInView={reduce ? undefined : { opacity: 1, y: 0 }}
               viewport={{ once: true }}
-              transition={{ duration: 0.5, ease: "easeOut" }}
+              transition={{ duration: duration.slow, ease: ease.out }}
               className={cn(
                 "flex flex-col gap-6 rounded-xl border border-surface-line bg-surface-page p-6",
                 isRecommended && "border-accent-primary shadow-[0_0_40px_-16px_var(--accent-glow)]",

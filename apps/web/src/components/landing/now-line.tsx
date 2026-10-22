@@ -1,3 +1,4 @@
+import { ease } from "@/consts/motion";
 import { motion } from "motion/react";
 
 /**
@@ -8,7 +9,6 @@ import { motion } from "motion/react";
 
 const TICKS = [13, 24, 35] as const; // y das marcas de hora
 const AXIS_X = 17;
-const EASE = [0.16, 1, 0.3, 1] as const;
 
 export interface NowLineProps {
   /** lado do svg em px */
@@ -54,7 +54,7 @@ export function NowLine({
         animate={animated ? { y: [9, 37], opacity: [0, 1, 1, 0] } : undefined}
         transition={
           animated
-            ? { duration: speed, times: [0, 0.14, 0.84, 1], repeat: Infinity, ease: EASE }
+            ? { duration: speed, times: [0, 0.14, 0.84, 1], repeat: Infinity, ease: ease.outExpo }
             : undefined
         }
       >

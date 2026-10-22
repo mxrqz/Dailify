@@ -1,3 +1,4 @@
+import { duration, ease } from "@/consts/motion";
 import {
   forwardRef,
   useEffect,
@@ -33,8 +34,6 @@ import { cn } from "@/lib/utils";
  * skeleton→conteúdo mora no TaskCard, então nada dessincroniza. Sem `loading`/timer interno:
  * o pai controla quando resolve.
  */
-
-const EXPO = [0.16, 1, 0.3, 1] as const; // ease-out-expo
 
 /** Uma tag como badge outline neutro (ou seu skeleton). */
 export function TagBadge({ label, loading }: { label: string; loading?: boolean }): JSX.Element {
@@ -486,7 +485,7 @@ function CardBody({
  */
 export function TaskCard({ loading, ...data }: TaskCardProps): JSX.Element {
   const reduce = useReducedMotion();
-  const transition = { duration: reduce ? 0 : 0.45, ease: EXPO };
+  const transition = { duration: reduce ? 0 : duration.slow, ease: ease.out };
   // `grid-cols-1` (= `minmax(0, 1fr)`), não a coluna implícita `auto`: com `field-sizing:content` o
   // campo do título contribui com o texto inteiro pro max-content da track — e o `max-w-1/2` dele é
   // porcentagem, ignorada nessa conta — então a track auto esticava o cartão.

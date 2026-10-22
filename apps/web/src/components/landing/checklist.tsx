@@ -1,3 +1,4 @@
+import { ease } from "@/consts/motion";
 import { motion } from "motion/react";
 
 /**
@@ -7,7 +8,6 @@ import { motion } from "motion/react";
  */
 
 const ROWS = [10, 22, 34] as const; // y de cada linha
-const EASE = [0.16, 1, 0.3, 1] as const;
 
 export interface ChecklistProps {
   /** lado do svg em px */
@@ -56,7 +56,7 @@ export function Checklist({
                     times: [0, 0.14, 0.88, 1],
                     repeat: Infinity,
                     delay: i * (speed * 0.14),
-                    ease: EASE,
+                    ease: ease.outExpo,
                   }
                 : undefined
             }

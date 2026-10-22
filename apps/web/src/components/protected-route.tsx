@@ -1,3 +1,4 @@
+import { duration } from "@/consts/motion";
 import { ReactNode, useEffect, useCallback, useRef, useState } from "react";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { Navigate, useLocation } from "react-router-dom";
@@ -258,7 +259,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
           initial={{ opacity: 0, y: 5 }}
           animate={{ opacity: 1, y: 0 }}
           exit={{ opacity: 0, y: -5 }}
-          transition={{ duration: 0.3 }}
+          transition={{ duration: duration.slow }}
           className="text-lg text-muted-foreground font-medium"
         >
           {isLoading}

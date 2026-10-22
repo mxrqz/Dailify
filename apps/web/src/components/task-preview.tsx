@@ -88,7 +88,7 @@ export function TaskDetailView({ task, className }: TaskDetailViewProps) {
   return (
     <Card
       className={cn(
-        "overflow-hidden transition-all p-0 w-full bg-zinc-100 dark:bg-zinc-900",
+        "overflow-hidden transition-shadow p-0 w-full bg-zinc-100 dark:bg-zinc-900",
         className,
       )}
     >

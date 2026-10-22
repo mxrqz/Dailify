@@ -1,8 +1,9 @@
+import { ease } from "@/consts/motion";
 import { useEffect, useState } from "react";
 import { motion, type Variants } from "motion/react";
 
 import { TaskCard, type TaskCardData } from "@/components/task-card";
-import { RESOLVE_STAGGER_MS, SKELETON_MS } from "./timing";
+import { ENTER_S, RESOLVE_STAGGER_MS, SKELETON_MS } from "./timing";
 
 /**
  * Cena "tarefas" (activeWord===0). Roda em 2 fases e replaya a cada reativação (a troca de `key` no
@@ -24,15 +25,13 @@ const tarefasMock: readonly TaskCardData[] = [
   { time: "14:00", title: "Deploy da build", duration: "20min", tags: ["ci", "release", "infra"] },
 ] as const;
 
-const EXPO = [0.16, 1, 0.3, 1] as const; // ease-out-expo
-
 const listVariants: Variants = {
   hidden: {},
   visible: { transition: { staggerChildren: 0.14, delayChildren: 0.05 } },
 };
 const rowVariants: Variants = {
   hidden: { opacity: 0, y: 8 },
-  visible: { opacity: 1, y: 0, transition: { duration: 0.35, ease: EXPO } },
+  visible: { opacity: 1, y: 0, transition: { duration: ENTER_S, ease: ease.outExpo } },
 };
 
 export function SceneTarefas({ reduce }: { reduce: boolean }): JSX.Element {

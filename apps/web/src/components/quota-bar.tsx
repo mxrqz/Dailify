@@ -61,14 +61,14 @@ export function QuotaBar(): JSX.Element | null {
                 <span
                   data-slot="quota-fill"
                   className={cn(
-                    "absolute inset-x-0 bottom-0 transition-all",
+                    "absolute inset-0 origin-bottom transition-transform",
                     state.exhausted
                       ? "bg-destructive"
                       : state.unlimited
                         ? "bg-muted-foreground"
                         : "bg-accent-primary",
                   )}
-                  style={{ height: `${fill * 100}%` }}
+                  style={{ transform: `scaleY(${fill})` }}
                 />
               </span>
             </Link>
