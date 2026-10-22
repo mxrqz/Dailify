@@ -40,6 +40,16 @@ describe("composeTaskInput", () => {
     });
   });
 
+  it("dias úteis: série seg–sex com lembrete", () => {
+    const task = compose("regar dias úteis");
+    expect(task.undated).toBe(true);
+    expect(task.repeat).toEqual({
+      Weekly: ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"],
+    });
+    expect(task.alert).toBe(task.date);
+    expect(task.date).toBe(at(21, 9));
+  });
+
   it("todo dia: sem lembrete", () => {
     const task = compose("meditar todo dia");
     expect(task).toMatchObject({ undated: true, date: NOW.getTime(), repeat: "Daily" });

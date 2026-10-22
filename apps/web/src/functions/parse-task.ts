@@ -863,10 +863,13 @@ export function parseTaskText(input: string, now: Date = new Date()): ParsedTask
     ? nextOccurrence(repeat.value, explicitDate ?? startOfDay(now), hasTime, now)
     : explicitDate;
 
+  // "toda quarta" cita dias; "dias úteis" também (seg–sex); "toda semana" não.
   const citesWeekday =
     typeof repeat?.value === "object" &&
     repeat.spans.some(([start, end]) =>
-      new RegExp(`\\b(?:${WEEKDAY_RE})s?\\b`).test(forWhen.slice(start, end)),
+      new RegExp(`\\b(?:${WEEKDAY_RE})s?\\b|\\b(?:dias\\s+uteis|weekday)\\b`).test(
+        forWhen.slice(start, end),
+      ),
     );
 
   return {

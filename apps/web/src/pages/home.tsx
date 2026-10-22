@@ -92,7 +92,7 @@ export default function Home() {
     };
     const undated = input.undated === true;
     const previous = (undated ? undatedTasks : tasks) ?? [];
-    const optimistic = { ...input, id: input.id, completed: [] };
+    const optimistic = { ...input, completed: [] };
     const apply = (list: Task[], task: Task) =>
       undated
         ? setUndatedTasks(upsertUndated(list, task))

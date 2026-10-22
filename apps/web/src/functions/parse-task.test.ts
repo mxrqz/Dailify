@@ -637,6 +637,8 @@ describe("hasDay", () => {
     ["regar toda quarta", true],
     ["comprar pão", false],
     ["meditar todo dia", false],
+    ["regar dias úteis", true],
+    ["regar toda semana", false],
   ])("%s -> %s", (input, expected) => {
     expect(parseTaskText(input, NOW).hasDay).toBe(expected);
   });
