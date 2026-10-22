@@ -1,4 +1,4 @@
-import { weekDays, type TaskInput } from "@dailify/shared";
+import { weekDays, type Repeat, type TaskInput } from "@dailify/shared";
 
 import type { ParsedTask } from "./parse-task";
 
@@ -27,20 +27,23 @@ export function composeTaskInput(
     return { ...base, date: parsed.date.getTime() };
   }
 
-  if (parsed.date && parsed.hasDay) {
-    // Cópia: `parsed.date` é o mesmo objeto que o composer usa pros chips.
-    const day = new Date(parsed.date);
-    day.setHours(DEFAULT_HOUR, 0, 0, 0);
-    // Lembrete no passado dispararia push logo após criar (o cron tem tolerância de 1h).
-    const date = day > now ? day : nextReminder(day, parsed.repeat, now);
-    if (date) return { ...base, date: date.getTime(), alert: date.getTime(), undated: true };
-  }
+  const date = parsed.date && parsed.hasDay && undatedReminder(parsed.date, parsed.repeat, now);
+  if (date) return { ...base, date: date.getTime(), alert: date.getTime(), undated: true };
 
   return { ...base, date: now.getTime(), undated: true };
 }
 
+/** Lembrete de Sem data: o dia às 09:00, ou `null` se já passou e não há próxima ocorrência. */
+export function undatedReminder(day: Date, repeat: Repeat, now: Date): Date | null {
+  // Cópia: quem chama pode estar usando o mesmo objeto (o composer, pros chips).
+  const at = new Date(day);
+  at.setHours(DEFAULT_HOUR, 0, 0, 0);
+  // Lembrete no passado dispararia push logo após criar (o cron tem tolerância de 1h).
+  return at > now ? at : nextReminder(at, repeat, now);
+}
+
 /** Próxima ocorrência futura da série às 09:00; `null` para avulsa (fica sem lembrete). */
-function nextReminder(day: Date, repeat: ParsedTask["repeat"], now: Date): Date | null {
+function nextReminder(day: Date, repeat: Repeat, now: Date): Date | null {
   if (repeat === "Off") return null;
   const at = (days: number, months = 0, years = 0) =>
     new Date(

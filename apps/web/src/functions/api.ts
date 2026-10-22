@@ -123,7 +123,8 @@ export async function createTask(
 export async function updateTask(
   token: string,
   id: string,
-  patch: Partial<TaskInput>,
+  /** `alert: null` limpa o lembrete. */
+  patch: Partial<Omit<TaskInput, "alert">> & { alert?: number | null },
   /** Epoch-ms da ocorrência quando a edição vale só pra ela (o servidor destaca da série). */
   occurrence?: number,
 ): Promise<{ task?: Task; series?: Task; error?: ApiError }> {

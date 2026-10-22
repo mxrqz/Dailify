@@ -8,6 +8,7 @@ const { dailify } = vi.hoisted(() => ({ dailify: vi.fn() }));
 vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
 vi.mock("@clerk/clerk-react", () => ({
   useAuth: () => ({ getToken: async () => "token", userId: "u1" }),
+  useUser: () => ({ user: { id: "u1" } }),
 }));
 vi.mock("@/functions/api", () => ({}));
 

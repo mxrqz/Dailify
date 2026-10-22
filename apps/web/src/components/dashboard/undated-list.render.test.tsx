@@ -16,6 +16,7 @@ const { dailify, api } = vi.hoisted(() => ({
 vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
 vi.mock("@clerk/clerk-react", () => ({
   useAuth: () => ({ getToken: async () => "token", userId: "u1" }),
+  useUser: () => ({ user: { id: "u1" } }),
 }));
 vi.mock("@/functions/api", () => api);
 
@@ -125,6 +126,14 @@ describe("<UndatedList>", () => {
   it("lembrete vira chip crimson", () => {
     renderList([task({ id: "a", alert: new Date(2026, 9, 29, 9).getTime() })]);
     expect(screen.getByText(/qui 09:00/)).toBeInTheDocument();
+  });
+
+  it("tocar na linha abre a edição com Sem horário ligado e o dia do lembrete", () => {
+    renderList([task({ id: "a", title: "Pagar", alert: new Date(2026, 9, 29, 9).getTime() })]);
+    act(() => screen.getByRole("button", { name: /Pagar/ }).click());
+    expect(screen.getByRole("switch", { name: copy.form.undated })).toBeChecked();
+    const sheet = within(screen.getByRole("dialog"));
+    expect(sheet.getByLabelText(copy.form.reminder)).toHaveValue("2026-10-29");
   });
 });
 

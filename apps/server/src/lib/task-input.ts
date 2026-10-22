@@ -78,8 +78,10 @@ export function parseTaskFields(body: unknown, opts: { partial: boolean }): Pars
     fields.date = date;
   } else if (!opts.partial) return { error: "date required" };
 
+  // `null` limpa o lembrete (mesmo truque das tags: `undefined` presente sobrescreve no spread).
   const alert = field(body, "alert");
-  if (alert !== undefined && alert !== null) {
+  if (alert === null) fields.alert = undefined;
+  else if (alert !== undefined) {
     if (!isEpochMs(alert)) return { error: "invalid alert" };
     fields.alert = alert;
   }

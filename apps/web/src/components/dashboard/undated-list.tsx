@@ -7,6 +7,7 @@ import { CheckHistory, periodKind } from "@/components/dashboard/check-history";
 import { copy } from "@/components/dashboard/copy";
 import { SHEET_EDITING } from "@/components/dashboard/day-task-row";
 import { SwipeActions } from "@/components/dashboard/swipe-actions";
+import { EditTask, EditTaskContent } from "@/components/edit-task";
 import { parseTaskText } from "@/functions/parse-task";
 import { repeatLabel } from "@/functions/repeat-label";
 import { pendingUndated, splitUndated } from "@/functions/undated";
@@ -33,6 +34,7 @@ function ReminderChip({ at }: { at: number }): JSX.Element {
 function UndatedRow({ task, swipe }: { task: Task; swipe: boolean }): JSX.Element {
   const { weekStart } = useDailify();
   const { done, toggle, remove } = useUndatedActions(task);
+  const [open, setOpen] = useState(false);
   const recurring = task.repeat !== "Off";
 
   const sub =
@@ -68,7 +70,11 @@ function UndatedRow({ task, swipe }: { task: Task; swipe: boolean }): JSX.Elemen
         />
       </button>
 
-      <div className="min-w-0 flex-1">
+      <button
+        type="button"
+        onClick={() => setOpen(true)}
+        className="min-w-0 flex-1 rounded-md text-left outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+      >
         <span
           className={cn(
             "block truncate text-sm",
@@ -78,20 +84,31 @@ function UndatedRow({ task, swipe }: { task: Task; swipe: boolean }): JSX.Elemen
           {task.title}
         </span>
         {(sub || recurring) && (
-          <div className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="mt-1 flex items-center gap-2 text-xs text-muted-foreground">
             {sub}
             {recurring && <CheckHistory task={task} weekStart={weekStart} periods={8} />}
-          </div>
+          </span>
         )}
-      </div>
+      </button>
     </div>
   );
 
-  if (!swipe) return row;
   return (
-    <SwipeActions onComplete={() => void toggle()} onDelete={() => void remove()}>
-      {row}
-    </SwipeActions>
+    <EditTask open={open} onOpenChange={setOpen}>
+      {swipe ? (
+        <SwipeActions onComplete={() => void toggle()} onDelete={() => void remove()}>
+          {row}
+        </SwipeActions>
+      ) : (
+        row
+      )}
+      <EditTaskContent
+        task={task}
+        day={new Date(task.date)}
+        open={open}
+        onClose={() => setOpen(false)}
+      />
+    </EditTask>
   );
 }
 

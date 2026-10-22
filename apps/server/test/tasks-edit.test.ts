@@ -48,6 +48,24 @@ describe("PATCH /tasks/:id", () => {
     expect(body.task.title).toBe("New title");
   });
 
+  it("alert: null clears the reminder (Sem data sem lembrete)", async () => {
+    const at = new Date(2026, 9, 23, 9).getTime();
+    await insertTask(env.DB, "u3", {
+      id: "edit-alert-null",
+      title: "Lembrar",
+      date: at,
+      alert: at,
+      duration: "10m",
+      priority: 0,
+      repeat: "Off",
+      completed: [],
+      undated: true,
+    });
+    const res = await patch("edit-alert-null", { alert: null });
+    expect(res.status).toBe(200);
+    expect((await getTask(env.DB, "u3", "edit-alert-null"))?.alert).toBeUndefined();
+  });
+
   it("404s for a missing task", async () => {
     const res = await patch("nope", { title: "x" });
     expect(res.status).toBe(404);
