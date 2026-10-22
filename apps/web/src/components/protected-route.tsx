@@ -69,10 +69,6 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     }
   }, [userId]);
 
-  useEffect(() => {
-    if (isLoaded && userId) loadUndated();
-  }, [isLoaded, userId, loadUndated]);
-
   // Depende de `isLoaded`/`userId`: com deps `[]` o efeito rodava uma vez só, antes do Clerk ficar
   // pronto, e o `getToken()` nulo deixava os dados de cobrança undefined pelo resto da sessão.
   useEffect(() => {
@@ -183,6 +179,8 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
           toast.error(copy.sync.dropped.replace("{n}", String(dropped)));
         }
       }
+      // Depois da fila, nunca junto: lida antes, a Sem data voltava sem o que foi feito offline.
+      loadUndated();
 
       const { tasks: fetched, error } = await getTasksForMonth(token, selectedDay);
 
@@ -210,7 +208,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(null);
     }
-  }, [userId, user, selectedDay, tasks]);
+  }, [userId, user, selectedDay, tasks, loadUndated]);
 
   // 🗓️ Atualizar tarefas se mudar de mês (também cobre a carga inicial, já que currentMonth começa undefined)
   useEffect(() => {
@@ -235,7 +233,6 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       if (!force && Date.now() - lastFetch.current < REVALIDATE_AFTER_MS) return;
       lastFetch.current = Date.now();
       getTasks();
-      loadUndated();
       setQuotaNonce((n) => n + 1);
     };
 
@@ -249,7 +246,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", onOnline);
     };
-  }, [isLoaded, userId, getTasks, loadUndated]);
+  }, [isLoaded, userId, getTasks]);
 
   // 🧭 Redirecionar se não estiver logado
   if (!isLoaded || (isLoading && !tasks)) {

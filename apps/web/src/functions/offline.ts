@@ -152,15 +152,25 @@ export function clearLocal(userId: string): void {
   }
 }
 
+type FlushResult = { sent: number; dropped: number; offline: boolean };
+
+// Duas subidas juntas reenviariam a mesma entrada; a segunda chamada espera a que já está no ar.
+const flushing = new Map<string, Promise<FlushResult>>();
+
 /**
  * Sobe a fila em ordem. Para no primeiro erro de REDE (a ordem importa: criar antes de editar), e
  * descarta a entrada num erro de servidor — quota estourada, tarefa que não existe mais. Retentar
  * pra sempre o que o servidor recusa é como uma fila entope.
  */
-export async function flushQueue(
-  userId: string,
-  token: string,
-): Promise<{ sent: number; dropped: number; offline: boolean }> {
+export function flushQueue(userId: string, token: string): Promise<FlushResult> {
+  const running = flushing.get(userId);
+  if (running) return running;
+  const flush = drainQueue(userId, token).finally(() => flushing.delete(userId));
+  flushing.set(userId, flush);
+  return flush;
+}
+
+async function drainQueue(userId: string, token: string): Promise<FlushResult> {
   const queue = readQueue(userId);
   let sent = 0;
   let dropped = 0;
