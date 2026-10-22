@@ -210,6 +210,9 @@ export const copy = {
     manyPending: "{n} pendentes",
     openHandle: "Abrir Sem data ({pending})",
     closeHandle: "Fechar Sem data",
+    // Indicador de páginas do mobile: Hoje | Sem data.
+    pages: "Páginas",
+    today: "Hoje",
     capture: "Anotar uma coisa…",
     recurring: "Recorrentes",
     todo: "Afazeres",
