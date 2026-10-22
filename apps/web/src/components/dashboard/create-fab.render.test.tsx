@@ -8,7 +8,8 @@ import { CreateFab } from "./create-fab";
 const setup = (undatedOnly?: boolean) => {
   const onSubmit = vi.fn();
   render(<CreateFab onSubmit={onSubmit} undatedOnly={undatedOnly} />);
-  return { onSubmit, user: userEvent.setup() };
+  // Radix modal põe pointer-events:none no body; sem isso o user-event recusa o unhover.
+  return { onSubmit, user: userEvent.setup({ pointerEventsCheck: 0 }) };
 };
 
 describe("<CreateFab>", () => {
@@ -32,18 +33,49 @@ describe("<CreateFab>", () => {
     expect(screen.queryByRole("button", { name: "Nova tarefa" })).not.toBeInTheDocument();
   });
 
-  it("aberto: n foca o campo; Minimizar volta ao +", async () => {
+  it("aberto: n foca o campo", async () => {
     localStorage.setItem("dailify:composer-docked", "1");
     const { user } = setup();
 
     await user.keyboard("n");
     expect(screen.getByRole("textbox")).toHaveFocus();
     expect(screen.getByRole("textbox")).toHaveValue("");
+  });
+
+  it("Minimizar desfixa mas deixa a folha aberta; sair com o mouse fecha", async () => {
+    localStorage.setItem("dailify:composer-docked", "1");
+    const { user } = setup();
 
     await user.click(screen.getByRole("button", { name: "Minimizar" }));
-    expect(screen.getByRole("button", { name: "Nova tarefa" })).toBeInTheDocument();
-    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(localStorage.getItem("dailify:composer-docked")).toBe("0");
+
+    await user.hover(screen.getByRole("dialog"));
+    await user.unhover(screen.getByRole("dialog"));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Nova tarefa" })).toBeInTheDocument();
+  });
+
+  it("desfixada com texto pela metade, sair com o mouse não fecha", async () => {
+    localStorage.setItem("dailify:composer-docked", "1");
+    const { user } = setup();
+
+    await user.click(screen.getByRole("button", { name: "Minimizar" }));
+    await user.type(screen.getByRole("textbox"), "comprar");
+    await user.hover(screen.getByRole("dialog"));
+    await user.unhover(screen.getByRole("dialog"));
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("aberta pelo +, sair com o mouse não fecha", async () => {
+    const { user } = setup();
+
+    await user.click(screen.getByRole("button", { name: "Nova tarefa" }));
+    await user.hover(screen.getByRole("dialog"));
+    await user.unhover(screen.getByRole("dialog"));
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
   it("aberto: enviar não some com o campo", async () => {

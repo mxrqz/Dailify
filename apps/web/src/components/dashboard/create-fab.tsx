@@ -37,6 +37,8 @@ interface CreateFabProps {
 export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const [docked, setDocked] = useStoredFlag(DOCKED_KEY);
+  // Desfixou: a folha fica aberta e some quando o mouse sai dela.
+  const [closeOnLeave, setCloseOnLeave] = useState(false);
   const desktop = useMediaQuery("(min-width: 768px)");
   const reduce = useReducedMotion();
   const fabRef = useRef<HTMLButtonElement>(null);
@@ -44,11 +46,11 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
 
   const morph: Transition = reduce
     ? { duration: 0 }
-    : { type: "spring", visualDuration: 0.38, bounce: 0.14 };
+    : { type: "spring", visualDuration: 0.24, bounce: 0 };
   // O conteúdo só aparece depois que a superfície já tomou forma, e sai antes de ela encolher.
   const content = {
     initial: { opacity: 0 },
-    animate: { opacity: 1, transition: { duration: reduce ? 0 : 0.18, delay: reduce ? 0 : 0.12 } },
+    animate: { opacity: 1, transition: { duration: reduce ? 0 : 0.14, delay: reduce ? 0 : 0.06 } },
   };
 
   // "n" e "/" abrem a folha de qualquer lugar da página, menos de quem já está escrevendo ou de
@@ -81,6 +83,17 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
     setOpen(false);
   };
 
+  const unpin = () => {
+    setDocked(false);
+    setOpen(true);
+    setCloseOnLeave(true);
+  };
+
+  const changeOpen = (next: boolean) => {
+    setOpen(next);
+    if (!next) setCloseOnLeave(false);
+  };
+
   return (
     <LayoutGroup id="composer">
       {docked ? (
@@ -104,7 +117,7 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
               {...content}
               type="button"
               aria-label={copy.composer.minimize}
-              onClick={() => setDocked(false)}
+              onClick={unpin}
               className={cn(iconButton, "absolute -top-3.5 right-4")}
             >
               <Minimize2 className="size-3.5" aria-hidden="true" />
@@ -121,7 +134,7 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
               style={{ borderRadius: RADIUS_FAB }}
               type="button"
               aria-label={label}
-              onClick={() => setOpen(true)}
+              onClick={() => changeOpen(true)}
               whileTap={reduce ? undefined : { scale: 0.96 }}
               className="absolute right-4 bottom-4 flex size-12 cursor-pointer items-center justify-center bg-accent-primary text-primary-foreground shadow-fab transition-colors hover:bg-accent-hover md:right-6 md:bottom-6"
             >
@@ -131,7 +144,7 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
             </motion.button>
           )}
 
-          <Dialog open={open} onOpenChange={setOpen}>
+          <Dialog open={open} onOpenChange={changeOpen}>
             <DialogPrimitive.Overlay asChild>
               <motion.div
                 initial={{ opacity: 0 }}
@@ -152,6 +165,13 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
               <motion.div
                 layoutId={SURFACE}
                 transition={morph}
+                // Texto pela metade segura a folha: sair com o mouse não pode jogar fora o que foi digitado.
+                onPointerLeave={(event) => {
+                  if (!closeOnLeave || event.pointerType !== "mouse") return;
+                  const field = document.getElementById("composer-text");
+                  if (field instanceof HTMLInputElement && field.value) return;
+                  changeOpen(false);
+                }}
                 style={
                   desktop
                     ? { borderRadius: RADIUS_PANEL }
@@ -174,7 +194,7 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
                     undatedOnly={undatedOnly}
                     onSubmit={(values, again) => {
                       onSubmit(values);
-                      if (!again) setOpen(false);
+                      if (!again) changeOpen(false);
                     }}
                   />
                 </motion.div>
