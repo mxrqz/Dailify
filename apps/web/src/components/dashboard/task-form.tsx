@@ -16,6 +16,7 @@ import { bareFieldClass } from "@/components/dashboard/styles";
 import { priorityText } from "@/consts/conts";
 import { useDailify } from "@/components/dailifyContext";
 import { useQuotas } from "@/hooks/useQuotas";
+import { DEFAULT_HOUR, undatedReminder } from "@/functions/compose-input";
 import { linkLabel } from "@/functions/link-label";
 import { cn } from "@/lib/utils";
 import type { TaskProps } from "@/types/types";
@@ -175,6 +176,8 @@ function DateRow({
   );
 }
 
+const reminderHour = `${String(DEFAULT_HOUR).padStart(2, "0")}:00`;
+
 /** `date` só-dia, mesmo padrão do DateRow; limpar no seletor nativo tira o lembrete. */
 function ReminderRow({
   value,
@@ -187,7 +190,9 @@ function ReminderRow({
     <div className={rowClass}>
       <span className={rowLabelClass}>{copy.form.reminder}</span>
       <span className="ml-auto min-w-0 truncate text-sm text-foreground">
-        {value ? format(value, "EEEEEE · d MMM · 09:00", { locale: ptBR }) : copy.form.noReminder}
+        {value
+          ? `${format(value, "EEEEEE · d MMM", { locale: ptBR })} · ${reminderHour}`
+          : copy.form.noReminder}
       </span>
       <BellIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
 
@@ -225,12 +230,15 @@ export function TaskForm({
   const [reminder, setReminder] = useState<Date | undefined>(() =>
     task?.undated && task.alert ? new Date(task.alert) : undefined,
   );
-  // Em Sem data a `date` só ordena a lista: a agenda parte do lembrete, ou de agora.
-  const [date, setDate] = useState<Date>(() =>
-    task
-      ? new Date(task.undated ? (task.alert ?? Date.now()) : task.date)
-      : (defaultDate ?? new Date()),
-  );
+  // Em Sem data a `date` só ordena a lista: a agenda parte do lembrete, ou do próximo 09:00
+  // ("Daily" = hoje se ainda não passou, senão amanhã).
+  const [date, setDate] = useState<Date>(() => {
+    if (!task) return defaultDate ?? new Date();
+    if (!task.undated) return new Date(task.date);
+    if (task.alert) return new Date(task.alert);
+    const now = new Date();
+    return undatedReminder(now, "Daily", now) ?? now;
+  });
   const [duration, setDuration] = useState(task?.duration ?? "10m");
   const [priority, setPriority] = useState(task?.priority ?? 0);
   const [repeat, setRepeat] = useState<Repeat>(task?.repeat ?? "Off");

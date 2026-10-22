@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, render, renderHook, screen, within } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Task } from "@dailify/shared";
 
@@ -11,6 +11,7 @@ const { dailify, api } = vi.hoisted(() => ({
     uncompleteTaskRange: vi.fn(),
     deleteTask: vi.fn(),
     createTask: vi.fn(),
+    updateTask: vi.fn(),
   },
 }));
 vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
@@ -134,6 +135,22 @@ describe("<UndatedList>", () => {
     expect(screen.getByRole("switch", { name: copy.form.undated })).toBeChecked();
     const sheet = within(screen.getByRole("dialog"));
     expect(sheet.getByLabelText(copy.form.reminder)).toHaveValue("2026-10-29");
+  });
+
+  it("limpar o lembrete salva com alert: null (não é 'sem alterações')", async () => {
+    const at = new Date(2026, 9, 29, 9).getTime();
+    renderList([task({ id: "a", title: "Pagar", date: at, alert: at, tags: [] })]);
+    api.updateTask.mockResolvedValue({ task: task({ id: "a", title: "Pagar" }) });
+    act(() => screen.getByRole("button", { name: /Pagar/ }).click());
+    const sheet = within(screen.getByRole("dialog"));
+    fireEvent.change(sheet.getByLabelText(copy.form.reminder), { target: { value: "" } });
+    await act(async () => sheet.getByRole("button", { name: copy.form.save }).click());
+    expect(api.updateTask).toHaveBeenCalledWith(
+      "token",
+      "a",
+      expect.objectContaining({ alert: null, undated: true }),
+      undefined,
+    );
   });
 });
 
