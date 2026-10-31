@@ -102,11 +102,12 @@ export function listDays({
   extra?: Date[];
   keepStart?: boolean;
 }): Date[] {
+  // Uma passada nas tarefas, não uma por dia: com meses carregados o filtro virava O(dias × tarefas).
+  const keep = new Set(
+    [...tasks.map((t) => t.date), ...extra].map((d) => new Date(d).toDateString()),
+  );
   return eachDayOfInterval({ start, end }).filter(
-    (day, i) =>
-      (keepStart && i === 0) ||
-      extra.some((d) => isSameDay(d, day)) ||
-      getTasksForDay(tasks, day).length > 0,
+    (day, i) => (keepStart && i === 0) || keep.has(day.toDateString()),
   );
 }
 

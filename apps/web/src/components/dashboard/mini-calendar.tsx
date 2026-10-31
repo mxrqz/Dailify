@@ -21,36 +21,23 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export function MiniCalendar() {
-  const { setSelectedDay, goToDay, selectedDay, weekStart } = useDailify();
+  const { goToDay, selectedDay, weekStart } = useDailify();
+  // As setas só folheiam: o dia escolhido (e a lista) muda só com clique num dia.
+  const [viewMonth, setViewMonth] = useState(selectedDay);
 
-  const goToPreviousMonth = () => {
-    // setIsLoading(true)
-    setSelectedDay(subMonths(selectedDay, 1));
-  };
-
-  const goToNextMonth = () => {
-    // setIsLoading(true)
-    setSelectedDay(addMonths(selectedDay, 1));
-  };
+  // Dia de outro mês clicado na grade (ou `goToDay` vindo de fora) traz a grade junto.
+  useEffect(() => setViewMonth(selectedDay), [selectedDay]);
 
   const goToToday = () => {
-    setSelectedDay(new Date());
+    const today = new Date();
+    setViewMonth(today);
+    void goToDay(today);
   };
 
-  const generateCalendarDays = () => {
-    const monthStart = startOfMonth(selectedDay);
-    const monthEnd = endOfMonth(selectedDay);
-    const calendarStart = startOfWeek(monthStart, { weekStartsOn: weekStart });
-    const calendarEnd = endOfWeek(monthEnd, { weekStartsOn: weekStart });
-    return eachDayOfInterval({ start: calendarStart, end: calendarEnd });
-  };
-
-  const [calendarDays, setCalendarDays] = useState<Date[]>(generateCalendarDays());
-
-  useEffect(() => {
-    const calendarDays = generateCalendarDays();
-    setCalendarDays(calendarDays);
-  }, [selectedDay, weekStart]);
+  const calendarDays = eachDayOfInterval({
+    start: startOfWeek(startOfMonth(viewMonth), { weekStartsOn: weekStart }),
+    end: endOfWeek(endOfMonth(viewMonth), { weekStartsOn: weekStart }),
+  });
 
   return (
     <div className="flex flex-col gap-4">
@@ -58,7 +45,7 @@ export function MiniCalendar() {
         <Button
           variant="ghost"
           size="icon"
-          onClick={goToPreviousMonth}
+          onClick={() => setViewMonth(subMonths(viewMonth, 1))}
           aria-label={copy.aside.prevMonth}
           className="size-7 rounded-full text-muted-foreground hover:bg-surface-hover"
         >
@@ -70,13 +57,13 @@ export function MiniCalendar() {
           onClick={goToToday}
           className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground transition-colors hover:text-foreground"
         >
-          {format(selectedDay, "MMMM yyyy", { locale: ptBR })}
+          {format(viewMonth, "MMMM yyyy", { locale: ptBR })}
         </button>
 
         <Button
           variant="ghost"
           size="icon"
-          onClick={goToNextMonth}
+          onClick={() => setViewMonth(addMonths(viewMonth, 1))}
           aria-label={copy.aside.nextMonth}
           className="size-7 rounded-full text-muted-foreground hover:bg-surface-hover"
         >
@@ -100,7 +87,7 @@ export function MiniCalendar() {
 
         <ul className="grid grid-cols-7 justify-items-center gap-1">
           {calendarDays.map((day, index) => {
-            const isCurrentMonth = isSameMonth(day, selectedDay);
+            const isCurrentMonth = isSameMonth(day, viewMonth);
             const isCurrentDay = isToday(day);
             const isSelectedDay = isSameDay(day, selectedDay);
 

@@ -5,28 +5,29 @@ primitives (see `ui/CLAUDE.md`). `@/` resolves to `src/`.
 
 ## Shared state — `dailifyContext.tsx`
 
-Single source of truth via `useDailify()`: `tasks`, `currentMonthTasks`, `selectedDay`,
-`isCalendar`, `quotas`, `invoices`, `paymentDetails`, and their setters.
+Single source of truth via `useDailify()`: `tasks`, `selectedDay`, `targetDay`, `loadedMonths`,
+`loadMonth`, `reloadMonths`, `goToDay`, `quotas`, `invoices`, `paymentDetails`, `undatedTasks`,
+`weekStart`, and their setters.
 
 - **`protected-route.tsx`** is where it all loads: gates on Clerk (`isLoaded`/`userId`), then
   `getTasks()`: flushes the offline queue, then `reloadMonths` (context) for today, next month and
   every month already in `loadedMonths`. Each month is fetched (`getTasksForMonth`) and merged into
-  `tasks` with `mergeMonth` — a month never replaces the others. `loadMonth(month)` (context) adds
-  one more month on demand, idempotent (loaded or in flight → no refetch). Payment/invoices
-  load once in the boot effect (deps `[isLoaded, userId]`); quotas load in their own effect keyed
-  by month (`quotaMonth`) — only that fetch refires when the month changes.
-- **`dashboard/day-view.tsx`** derives `dayTasks` from `getTasksForDay(tasks, selectedDay)` then
-  `groupTasksByTime`. (The two-column day+aside layout lives one level up, in `pages/home.tsx`, which
-  mounts `DayView` beside `DayAside`.) **`dashboard/month-view.tsx`** (grid chrome) and
-  **`dashboard/month-day-cell.tsx`** (cell + day sheet, mounting `DayTaskRow`) read `tasks` per day
-  the same way. All three read from the shared array — so any write must update it.
+  `tasks` with `mergeMonth` — a month never replaces the others. `loadMonth(month)` adds one more
+  month on demand, idempotent (loaded or in flight → no refetch). `goToDay(day)` loads every month
+  between today and `day`, then sets `selectedDay` and `targetDay` (the list scrolls to it).
+  Payment/invoices load once in the boot effect (deps `[isLoaded, userId]`); quotas load in their
+  own effect keyed by TODAY's month (`useNow`), not `selectedDay`'s.
+- **`dashboard/day-list.tsx`** is the continuous list: one `DaySection` per day with tasks (via
+  `listDays`) up to the contiguous run of `loadedMonths`; a sentinel asks for the next month. The
+  skeleton shows only at boot (`isLoading && !tasks`) — revalidation keeps the list and its scroll.
+  `day-section.tsx`, `week-strip.tsx` read `tasks` per day with `getTasksForDay`. All read from the
+  shared array — so any write must update it.
 
 ## Writes are optimistic against the shared array
 
-On create success: `setTasks(upsertTaskById(tasks ?? [], task))`. On EDIT, use
-`upsertTaskWithRecurrence(tasks ?? [], task, loadedMonths)` — recurring instances share the
-original's id, so `upsertTaskById` would swap only the first one and leave the rest stale; it rebuilds
-the instances in every loaded month. Complete/delete/patch apply the
+On create and on EDIT: `upsertTaskWithRecurrence(tasks ?? [], task, loadedMonths)` — recurring
+instances share the original's id, so `upsertTaskById` would swap only the first one and leave the
+rest stale; it rebuilds the instances in every loaded month. Complete/delete/patch apply the
 change to `tasks` **immediately**, keep the previous array, and restore it if the server refuses
 (`hooks/useTaskActions.tsx`) — waiting for the round-trip made every tap feel dead on mobile. Delete
 also offers "Desfazer" in the toast, which recreates the task with the same id.

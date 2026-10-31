@@ -1,4 +1,4 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { useReducedMotion } from "motion/react";
 import {
   addMonths,
@@ -45,13 +45,19 @@ export function DayList(): JSX.Element {
   const canLoadMore = emptyMonths < MAX_EMPTY_MONTHS;
 
   // Hoje entra também quando há tarefa sem data: o bloco "A qualquer hora" mora nele.
-  const days = listDays({
-    start,
-    end: endOfMonth(addMonths(nextMonth, -1)),
-    tasks: tasks ?? [],
-    extra: targetDay ? [targetDay] : [],
-    keepStart: start.getTime() === today.getTime() && !!undatedTasks?.length,
-  });
+  const keepStart = start.getTime() === today.getTime() && !!undatedTasks?.length;
+  const startKey = start.getTime();
+  const days = useMemo(
+    () =>
+      listDays({
+        start: new Date(startKey),
+        end: endOfMonth(addMonths(new Date(nextKey), -1)),
+        tasks: tasks ?? [],
+        extra: targetDay ? [targetDay] : [],
+        keepStart,
+      }),
+    [startKey, nextKey, tasks, targetDay, keepStart],
+  );
 
   // Reobserva a cada mês novo: o observer só avisa quando a interseção muda, e um mês sem tarefa
   // deixa a sentinela onde estava.
@@ -78,7 +84,8 @@ export function DayList(): JSX.Element {
 
   const sentinelEl = <div ref={sentinel} aria-hidden />;
 
-  if (isLoading) return <TaskSkeletons />;
+  // Só no boot: na revalidação a lista fica, senão a rolagem e as âncoras se perdiam.
+  if (isLoading && !tasks) return <TaskSkeletons />;
 
   // Primeiro uso e mês vazio são situações diferentes: uma pede um empurrão, a outra é só um fato.
   if (days.length === 0) {

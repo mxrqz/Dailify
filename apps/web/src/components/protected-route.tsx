@@ -20,6 +20,7 @@ import {
   readCachedUndated,
 } from "@/functions/offline";
 import { initialMonths } from "@/functions/functions";
+import { useNow } from "@/hooks/useNow";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 
@@ -93,23 +94,24 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     })();
   }, [isLoaded, userId]);
 
-  // Efeito próprio porque quota de escopo mensal muda com o mês olhado; os outros dados, não.
-  // A chave é só o MÊS: andar de dia dentro dele não muda a resposta e não deve refazer o fetch.
+  // Efeito próprio porque quota de escopo mensal vira com o mês de HOJE (não o do dia olhado: a
+  // cota que bloqueia a criação é a do mês corrente); os outros dados, não.
   // `quotas` fica undefined se a API falhou — `computeQuotas` trata isso como "ainda carregando",
   // que é o comportamento seguro: a UI se esconde e a criação não é bloqueada.
   // Relê também no `quotaNonce`, que a revalidação lá embaixo incrementa: `bumpUsage` só sobe,
   // então sem uma releitura quem cria 30 tarefas e apaga 20 fica travado no 30 a sessão inteira.
-  const quotaMonth = `${selectedDay.getFullYear()}-${selectedDay.getMonth()}`;
+  const now = useNow(60_000);
+  const quotaMonth = `${now.getFullYear()}-${now.getMonth()}`;
   const [quotaNonce, setQuotaNonce] = useState(0);
   useEffect(() => {
     if (!isLoaded || !userId) return;
-    // Trocar de mês rápido põe duas respostas correndo: a do mês que saiu de tela não vale mais.
+    // Virada de mês ou releitura com fetch em voo: a resposta anterior não vale mais.
     let current = true;
     (async () => {
       try {
         const token = await getToken();
         if (!token) return;
-        const snapshot = await getQuotas(token, selectedDay);
+        const snapshot = await getQuotas(token, now);
         if (current && snapshot) setQuotas(snapshot);
       } catch {
         /* sem sessão utilizável */
@@ -193,7 +195,10 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       // que perdeu as tarefas. Offline com cache na tela é silencioso — o indicador já conta.
       if (error) {
         if (!error.offline || !tasks?.length) {
-          toast.error(copy.loading.tasksError, { description: error.message });
+          toast.error(copy.loading.tasksError, {
+            id: "tasks-load-error",
+            description: error.message,
+          });
         }
         return;
       }
@@ -203,7 +208,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       // Mas só quando NÃO há nada na tela: offline o Clerk falha ao renovar o token e cai aqui —
       // zerar ali apagaria a agenda que o cache tinha acabado de pintar.
       if (!tasks?.length) setTasks([]);
-      toast.error(copy.loading.tasksError);
+      toast.error(copy.loading.tasksError, { id: "tasks-load-error" });
     } finally {
       setIsLoading(null);
     }

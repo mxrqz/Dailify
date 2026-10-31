@@ -72,10 +72,18 @@ describe("<DayList>", () => {
     expect(loadMonth).toHaveBeenCalledWith(startOfMonth(addMonths(now, 2)));
   });
 
+  it("skeleton só no boot, antes de haver tarefas", () => {
+    setup({ isLoading: "x", tasks: undefined });
+    const { getByTestId } = render(<DayList />);
+    expect(getByTestId("skeleton")).toBeInTheDocument();
+  });
+
   it("não observa nada enquanto carrega nem depois de 12 meses sem tarefa", () => {
     const { now } = setup({ isLoading: "x" });
-    const { rerender } = render(<DayList />);
+    const { rerender, queryByTestId } = render(<DayList />);
     expect(fire).toBeUndefined();
+    // Revalidação com lista na tela não troca por skeleton: a rolagem se perderia.
+    expect(queryByTestId("skeleton")).toBeNull();
 
     setup({
       loadedMonths: Array.from({ length: 13 }, (_, i) => startOfMonth(addMonths(now, i))),

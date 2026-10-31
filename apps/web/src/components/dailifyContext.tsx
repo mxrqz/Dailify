@@ -1,7 +1,7 @@
 import { InvoicesProps, PaymentDetailsProps, TaskProps } from "@/types/types";
 import { createContext, useContext, useRef, useState, ReactNode } from "react";
 import { useAuth } from "@clerk/clerk-react";
-import { isSameMonth, startOfDay, startOfMonth } from "date-fns";
+import { startOfDay, startOfMonth } from "date-fns";
 import { toast } from "sonner";
 import { DEFAULT_WEEK_START } from "@dailify/shared";
 import type { QuotaKey, WeekStart } from "@dailify/shared";
@@ -27,8 +27,6 @@ interface DailifyContextType {
   loadMonth: (month: Date) => Promise<void>;
   /** Rebusca os meses à força (boot, volta do segundo plano); devolve o primeiro erro. */
   reloadMonths: (months: Date[]) => Promise<ApiError | undefined>;
-  currentMonthTasks: TaskProps[] | undefined;
-  setCurrentMonthTasks: (task: TaskProps[]) => void;
   paymentDetails: PaymentDetailsProps | null | undefined;
   setPaymentDetails: (paymentDetails: PaymentDetailsProps | null) => void;
   invoices: InvoicesProps[] | undefined;
@@ -54,7 +52,6 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
   const [isLoading, setIsLoading] = useState<null | string>(null);
   // Já começa com os do boot: com o cache na tela antes da 1ª leitura, `[]` apagava as instâncias.
   const [loadedMonths, setLoadedMonths] = useState<Date[]>(() => initialMonths(new Date()));
-  const [currentMonthTasks, setCurrentMonthTasks] = useState<TaskProps[]>();
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsProps | null>();
   const [quotas, setQuotas] = useState<QuotaSnapshot>();
   const [invoices, setInvoices] = useState<InvoicesProps[]>();
@@ -88,7 +85,6 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
         }
         // Uma releitura mais nova do mesmo mês já está no mapa: esta resposta é velha.
         if (!isCurrent()) return;
-        if (isSameMonth(new Date(), month)) setCurrentMonthTasks(fetched);
         setTasks((prev) => mergeMonth(prev ?? [], month, fetched));
         setLoadedMonths((prev) =>
           prev.some((m) => m.getTime() === key)
@@ -128,10 +124,15 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
       const error = await fetchMonth(month);
       // Mesma regra do boot: offline com agenda na tela é silencioso, o indicador já conta.
       if (error && (!error.offline || !tasks?.length)) {
-        toast.error(copy.loading.tasksError, { description: error.message });
+        toast.error(copy.loading.tasksError, {
+          id: "tasks-load-error",
+          description: error.message,
+        });
       }
     } catch {
-      toast.error(copy.loading.tasksError);
+      // Offline o `getToken` lança; com agenda na tela, cada mês pedido viraria um toast.
+      if (navigator.onLine === false && tasks?.length) return;
+      toast.error(copy.loading.tasksError, { id: "tasks-load-error" });
     }
   };
 
@@ -167,8 +168,6 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
         loadedMonths,
         loadMonth,
         reloadMonths,
-        currentMonthTasks,
-        setCurrentMonthTasks,
         invoices,
         setInvoices,
         paymentDetails,
