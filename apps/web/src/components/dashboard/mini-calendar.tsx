@@ -21,7 +21,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
 export function MiniCalendar() {
-  const { setSelectedDay, selectedDay, weekStart } = useDailify();
+  const { setSelectedDay, goToDay, selectedDay, weekStart } = useDailify();
 
   const goToPreviousMonth = () => {
     // setIsLoading(true)
@@ -108,7 +108,7 @@ export function MiniCalendar() {
               <li key={index}>
                 <button
                   type="button"
-                  onClick={() => setSelectedDay(day)}
+                  onClick={() => void goToDay(day)}
                   className={cn(
                     "flex size-7 items-center justify-center rounded-full font-mono text-xs transition-colors",
                     isCurrentMonth ? "text-foreground" : "text-muted-foreground",

@@ -20,7 +20,7 @@ import { cn } from "@/lib/utils";
 
 const SKELETON_ROWS = 3;
 
-/** Id da seção de um dia — a `WeekStrip` usa isto pra rolar até ele. */
+/** Id da seção de um dia — a `DayList` usa isto pra rolar até ele. */
 export const dayAnchorId = (day: Date) => `day-${format(day, "yyyy-MM-dd")}`;
 
 /**
@@ -156,6 +156,10 @@ export function DaySection({ day }: { day: Date }): JSX.Element {
       </header>
 
       {isCurrentDay && <AnytimeBlock />}
+
+      {!isCurrentDay && dayTasks.length === 0 && (
+        <p className="text-sm text-content-secondary">{copy.day.emptyDay}</p>
+      )}
 
       {groups.length > 0 && (
         <motion.ul

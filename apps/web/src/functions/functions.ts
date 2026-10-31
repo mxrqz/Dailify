@@ -117,6 +117,13 @@ export function nextMonthToLoad(loaded: Date[], start: Date): Date {
   return month;
 }
 
+/** Início de cada mês de `from` a `to`, inclusive. */
+export function monthsBetween(from: Date, to: Date): Date[] {
+  const months: Date[] = [];
+  for (let m = startOfMonth(from); m <= to; m = addMonths(m, 1)) months.push(m);
+  return months;
+}
+
 /** Troca as tarefas de `month` pelas que o servidor devolveu; os outros meses ficam como estão. */
 export function mergeMonth(tasks: TaskProps[], month: Date, fetched: TaskProps[]): TaskProps[] {
   return [...tasks.filter((t) => !isSameMonth(t.date, month)), ...fetched];

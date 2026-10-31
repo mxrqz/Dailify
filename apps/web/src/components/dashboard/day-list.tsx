@@ -1,4 +1,5 @@
 import { useEffect, useRef } from "react";
+import { useReducedMotion } from "motion/react";
 import {
   addMonths,
   differenceInCalendarMonths,
@@ -9,7 +10,7 @@ import {
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { DaySection, TaskSkeletons } from "@/components/dashboard/day-section";
+import { DaySection, TaskSkeletons, dayAnchorId } from "@/components/dashboard/day-section";
 import { listDays, nextMonthToLoad } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
 
@@ -17,13 +18,15 @@ import { useNow } from "@/hooks/useNow";
 const MAX_EMPTY_MONTHS = 12;
 
 /**
- * A lista do dashboard: um bloco por dia COM TAREFA, de hoje (ou do dia passado escolhido) até o
+ * A lista do dashboard: um bloco por dia COM TAREFA (ou escolhido por clique), de hoje (ou do dia passado escolhido) até o
  * fim do trecho contíguo de meses carregados. A sentinela no fim pede o mês seguinte com ~2 telas de folga, então
  * ele já está lá quando a rolagem chega.
  */
 export function DayList(): JSX.Element {
-  const { selectedDay, tasks, undatedTasks, isLoading, loadedMonths, loadMonth } = useDailify();
+  const { selectedDay, tasks, undatedTasks, isLoading, loadedMonths, loadMonth, targetDay } =
+    useDailify();
   const sentinel = useRef<HTMLDivElement>(null);
+  const reduce = useReducedMotion();
 
   // `useNow` e não `new Date()` solto: com o app aberto na virada do dia, a lista continuava
   // começando em ontem.
@@ -46,6 +49,7 @@ export function DayList(): JSX.Element {
     start,
     end: endOfMonth(addMonths(nextMonth, -1)),
     tasks: tasks ?? [],
+    extra: targetDay ? [targetDay] : [],
     keepStart: start.getTime() === today.getTime() && !!undatedTasks?.length,
   });
 
@@ -63,6 +67,14 @@ export function DayList(): JSX.Element {
     observer.observe(el);
     return () => observer.disconnect();
   }, [nextKey, booted, isLoading, canLoadMore]);
+
+  // O alvo entrou na lista neste mesmo commit, então o elemento já existe quando o effect roda.
+  useEffect(() => {
+    if (!targetDay) return;
+    document
+      .getElementById(dayAnchorId(targetDay))
+      ?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+  }, [targetDay]);
 
   const sentinelEl = <div ref={sentinel} aria-hidden />;
 

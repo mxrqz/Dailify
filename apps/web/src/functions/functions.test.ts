@@ -16,6 +16,7 @@ import {
   initialMonths,
   listDays,
   nextMonthToLoad,
+  monthsBetween,
 } from "./functions";
 import type { TaskProps } from "@/types/types";
 
@@ -378,5 +379,13 @@ describe("nextMonthToLoad", () => {
 
   test("se o mês do início nem foi carregado, é ele", () => {
     expect(nextMonthToLoad([m(10)], new Date(2026, 9, 5))).toEqual(m(9));
+  });
+});
+
+describe("monthsBetween", () => {
+  test("do mês de from ao de to, inclusive; no mesmo mês, só ele", () => {
+    const months = monthsBetween(new Date(2026, 0, 20), new Date(2026, 3, 2));
+    expect(months).toEqual([0, 1, 2, 3].map((m) => new Date(2026, m, 1)));
+    expect(monthsBetween(new Date(2026, 5, 9), new Date(2026, 5, 20))).toHaveLength(1);
   });
 });

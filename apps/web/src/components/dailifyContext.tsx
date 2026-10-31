@@ -1,18 +1,22 @@
 import { InvoicesProps, PaymentDetailsProps, TaskProps } from "@/types/types";
 import { createContext, useContext, useRef, useState, ReactNode } from "react";
 import { useAuth } from "@clerk/clerk-react";
-import { isSameMonth, startOfMonth } from "date-fns";
+import { isSameMonth, startOfDay, startOfMonth } from "date-fns";
 import { toast } from "sonner";
 import { DEFAULT_WEEK_START } from "@dailify/shared";
 import type { QuotaKey, WeekStart } from "@dailify/shared";
 import { getTasksForMonth } from "@/functions/api";
 import type { ApiError, QuotaSnapshot } from "@/functions/api";
-import { initialMonths, mergeMonth } from "@/functions/functions";
+import { initialMonths, mergeMonth, monthsBetween } from "@/functions/functions";
 import { copy } from "@/components/dashboard/copy";
 
 interface DailifyContextType {
   selectedDay: Date;
   setSelectedDay: (selectedDay: Date) => void;
+  /** Dia pedido por clique; a lista rola até ele e o mostra mesmo sem tarefa. */
+  targetDay: Date | undefined;
+  /** Carrega os meses até o dia e só então o marca como alvo, pra ele já estar na lista. */
+  goToDay: (day: Date) => Promise<void>;
   tasks: TaskProps[] | undefined;
   setTasks: (task: TaskProps[]) => void;
   isLoading: string | null;
@@ -45,6 +49,7 @@ const DailifyContext = createContext<DailifyContextType | undefined>(undefined);
 // Criando o provider
 export function DailifyProvider({ children }: { children: ReactNode }) {
   const [selectedDay, setSelectedDay] = useState<Date>(new Date());
+  const [targetDay, setTargetDay] = useState<Date>();
   const [tasks, setTasks] = useState<TaskProps[]>();
   const [isLoading, setIsLoading] = useState<null | string>(null);
   // Já começa com os do boot: com o cache na tela antes da 1ª leitura, `[]` apagava as instâncias.
@@ -130,6 +135,15 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
     }
   };
 
+  const goToDay = async (day: Date) => {
+    const today = startOfDay(new Date());
+    setSelectedDay(day);
+    // Dia passado vira o início da lista; o futuro precisa dos meses do meio, senão a lista não o alcança.
+    await Promise.all(monthsBetween(day < today ? day : today, day).map(loadMonth));
+    // Data nova a cada clique: clicar no mesmo dia de novo rola de novo.
+    setTargetDay(new Date(day));
+  };
+
   const bumpUsage = (key: QuotaKey) =>
     setQuotas((current) =>
       current
@@ -142,6 +156,8 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
       value={{
         selectedDay,
         setSelectedDay,
+        targetDay,
+        goToDay,
         tasks,
         setTasks,
         isLoading,

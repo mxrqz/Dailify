@@ -52,6 +52,7 @@ export const copy = {
     inHours: "EM {n} H",
     openCalendar: "Abrir calendário",
     noTasks: "Nenhuma tarefa",
+    emptyDay: "Nada neste dia",
     listEmpty: "Nada agendado pela frente.",
     listFirstRun: "Sua agenda começa aqui.",
     listFirstRunHint: "Escreva a tarefa do jeito que você falaria — o campo acima entende a data.",

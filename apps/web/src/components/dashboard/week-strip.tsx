@@ -4,7 +4,6 @@ import { CalendarIcon } from "lucide-react";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { dayAnchorId } from "@/components/dashboard/day-section";
 import { MiniCalendar } from "@/components/dashboard/mini-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getTasksForDay } from "@/functions/functions";
@@ -20,15 +19,9 @@ const MAX_DOTS = 3;
  * Clicar rola até o dia na lista; o mês inteiro continua a um clique, no popover à direita.
  */
 export function WeekStrip(): JSX.Element {
-  const { tasks } = useDailify();
+  const { tasks, goToDay } = useDailify();
   const today = startOfDay(new Date());
   const days = Array.from({ length: DAYS_AHEAD }, (_, i) => addDays(today, i));
-
-  const goTo = (day: Date) => {
-    document
-      .getElementById(dayAnchorId(day))
-      ?.scrollIntoView({ behavior: "smooth", block: "start" });
-  };
 
   return (
     <div className="flex items-center gap-1 rounded-2xl border border-surface-line bg-surface-card p-2">
@@ -40,7 +33,7 @@ export function WeekStrip(): JSX.Element {
           <button
             key={day.toISOString()}
             type="button"
-            onClick={() => goTo(day)}
+            onClick={() => void goToDay(day)}
             className={cn(
               "flex flex-1 cursor-pointer flex-col items-center gap-1 rounded-xl px-2 py-2 transition-colors",
               current ? "bg-surface-hover" : "hover:bg-surface-hover",
