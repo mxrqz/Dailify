@@ -10,7 +10,7 @@ import {
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { DaySection, TaskSkeletons } from "@/components/dashboard/day-section";
-import { listDays } from "@/functions/functions";
+import { listDays, nextMonthToLoad } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
 
 // Sem tarefa em tantos meses seguidos, a sentinela desiste de pedir o próximo.
@@ -18,7 +18,7 @@ const MAX_EMPTY_MONTHS = 12;
 
 /**
  * A lista do dashboard: um bloco por dia COM TAREFA, de hoje (ou do dia passado escolhido) até o
- * fim do último mês carregado. A sentinela no fim pede o mês seguinte com ~2 telas de folga, então
+ * fim do trecho contíguo de meses carregados. A sentinela no fim pede o mês seguinte com ~2 telas de folga, então
  * ele já está lá quando a rolagem chega.
  */
 export function DayList(): JSX.Element {
@@ -29,20 +29,22 @@ export function DayList(): JSX.Element {
   // começando em ontem.
   const today = startOfDay(useNow(60_000));
   const start = selectedDay < today ? startOfDay(selectedDay) : today;
-  const lastMonth = loadedMonths[loadedMonths.length - 1];
+  // Um mês longe de hoje pode estar carregado sozinho: a lista só vai até onde não há buraco.
+  const nextMonth = nextMonthToLoad(loadedMonths, start);
+  const nextKey = nextMonth.getTime();
+  const booted = !!tasks;
 
   // Meses carregados desde a última tarefa: passou do limite, não há por que continuar pedindo.
   const lastTask = tasks?.reduce((max, t) => Math.max(max, t.date), 0);
-  const emptyMonths = differenceInCalendarMonths(
-    lastMonth,
-    lastTask ? startOfMonth(lastTask) : startOfMonth(today),
-  );
+  const emptyMonths =
+    differenceInCalendarMonths(nextMonth, lastTask ? startOfMonth(lastTask) : startOfMonth(today)) -
+    1;
   const canLoadMore = emptyMonths < MAX_EMPTY_MONTHS;
 
   // Hoje entra também quando há tarefa sem data: o bloco "A qualquer hora" mora nele.
   const days = listDays({
     start,
-    end: endOfMonth(lastMonth),
+    end: endOfMonth(addMonths(nextMonth, -1)),
     tasks: tasks ?? [],
     keepStart: start.getTime() === today.getTime() && !!undatedTasks?.length,
   });
@@ -51,16 +53,16 @@ export function DayList(): JSX.Element {
   // deixa a sentinela onde estava.
   useEffect(() => {
     const el = sentinel.current;
-    if (!el || isLoading || !canLoadMore) return;
+    if (!el || !booted || isLoading || !canLoadMore) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting)) void loadMonth(addMonths(lastMonth, 1));
+        if (entries.some((e) => e.isIntersecting)) void loadMonth(new Date(nextKey));
       },
       { rootMargin: "0px 0px 200% 0px" },
     );
     observer.observe(el);
     return () => observer.disconnect();
-  }, [lastMonth.getTime(), isLoading, canLoadMore]);
+  }, [nextKey, booted, isLoading, canLoadMore]);
 
   const sentinelEl = <div ref={sentinel} aria-hidden />;
 

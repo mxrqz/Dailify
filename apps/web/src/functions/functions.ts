@@ -110,6 +110,13 @@ export function listDays({
   );
 }
 
+/** Primeiro mês sem carga a partir do de `start`: a lista termina logo antes dele. */
+export function nextMonthToLoad(loaded: Date[], start: Date): Date {
+  let month = startOfMonth(start);
+  while (loaded.some((m) => isSameMonth(m, month))) month = addMonths(month, 1);
+  return month;
+}
+
 /** Troca as tarefas de `month` pelas que o servidor devolveu; os outros meses ficam como estão. */
 export function mergeMonth(tasks: TaskProps[], month: Date, fetched: TaskProps[]): TaskProps[] {
   return [...tasks.filter((t) => !isSameMonth(t.date, month)), ...fetched];

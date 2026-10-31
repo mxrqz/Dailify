@@ -5,7 +5,7 @@ import { addMonths, startOfMonth } from "date-fns";
 
 import { DayList } from "./day-list";
 
-const dailify = vi.hoisted(() => ({ current: {} as Record<string, unknown> }));
+const dailify = vi.hoisted((): { current: Record<string, unknown> } => ({ current: {} }));
 vi.mock("@/components/dailifyContext", () => ({ useDailify: () => dailify.current }));
 vi.mock("@/components/dashboard/day-section", () => ({
   DaySection: () => <section />,
@@ -30,6 +30,8 @@ beforeEach(() => {
   );
 });
 afterEach(() => vi.unstubAllGlobals());
+
+const now0 = () => new Date();
 
 function setup(over: Record<string, unknown> = {}) {
   const now = new Date();
@@ -56,13 +58,27 @@ describe("<DayList>", () => {
     expect(loadMonth).toHaveBeenCalledWith(startOfMonth(addMonths(now, 2)));
   });
 
+  it("com buraco nos meses carregados pede o primeiro ausente, não o seguinte ao último", () => {
+    const { now } = setup({
+      loadedMonths: [
+        startOfMonth(now0()),
+        startOfMonth(addMonths(now0(), 1)),
+        startOfMonth(addMonths(now0(), 4)),
+      ],
+    });
+    render(<DayList />);
+
+    fire?.();
+    expect(loadMonth).toHaveBeenCalledWith(startOfMonth(addMonths(now, 2)));
+  });
+
   it("não observa nada enquanto carrega nem depois de 12 meses sem tarefa", () => {
     const { now } = setup({ isLoading: "x" });
     const { rerender } = render(<DayList />);
     expect(fire).toBeUndefined();
 
     setup({
-      loadedMonths: [startOfMonth(now), startOfMonth(addMonths(now, 12))],
+      loadedMonths: Array.from({ length: 13 }, (_, i) => startOfMonth(addMonths(now, i))),
     });
     rerender(<DayList />);
     expect(fire).toBeUndefined();

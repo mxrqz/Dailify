@@ -15,6 +15,7 @@ import {
   mergeMonth,
   initialMonths,
   listDays,
+  nextMonthToLoad,
 } from "./functions";
 import type { TaskProps } from "@/types/types";
 
@@ -365,5 +366,17 @@ describe("listDays", () => {
 
   test("extra fora do intervalo é ignorado", () => {
     expect(listDays({ start, end, tasks: [], extra: [new Date(2026, 7, 1)] })).toEqual([]);
+  });
+});
+
+describe("nextMonthToLoad", () => {
+  const m = (i: number) => new Date(2026, i, 1);
+
+  test("pula o trecho contíguo e para no primeiro buraco", () => {
+    expect(nextMonthToLoad([m(9), m(10), m(0)], new Date(2026, 9, 31))).toEqual(m(11));
+  });
+
+  test("se o mês do início nem foi carregado, é ele", () => {
+    expect(nextMonthToLoad([m(10)], new Date(2026, 9, 5))).toEqual(m(9));
   });
 });
