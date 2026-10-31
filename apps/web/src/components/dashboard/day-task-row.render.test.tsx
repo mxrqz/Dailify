@@ -39,6 +39,7 @@ describe("DayTaskRow", () => {
       tasks: [task],
       setTasks: vi.fn(),
       selectedDay: day,
+      loadedMonths: [day],
       bumpUsage: vi.fn(),
     });
     api.completeTask.mockResolvedValue({});

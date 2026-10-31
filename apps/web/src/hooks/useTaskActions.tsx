@@ -24,7 +24,7 @@ export function useTaskActions(
   day: Date = new Date(),
   { onDeleted }: { onDeleted?: () => void } = {},
 ) {
-  const { tasks, setTasks, selectedDay } = useDailify();
+  const { tasks, setTasks, loadedMonths } = useDailify();
   const { getToken, userId } = useAuth();
   const [scopeOpen, setScopeOpen] = useState(false);
 
@@ -63,7 +63,7 @@ export function useTaskActions(
     const at = Date.now();
     const previous = tasks ?? [];
     const done: TaskProps = { ...task, completed: [...task.completed, at], updatedAt: at };
-    setTasks(upsertTaskWithRecurrence(previous, done, selectedDay));
+    setTasks(upsertTaskWithRecurrence(previous, done, loadedMonths));
 
     const mutation: Mutation = { op: "complete", taskId: task.id, at };
     const { token, error: authError } = await authToken();
@@ -87,7 +87,7 @@ export function useTaskActions(
       completed: task.completed.filter((done) => done < from || done > to),
       updatedAt: at,
     };
-    setTasks(upsertTaskWithRecurrence(previous, reopened, selectedDay));
+    setTasks(upsertTaskWithRecurrence(previous, reopened, loadedMonths));
 
     const mutation: Mutation = { op: "uncomplete", taskId: task.id, day: from, at };
     const { token, error: authError } = await authToken();
@@ -171,7 +171,7 @@ export function useTaskActions(
     if (!settle(error, previous, mutation, copy.task.deleteError)) return;
     // Reexpandir a série com o `exdates` novo é mais fiel que o filtro otimista acima: é o servidor
     // dizendo quais dias sobraram.
-    if (series) setTasks(upsertTaskWithRecurrence(previous, series, selectedDay));
+    if (series) setTasks(upsertTaskWithRecurrence(previous, series, loadedMonths));
     onDeleted?.();
     toast.success(copy.task.occurrenceDeleted, { description: task.title });
   };
@@ -212,7 +212,7 @@ export function useTaskActions(
     const at = Date.now();
     const previous = tasks ?? [];
     const stamped = { ...patch, updatedAt: at };
-    setTasks(upsertTaskWithRecurrence(previous, { ...task, ...stamped }, selectedDay));
+    setTasks(upsertTaskWithRecurrence(previous, { ...task, ...stamped }, loadedMonths));
 
     const mutation: Mutation = { op: "patch", taskId: task.id, patch: stamped, at };
     const { token, error: authError } = await authToken();
@@ -223,7 +223,7 @@ export function useTaskActions(
     if (!updated) return true; // foi pra fila: o que está na tela já é o estado bom
 
     // A resposta do servidor ainda entra: ela traz o que o patch não mandou (recorrência expandida).
-    setTasks(upsertTaskWithRecurrence(previous, updated, selectedDay));
+    setTasks(upsertTaskWithRecurrence(previous, updated, loadedMonths));
     return true;
   };
 

@@ -20,7 +20,7 @@ import { useQuotas } from "@/hooks/useQuotas";
  */
 export function useCreateTask() {
   const { getToken, userId } = useAuth();
-  const { tasks, setTasks, undatedTasks, setUndatedTasks, bumpUsage, selectedDay } = useDailify();
+  const { tasks, setTasks, undatedTasks, setUndatedTasks, bumpUsage, loadedMonths } = useDailify();
   const quotas = useQuotas();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
@@ -55,7 +55,7 @@ export function useCreateTask() {
     const apply = (list: Task[], task: Task) =>
       undated
         ? setUndatedTasks(upsertUndated(list, task))
-        : setTasks(upsertTaskWithRecurrence(list, task, selectedDay));
+        : setTasks(upsertTaskWithRecurrence(list, task, loadedMonths));
     const restore = (list: Task[]) => (undated ? setUndatedTasks(list) : setTasks(list));
     apply(previous, optimistic);
 

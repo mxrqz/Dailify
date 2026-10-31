@@ -1,5 +1,5 @@
 import { TaskProps } from "@/types/types";
-import { format, isSameDay } from "date-fns";
+import { format, isSameDay, isSameMonth } from "date-fns";
 import { enUS, ptBR } from "date-fns/locale";
 import type { TaskCardData } from "@/components/task-card";
 import { expandRecurringTask } from "@dailify/shared";
@@ -70,10 +70,15 @@ export function upsertTaskById(tasks: TaskProps[], task: TaskProps): TaskProps[]
 export function upsertTaskWithRecurrence(
   tasks: TaskProps[],
   task: TaskProps,
-  month: Date,
+  months: Date[],
 ): TaskProps[] {
   const others = tasks.filter((t) => t.id !== task.id);
-  return [...others, task, ...expandRecurringTask(task, month)];
+  return [...others, task, ...months.flatMap((month) => expandRecurringTask(task, month))];
+}
+
+/** Troca as tarefas de `month` pelas que o servidor devolveu; os outros meses ficam como estão. */
+export function mergeMonth(tasks: TaskProps[], month: Date, fetched: TaskProps[]): TaskProps[] {
+  return [...tasks.filter((t) => !isSameMonth(t.date, month)), ...fetched];
 }
 
 export function getNextTask(currentMonthTasks: TaskProps[]) {

@@ -12,6 +12,7 @@ import {
   taskToCardData,
   nextGroupIndex,
   upsertTaskWithRecurrence,
+  mergeMonth,
 } from "./functions";
 import type { TaskProps } from "@/types/types";
 
@@ -273,7 +274,7 @@ describe("nextGroupIndex", () => {
 });
 
 describe("upsertTaskWithRecurrence", () => {
-  const month = new Date(2026, 7, 1);
+  const month = [new Date(2026, 7, 1)];
   const daily = makeTask({ id: "r", repeat: "Daily", date: new Date(2026, 7, 1, 9, 0).getTime() });
 
   test("virar diária cria as instâncias do mês na hora", () => {
@@ -299,5 +300,33 @@ describe("upsertTaskWithRecurrence", () => {
     const other = makeTask({ id: "outra" });
     const next = upsertTaskWithRecurrence([other, daily], { ...daily, repeat: "Off" }, month);
     expect(next.filter((t) => t.id === "outra")).toEqual([other]);
+  });
+
+  test("reconstrói as instâncias em todos os meses carregados", () => {
+    const next = upsertTaskWithRecurrence([], daily, [new Date(2026, 7, 1), new Date(2026, 8, 1)]);
+    expect(next.length).toBe(61); // a original + 30 de agosto + 30 de setembro
+    expect(next.filter((t) => new Date(t.date).getMonth() === 8).length).toBe(30);
+  });
+});
+
+describe("mergeMonth", () => {
+  const aug = new Date(2026, 7, 1);
+  const inAug = makeTask({ id: "a", date: new Date(2026, 7, 10).getTime() });
+  const inSep = makeTask({ id: "s", date: new Date(2026, 8, 10).getTime() });
+
+  test("troca só as tarefas do mês buscado", () => {
+    const fresh = makeTask({ id: "n", date: new Date(2026, 7, 20).getTime() });
+    expect(mergeMonth([inAug, inSep], aug, [fresh])).toEqual([inSep, fresh]);
+  });
+
+  test("recorrente em dois meses: recarregar um não apaga as instâncias do outro", () => {
+    const daily = makeTask({ id: "r", repeat: "Daily", date: new Date(2026, 7, 31, 9).getTime() });
+    const sepInstance = { ...daily, date: new Date(2026, 8, 1, 9).getTime() };
+    const merged = mergeMonth([daily, sepInstance], aug, [{ ...daily, title: "novo" }]);
+    expect(merged).toEqual([sepInstance, { ...daily, title: "novo" }]);
+  });
+
+  test("mês vazio no servidor esvazia só aquele mês", () => {
+    expect(mergeMonth([inAug, inSep], aug, [])).toEqual([inSep]);
   });
 });

@@ -87,7 +87,7 @@ export function EditTaskContent({
   open?: boolean;
   onClose: () => void;
 }) {
-  const { tasks, setTasks, undatedTasks, setUndatedTasks, selectedDay } = useDailify();
+  const { tasks, setTasks, undatedTasks, setUndatedTasks, loadedMonths } = useDailify();
   const { getToken } = useAuth();
   const { user } = useUser();
   const navigate = useNavigate();
@@ -181,14 +181,14 @@ export function EditTaskContent({
       // A série vem primeiro: reexpandi-la é o que tira da lista a ocorrência que virou tarefa
       // própria (ela some pelo `exdates` novo), antes de inserir a tarefa destacada.
       const base = series
-        ? upsertTaskWithRecurrence(tasks ?? [], series, selectedDay)
+        ? upsertTaskWithRecurrence(tasks ?? [], series, loadedMonths)
         : (tasks ?? []);
       // Mudar de lado tira de uma lista e põe na outra; série só expande na agenda.
       if (updated.undated) {
         setTasks(occurrence === undefined ? base.filter((t) => t.id !== updated.id) : base);
         setUndatedTasks(upsertUndated(undatedTasks ?? [], updated));
       } else {
-        setTasks(upsertTaskWithRecurrence(base, updated, selectedDay));
+        setTasks(upsertTaskWithRecurrence(base, updated, loadedMonths));
         if (wasUndated) setUndatedTasks(removeUndated(undatedTasks ?? [], updated.id));
       }
       onClose();

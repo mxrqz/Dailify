@@ -9,7 +9,10 @@ Single source of truth via `useDailify()`: `tasks`, `currentMonthTasks`, `select
 `isCalendar`, `quotas`, `invoices`, `paymentDetails`, and their setters.
 
 - **`protected-route.tsx`** is where it all loads: gates on Clerk (`isLoaded`/`userId`), then
-  `getTasks()` (→ `getTasksForMonth`, `@/functions/api`) for the selected month. Payment/invoices
+  `getTasks()`: flushes the offline queue, then `reloadMonths` (context) for today, next month and
+  every month already in `loadedMonths`. Each month is fetched (`getTasksForMonth`) and merged into
+  `tasks` with `mergeMonth` — a month never replaces the others. `loadMonth(month)` (context) adds
+  one more month on demand, idempotent (loaded or in flight → no refetch). Payment/invoices
   load once in the boot effect (deps `[isLoaded, userId]`); quotas load in their own effect keyed
   by month (`quotaMonth`) — only that fetch refires when the month changes.
 - **`dashboard/day-view.tsx`** derives `dayTasks` from `getTasksForDay(tasks, selectedDay)` then
@@ -21,8 +24,9 @@ Single source of truth via `useDailify()`: `tasks`, `currentMonthTasks`, `select
 ## Writes are optimistic against the shared array
 
 On create success: `setTasks(upsertTaskById(tasks ?? [], task))`. On EDIT, use
-`upsertTaskWithRecurrence(tasks ?? [], task, selectedDay)` — recurring instances share the original's
-id, so `upsertTaskById` would swap only the first one and leave the rest stale. Complete/delete/patch apply the
+`upsertTaskWithRecurrence(tasks ?? [], task, loadedMonths)` — recurring instances share the
+original's id, so `upsertTaskById` would swap only the first one and leave the rest stale; it rebuilds
+the instances in every loaded month. Complete/delete/patch apply the
 change to `tasks` **immediately**, keep the previous array, and restore it if the server refuses
 (`hooks/useTaskActions.tsx`) — waiting for the round-trip made every tap feel dead on mobile. Delete
 also offers "Desfazer" in the toast, which recreates the task with the same id.

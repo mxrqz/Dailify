@@ -6,7 +6,6 @@ import { Loader2Icon } from "lucide-react";
 import { useDailify } from "./dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import {
-  getTasksForMonth,
   getQuotas,
   getPaymentDetails,
   getInvoices,
@@ -20,7 +19,7 @@ import {
   readCachedTasks,
   readCachedUndated,
 } from "@/functions/offline";
-import { isSameMonth } from "date-fns";
+import { addMonths } from "date-fns";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 
@@ -35,9 +34,9 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     setTasks,
     setIsLoading,
     isLoading,
-    setCurrentMonth,
-    currentMonth,
-    setCurrentMonthTasks,
+    loadedMonths,
+    loadMonth,
+    reloadMonths,
     setInvoices,
     setPaymentDetails,
     setQuotas,
@@ -183,7 +182,9 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       // Depois da fila, nunca junto: lida antes, a Sem data voltava sem o que foi feito offline.
       loadUndated();
 
-      const { tasks: fetched, error } = await getTasksForMonth(token, selectedDay);
+      // Hoje e o seguinte já no boot: a lista contínua não pode esperar a rolagem chegar no fim.
+      const today = new Date();
+      const error = await reloadMonths([...loadedMonths, today, addMonths(today, 1), selectedDay]);
 
       // Erro de carga não é mês vazio: sem o aviso, quem está sem rede lê "nada agendado" e acha
       // que perdeu as tarefas. Offline com cache na tela é silencioso — o indicador já conta.
@@ -193,12 +194,6 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
         }
         return;
       }
-
-      if (isSameMonth(new Date(), selectedDay)) {
-        setCurrentMonthTasks(fetched);
-      }
-
-      setTasks(fetched);
     } catch {
       // Sem isto o app trava no spinner para sempre: a exceção pulava o `setIsLoading(null)` e o
       // gate lá embaixo (`isLoading && !tasks`) nunca liberava. `setTasks([])` é o que destrava.
@@ -209,17 +204,18 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(null);
     }
-  }, [userId, user, selectedDay, tasks, loadUndated]);
+  }, [userId, user, selectedDay, tasks, loadedMonths, loadUndated]);
 
-  // 🗓️ Atualizar tarefas se mudar de mês (também cobre a carga inicial, já que currentMonth começa undefined)
+  // O boot passa pela fila (`getTasks`); depois, dia em outro mês só soma aquele mês à lista.
+  const booted = useRef(false);
   useEffect(() => {
     if (!isLoaded || !userId) return;
-
-    const shouldUpdateMonth = !currentMonth || !isSameMonth(currentMonth, selectedDay);
-    if (shouldUpdateMonth) {
-      setCurrentMonth(selectedDay);
-      getTasks();
+    if (booted.current) {
+      loadMonth(selectedDay);
+      return;
     }
+    booted.current = true;
+    getTasks();
   }, [selectedDay, isLoaded, userId]);
 
   // O celular passa horas em segundo plano e volta com a lista de antes; tarefa criada no desktop
