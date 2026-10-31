@@ -2,7 +2,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { act, render, screen } from "@testing-library/react";
 
+import { addDays, startOfDay } from "date-fns";
+
 import { copy } from "@/components/dashboard/copy";
+import { dayAnchorId } from "@/components/dashboard/day-section";
 
 const dailify = vi.hoisted(() => vi.fn());
 vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
@@ -47,5 +50,21 @@ describe("WeekStrip (mobile)", () => {
 
     cross("-48px 0px 0px 0px", { intersectionRatio: 1, ...top });
     expect(setStripDocked).toHaveBeenLastCalledWith(false);
+  });
+
+  it("o fundo marca o dia que se está lendo na lista, não hoje", () => {
+    vi.stubGlobal("IntersectionObserver", FakeObserver);
+    dailify.mockReturnValue({ tasks: [], goToDay: vi.fn(), setStripDocked: vi.fn() });
+    const section = document.createElement("section");
+    section.id = dayAnchorId(addDays(startOfDay(new Date()), 2));
+    document.body.append(section);
+
+    render(<WeekStrip />);
+    cross("-48px 0px -60% 0px", { target: section, isIntersecting: true });
+
+    const days = screen.getAllByRole("button");
+    expect(days[2].className).toContain("bg-surface-hover");
+    expect(days[0].className).not.toMatch(/(^| )bg-surface-hover/);
+    section.remove();
   });
 });
