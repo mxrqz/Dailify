@@ -39,6 +39,9 @@ interface DailifyContextType {
   setWeekStart: (weekStart: WeekStart) => void;
   /** Incremento otimista: sem ele a barra só se moveria no próximo fetch. */
   bumpUsage: (key: QuotaKey) => void;
+  /** A faixa da semana passou por baixo da top bar: no mobile ela vira a semana compacta do header. */
+  stripDocked: boolean;
+  setStripDocked: (docked: boolean) => void;
 }
 
 // Criando o contexto com um valor inicial `undefined`
@@ -48,6 +51,7 @@ const DailifyContext = createContext<DailifyContextType | undefined>(undefined);
 export function DailifyProvider({ children }: { children: ReactNode }) {
   const [selectedDay, setSelectedDay] = useState<Date>(new Date());
   const [targetDay, setTargetDay] = useState<Date>();
+  const [stripDocked, setStripDocked] = useState(false);
   const [tasks, setTasks] = useState<TaskProps[]>();
   const [isLoading, setIsLoading] = useState<null | string>(null);
   // Já começa com os do boot: com o cache na tela antes da 1ª leitura, `[]` apagava as instâncias.
@@ -179,6 +183,8 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
         weekStart,
         setWeekStart,
         bumpUsage,
+        stripDocked,
+        setStripDocked,
       }}
     >
       {children}
