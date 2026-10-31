@@ -7,7 +7,7 @@ import { DEFAULT_WEEK_START } from "@dailify/shared";
 import type { QuotaKey, WeekStart } from "@dailify/shared";
 import { getTasksForMonth } from "@/functions/api";
 import type { ApiError, QuotaSnapshot } from "@/functions/api";
-import { mergeMonth } from "@/functions/functions";
+import { initialMonths, mergeMonth } from "@/functions/functions";
 import { copy } from "@/components/dashboard/copy";
 
 interface DailifyContextType {
@@ -17,7 +17,7 @@ interface DailifyContextType {
   setTasks: (task: TaskProps[]) => void;
   isLoading: string | null;
   setIsLoading: (isLoading: string | null) => void;
-  /** Inícios de mês já buscados no servidor, em ordem. */
+  /** Inícios dos meses na tela, em ordem; quem reconstrói recorrência expande neles. */
   loadedMonths: Date[];
   /** Busca e mescla o mês; já carregado ou em voo não refaz. */
   loadMonth: (month: Date) => Promise<void>;
@@ -47,7 +47,8 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
   const [selectedDay, setSelectedDay] = useState<Date>(new Date());
   const [tasks, setTasks] = useState<TaskProps[]>();
   const [isLoading, setIsLoading] = useState<null | string>(null);
-  const [loadedMonths, setLoadedMonths] = useState<Date[]>([]);
+  // Já começa com os do boot: com o cache na tela antes da 1ª leitura, `[]` apagava as instâncias.
+  const [loadedMonths, setLoadedMonths] = useState<Date[]>(() => initialMonths(new Date()));
   const [currentMonthTasks, setCurrentMonthTasks] = useState<TaskProps[]>();
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsProps | null>();
   const [quotas, setQuotas] = useState<QuotaSnapshot>();
@@ -64,8 +65,9 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
     const month = startOfMonth(date);
     const key = month.getTime();
     // Um refresh pode ter posto outra requisição no lugar; só esquece a própria.
+    const isCurrent = () => monthRequests.current.get(key) === request;
     const forget = () => {
-      if (monthRequests.current.get(key) === request) monthRequests.current.delete(key);
+      if (isCurrent()) monthRequests.current.delete(key);
     };
     const request = (async (): Promise<ApiError | undefined> => {
       try {
@@ -79,6 +81,8 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
           forget();
           return error;
         }
+        // Uma releitura mais nova do mesmo mês já está no mapa: esta resposta é velha.
+        if (!isCurrent()) return;
         if (isSameMonth(new Date(), month)) setCurrentMonthTasks(fetched);
         setTasks((prev) => mergeMonth(prev ?? [], month, fetched));
         setLoadedMonths((prev) =>

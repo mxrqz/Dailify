@@ -1,5 +1,5 @@
 import { TaskProps } from "@/types/types";
-import { format, isSameDay, isSameMonth } from "date-fns";
+import { addMonths, format, isSameDay, isSameMonth, startOfMonth } from "date-fns";
 import { enUS, ptBR } from "date-fns/locale";
 import type { TaskCardData } from "@/components/task-card";
 import { expandRecurringTask } from "@dailify/shared";
@@ -74,6 +74,11 @@ export function upsertTaskWithRecurrence(
 ): TaskProps[] {
   const others = tasks.filter((t) => t.id !== task.id);
   return [...others, task, ...months.flatMap((month) => expandRecurringTask(task, month))];
+}
+
+/** Mês de hoje e o seguinte: a lista contínua não pode esperar a rolagem chegar no fim. */
+export function initialMonths(today: Date): Date[] {
+  return [startOfMonth(today), startOfMonth(addMonths(today, 1))];
 }
 
 /** Troca as tarefas de `month` pelas que o servidor devolveu; os outros meses ficam como estão. */

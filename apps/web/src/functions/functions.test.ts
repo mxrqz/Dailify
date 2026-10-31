@@ -13,6 +13,7 @@ import {
   nextGroupIndex,
   upsertTaskWithRecurrence,
   mergeMonth,
+  initialMonths,
 } from "./functions";
 import type { TaskProps } from "@/types/types";
 
@@ -306,6 +307,15 @@ describe("upsertTaskWithRecurrence", () => {
     const next = upsertTaskWithRecurrence([], daily, [new Date(2026, 7, 1), new Date(2026, 8, 1)]);
     expect(next.length).toBe(61); // a original + 30 de agosto + 30 de setembro
     expect(next.filter((t) => new Date(t.date).getMonth() === 8).length).toBe(30);
+  });
+});
+
+describe("initialMonths", () => {
+  test("concluir uma recorrente antes da 1ª leitura mantém as instâncias dos dois meses", () => {
+    const daily = makeTask({ id: "r", repeat: "Daily", date: new Date(2026, 7, 1, 9).getTime() });
+    const months = initialMonths(new Date(2026, 7, 31, 23));
+    expect(months).toEqual([new Date(2026, 7, 1), new Date(2026, 8, 1)]);
+    expect(upsertTaskWithRecurrence([daily], daily, months).length).toBe(61);
   });
 });
 
