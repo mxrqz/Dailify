@@ -156,7 +156,7 @@ export function DayTaskRow({
       selected={open}
       check={
         <ClockCheck
-          time={showTime ? data.time : undefined}
+          time={data.time}
           checked={data.completed}
           onCheckedChange={(next) => void (next ? onComplete() : onUncomplete())}
           label={data.completed ? copy.task.uncomplete : copy.task.complete}
