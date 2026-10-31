@@ -2,14 +2,14 @@ import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "re
 import { addDays, format, isToday, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
-import { AnimatePresence, motion, MotionConfig } from "motion/react";
+import { motion, MotionConfig } from "motion/react";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { MiniCalendar } from "@/components/dashboard/mini-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getTasksForDay } from "@/functions/functions";
-import { fade, spring } from "@/consts/motion";
+import { spring } from "@/consts/motion";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 
@@ -119,7 +119,7 @@ export function WeekStrip(): JSX.Element {
                 aria-current={current ? "date" : undefined}
                 className={cn(
                   "flex min-w-0 flex-1 cursor-pointer items-center justify-center transition-colors",
-                  docked ? "h-8 gap-1" : "flex-col gap-1 px-2 py-2",
+                  docked ? "h-8 gap-0.5" : "flex-col gap-1 px-2 py-2",
                   current ? "bg-surface-hover" : "hover:bg-surface-hover",
                 )}
               >
@@ -159,27 +159,30 @@ export function WeekStrip(): JSX.Element {
             );
           })}
 
-          <AnimatePresence initial={false}>
-            {!docked && (
-              <motion.div key="calendar" {...box} {...fade}>
-                <Popover>
-                  <PopoverTrigger
-                    aria-label={copy.day.openCalendar}
-                    className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
-                  >
-                    <CalendarIcon className="size-4" />
-                  </PopoverTrigger>
+          {/* Fica nas duas docas: sair com animação deixava a linha se reacomodar sem animar no fim
+              do morph — o "pulo" ao acoplar. */}
+          <Popover>
+            <PopoverTrigger asChild>
+              <motion.button
+                {...box}
+                initial={false}
+                animate={{ borderRadius: docked ? RADIUS_DAY_DOCKED : RADIUS_DAY }}
+                aria-label={copy.day.openCalendar}
+                className={cn(
+                  "flex shrink-0 cursor-pointer items-center justify-center text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground",
+                  docked ? "size-8" : "size-9",
+                )}
+              >
+                <motion.span {...leaf} className="flex">
+                  <CalendarIcon className="size-4" />
+                </motion.span>
+              </motion.button>
+            </PopoverTrigger>
 
-                  <PopoverContent
-                    align="end"
-                    className="w-auto border-surface-line bg-surface-card p-3"
-                  >
-                    <MiniCalendar />
-                  </PopoverContent>
-                </Popover>
-              </motion.div>
-            )}
-          </AnimatePresence>
+            <PopoverContent align="end" className="w-auto border-surface-line bg-surface-card p-3">
+              <MiniCalendar />
+            </PopoverContent>
+          </Popover>
         </motion.div>
       </MotionConfig>
     </div>

@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { act, render, screen, waitFor } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 
 import { copy } from "@/components/dashboard/copy";
 
@@ -29,7 +29,7 @@ afterEach(() => {
 });
 
 describe("WeekStrip (mobile)", () => {
-  it("acopla no header ao encostar na barra e só desacopla com folga", async () => {
+  it("acopla no header ao encostar na barra e só desacopla com folga", () => {
     vi.stubGlobal("IntersectionObserver", FakeObserver);
     const setStripDocked = vi.fn();
     dailify.mockReturnValue({ tasks: [], goToDay: vi.fn(), setStripDocked });
@@ -42,8 +42,8 @@ describe("WeekStrip (mobile)", () => {
     const top = { boundingClientRect: { ...rect, toJSON: () => rect } };
     cross("-40px 0px 0px 0px", { intersectionRatio: 0.5, ...top });
     expect(setStripDocked).toHaveBeenLastCalledWith(true);
-    // Acoplada: os 7 dias continuam (mesmos nós), o calendário sai.
-    await waitFor(() => expect(screen.getAllByRole("button")).toHaveLength(7));
+    // Acoplada: os mesmos 7 dias e o calendário, nada entra nem sai.
+    expect(screen.getAllByRole("button")).toHaveLength(8);
 
     cross("-48px 0px 0px 0px", { intersectionRatio: 1, ...top });
     expect(setStripDocked).toHaveBeenLastCalledWith(false);
