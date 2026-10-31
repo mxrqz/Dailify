@@ -18,9 +18,9 @@ import { useNow } from "@/hooks/useNow";
 const MAX_EMPTY_MONTHS = 12;
 
 /**
- * A lista do dashboard: um bloco por dia COM TAREFA (ou escolhido por clique), de hoje (ou do dia passado escolhido) até o
- * fim do trecho contíguo de meses carregados. A sentinela no fim pede o mês seguinte com ~2 telas de folga, então
- * ele já está lá quando a rolagem chega.
+ * A lista do dashboard: um bloco por dia COM TAREFA (ou escolhido por clique), de hoje (ou do dia
+ * passado escolhido) até o fim do trecho contíguo de meses carregados. A sentinela no fim pede o
+ * mês seguinte com ~2 telas de folga, então ele já está lá quando a rolagem chega.
  */
 export function DayList(): JSX.Element {
   const { selectedDay, tasks, undatedTasks, isLoading, loadedMonths, loadMonth, targetDay } =

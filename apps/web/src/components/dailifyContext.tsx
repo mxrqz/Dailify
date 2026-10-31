@@ -137,9 +137,11 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
 
   const goToDay = async (day: Date) => {
     const today = startOfDay(new Date());
+    // Todos os meses entre hoje e o dia: a lista só vai até o primeiro buraco, passado ou futuro.
+    const [from, to] = day < today ? [day, today] : [today, day];
+    await Promise.all(monthsBetween(from, to).map(loadMonth));
+    // Só depois de carregar, pra a lista não trocar de início antes de ter os meses.
     setSelectedDay(day);
-    // Dia passado vira o início da lista; o futuro precisa dos meses do meio, senão a lista não o alcança.
-    await Promise.all(monthsBetween(day < today ? day : today, day).map(loadMonth));
     // Data nova a cada clique: clicar no mesmo dia de novo rola de novo.
     setTargetDay(new Date(day));
   };

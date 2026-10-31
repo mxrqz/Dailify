@@ -389,3 +389,9 @@ describe("monthsBetween", () => {
     expect(monthsBetween(new Date(2026, 5, 9), new Date(2026, 5, 20))).toHaveLength(1);
   });
 });
+
+describe("monthsBetween (dia passado)", () => {
+  test("de um dia passado até hoje cobre todos os meses do meio", () => {
+    expect(monthsBetween(new Date(2026, 7, 15), new Date(2026, 9, 31))).toHaveLength(3);
+  });
+});

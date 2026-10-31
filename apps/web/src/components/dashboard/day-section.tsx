@@ -150,8 +150,8 @@ export function DaySection({ day }: { day: Date }): JSX.Element {
         />
 
         <span className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
-          {/* Em hoje sem tarefa datada o bloco A qualquer hora já ocupa o dia: "Nenhuma tarefa" mentiria. */}
-          {!(isCurrentDay && dayTasks.length === 0) && taskCountLabel(dayTasks.length)}
+          {/* Dia sem tarefa já tem o bloco A qualquer hora ou "Nada neste dia" no corpo. */}
+          {dayTasks.length > 0 && taskCountLabel(dayTasks.length)}
         </span>
       </header>
 
