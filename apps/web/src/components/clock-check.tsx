@@ -1,14 +1,14 @@
 import { motion, useReducedMotion } from "motion/react";
 import { duration, ease } from "@/consts/motion";
 
-// 0° = 12h, sentido horário; a hora usa o relógio de 12h com a fração dos minutos.
-export const clockAngles = (time: string) => {
+// Posição do ponteiro das horas: 0° = 12h, sentido horário, com a fração dos minutos.
+export const hourAngle = (time: string) => {
   const [h, m] = time.split(":").map(Number);
-  return { hour: ((h % 12) + m / 60) * 30, minute: m * 6 };
+  return ((h % 12) + m / 60) * 30;
 };
 
 const CENTER = 10;
-const DOT_RADIUS = 6;
+const DOT_RADIUS = 4.5;
 const polar = (deg: number) => ({
   cx: CENTER + DOT_RADIUS * Math.sin((deg * Math.PI) / 180),
   cy: CENTER - DOT_RADIUS * Math.cos((deg * Math.PI) / 180),
@@ -23,12 +23,7 @@ type Props = {
 
 export function ClockCheck({ checked, onCheckedChange, time, label }: Props) {
   const reduce = useReducedMotion();
-  const dots = time
-    ? [
-        { ...polar(clockAngles(time).hour), r: 1.6 },
-        { ...polar(clockAngles(time).minute), r: 1.1 },
-      ]
-    : [{ cx: CENTER, cy: CENTER, r: 1.1 }];
+  const dot = time ? polar(hourAngle(time)) : { cx: CENTER, cy: CENTER };
 
   return (
     <motion.button
@@ -48,16 +43,14 @@ export function ClockCheck({ checked, onCheckedChange, time, label }: Props) {
           strokeWidth="1.5"
           className={`transition-colors duration-base ease-out ${checked ? "fill-primary stroke-primary" : "fill-transparent stroke-control-mark"}`}
         />
-        {dots.map((d) => (
-          <motion.circle
-            key={`${d.cx}-${d.cy}-${d.r}`}
-            data-dot
-            {...d}
-            className="fill-content-secondary"
-            animate={{ opacity: checked ? 0 : 1 }}
-            transition={{ duration: reduce ? 0 : duration.fast, ease: ease.out }}
-          />
-        ))}
+        <motion.circle
+          data-dot
+          {...dot}
+          r={1.6}
+          className="fill-content-secondary"
+          animate={{ opacity: checked ? 0 : 1 }}
+          transition={{ duration: reduce ? 0 : duration.fast, ease: ease.out }}
+        />
         <motion.path
           d="M6 10.4l2.8 2.8L14 7.4"
           pathLength={1}

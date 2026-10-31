@@ -45,7 +45,7 @@ describe("DayTaskRow", () => {
     api.completeTask.mockResolvedValue({});
     const { container } = render(<DayTaskRow task={task} day={day} showTime={false} />);
 
-    expect(container.querySelectorAll("[data-dot]")).toHaveLength(2);
+    expect(container.querySelector("[data-dot]")?.getAttribute("cy")).not.toBe("10");
     fireEvent.click(screen.getByRole("checkbox"));
     expect(screen.queryByText("folha aberta")).toBeNull();
   });

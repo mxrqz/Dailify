@@ -2,18 +2,18 @@
 import { useState } from "react";
 import { describe, it, expect } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
-import { ClockCheck, clockAngles } from "./clock-check";
+import { ClockCheck, hourAngle } from "./clock-check";
 
 const Harness = ({ time }: { time?: string }) => {
   const [checked, setChecked] = useState(false);
   return <ClockCheck checked={checked} onCheckedChange={setChecked} time={time} label="Concluir" />;
 };
 
-describe("clockAngles", () => {
-  it("hora em 12h, minuto em 6°/min, 0° = 12h", () => {
-    expect(clockAngles("21:00")).toEqual({ hour: 270, minute: 0 });
-    expect(clockAngles("09:30")).toEqual({ hour: 285, minute: 180 });
-    expect(clockAngles("12:00")).toEqual({ hour: 0, minute: 0 });
+describe("hourAngle", () => {
+  it("relógio de 12h com a fração dos minutos, 0° = 12h", () => {
+    expect(hourAngle("21:00")).toBe(270);
+    expect(hourAngle("09:30")).toBe(285);
+    expect(hourAngle("12:00")).toBe(0);
   });
 });
 
@@ -26,10 +26,13 @@ describe("ClockCheck", () => {
     expect(box.getAttribute("aria-checked")).toBe("true");
   });
 
-  it("1 ponto sem horário, 2 com horário", () => {
+  it("um ponto: no centro sem horário, fora dele com horário", () => {
     const { container, rerender } = render(<Harness />);
-    expect(container.querySelectorAll("circle[data-dot]")).toHaveLength(1);
-    rerender(<Harness time="09:30" />);
-    expect(container.querySelectorAll("circle[data-dot]")).toHaveLength(2);
+    const dot = () => container.querySelectorAll("circle[data-dot]");
+    expect(dot()).toHaveLength(1);
+    expect(dot()[0].getAttribute("cy")).toBe("10");
+    rerender(<Harness time="12:00" />);
+    expect(dot()).toHaveLength(1);
+    expect(dot()[0].getAttribute("cy")).toBe("5.5");
   });
 });
