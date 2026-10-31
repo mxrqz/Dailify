@@ -14,6 +14,7 @@ import {
   upsertTaskWithRecurrence,
   mergeMonth,
   initialMonths,
+  listDays,
 } from "./functions";
 import type { TaskProps } from "@/types/types";
 
@@ -338,5 +339,31 @@ describe("mergeMonth", () => {
 
   test("mês vazio no servidor esvazia só aquele mês", () => {
     expect(mergeMonth([inAug, inSep], aug, [])).toEqual([inSep]);
+  });
+});
+
+describe("listDays", () => {
+  const start = new Date(2026, 7, 10);
+  const end = new Date(2026, 8, 30);
+  const at = (m: number, d: number) => makeTask({ date: new Date(2026, m, d, 9).getTime() });
+
+  test("só dias com tarefa, atravessando meses, em ordem", () => {
+    const days = listDays({ start, end, tasks: [at(8, 5), at(7, 12), at(7, 12)] });
+    expect(days).toEqual([new Date(2026, 7, 12), new Date(2026, 8, 5)]);
+  });
+
+  test("o início entra sem tarefa quando pedido; dias extras também, sem duplicar", () => {
+    const days = listDays({
+      start,
+      end,
+      tasks: [at(7, 20)],
+      keepStart: true,
+      extra: [new Date(2026, 7, 15, 13), new Date(2026, 7, 20)],
+    });
+    expect(days).toEqual([new Date(2026, 7, 10), new Date(2026, 7, 15), new Date(2026, 7, 20)]);
+  });
+
+  test("extra fora do intervalo é ignorado", () => {
+    expect(listDays({ start, end, tasks: [], extra: [new Date(2026, 7, 1)] })).toEqual([]);
   });
 });

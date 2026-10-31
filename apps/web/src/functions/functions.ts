@@ -1,5 +1,12 @@
 import { TaskProps } from "@/types/types";
-import { addMonths, format, isSameDay, isSameMonth, startOfMonth } from "date-fns";
+import {
+  addMonths,
+  eachDayOfInterval,
+  format,
+  isSameDay,
+  isSameMonth,
+  startOfMonth,
+} from "date-fns";
 import { enUS, ptBR } from "date-fns/locale";
 import type { TaskCardData } from "@/components/task-card";
 import { expandRecurringTask } from "@dailify/shared";
@@ -79,6 +86,28 @@ export function upsertTaskWithRecurrence(
 /** Mês de hoje e o seguinte: a lista contínua não pode esperar a rolagem chegar no fim. */
 export function initialMonths(today: Date): Date[] {
   return [startOfMonth(today), startOfMonth(addMonths(today, 1))];
+}
+
+/** Dias de `start` a `end` que entram na lista: com tarefa, `extra` e, se pedido, o próprio início. */
+export function listDays({
+  start,
+  end,
+  tasks,
+  extra = [],
+  keepStart = false,
+}: {
+  start: Date;
+  end: Date;
+  tasks: TaskProps[];
+  extra?: Date[];
+  keepStart?: boolean;
+}): Date[] {
+  return eachDayOfInterval({ start, end }).filter(
+    (day, i) =>
+      (keepStart && i === 0) ||
+      extra.some((d) => isSameDay(d, day)) ||
+      getTasksForDay(tasks, day).length > 0,
+  );
 }
 
 /** Troca as tarefas de `month` pelas que o servidor devolveu; os outros meses ficam como estão. */

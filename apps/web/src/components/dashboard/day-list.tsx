@@ -1,51 +1,93 @@
-import { eachDayOfInterval, endOfMonth, isSameMonth, startOfDay, startOfMonth } from "date-fns";
+import { useEffect, useRef } from "react";
+import {
+  addMonths,
+  differenceInCalendarMonths,
+  endOfMonth,
+  startOfDay,
+  startOfMonth,
+} from "date-fns";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { DaySection, TaskSkeletons } from "@/components/dashboard/day-section";
-import { getTasksForDay } from "@/functions/functions";
+import { listDays } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
 
+// Sem tarefa em tantos meses seguidos, a sentinela desiste de pedir o próximo.
+const MAX_EMPTY_MONTHS = 12;
+
 /**
- * A lista do dashboard: um bloco por dia COM TAREFA, de hoje até o fim do mês carregado. Não há
- * mais troca entre "dia" e "mês" — é a mesma sequência, e quem rola é a página.
- *
- * Num mês que não é o atual (o mini-calendário navegou) começa no dia 1, porque não existe
- * "hoje" nele.
+ * A lista do dashboard: um bloco por dia COM TAREFA, de hoje (ou do dia passado escolhido) até o
+ * fim do último mês carregado. A sentinela no fim pede o mês seguinte com ~2 telas de folga, então
+ * ele já está lá quando a rolagem chega.
  */
 export function DayList(): JSX.Element {
-  const { selectedDay, tasks, undatedTasks, isLoading } = useDailify();
+  const { selectedDay, tasks, undatedTasks, isLoading, loadedMonths, loadMonth } = useDailify();
+  const sentinel = useRef<HTMLDivElement>(null);
 
   // `useNow` e não `new Date()` solto: com o app aberto na virada do dia, a lista continuava
   // começando em ontem.
   const today = startOfDay(useNow(60_000));
-  const currentMonth = isSameMonth(selectedDay, today);
-  const start = currentMonth ? today : startOfMonth(selectedDay);
+  const start = selectedDay < today ? startOfDay(selectedDay) : today;
+  const lastMonth = loadedMonths[loadedMonths.length - 1];
 
-  // Só os dias que têm tarefa: a sequência completa do mês era uma parede de "nenhuma tarefa".
-  // Hoje entra também quando há tarefa sem data: o bloco "A qualquer hora" mora nele.
-  const days = eachDayOfInterval({ start, end: endOfMonth(selectedDay) }).filter(
-    (day, i) =>
-      (tasks && getTasksForDay(tasks, day).length > 0) ||
-      (currentMonth && i === 0 && !!undatedTasks?.length),
+  // Meses carregados desde a última tarefa: passou do limite, não há por que continuar pedindo.
+  const lastTask = tasks?.reduce((max, t) => Math.max(max, t.date), 0);
+  const emptyMonths = differenceInCalendarMonths(
+    lastMonth,
+    lastTask ? startOfMonth(lastTask) : startOfMonth(today),
   );
+  const canLoadMore = emptyMonths < MAX_EMPTY_MONTHS;
+
+  // Hoje entra também quando há tarefa sem data: o bloco "A qualquer hora" mora nele.
+  const days = listDays({
+    start,
+    end: endOfMonth(lastMonth),
+    tasks: tasks ?? [],
+    keepStart: start.getTime() === today.getTime() && !!undatedTasks?.length,
+  });
+
+  // Reobserva a cada mês novo: o observer só avisa quando a interseção muda, e um mês sem tarefa
+  // deixa a sentinela onde estava.
+  useEffect(() => {
+    const el = sentinel.current;
+    if (!el || isLoading || !canLoadMore) return;
+    const observer = new IntersectionObserver(
+      (entries) => {
+        if (entries.some((e) => e.isIntersecting)) void loadMonth(addMonths(lastMonth, 1));
+      },
+      { rootMargin: "0px 0px 200% 0px" },
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [lastMonth.getTime(), isLoading, canLoadMore]);
+
+  const sentinelEl = <div ref={sentinel} aria-hidden />;
 
   if (isLoading) return <TaskSkeletons />;
 
   // Primeiro uso e mês vazio são situações diferentes: uma pede um empurrão, a outra é só um fato.
   if (days.length === 0) {
     if (tasks?.length || undatedTasks?.length) {
-      return <p className="py-6 text-sm text-content-secondary">{copy.day.listEmpty}</p>;
+      return (
+        <>
+          <p className="py-6 text-sm text-content-secondary">{copy.day.listEmpty}</p>
+          {sentinelEl}
+        </>
+      );
     }
 
     return (
-      <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-surface-line px-6 py-10 text-center">
-        <p className="text-sm font-medium text-foreground">{copy.day.listFirstRun}</p>
-        <p className="max-w-xs text-sm text-content-secondary">{copy.day.listFirstRunHint}</p>
-        <p className="mt-1 rounded-md bg-surface-panel px-2 py-1 font-mono text-2xs text-muted-foreground">
-          {copy.day.listFirstRunExample}
-        </p>
-      </div>
+      <>
+        <div className="flex flex-col items-center gap-2 rounded-2xl border border-dashed border-surface-line px-6 py-10 text-center">
+          <p className="text-sm font-medium text-foreground">{copy.day.listFirstRun}</p>
+          <p className="max-w-xs text-sm text-content-secondary">{copy.day.listFirstRunHint}</p>
+          <p className="mt-1 rounded-md bg-surface-panel px-2 py-1 font-mono text-2xs text-muted-foreground">
+            {copy.day.listFirstRunExample}
+          </p>
+        </div>
+        {sentinelEl}
+      </>
     );
   }
 
@@ -54,6 +96,7 @@ export function DayList(): JSX.Element {
       {days.map((day) => (
         <DaySection key={day.toISOString()} day={day} />
       ))}
+      {sentinelEl}
     </div>
   );
 }

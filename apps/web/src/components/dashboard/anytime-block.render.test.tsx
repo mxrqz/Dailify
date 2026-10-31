@@ -60,6 +60,8 @@ const context = (undatedTasks: Task[] | undefined) => {
     selectedDay: new Date(FRIDAY),
     quotas: undefined,
     isLoading: null,
+    loadedMonths: [new Date(FRIDAY)],
+    loadMonth: vi.fn(),
   });
   return setUndatedTasks;
 };
