@@ -14,23 +14,27 @@ import { useNow } from "@/hooks/useNow";
  * "hoje" nele.
  */
 export function DayList(): JSX.Element {
-  const { selectedDay, tasks, isLoading } = useDailify();
+  const { selectedDay, tasks, undatedTasks, isLoading } = useDailify();
 
   // `useNow` e não `new Date()` solto: com o app aberto na virada do dia, a lista continuava
   // começando em ontem.
   const today = startOfDay(useNow(60_000));
-  const start = isSameMonth(selectedDay, today) ? today : startOfMonth(selectedDay);
+  const currentMonth = isSameMonth(selectedDay, today);
+  const start = currentMonth ? today : startOfMonth(selectedDay);
 
   // Só os dias que têm tarefa: a sequência completa do mês era uma parede de "nenhuma tarefa".
+  // Hoje entra também quando há tarefa sem data: o bloco "A qualquer hora" mora nele.
   const days = eachDayOfInterval({ start, end: endOfMonth(selectedDay) }).filter(
-    (day) => tasks && getTasksForDay(tasks, day).length > 0,
+    (day, i) =>
+      (tasks && getTasksForDay(tasks, day).length > 0) ||
+      (currentMonth && i === 0 && !!undatedTasks?.length),
   );
 
   if (isLoading) return <TaskSkeletons />;
 
   // Primeiro uso e mês vazio são situações diferentes: uma pede um empurrão, a outra é só um fato.
   if (days.length === 0) {
-    if (tasks?.length) {
+    if (tasks?.length || undatedTasks?.length) {
       return <p className="py-6 text-sm text-content-secondary">{copy.day.listEmpty}</p>;
     }
 

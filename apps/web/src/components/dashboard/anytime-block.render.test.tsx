@@ -24,7 +24,8 @@ vi.mock("@/functions/api", () => api);
 
 import { copy } from "./copy";
 import { CheckHistory } from "./check-history";
-import { UndatedList } from "./undated-list";
+import { AnytimeBlock } from "./anytime-block";
+import { DayList } from "./day-list";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
 import { readQueue } from "@/functions/offline";
 
@@ -58,6 +59,7 @@ const context = (undatedTasks: Task[] | undefined) => {
     bumpUsage: vi.fn(),
     selectedDay: new Date(FRIDAY),
     quotas: undefined,
+    isLoading: null,
   });
   return setUndatedTasks;
 };
@@ -66,7 +68,7 @@ const renderList = (undatedTasks: Task[] | undefined) => {
   context(undatedTasks);
   return render(
     <MemoryRouter>
-      <UndatedList />
+      <AnytimeBlock />
     </MemoryRouter>,
   );
 };
@@ -83,7 +85,7 @@ afterEach(() => {
   localStorage.clear();
 });
 
-describe("<UndatedList>", () => {
+describe("<AnytimeBlock>", () => {
   it("série marcada nesta semana aparece marcada", () => {
     renderList([
       task({
@@ -119,14 +121,16 @@ describe("<UndatedList>", () => {
     expect(screen.getByText(copy.undated.onePending)).toBeInTheDocument();
   });
 
-  it("vazio mostra copy.undated.empty", () => {
+  it("vazio fica só com o campo de anotar", () => {
     renderList([]);
-    expect(screen.getByText(copy.undated.empty)).toBeInTheDocument();
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(screen.getByText("0 pendentes")).toBeInTheDocument();
+    expect(screen.getByPlaceholderText(copy.undated.capture)).toBeInTheDocument();
   });
 
-  it("carregando (undefined) não quebra nem diz que está vazio", () => {
+  it("carregando (undefined) não quebra nem mostra contagem", () => {
     renderList(undefined);
-    expect(screen.queryByText(copy.undated.empty)).not.toBeInTheDocument();
+    expect(screen.queryByText(/pendente/)).not.toBeInTheDocument();
     expect(screen.getByPlaceholderText(copy.undated.capture)).toBeInTheDocument();
   });
 
@@ -194,6 +198,32 @@ describe("<UndatedList>", () => {
       expect.objectContaining({ alert: next, undated: true }),
       undefined,
     );
+  });
+});
+
+describe("<DayList> com tarefas sem data", () => {
+  const renderDayList = (undatedTasks: Task[]) => {
+    context(undatedTasks);
+    return render(
+      <MemoryRouter>
+        <DayList />
+      </MemoryRouter>,
+    );
+  };
+
+  it("hoje aparece com o bloco no topo mesmo sem tarefa datada", () => {
+    renderDayList([task({ id: "a", title: "Comprar presente" })]);
+
+    const block = screen.getByRole("region", { name: copy.undated.title });
+    expect(block.closest("section[id]")).toHaveTextContent(copy.day.today);
+    expect(within(block).getByText("Comprar presente")).toBeInTheDocument();
+    expect(screen.queryByText(copy.day.listFirstRun)).not.toBeInTheDocument();
+  });
+
+  it("sem tarefa nenhuma mostra o primeiro uso", () => {
+    renderDayList([]);
+    expect(screen.getByText(copy.day.listFirstRun)).toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: copy.undated.title })).not.toBeInTheDocument();
   });
 });
 

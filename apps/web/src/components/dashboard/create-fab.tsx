@@ -26,8 +26,6 @@ const iconButton =
 interface CreateFabProps {
   onSubmit: (values: ComposerValues) => void;
   submitting?: boolean;
-  /** Tela Sem data do mobile: o "+" cria sem data. */
-  undatedOnly?: boolean;
 }
 
 /**
@@ -35,7 +33,7 @@ interface CreateFabProps {
  * aberto no rodapé do painel (largura toda). Sem portal de propósito: no desktop a folha se ancora
  * no próprio botão, que mora no painel da agenda e desliza com ele.
  */
-export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps): JSX.Element {
+export function CreateFab({ onSubmit, submitting }: CreateFabProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const [docked, setDocked] = useStoredFlag(DOCKED_KEY);
   // Desfixou: a folha fica aberta e some quando o mouse sai dela.
@@ -43,7 +41,7 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
   const desktop = useMediaQuery("(min-width: 768px)");
   const reduce = useReducedMotion();
   const fabRef = useRef<HTMLButtonElement>(null);
-  const label = undatedOnly ? copy.composer.openUndated : copy.composer.open;
+  const label = copy.composer.open;
 
   const morph = reduce ? { duration: 0 } : spring.soft;
   // O conteúdo só aparece depois que a superfície já tomou forma, e sai antes de ela encolher.
@@ -93,8 +91,7 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
   return (
     <LayoutGroup id="composer">
       {docked ? (
-        // pb-16 no mobile: o campo para acima do indicador de páginas, que é fixed em bottom-6.
-        <div className="sticky bottom-0 z-40 mt-auto px-4 pb-16 md:px-6 md:pb-6">
+        <div className="sticky bottom-0 z-40 mt-auto px-4 pb-4 md:px-6 md:pb-6">
           <motion.section
             layoutId={SURFACE}
             transition={morph}
@@ -103,11 +100,7 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
             className="relative border border-highlight bg-surface-panel p-1 shadow-panel"
           >
             <motion.div {...content}>
-              <TaskComposer
-                submitting={submitting}
-                undatedOnly={undatedOnly}
-                onSubmit={(values) => onSubmit(values)}
-              />
+              <TaskComposer submitting={submitting} onSubmit={(values) => onSubmit(values)} />
             </motion.div>
             <motion.button
               {...content}
@@ -187,7 +180,6 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
                 <motion.div {...content}>
                   <TaskComposer
                     submitting={submitting}
-                    undatedOnly={undatedOnly}
                     onSubmit={(values, again) => {
                       onSubmit(values);
                       if (!again) changeOpen(false);

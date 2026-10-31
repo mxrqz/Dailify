@@ -23,13 +23,10 @@ import { cn } from "@/lib/utils";
 
 export interface ComposerValues {
   parsed: ParsedTask;
-  undatedOnly: boolean;
 }
 
 interface TaskComposerProps {
   submitting?: boolean;
-  /** Folha aberta na tela Sem data: a regra de destino ignora a data/hora do parser. */
-  undatedOnly?: boolean;
   /** `again`: ⇧⏎, criar e continuar — quem abriu a folha a mantém aberta. */
   onSubmit: (values: ComposerValues, again: boolean) => void;
 }
@@ -46,18 +43,11 @@ const ghost = "border-dashed border-surface-line text-muted-foreground";
  * "Vai para" diz onde a tarefa cai — sem esse eco o usuário só descobre no envio que a hora não
  * foi entendida.
  */
-export function TaskComposer({
-  submitting,
-  undatedOnly = false,
-  onSubmit,
-}: TaskComposerProps): JSX.Element {
+export function TaskComposer({ submitting, onSubmit }: TaskComposerProps): JSX.Element {
   const [input, setInput] = useState("");
 
   const parsed = useMemo(() => parseTaskText(input), [input]);
-  const task = useMemo(
-    () => composeTaskInput(parsed, new Date(), { undatedOnly }),
-    [parsed, undatedOnly],
-  );
+  const task = useMemo(() => composeTaskInput(parsed, new Date()), [parsed]);
   const canSubmit = Boolean(parsed.text) && !submitting;
 
   const destination = !task.undated
@@ -67,11 +57,10 @@ export function TaskComposer({
       : copy.composer.toUndated;
 
   const recurring = parsed.repeat !== "Off";
-  const hasTime = parsed.hasTime && !undatedOnly;
 
   const submit = (again: boolean) => {
     if (!canSubmit) return;
-    onSubmit({ parsed, undatedOnly }, again);
+    onSubmit({ parsed }, again);
     setInput("");
   };
 
@@ -122,8 +111,8 @@ export function TaskComposer({
             copy.composer.addDay
           )}
         </span>
-        <span className={cn(chip, hasTime ? metaTime : ghost)}>
-          {hasTime && parsed.date ? (
+        <span className={cn(chip, parsed.hasTime ? metaTime : ghost)}>
+          {parsed.hasTime && parsed.date ? (
             <>
               <ClockIcon className="size-3" aria-hidden="true" />
               {format(parsed.date, "HH:mm")}

@@ -5,9 +5,9 @@ import userEvent from "@testing-library/user-event";
 
 import { CreateFab } from "./create-fab";
 
-const setup = (undatedOnly?: boolean) => {
+const setup = () => {
   const onSubmit = vi.fn();
-  render(<CreateFab onSubmit={onSubmit} undatedOnly={undatedOnly} />);
+  render(<CreateFab onSubmit={onSubmit} />);
   // Radix modal põe pointer-events:none no body; sem isso o user-event recusa o unhover.
   return { onSubmit, user: userEvent.setup({ pointerEventsCheck: 0 }) };
 };
@@ -149,7 +149,7 @@ describe("<CreateFab>", () => {
     expect(screen.getByRole("textbox")).toHaveValue("");
   });
 
-  it("mostra o destino: com horário vai para a Agenda; na Sem data, sempre Sem data", async () => {
+  it("mostra o destino: com horário vai para a Agenda; sem horário, A qualquer hora", async () => {
     const { user } = setup();
     await user.click(screen.getByRole("button", { name: "Nova tarefa" }));
     await user.keyboard("Reunião amanhã às 16h");
@@ -157,15 +157,6 @@ describe("<CreateFab>", () => {
 
     await user.clear(screen.getByRole("textbox"));
     await user.keyboard("Regar as plantas toda quarta");
-    expect(screen.getByRole("dialog")).toHaveTextContent("Vai para Sem data · Recorrentes");
-  });
-
-  it("undatedOnly manda para Sem data mesmo com horário", async () => {
-    const { user } = setup(true);
-    await user.click(screen.getByRole("button", { name: "Nova tarefa sem data" }));
-    await user.keyboard("Reunião amanhã às 16h");
-
-    expect(screen.getByRole("dialog")).toHaveTextContent("Vai para Sem data");
-    expect(screen.getByRole("dialog")).not.toHaveTextContent("Agenda");
+    expect(screen.getByRole("dialog")).toHaveTextContent("Vai para A qualquer hora · Recorrentes");
   });
 });

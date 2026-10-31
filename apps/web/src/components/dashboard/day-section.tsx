@@ -4,6 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 
 import { useDailify } from "@/components/dailifyContext";
+import { AnytimeBlock } from "@/components/dashboard/anytime-block";
 import { copy } from "@/components/dashboard/copy";
 import { DayTaskRow } from "@/components/dashboard/day-task-row";
 import { TaskCard } from "@/components/task-card";
@@ -152,6 +153,8 @@ export function DaySection({ day }: { day: Date }): JSX.Element {
           {taskCountLabel(dayTasks.length)}
         </span>
       </header>
+
+      {isCurrentDay && <AnytimeBlock />}
 
       {groups.length > 0 && (
         <motion.ul

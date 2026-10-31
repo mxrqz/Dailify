@@ -1,7 +1,8 @@
 import { useState, type FormEvent } from "react";
-import { Bell, Check, Plus } from "lucide-react";
+import { Bell, Plus, RepeatIcon } from "lucide-react";
 import { PERIOD_ROLLOVER_HOUR, type Task } from "@dailify/shared";
 
+import { ClockCheck } from "@/components/clock-check";
 import { useDailify } from "@/components/dailifyContext";
 import { CheckHistory, periodKind } from "@/components/dashboard/check-history";
 import { copy } from "@/components/dashboard/copy";
@@ -31,7 +32,7 @@ function ReminderChip({ at }: { at: number }): JSX.Element {
   );
 }
 
-function UndatedRow({ task, swipe }: { task: Task; swipe: boolean }): JSX.Element {
+function AnytimeRow({ task, swipe }: { task: Task; swipe: boolean }): JSX.Element {
   const { weekStart } = useDailify();
   const { done, toggle, remove } = useUndatedActions(task);
   const [open, setOpen] = useState(false);
@@ -43,32 +44,21 @@ function UndatedRow({ task, swipe }: { task: Task; swipe: boolean }): JSX.Elemen
     ) : task.alert ? (
       <ReminderChip at={task.alert} />
     ) : (
-      recurring && <span>{repeatLabel(task.repeat)}</span>
+      recurring && (
+        <span className="inline-flex items-center gap-1 text-meta-repeat">
+          <RepeatIcon className="size-3" aria-hidden />
+          {repeatLabel(task.repeat)}
+        </span>
+      )
     );
 
   const row = (
-    <div className="-mx-2.5 flex items-start gap-2.5 rounded-xl bg-surface-card px-2.5 py-2 transition-colors hover:bg-surface-hover">
-      <button
-        type="button"
-        role="checkbox"
-        aria-checked={done}
-        aria-label={done ? copy.task.uncomplete : copy.task.complete}
-        onClick={() => void toggle()}
-        className={cn(
-          "mt-0.5 grid size-4.5 shrink-0 place-items-center rounded-md border-2 outline-none focus-visible:ring-3 focus-visible:ring-ring/50",
-          !done && "border-highlight",
-          done && (recurring ? "border-success bg-success" : "border-foreground bg-foreground"),
-        )}
-      >
-        <Check
-          aria-hidden
-          strokeWidth={3}
-          className={cn(
-            "size-3 text-surface-page transition-[opacity,transform] duration-200 motion-reduce:transition-none",
-            done ? "scale-100 opacity-100" : "scale-50 opacity-0",
-          )}
-        />
-      </button>
+    <div className="flex items-start gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-surface-hover">
+      <ClockCheck
+        checked={done}
+        onCheckedChange={() => void toggle()}
+        label={done ? copy.task.uncomplete : copy.task.complete}
+      />
 
       <button
         type="button"
@@ -112,7 +102,7 @@ function UndatedRow({ task, swipe }: { task: Task; swipe: boolean }): JSX.Elemen
   );
 }
 
-/** Campo do topo: Enter anota em Sem data sem abrir a folha de criação. */
+/** Última linha do bloco: Enter anota sem data, sem abrir a folha de criação. */
 function CaptureField(): JSX.Element {
   const { create, submitting } = useCreateTask();
   const [text, setText] = useState("");
@@ -127,9 +117,9 @@ function CaptureField(): JSX.Element {
   return (
     <form
       onSubmit={(e) => void onSubmit(e)}
-      className="flex items-center gap-2 rounded-field border border-surface-line bg-surface-page px-3 py-2"
+      className="flex items-center gap-2.5 rounded-lg px-2.5 py-2 transition-colors focus-within:bg-surface-hover hover:bg-surface-hover"
     >
-      <Plus className="size-4 shrink-0 text-muted-foreground" aria-hidden />
+      <Plus className="size-5 shrink-0 p-0.5 text-muted-foreground" aria-hidden />
       <input
         value={text}
         onChange={(e) => setText(e.target.value)}
@@ -141,20 +131,20 @@ function CaptureField(): JSX.Element {
   );
 }
 
-export const pendingLabel = (n: number): string =>
+const pendingLabel = (n: number): string =>
   n === 1 ? copy.undated.onePending : copy.undated.manyPending.replace("{n}", String(n));
 
 function SectionHeader({ title, hint }: { title: string; hint?: string }): JSX.Element {
   return (
-    <div className="mx-0.5 mt-1.5 mb-2 flex justify-between text-xs">
-      <h3 className="text-content-secondary">{title}</h3>
+    <div className="mx-2.5 mt-1.5 mb-1 flex justify-between text-xs">
+      <h4 className="text-content-secondary">{title}</h4>
       {hint && <span className="text-muted-foreground">{hint}</span>}
     </div>
   );
 }
 
-/** A lista Sem data: recorrentes (marcadas por período) no topo, afazeres embaixo. */
-export function UndatedList({ className }: { className?: string }): JSX.Element {
+/** Topo de hoje: recorrentes (marcadas por período), afazeres sem data e o campo de anotar. */
+export function AnytimeBlock(): JSX.Element {
   const { undatedTasks, weekStart } = useDailify();
   const swipe = useMediaQuery(SHEET_EDITING);
   const { recurring, todo } = splitUndated(undatedTasks ?? []);
@@ -169,42 +159,36 @@ export function UndatedList({ className }: { className?: string }): JSX.Element 
     <section
       aria-label={copy.undated.title}
       aria-busy={undatedTasks === undefined}
-      className={cn("flex flex-col", className)}
+      className="mb-3 flex flex-col rounded-field border border-dashed border-surface-line p-1"
     >
-      <div className="mb-3 flex items-baseline justify-between">
-        <h2 className="text-base font-semibold">{copy.undated.title}</h2>
-        {undatedTasks && (
-          <span className="text-xs text-muted-foreground">{pendingLabel(pending)}</span>
-        )}
+      <div className="flex items-baseline gap-2 px-2.5 py-1.5 font-mono text-2xs uppercase tracking-wider">
+        <h3 className="text-content-secondary">{copy.undated.title}</h3>
+        {undatedTasks && <span className="text-muted-foreground">{pendingLabel(pending)}</span>}
       </div>
+
+      {recurring.length > 0 && (
+        <>
+          <SectionHeader title={copy.undated.recurring} hint={hasWeekly ? rollover : undefined} />
+          {recurring.map((task) => (
+            <AnytimeRow key={task.id} task={task} swipe={swipe} />
+          ))}
+        </>
+      )}
+
+      {recurring.length > 0 && todo.length > 0 && (
+        <hr className="mx-2.5 my-2 border-dashed border-surface-line" />
+      )}
+
+      {todo.length > 0 && (
+        <>
+          <SectionHeader title={copy.undated.todo} />
+          {todo.map((task) => (
+            <AnytimeRow key={task.id} task={task} swipe={swipe} />
+          ))}
+        </>
+      )}
 
       <CaptureField />
-
-      <div className="mt-4 flex flex-col">
-        {recurring.length > 0 && (
-          <>
-            <SectionHeader title={copy.undated.recurring} hint={hasWeekly ? rollover : undefined} />
-            {recurring.map((task) => (
-              <UndatedRow key={task.id} task={task} swipe={swipe} />
-            ))}
-          </>
-        )}
-
-        {recurring.length > 0 && todo.length > 0 && <hr className="my-3 border-surface-line" />}
-
-        {todo.length > 0 && (
-          <>
-            <SectionHeader title={copy.undated.todo} />
-            {todo.map((task) => (
-              <UndatedRow key={task.id} task={task} swipe={swipe} />
-            ))}
-          </>
-        )}
-
-        {undatedTasks && !recurring.length && !todo.length && (
-          <p className="mt-2 text-sm text-muted-foreground">{copy.undated.empty}</p>
-        )}
-      </div>
     </section>
   );
 }

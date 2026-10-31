@@ -127,7 +127,7 @@ export const copy = {
     titleRequired: "O título é obrigatório",
     fieldsRequired: "Preencha todos os campos",
     created: "Tarefa criada",
-    createdUndated: "Anotado em Sem data",
+    createdUndated: "Anotado em A qualquer hora",
     updated: "Tarefa atualizada",
     noChanges: "Nenhuma alteração para salvar",
     createError: "Não foi possível salvar a tarefa",
@@ -206,7 +206,6 @@ export const copy = {
     textPlaceholder: "Reunião com o time hoje às 16:30",
     submit: "Criar tarefa",
     open: "Nova tarefa",
-    openUndated: "Nova tarefa sem data",
     // Modo da criação, lembrado por device: só o "+" ou o campo sempre aberto.
     pin: "Manter aberto",
     minimize: "Minimizar",
@@ -214,30 +213,31 @@ export const copy = {
     addTime: "+ horário",
     addDuration: "+ duração",
     addReminder: "+ lembrete",
-    // "Vai para Agenda | Sem data | Sem data · Recorrentes", antes de enviar.
+    // "Vai para Agenda | A qualquer hora | A qualquer hora · Recorrentes", antes de enviar.
     goesTo: "Vai para",
     toAgenda: "Agenda",
-    toUndated: "Sem data",
-    toRecurring: "Sem data · Recorrentes",
+    toUndated: "A qualquer hora",
+    toRecurring: "A qualquer hora · Recorrentes",
     hintCreate: "⏎ criar",
     hintContinue: "criar e continuar",
   },
 
+  // Puxador da coluna lateral do desktop, vazia desde que a Sem data foi para o topo de hoje.
+  column: {
+    open: "Abrir coluna lateral",
+    close: "Fechar coluna lateral",
+  },
+
+  // Tarefas sem data: o bloco "A qualquer hora" no topo de hoje.
   undated: {
-    title: "Sem data",
+    title: "A qualquer hora",
     onePending: "1 pendente",
     manyPending: "{n} pendentes",
-    openHandle: "Abrir Sem data ({pending})",
-    closeHandle: "Fechar Sem data",
-    // Indicador de páginas do mobile: Hoje | Sem data.
-    pages: "Páginas",
-    today: "Hoje",
     capture: "Anotar uma coisa…",
     recurring: "Recorrentes",
     todo: "Afazeres",
     // Quando a marcação das recorrentes semanais zera: "semana vira dom 06:00".
     rollover: "semana vira {day} {hour}",
-    empty: "Nada sem data por aqui.",
     doneDaily: "feito hoje",
     doneWeekly: "feito nesta semana",
     doneMonthly: "feito neste mês",

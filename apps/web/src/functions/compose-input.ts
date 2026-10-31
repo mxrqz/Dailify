@@ -7,8 +7,8 @@ export const DEFAULT_DURATION = "10m";
 
 /**
  * Onde a tarefa vai parar: só o que tem horário entra na agenda. Sem horário vai para Sem data —
- * com lembrete às 09:00 se citou um dia, sem lembrete se não citou. `undatedOnly` (composer da
- * coluna Sem data) ignora a hora do parser.
+ * com lembrete às 09:00 se citou um dia, sem lembrete se não citou. `undatedOnly` (campo do bloco
+ * "A qualquer hora") ignora a hora do parser.
  */
 export function composeTaskInput(
   parsed: ParsedTask,
