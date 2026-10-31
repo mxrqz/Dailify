@@ -55,16 +55,23 @@ describe("WeekStrip (mobile)", () => {
   it("o fundo marca o dia que se está lendo na lista, não hoje", () => {
     vi.stubGlobal("IntersectionObserver", FakeObserver);
     dailify.mockReturnValue({ tasks: [], goToDay: vi.fn(), setStripDocked: vi.fn() });
-    const section = document.createElement("section");
-    section.id = dayAnchorId(addDays(startOfDay(new Date()), 2));
-    document.body.append(section);
+    const today = startOfDay(new Date());
+    // Hoje já passou da linha de leitura e daqui a 2 dias também; daqui a 4 ainda está abaixo.
+    const sections = [0, 2, 4].map((offset, i) => {
+      const section = document.createElement("section");
+      section.id = dayAnchorId(addDays(today, offset));
+      const top = [-300, 20, 400][i];
+      const rect = { x: 0, y: top, width: 0, height: 0, top, right: 0, bottom: top, left: 0 };
+      section.getBoundingClientRect = () => ({ ...rect, toJSON: () => rect });
+      document.body.append(section);
+      return section;
+    });
 
     render(<WeekStrip />);
-    cross("-48px 0px -60% 0px", { target: section, isIntersecting: true });
 
     const days = screen.getAllByRole("button");
     expect(days[2].className).toContain("bg-surface-hover");
     expect(days[0].className).not.toMatch(/(^| )bg-surface-hover/);
-    section.remove();
+    for (const section of sections) section.remove();
   });
 });

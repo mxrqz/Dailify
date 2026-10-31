@@ -20,6 +20,8 @@ const MAX_DOTS = 3;
 const HEADER_PX = 40;
 // Só desacopla alguns px abaixo de onde acoplou: com o dedo parado no limiar ela trocava a cada frame.
 const HYSTERESIS_PX = 8;
+// Uma seção vira "o dia que se está vendo" quando o topo dela sobe até aqui (o goToDay a para em 56).
+const READING_LINE_PX = 64;
 // Espelham rounded-2xl/rounded-xl/rounded-lg. Números porque o motion só corrige o raio durante a
 // escala do morph quando ele vem pelo animate, não por classe.
 const RADIUS_STRIP = 16;
@@ -74,26 +76,33 @@ function useVisibleDay(days: Date[]): string | undefined {
   const firstDay = days[0].getTime();
 
   useEffect(() => {
-    const ids = days.map(dayAnchorId);
-    const seen = new Set<string>();
-    const observer = new IntersectionObserver(
-      (entries) => {
-        for (const entry of entries) {
-          if (entry.isIntersecting) seen.add(entry.target.id);
-          else seen.delete(entry.target.id);
-        }
-        setVisible(ids.find((id) => seen.has(id)));
-      },
-      // Uma faixa logo abaixo da top bar: "visível" é o que está sendo lido, não o que aparece na base.
-      { rootMargin: "-48px 0px -60% 0px" },
-    );
-    for (const id of ids) {
-      const section = document.getElementById(id);
-      if (section) observer.observe(section);
-    }
-    return () => observer.disconnect();
-    // As seções nascem com as tarefas e com o dia-alvo; os dias da semana só mudam à meia-noite.
-  }, [tasks, targetDay, firstDay]);
+    const week = new Set(days.map(dayAnchorId));
+    let frame = 0;
+    // O dia "atual" é a última seção cujo topo já passou da linha de leitura (logo abaixo da barra);
+    // lido na rolagem, e não por observer, porque as seções nascem depois (cache, meses chegando).
+    const update = () => {
+      frame = 0;
+      const sections = document.querySelectorAll<HTMLElement>("section[id^='day-']");
+      let current = sections[0];
+      for (const section of sections) {
+        if (section.getBoundingClientRect().top > READING_LINE_PX) break;
+        current = section;
+      }
+      setVisible(current && week.has(current.id) ? current.id : undefined);
+    };
+    const schedule = () => {
+      if (!frame) frame = requestAnimationFrame(update);
+    };
+    update();
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    return () => {
+      cancelAnimationFrame(frame);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
+    // Reavalia quando a lista muda; os dias da semana só mudam à meia-noite.
+  }, [tasks, firstDay]);
 
   useEffect(() => {
     if (!targetDay) return;
