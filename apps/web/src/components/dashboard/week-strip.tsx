@@ -36,7 +36,6 @@ export const weekDays = (): Date[] => {
 /** Mobile: a doca da página (o placeholder) chegou na top bar. */
 function useDocked(dock: RefObject<HTMLElement>): boolean {
   const [docked, setDocked] = useState(false);
-  const { setStripDocked } = useDailify();
   const mobile = useMediaQuery("(max-width: 767px)");
 
   useEffect(() => {
@@ -62,8 +61,10 @@ function useDocked(dock: RefObject<HTMLElement>): boolean {
   }, [dock, mobile]);
 
   // O header esconde marca e ações enquanto a faixa ocupa o centro dele.
-  useEffect(() => setStripDocked(docked), [docked, setStripDocked]);
-  useEffect(() => () => setStripDocked(false), [setStripDocked]);
+  useLayoutEffect(() => {
+    document.documentElement.toggleAttribute("data-strip-docked", docked);
+    return () => document.documentElement.removeAttribute("data-strip-docked");
+  }, [docked]);
 
   return docked;
 }
@@ -152,11 +153,12 @@ export function WeekStrip(): JSX.Element {
           initial={false}
           animate={{ borderRadius: docked ? 0 : RADIUS_STRIP }}
           className={cn(
-            "z-30 flex items-center overflow-hidden transition-colors",
+            // Borda sempre de 1px (transparente acoplada): sumir com ela mudava a caixa no frame 0.
+            "z-30 flex items-center overflow-hidden border transition-colors duration-base",
             docked
               ? // h-9.75: para 1px acima da borda de baixo da top bar, que segue inteira por baixo.
-                "fixed inset-x-12 top-0 h-9.75 gap-0.5 bg-surface-page"
-              : "absolute inset-x-0 top-0 gap-1 border border-surface-line bg-surface-card p-2 md:static",
+                "fixed inset-x-12 top-0 h-9.75 gap-0.5 border-transparent bg-surface-page"
+              : "absolute inset-x-0 top-0 gap-1 border-surface-line bg-surface-card p-2 md:static",
           )}
         >
           {days.map((day) => {
@@ -179,11 +181,29 @@ export function WeekStrip(): JSX.Element {
                   dayAnchorId(day) === visible ? "bg-surface-hover" : "hover:bg-surface-hover",
                 )}
               >
+                {/* Os dois rótulos ficam montados e cruzam opacidade: trocar o texto no commit era
+                    um pop no meio do morph. O de fora sai do fluxo pra não ocupar largura. */}
                 <motion.span
                   {...leaf}
-                  className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground"
+                  className="relative font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground"
                 >
-                  {format(day, docked ? "EEEEE" : "EEEEEE", { locale: ptBR })}
+                  <span
+                    className={cn(
+                      "transition-opacity duration-base",
+                      docked && "absolute top-0 left-0 opacity-0",
+                    )}
+                  >
+                    {format(day, "EEEEEE", { locale: ptBR })}
+                  </span>
+                  <span
+                    aria-hidden="true"
+                    className={cn(
+                      "transition-opacity duration-base",
+                      !docked && "absolute top-0 left-0 opacity-0",
+                    )}
+                  >
+                    {format(day, "EEEEE", { locale: ptBR })}
+                  </span>
                 </motion.span>
 
                 <motion.span

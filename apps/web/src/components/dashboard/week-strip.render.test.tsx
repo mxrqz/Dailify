@@ -34,8 +34,7 @@ afterEach(() => {
 describe("WeekStrip (mobile)", () => {
   it("acopla no header ao encostar na barra e só desacopla com folga", () => {
     vi.stubGlobal("IntersectionObserver", FakeObserver);
-    const setStripDocked = vi.fn();
-    dailify.mockReturnValue({ tasks: [], goToDay: vi.fn(), setStripDocked });
+    dailify.mockReturnValue({ tasks: [], goToDay: vi.fn() });
 
     render(<WeekStrip />);
     expect(screen.getAllByRole("button")).toHaveLength(8);
@@ -44,17 +43,17 @@ describe("WeekStrip (mobile)", () => {
     const rect = { x: 0, y: 30, width: 0, height: 0, top: 30, right: 0, bottom: 30, left: 0 };
     const top = { boundingClientRect: { ...rect, toJSON: () => rect } };
     cross("-40px 0px 0px 0px", { intersectionRatio: 0.5, ...top });
-    expect(setStripDocked).toHaveBeenLastCalledWith(true);
+    expect(document.documentElement.hasAttribute("data-strip-docked")).toBe(true);
     // Acoplada: os mesmos 7 dias e o calendário, nada entra nem sai.
     expect(screen.getAllByRole("button")).toHaveLength(8);
 
     cross("-48px 0px 0px 0px", { intersectionRatio: 1, ...top });
-    expect(setStripDocked).toHaveBeenLastCalledWith(false);
+    expect(document.documentElement.hasAttribute("data-strip-docked")).toBe(false);
   });
 
   it("o fundo marca o dia que se está lendo na lista, não hoje", () => {
     vi.stubGlobal("IntersectionObserver", FakeObserver);
-    dailify.mockReturnValue({ tasks: [], goToDay: vi.fn(), setStripDocked: vi.fn() });
+    dailify.mockReturnValue({ tasks: [], goToDay: vi.fn() });
     const today = startOfDay(new Date());
     // Hoje já passou da linha de leitura e daqui a 2 dias também; daqui a 4 ainda está abaixo.
     const sections = [0, 2, 4].map((offset, i) => {

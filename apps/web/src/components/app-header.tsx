@@ -3,7 +3,6 @@ import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 
 import { Brand } from "@/components/brand";
-import { useDailify } from "@/components/dailifyContext";
 import { MobileNav } from "@/components/dashboard/sidebar/mobile-nav";
 import { QuotaBar } from "@/components/quota-bar";
 import { SyncBadge } from "@/components/sync-badge";
@@ -22,9 +21,11 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
   // `publicMetadata.plan` só nasce por webhook do Stripe: quem nunca assinou não tem o campo, e a
   // comparação crua escondia o "Assinar" justamente de quem deveria ver.
   const isFree = isSignedIn && toText(user?.publicMetadata?.plan, PLAN_ID.free) === PLAN_ID.free;
-  // A faixa da semana acoplada ocupa o centro da barra: marca e ações saem da frente, o ☰ fica.
-  const { stripDocked } = useDailify();
-  const tucked = stripDocked && "pointer-events-none opacity-0";
+  // A faixa da semana acoplada (`data-strip-docked` no <html>, posto pela WeekStrip) ocupa o centro
+  // da barra: marca e ações saem da frente, o ☰ fica. Atributo e não contexto: mudar o contexto
+  // re-renderizava a lista inteira bem no primeiro frame do morph.
+  const tucked =
+    "transition-[opacity,visibility] duration-fast in-data-strip-docked:invisible in-data-strip-docked:opacity-0";
 
   return (
     <header
@@ -41,7 +42,7 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
         to="/dashboard"
         compact
         className={cn(
-          "absolute left-1/2 -translate-x-1/2 pl-0 transition-opacity duration-fast md:static md:translate-x-0 md:pl-3",
+          "absolute left-1/2 -translate-x-1/2 pl-0 md:static md:translate-x-0 md:pl-3",
           tucked,
         )}
       />
@@ -68,13 +69,7 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
         </Button>
       </div>
 
-      <div
-        aria-hidden={stripDocked || undefined}
-        className={cn(
-          "ml-auto inline-flex items-center gap-2 transition-opacity duration-fast",
-          tucked,
-        )}
-      >
+      <div className={cn("ml-auto inline-flex items-center gap-2", tucked)}>
         <QuotaBar />
 
         <SyncBadge />

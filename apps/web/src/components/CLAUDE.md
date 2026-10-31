@@ -7,9 +7,9 @@ primitives (see `ui/CLAUDE.md`). `@/` resolves to `src/`.
 
 Single source of truth via `useDailify()`: `tasks`, `selectedDay`, `targetDay`, `loadedMonths`,
 `loadMonth`, `reloadMonths`, `goToDay`, `quotas`, `invoices`, `paymentDetails`, `undatedTasks`,
-`weekStart`, `stripDocked`, and their setters. `stripDocked`: on mobile the `WeekStrip` is ONE
-element with two docks (the card in the page, the center of the top bar) morphed by motion `layout`;
-while docked, `AppHeader` fades its brand and actions out of the way and keeps the ☰.
+`weekStart`, and their setters. Keep per-frame UI state OUT of this context: every consumer
+re-renders (the whole Home, measuring every swipe row) — the docked week strip flags
+`data-strip-docked` on `<html>` instead, and `AppHeader` reacts with `in-data-strip-docked:`.
 
 - **`protected-route.tsx`** is where it all loads: gates on Clerk (`isLoaded`/`userId`), then
   `getTasks()`: flushes the offline queue, then `reloadMonths` (context) for today, next month and
