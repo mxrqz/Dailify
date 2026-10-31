@@ -218,6 +218,7 @@ describe("<DayList> com tarefas sem data", () => {
     expect(block.closest("section[id]")).toHaveTextContent(copy.day.today);
     expect(within(block).getByText("Comprar presente")).toBeInTheDocument();
     expect(screen.queryByText(copy.day.listFirstRun)).not.toBeInTheDocument();
+    expect(screen.queryByText(copy.day.noTasks)).not.toBeInTheDocument();
   });
 
   it("sem tarefa nenhuma mostra o primeiro uso", () => {

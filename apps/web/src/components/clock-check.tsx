@@ -1,4 +1,4 @@
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 import { duration, ease } from "@/consts/motion";
 
 // 0° = 12h, sentido horário; a hora usa o relógio de 12h com a fração dos minutos.
@@ -22,6 +22,7 @@ type Props = {
 };
 
 export function ClockCheck({ checked, onCheckedChange, time, label }: Props) {
+  const reduce = useReducedMotion();
   const dots = time
     ? [
         { ...polar(clockAngles(time).hour), r: 1.6 },
@@ -37,7 +38,7 @@ export function ClockCheck({ checked, onCheckedChange, time, label }: Props) {
       aria-label={label}
       onClick={() => onCheckedChange(!checked)}
       whileTap={{ scale: 0.9 }}
-      className="grid size-5 shrink-0 place-items-center rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      className="relative grid size-5 shrink-0 place-items-center rounded-full outline-none after:absolute after:-inset-2.5 after:content-[''] focus-visible:ring-3 focus-visible:ring-ring/50"
     >
       <svg viewBox="0 0 20 20" className="size-full" aria-hidden>
         <circle
@@ -45,7 +46,7 @@ export function ClockCheck({ checked, onCheckedChange, time, label }: Props) {
           cy={CENTER}
           r="9"
           strokeWidth="1.5"
-          className={`transition-colors duration-base ease-out ${checked ? "fill-primary stroke-primary" : "fill-transparent stroke-pager-mark"}`}
+          className={`transition-colors duration-base ease-out ${checked ? "fill-primary stroke-primary" : "fill-transparent stroke-control-mark"}`}
         />
         {dots.map((d) => (
           <motion.circle
@@ -54,7 +55,7 @@ export function ClockCheck({ checked, onCheckedChange, time, label }: Props) {
             {...d}
             className="fill-content-secondary"
             animate={{ opacity: checked ? 0 : 1 }}
-            transition={{ duration: duration.fast, ease: ease.out }}
+            transition={{ duration: reduce ? 0 : duration.fast, ease: ease.out }}
           />
         ))}
         <motion.path
@@ -67,7 +68,7 @@ export function ClockCheck({ checked, onCheckedChange, time, label }: Props) {
           className="fill-none stroke-primary-foreground"
           initial={false}
           animate={{ strokeDashoffset: checked ? 0 : 1 }}
-          transition={{ duration: duration.base, ease: ease.out }}
+          transition={{ duration: reduce ? 0 : duration.base, ease: ease.out }}
         />
       </svg>
     </motion.button>

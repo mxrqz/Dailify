@@ -15,7 +15,7 @@ import { upsertUndated } from "@/functions/undated";
 import { useQuotas } from "@/hooks/useQuotas";
 
 /**
- * Criar a partir do texto já interpretado — o composer do dashboard e o campo da Sem data.
+ * Criar a partir do texto já interpretado — o composer do dashboard e o campo do bloco A qualquer hora.
  * Devolve `true` quando a tarefa existe (no servidor ou na fila), pra quem chamou limpar o campo.
  */
 export function useCreateTask() {
