@@ -140,6 +140,13 @@
   --accent-glow: color-mix(in oklch, var(--primary) 20%, transparent);
   /* Borda crimson suave do chip de lembrete: a hairline puxada pro crimson, sem gritar como ação. */
   --accent-line: color-mix(in oklch, var(--primary) 35%, var(--surface-line));
+  /* Metadados por tipo: data azul, horário âmbar, recorrência roxo. Texto legível nos dois temas; fundo = mesmo tom a 16%. */
+  --meta-date: light-dark(oklch(48% 0.19 255), oklch(76% 0.13 255));
+  --meta-time: light-dark(oklch(50% 0.13 70), oklch(82% 0.15 80));
+  --meta-repeat: light-dark(oklch(47% 0.21 295), oklch(77% 0.14 295));
+  --meta-date-subtle: color-mix(in oklch, var(--meta-date) 16%, transparent);
+  --meta-time-subtle: color-mix(in oklch, var(--meta-time) 16%, transparent);
+  --meta-repeat-subtle: color-mix(in oklch, var(--meta-repeat) 16%, transparent);
   --border-highlight: light-dark(oklch(90% 0.004 286.3), oklch(30% 0.005 286));
   /* Bolinhas do pager e borda do puxador: no light a highlight some no branco; 62% dá ~3.6:1 contra
      a page (WCAG 1.4.11). Dark igual à highlight. */
@@ -281,6 +288,12 @@
   --color-accent-subtle: var(--accent-subtle);
   --color-accent-glow: var(--accent-glow);
   --color-accent-line: var(--accent-line);
+  --color-meta-date: var(--meta-date);
+  --color-meta-time: var(--meta-time);
+  --color-meta-repeat: var(--meta-repeat);
+  --color-meta-date-subtle: var(--meta-date-subtle);
+  --color-meta-time-subtle: var(--meta-time-subtle);
+  --color-meta-repeat-subtle: var(--meta-repeat-subtle);
   --color-highlight: var(--border-highlight);
   --color-pager-mark: var(--pager-mark);
   --radius-panel: var(--radius-panel);
