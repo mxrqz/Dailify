@@ -6,9 +6,9 @@ import { addDays, startOfDay } from "date-fns";
 const dailify = vi.hoisted(() => vi.fn());
 vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
 
-import { HeaderWeek } from "./header-week";
+import { CompactWeek } from "./compact-week";
 
-describe("HeaderWeek", () => {
+describe("CompactWeek", () => {
   it("mostra os 7 dias a partir de hoje, marca hoje e o ponto de quem tem tarefa", () => {
     const goToDay = vi.fn();
     const today = startOfDay(new Date());
@@ -18,7 +18,7 @@ describe("HeaderWeek", () => {
       goToDay,
     });
 
-    render(<HeaderWeek />);
+    render(<CompactWeek />);
     const days = screen.getAllByRole("button");
     expect(days).toHaveLength(7);
     expect(days[0].getAttribute("aria-current")).toBe("date");

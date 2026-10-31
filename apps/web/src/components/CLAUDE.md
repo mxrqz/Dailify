@@ -7,9 +7,7 @@ primitives (see `ui/CLAUDE.md`). `@/` resolves to `src/`.
 
 Single source of truth via `useDailify()`: `tasks`, `selectedDay`, `targetDay`, `loadedMonths`,
 `loadMonth`, `reloadMonths`, `goToDay`, `quotas`, `invoices`, `paymentDetails`, `undatedTasks`,
-`weekStart`, `stripDocked`, and their setters. `stripDocked`: on mobile the `WeekStrip` reports
-when it has scrolled under the top bar, and `AppHeader` swaps the brand for `HeaderWeek` (the day
-numbers share a `layoutId`, so they morph from the strip into the bar).
+`weekStart`, and their setters.
 
 - **`protected-route.tsx`** is where it all loads: gates on Clerk (`isLoaded`/`userId`), then
   `getTasks()`: flushes the offline queue, then `reloadMonths` (context) for today, next month and

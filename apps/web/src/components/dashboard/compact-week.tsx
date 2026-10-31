@@ -6,9 +6,9 @@ import { motion } from "motion/react";
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { dayAnchorId } from "@/components/dashboard/day-section";
-import { stripDayLayoutId, weekDays } from "@/components/dashboard/week-strip";
+import { weekDays } from "@/components/dashboard/week-strip";
 import { getTasksForDay } from "@/functions/functions";
-import { spring } from "@/consts/motion";
+import { duration, ease } from "@/consts/motion";
 import { cn } from "@/lib/utils";
 
 /** O dia cuja seção está no topo da lista; um clique fixa o dia até o próximo gesto do usuário. */
@@ -55,14 +55,21 @@ function useVisibleDay(days: Date[]): string | undefined {
   return pinned ?? visible;
 }
 
-/** A semana compacta que toma o lugar da marca no header do mobile quando a faixa sai de vista. */
-export function HeaderWeek(): JSX.Element {
+/** A faixa da semana depois que sobe por cima da top bar (mobile): uma linha, largura toda. */
+export function CompactWeek(): JSX.Element {
   const { tasks, goToDay } = useDailify();
   const days = weekDays();
   const visible = useVisibleDay(days);
 
   return (
-    <nav aria-label={copy.header.week} className="flex min-w-0 flex-1 justify-center gap-0.5">
+    <motion.nav
+      aria-label={copy.header.week}
+      initial={{ opacity: 0, y: -8 }}
+      animate={{ opacity: 1, y: 0 }}
+      exit={{ opacity: 0, y: -8 }}
+      transition={{ duration: duration.base, ease: ease.out }}
+      className="fixed inset-x-0 top-0 z-30 flex h-10 items-center gap-1 border-b border-surface-line bg-surface-page px-3 md:hidden"
+    >
       {days.map((day) => {
         const busy = tasks ? getTasksForDay(tasks, day).length > 0 : false;
         const current = isToday(day);
@@ -75,20 +82,21 @@ export function HeaderWeek(): JSX.Element {
             aria-label={format(day, "EEEE, d", { locale: ptBR })}
             aria-current={current ? "date" : undefined}
             className={cn(
-              "relative flex h-8 w-6.5 cursor-pointer flex-col items-center justify-center gap-0.5 rounded-lg transition-colors after:absolute after:-inset-x-0.5 after:-inset-y-1 after:content-['']",
+              "flex h-8 flex-1 cursor-pointer items-center justify-center gap-1.5 rounded-lg transition-colors",
               dayAnchorId(day) === visible && "bg-surface-hover",
             )}
           >
-            <motion.span
-              layoutId={stripDayLayoutId(day)}
-              transition={spring.soft}
+            <span className="font-mono text-2xs uppercase text-muted-foreground">
+              {format(day, "EEEEE", { locale: ptBR })}
+            </span>
+            <span
               className={cn(
                 "text-sm/none font-medium",
                 current ? "text-accent-primary" : "text-foreground",
               )}
             >
               {format(day, "d")}
-            </motion.span>
+            </span>
             <span
               aria-hidden="true"
               className={cn("size-1 rounded-full", busy ? "bg-accent-primary" : "bg-transparent")}
@@ -96,6 +104,6 @@ export function HeaderWeek(): JSX.Element {
           </button>
         );
       })}
-    </nav>
+    </motion.nav>
   );
 }
