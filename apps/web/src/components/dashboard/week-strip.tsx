@@ -1,120 +1,187 @@
-import { useEffect, useRef, useState, type RefObject } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { addDays, format, isToday, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { CalendarIcon } from "lucide-react";
-import { AnimatePresence } from "motion/react";
+import { AnimatePresence, motion, MotionConfig } from "motion/react";
 
 import { useDailify } from "@/components/dailifyContext";
-import { CompactWeek } from "@/components/dashboard/compact-week";
 import { copy } from "@/components/dashboard/copy";
 import { MiniCalendar } from "@/components/dashboard/mini-calendar";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getTasksForDay } from "@/functions/functions";
+import { fade, spring } from "@/consts/motion";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
 
 const DAYS_AHEAD = 7;
 const MAX_DOTS = 3;
-// Espelha o h-10 da AppHeader: quando a faixa termina de passar por cima dela, vira a compacta.
+// Espelha o h-10 da AppHeader: a faixa acopla quando o topo dela encosta na barra.
 const HEADER_PX = 40;
+// Só desacopla alguns px abaixo de onde acoplou: com o dedo parado no limiar ela trocava a cada frame.
+const HYSTERESIS_PX = 8;
+// Espelham rounded-2xl/rounded-xl/rounded-lg. Números porque o motion só corrige o raio durante a
+// escala do morph quando ele vem pelo animate, não por classe.
+const RADIUS_STRIP = 16;
+const RADIUS_DAY = 12;
+const RADIUS_DAY_DOCKED = 8;
 
 export const weekDays = (): Date[] => {
   const today = startOfDay(new Date());
   return Array.from({ length: DAYS_AHEAD }, (_, i) => addDays(today, i));
 };
 
-/** Mobile: a faixa já subiu inteira por cima da top bar. */
-function useDocked(): [RefObject<HTMLDivElement>, boolean] {
-  const ref = useRef<HTMLDivElement>(null);
+/** Mobile: a doca da página (o placeholder) chegou na top bar. */
+function useDocked(dock: RefObject<HTMLElement>): boolean {
   const [docked, setDocked] = useState(false);
+  const { setStripDocked } = useDailify();
   const mobile = useMediaQuery("(max-width: 767px)");
 
   useEffect(() => {
-    const strip = ref.current;
-    if (!strip || !mobile) return;
-    const observer = new IntersectionObserver(
-      ([entry]) => setDocked(!entry.isIntersecting && entry.boundingClientRect.top < HEADER_PX),
-      { rootMargin: `-${HEADER_PX}px 0px 0px 0px` },
+    const el = dock.current;
+    if (!el || !mobile) return;
+    const line = (px: number) => ({ rootMargin: `-${px}px 0px 0px 0px`, threshold: 1 });
+    const dockAt = new IntersectionObserver(([entry]) => {
+      if (entry.intersectionRatio < 1 && entry.boundingClientRect.top < HEADER_PX) setDocked(true);
+    }, line(HEADER_PX));
+    const undockAt = new IntersectionObserver(
+      ([entry]) => {
+        if (entry.intersectionRatio === 1) setDocked(false);
+      },
+      line(HEADER_PX + HYSTERESIS_PX),
     );
-    observer.observe(strip);
+    dockAt.observe(el);
+    undockAt.observe(el);
     return () => {
-      observer.disconnect();
+      dockAt.disconnect();
+      undockAt.disconnect();
       setDocked(false);
     };
-  }, [mobile]);
+  }, [dock, mobile]);
 
-  return [ref, docked];
+  // O header esconde marca e ações enquanto a faixa ocupa o centro dele.
+  useEffect(() => setStripDocked(docked), [docked, setStripDocked]);
+  useEffect(() => () => setStripDocked(false), [setStripDocked]);
+
+  return docked;
 }
 
 /**
- * Os próximos sete dias em uma linha, com um ponto nos que têm tarefa. Substitui o mini-calendário
- * que ocupava a dobra: 42 células pra mostrar o que cabe em sete.
+ * Os próximos sete dias em uma linha, com um ponto nos que têm tarefa; o mês inteiro fica no popover.
  *
- * Clicar rola até o dia na lista; o mês inteiro continua a um clique, no popover à direita.
+ * No mobile é UM elemento com duas docas: o card na página e, ao rolar, o centro da top bar (entre o
+ * ☰ e a mesma folga do outro lado). É o mesmo nó nas duas — o motion anima a troca (layout/FLIP) — e
+ * o espaço do card fica reservado pra lista não pular.
  */
 export function WeekStrip(): JSX.Element {
   const { tasks, goToDay } = useDailify();
   const days = weekDays();
-  const [ref, docked] = useDocked();
+  const dock = useRef<HTMLDivElement>(null);
+  const strip = useRef<HTMLDivElement>(null);
+  const docked = useDocked(dock);
+  const [height, setHeight] = useState<number>();
+
+  // A altura da doca da página é a do card aberto; medida enquanto ele está nela.
+  useLayoutEffect(() => {
+    if (!docked && strip.current) setHeight(strip.current.offsetHeight);
+  }, [docked, tasks]);
+
+  const box = { layout: true, layoutDependency: docked } as const;
+  const leaf = { layout: "position", layoutDependency: docked } as const;
 
   return (
-    <>
-      <AnimatePresence>{docked && <CompactWeek />}</AnimatePresence>
-      <div
-        ref={ref}
-        // z acima da top bar (z-20): ao rolar, a faixa sobe POR CIMA dela antes de virar a compacta.
-        className="relative z-30 flex items-center gap-1 rounded-2xl border border-surface-line bg-surface-card p-2 md:z-auto"
-      >
-        {days.map((day) => {
-          const current = isToday(day);
-          const dots = Math.min(tasks ? getTasksForDay(tasks, day).length : 0, MAX_DOTS);
+    <div ref={dock} style={{ height }} className="relative md:h-auto!">
+      <MotionConfig transition={spring.soft}>
+        <motion.div
+          ref={strip}
+          {...box}
+          initial={false}
+          animate={{ borderRadius: docked ? 0 : RADIUS_STRIP }}
+          className={cn(
+            "z-30 flex items-center overflow-hidden transition-colors",
+            docked
+              ? // h-9.75: para 1px acima da borda de baixo da top bar, que segue inteira por baixo.
+                "fixed inset-x-12 top-0 h-9.75 gap-0.5 bg-surface-page"
+              : "absolute inset-x-0 top-0 gap-1 border border-surface-line bg-surface-card p-2 md:static",
+          )}
+        >
+          {days.map((day) => {
+            const current = isToday(day);
+            const dots = Math.min(tasks ? getTasksForDay(tasks, day).length : 0, MAX_DOTS);
 
-          return (
-            <button
-              key={day.toISOString()}
-              type="button"
-              onClick={() => void goToDay(day)}
-              className={cn(
-                "flex flex-1 cursor-pointer flex-col items-center gap-1 rounded-xl px-2 py-2 transition-colors",
-                current ? "bg-surface-hover" : "hover:bg-surface-hover",
-              )}
-            >
-              <span className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
-                {format(day, "EEEEEE", { locale: ptBR })}
-              </span>
-
-              <span
+            return (
+              <motion.button
+                key={day.toISOString()}
+                {...box}
+                initial={false}
+                animate={{ borderRadius: docked ? RADIUS_DAY_DOCKED : RADIUS_DAY }}
+                type="button"
+                onClick={() => void goToDay(day)}
+                aria-current={current ? "date" : undefined}
                 className={cn(
-                  "text-sm font-medium",
-                  current ? "text-accent-primary" : "text-foreground",
+                  "flex min-w-0 flex-1 cursor-pointer items-center justify-center transition-colors",
+                  docked ? "h-8 gap-1" : "flex-col gap-1 px-2 py-2",
+                  current ? "bg-surface-hover" : "hover:bg-surface-hover",
                 )}
               >
-                {format(day, "d")}
-              </span>
+                <motion.span
+                  {...leaf}
+                  className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground"
+                >
+                  {format(day, docked ? "EEEEE" : "EEEEEE", { locale: ptBR })}
+                </motion.span>
 
-              {/* Altura reservada mesmo sem tarefa: senão os dias sobem e descem na faixa. */}
-              <span className="flex h-1 items-center gap-0.5" aria-hidden="true">
-                {Array.from({ length: dots }).map((_, index) => (
-                  <span key={index} className="size-1 rounded-full bg-accent-primary" />
-                ))}
-              </span>
-            </button>
-          );
-        })}
+                <motion.span
+                  {...leaf}
+                  className={cn(
+                    "text-sm font-medium",
+                    current ? "text-accent-primary" : "text-foreground",
+                  )}
+                >
+                  {format(day, "d")}
+                </motion.span>
 
-        <Popover>
-          <PopoverTrigger
-            aria-label={copy.day.openCalendar}
-            className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
-          >
-            <CalendarIcon className="size-4" />
-          </PopoverTrigger>
+                {/* Altura reservada mesmo sem tarefa: senão os dias sobem e descem na faixa. Acoplada,
+                    a faixa só tem espaço pra um ponto. */}
+                <motion.span
+                  {...box}
+                  className={cn("flex h-1 items-center gap-0.5 overflow-hidden", docked && "w-1")}
+                  aria-hidden="true"
+                >
+                  {Array.from({ length: dots }).map((_, index) => (
+                    <motion.span
+                      key={index}
+                      {...leaf}
+                      className="size-1 shrink-0 rounded-full bg-accent-primary"
+                    />
+                  ))}
+                </motion.span>
+              </motion.button>
+            );
+          })}
 
-          <PopoverContent align="end" className="w-auto border-surface-line bg-surface-card p-3">
-            <MiniCalendar />
-          </PopoverContent>
-        </Popover>
-      </div>
-    </>
+          <AnimatePresence initial={false}>
+            {!docked && (
+              <motion.div key="calendar" {...box} {...fade}>
+                <Popover>
+                  <PopoverTrigger
+                    aria-label={copy.day.openCalendar}
+                    className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-xl text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
+                  >
+                    <CalendarIcon className="size-4" />
+                  </PopoverTrigger>
+
+                  <PopoverContent
+                    align="end"
+                    className="w-auto border-surface-line bg-surface-card p-3"
+                  >
+                    <MiniCalendar />
+                  </PopoverContent>
+                </Popover>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </motion.div>
+      </MotionConfig>
+    </div>
   );
 }

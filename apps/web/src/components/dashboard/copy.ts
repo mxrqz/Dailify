@@ -14,7 +14,6 @@ export const copy = {
     back: "Voltar",
     forward: "Avançar",
     upgrade: "Assinar",
-    week: "Semana",
     profile: "Perfil",
     accountMenu: "Menu da conta",
     openNav: "Abrir navegação",
