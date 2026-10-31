@@ -7,7 +7,7 @@ import { copy } from "@/components/dashboard/copy";
 import { TaskComposer, type ComposerValues } from "@/components/dashboard/task-composer";
 import { Dialog, DialogTitle } from "@/components/ui/dialog";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { reveal, spring } from "@/consts/motion";
+import { duration, reveal, spring } from "@/consts/motion";
 import { useStoredFlag } from "@/hooks/useStoredFlag";
 import { cn } from "@/lib/utils";
 
@@ -145,7 +145,7 @@ export function CreateFab({ onSubmit, submitting, undatedOnly }: CreateFabProps)
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                transition={{ duration: reduce ? 0 : 0.2 }}
+                transition={{ duration: reduce ? 0 : duration.base }}
                 className="fixed inset-0 bg-surface-scrim md:hidden"
               />
             </DialogPrimitive.Overlay>

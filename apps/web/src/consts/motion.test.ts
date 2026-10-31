@@ -6,7 +6,7 @@ const css = readFileSync(new URL("../global.css", import.meta.url), "utf8");
 const token = (name: string) => css.match(new RegExp(`--${name}:\\s*([^;]+);`))?.[1];
 
 describe("consts/motion", () => {
-  it.each(Object.entries(duration))("--duration-%s bate com o CSS", (name, seconds) => {
+  it.each(Object.entries(duration))("--motion-duration-%s bate com o CSS", (name, seconds) => {
     expect(token(`motion-duration-${name}`)).toBe(`${seconds * 1000}ms`);
   });
 

@@ -89,11 +89,13 @@ passariam por qualquer suíte de função pura.
 Estudo: `docs/research/2026-10-21-microanimacoes.md`. Valores sempre de `consts/motion.ts`.
 
 - Anime pela frequência: o que se repete o dia todo (hover, atalho de teclado) é rápido ou não anima.
-  Ação de teclado não anima.
+  Exceção: `n`/`/` abrem o composer com o morph, porque é o mesmo caminho do clique.
 - CSS primeiro (hover, press, cor). `motion` para saída, layout, gesto e morph.
-- Só `transform`/`opacity`; nunca `transition-all`. Exceções: largura da coluna Sem data e o
-  `grid-template-rows` do colapso.
+- Só `transform`/`opacity`; nunca `transition-all`. Exceções: largura da coluna Sem data, o
+  `grid-template-rows` do colapso e o `height` do preset `collapse` (saída de item de lista).
 - Durações e curvas: utilitários `duration-fast|base|slow` e `ease-out|standard|exit` no CSS;
   `duration`, `ease`, `spring`, `fade`, `reveal`, `slideX`, `collapse` no motion. Sem bounce.
+  `ease-out` sobrescreve a curva padrão do Tailwind. Landing: `ease.outExpo` e durações nomeadas
+  em `landing/scenes/timing.ts`.
 - Reduced motion: `<MotionConfig reducedMotion="user">` na raiz cobre transform e layout.
   `useReducedMotion` só onde há `duration` manual ou altura customizada.
