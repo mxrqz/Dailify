@@ -37,7 +37,7 @@ export function ClockCheck({ checked, onCheckedChange, time, label }: Props) {
       aria-label={label}
       onClick={() => onCheckedChange(!checked)}
       whileTap={{ scale: 0.9 }}
-      className="grid size-5 shrink-0 place-items-center rounded-full"
+      className="grid size-5 shrink-0 place-items-center rounded-full outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
     >
       <svg viewBox="0 0 20 20" className="size-full" aria-hidden>
         <circle
