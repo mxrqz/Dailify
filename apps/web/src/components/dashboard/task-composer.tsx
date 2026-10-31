@@ -1,7 +1,15 @@
 import { FormEvent, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowUpIcon, BellIcon, LinkIcon, Loader2Icon, RepeatIcon } from "lucide-react";
+import {
+  ArrowUpIcon,
+  BellIcon,
+  CalendarIcon,
+  ClockIcon,
+  LinkIcon,
+  Loader2Icon,
+  RepeatIcon,
+} from "lucide-react";
 
 import { TASK_LIMITS } from "@dailify/shared";
 
@@ -28,6 +36,9 @@ interface TaskComposerProps {
 
 const chip = "inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-xs";
 const got = "border-highlight bg-surface-hover text-foreground";
+const metaDate = "border-transparent bg-meta-date-subtle text-meta-date";
+const metaTime = "border-transparent bg-meta-time-subtle text-meta-time";
+const metaRepeat = "border-transparent bg-meta-repeat-subtle text-meta-repeat";
 const ghost = "border-dashed border-surface-line text-muted-foreground";
 
 /**
@@ -95,21 +106,31 @@ export function TaskComposer({
 
       {/* Slots sempre montados, na mesma ordem: chip que some e aparece mexe o layout a cada tecla. */}
       <div aria-live="polite" className="flex flex-wrap gap-1.5 px-2 pt-2.5 pb-1.5">
-        <span className={cn(chip, recurring || parsed.date ? got : ghost)}>
+        <span className={cn(chip, recurring ? metaRepeat : parsed.date ? metaDate : ghost)}>
           {recurring ? (
             <>
               <RepeatIcon className="size-3" aria-hidden="true" />
               {repeatLabel(parsed.repeat)}
             </>
           ) : parsed.date ? (
-            // EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
-            format(parsed.date, "EEEEEE · d MMM", { locale: ptBR })
+            <>
+              <CalendarIcon className="size-3" aria-hidden="true" />
+              {/* EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso. */}
+              {format(parsed.date, "EEEEEE · d MMM", { locale: ptBR })}
+            </>
           ) : (
             copy.composer.addDay
           )}
         </span>
-        <span className={cn(chip, hasTime ? got : ghost)}>
-          {hasTime && parsed.date ? format(parsed.date, "HH:mm") : copy.composer.addTime}
+        <span className={cn(chip, hasTime ? metaTime : ghost)}>
+          {hasTime && parsed.date ? (
+            <>
+              <ClockIcon className="size-3" aria-hidden="true" />
+              {format(parsed.date, "HH:mm")}
+            </>
+          ) : (
+            copy.composer.addTime
+          )}
         </span>
         <span className={cn(chip, parsed.duration ? got : ghost)}>
           {parsed.duration ?? copy.composer.addDuration}

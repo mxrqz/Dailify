@@ -9,6 +9,7 @@ import {
   PriorityMenu,
   RepeatMenu,
 } from "@/components/dashboard/task-meta-menus";
+import { ClockCheck } from "@/components/clock-check";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
 import { TaskCard, TimeLabel } from "@/components/task-card";
 import { Button } from "@/components/ui/button";
@@ -153,6 +154,14 @@ export function DayTaskRow({
       time={sheetEditing ? "" : time}
       upcoming={Boolean(countdown)}
       selected={open}
+      check={
+        <ClockCheck
+          time={showTime ? data.time : undefined}
+          checked={data.completed}
+          onCheckedChange={(next) => void (next ? onComplete() : onUncomplete())}
+          label={data.completed ? copy.task.uncomplete : copy.task.complete}
+        />
+      }
       onClick={sheetEditing ? () => setOpen(true) : undefined}
       onTitleChange={sheetEditing ? undefined : onRename}
       edit={edit}

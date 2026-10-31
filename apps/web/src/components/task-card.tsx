@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { Check, Flag, LinkIcon, RepeatIcon, TimerIcon } from "lucide-react";
+import { Flag, LinkIcon, RepeatIcon, TimerIcon } from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 /**
@@ -149,7 +149,13 @@ const RepeatChip = forwardRef<HTMLButtonElement, { label: string } & MetaChipPro
   function RepeatChip({ label, editable, ...props }, ref) {
     if (!label) return null;
     return (
-      <Chip ref={ref} editable={editable} label={label} className="max-w-40" {...props}>
+      <Chip
+        ref={ref}
+        editable={editable}
+        label={label}
+        className="max-w-40 bg-meta-repeat-subtle text-meta-repeat"
+        {...props}
+      >
         <RepeatIcon className="size-3.5 shrink-0" aria-hidden="true" />
         <span className="hidden truncate sm:inline" aria-hidden="true">
           {label}
@@ -251,10 +257,12 @@ export interface TaskCardProps extends TaskCardData {
   selected?: boolean;
   /** A próxima do dia: o gutter vira contagem em crimson (o `time` já vem trocado). */
   upcoming?: boolean;
-  /** Concluída neste dia: título riscado + check verde. */
+  /** Concluída neste dia: título riscado (o check em si vem no slot `check`). */
   completed?: boolean;
   /** 0–4; só aparece a partir de 1 (0 = "sem prioridade" não merece ícone). */
   priority?: number;
+  /** Check à esquerda do título; fica acima do overlay clicável. */
+  check?: JSX.Element;
   /** Abre o detalhe. Vira um overlay clicável — ver nota de acessibilidade no corpo. */
   onClick?: () => void;
   /** Menu (⋮) do app, à direita da duração. Fica FORA do overlay clicável. */
@@ -352,7 +360,7 @@ export function TimeLabel({ time, accent }: { time: string; accent?: boolean }):
     <span
       className={cn(
         "cursor-default font-mono text-2xs",
-        accent ? "text-accent-primary" : "text-muted-foreground",
+        accent ? "text-accent-primary" : "text-meta-time",
       )}
     >
       {time}
@@ -371,6 +379,7 @@ function CardBody({
   completed,
   priority,
   onClick,
+  check,
   actions,
   links = [],
   repeat = "",
@@ -434,6 +443,7 @@ function CardBody({
         )}
 
         <div className="flex items-center justify-between gap-2">
+          {!loading && check && <span className="relative z-10 flex shrink-0">{check}</span>}
           {loading ? (
             <span className="skeleton h-3.5 w-32 rounded" />
           ) : onTitleChange ? (
@@ -450,12 +460,6 @@ function CardBody({
           )}
 
           <div className="pointer-events-none relative z-10 flex shrink-0 items-center gap-1.5">
-            {!loading && completed && (
-              <>
-                <Check className="size-3.5 shrink-0 text-success" aria-hidden="true" />
-                <span className="sr-only">{copy.task.completed}</span>
-              </>
-            )}
             {!loading && wrap(edit?.link, <LinkChip links={links} editable={!!edit?.link} />)}
             {!loading &&
               wrap(edit?.repeat, <RepeatChip label={repeat} editable={!!edit?.repeat} />)}
