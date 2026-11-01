@@ -32,7 +32,7 @@ afterEach(() => {
 });
 
 describe("WeekStrip (mobile)", () => {
-  it("acopla no header ao encostar na barra e só desacopla com folga", () => {
+  it("acopla ao chegar no topo e só desacopla com folga", () => {
     vi.stubGlobal("IntersectionObserver", FakeObserver);
     dailify.mockReturnValue({ tasks: [], goToDay: vi.fn() });
 
@@ -40,14 +40,14 @@ describe("WeekStrip (mobile)", () => {
     expect(screen.getAllByRole("button")).toHaveLength(8);
     expect(screen.getByRole("button", { name: copy.day.openCalendar })).toBeTruthy();
 
-    const rect = { x: 0, y: 30, width: 0, height: 0, top: 30, right: 0, bottom: 30, left: 0 };
+    const rect = { x: 0, y: -5, width: 0, height: 0, top: -5, right: 0, bottom: -4, left: 0 };
     const top = { boundingClientRect: { ...rect, toJSON: () => rect } };
-    cross("-40px 0px 0px 0px", { intersectionRatio: 0.5, ...top });
+    cross("-0px 0px 0px 0px", { isIntersecting: false, ...top });
     expect(document.documentElement.hasAttribute("data-strip-docked")).toBe(true);
     // Acoplada: os mesmos 7 dias e o calendário, nada entra nem sai.
     expect(screen.getAllByRole("button")).toHaveLength(8);
 
-    cross("-48px 0px 0px 0px", { intersectionRatio: 1, ...top });
+    cross("-8px 0px 0px 0px", { isIntersecting: true, ...top });
     expect(document.documentElement.hasAttribute("data-strip-docked")).toBe(false);
   });
 

@@ -16,10 +16,10 @@ import { cn } from "@/lib/utils";
 
 const DAYS_AHEAD = 7;
 const MAX_DOTS = 3;
-// Espelha o h-10 da AppHeader: a faixa acopla quando o topo dela encosta na barra.
-const HEADER_PX = 40;
 // Só desacopla alguns px abaixo de onde acoplou: com o dedo parado no limiar ela trocava a cada frame.
 const HYSTERESIS_PX = 8;
+// h-9.75 da faixa acoplada: para 1px acima da borda de baixo da top bar (h-10), que segue inteira.
+const DOCKED_PX = 39;
 // Uma seção vira "o dia que se está vendo" quando o topo dela sobe até aqui (o goToDay a para em 56).
 const READING_LINE_PX = 64;
 // Espelham rounded-2xl/rounded-xl/rounded-lg. Números porque o motion só corrige o raio durante a
@@ -33,24 +33,21 @@ export const weekDays = (): Date[] => {
   return Array.from({ length: DAYS_AHEAD }, (_, i) => addDays(today, i));
 };
 
-/** Mobile: a doca da página (o placeholder) chegou na top bar. */
-function useDocked(dock: RefObject<HTMLElement>): boolean {
+/** Mobile: o lugar da faixa na página (a sentinela logo acima dela) chegou ao topo da tela. */
+function useDocked(sentinel: RefObject<HTMLElement>): boolean {
   const [docked, setDocked] = useState(false);
   const mobile = useMediaQuery("(max-width: 767px)");
 
   useEffect(() => {
-    const el = dock.current;
+    const el = sentinel.current;
     if (!el || !mobile) return;
-    const line = (px: number) => ({ rootMargin: `-${px}px 0px 0px 0px`, threshold: 1 });
+    const line = (px: number) => ({ rootMargin: `-${px}px 0px 0px 0px` });
     const dockAt = new IntersectionObserver(([entry]) => {
-      if (entry.intersectionRatio < 1 && entry.boundingClientRect.top < HEADER_PX) setDocked(true);
-    }, line(HEADER_PX));
-    const undockAt = new IntersectionObserver(
-      ([entry]) => {
-        if (entry.intersectionRatio === 1) setDocked(false);
-      },
-      line(HEADER_PX + HYSTERESIS_PX),
-    );
+      if (!entry.isIntersecting && entry.boundingClientRect.top < 0) setDocked(true);
+    }, line(0));
+    const undockAt = new IntersectionObserver(([entry]) => {
+      if (entry.isIntersecting) setDocked(false);
+    }, line(HYSTERESIS_PX));
     dockAt.observe(el);
     undockAt.observe(el);
     return () => {
@@ -58,7 +55,7 @@ function useDocked(dock: RefObject<HTMLElement>): boolean {
       undockAt.disconnect();
       setDocked(false);
     };
-  }, [dock, mobile]);
+  }, [sentinel, mobile]);
 
   // O header esconde marca e ações enquanto a faixa ocupa o centro dele.
   useLayoutEffect(() => {
@@ -131,12 +128,12 @@ export function WeekStrip(): JSX.Element {
   const { tasks, goToDay } = useDailify();
   const days = weekDays();
   const visible = useVisibleDay(days);
-  const dock = useRef<HTMLDivElement>(null);
+  const sentinel = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLDivElement>(null);
-  const docked = useDocked(dock);
-  const [height, setHeight] = useState<number>();
+  const docked = useDocked(sentinel);
+  const [height, setHeight] = useState(0);
 
-  // A altura da doca da página é a do card aberto; medida enquanto ele está nela.
+  // Altura do card aberto: acoplada, a diferença vira um espaçador e a lista abaixo não se mexe.
   useLayoutEffect(() => {
     if (!docked && strip.current) setHeight(strip.current.offsetHeight);
   }, [docked, tasks]);
@@ -145,20 +142,24 @@ export function WeekStrip(): JSX.Element {
   const leaf = { layout: "position", layoutDependency: docked } as const;
 
   return (
-    <div ref={dock} style={{ height }} className="relative md:h-auto!">
+    <>
+      <div ref={sentinel} aria-hidden="true" className="h-px -mb-px" />
       <MotionConfig transition={spring.soft}>
         <motion.div
           ref={strip}
           {...box}
           initial={false}
           animate={{ borderRadius: docked ? 0 : RADIUS_STRIP }}
+          // Sticky e não fixed: quem prende no topo é o navegador, na thread da rolagem. Trocar de
+          // absolute pra fixed fazia o motion medir a partida com um scroll atrasado — o tranco.
+          // Assim o morph é só de tamanho, ancorado no topo.
           className={cn(
             // Borda sempre de 1px (transparente acoplada): sumir com ela mudava a caixa no frame 0.
-            "z-30 flex items-center overflow-hidden border transition-colors duration-base",
+            "z-30 flex items-center overflow-hidden border transition-colors duration-base max-md:sticky max-md:top-0",
             docked
-              ? // h-9.75: para 1px acima da borda de baixo da top bar, que segue inteira por baixo.
-                "fixed inset-x-12 top-0 h-9.75 gap-0.5 border-transparent bg-surface-page"
-              : "absolute inset-x-0 top-0 gap-1 border-surface-line bg-surface-card p-2 md:static",
+              ? // mx-8 + o px-gutter da página = 48px de cada lado: o ☰ continua livre.
+                "mx-8 h-9.75 gap-0.5 border-transparent bg-surface-page"
+              : "gap-1 border-surface-line bg-surface-card p-2",
           )}
         >
           {days.map((day) => {
@@ -261,6 +262,8 @@ export function WeekStrip(): JSX.Element {
           </Popover>
         </motion.div>
       </MotionConfig>
-    </div>
+      {/* Espaçador e não margem: a margem colapsava com o mt-10 da lista e ela subia 40px. */}
+      <div aria-hidden="true" style={{ height: docked ? height - DOCKED_PX : 0 }} />
+    </>
   );
 }
