@@ -2,7 +2,9 @@ import { useState } from "react";
 
 import { copy } from "@/components/dashboard/copy";
 import { SwipeActions } from "@/components/dashboard/swipe-actions";
+import { RecurrenceScopeDialog } from "@/components/dashboard/recurrence-scope-dialog";
 import {
+  DateTimePopover,
   DurationMenu,
   LinksPopover,
   PriorityMenu,
@@ -38,13 +40,14 @@ export const SHEET_EDITING = "(hover: none), (max-width: 639px)";
 export function DayTaskRow({
   task,
   day,
-  showTime,
+  hour,
   countdown,
 }: {
   task: TaskProps;
   day: Date;
-  showTime: boolean;
-  /** Substitui o horário no gutter na próxima tarefa do dia ("EM 25 MIN"). */
+  /** "16:00" acima do primeiro cartão da hora; os seguintes não repetem. */
+  hour?: string;
+  /** Substitui o horário no chip na próxima tarefa do dia ("EM 25 MIN"). */
   countdown?: string;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
@@ -56,11 +59,29 @@ export function DayTaskRow({
   );
 
   const onOpenChange = (next: boolean) => setOpen(next);
+  // Remarcar uma recorrente espera a escolha entre esta ocorrência e a série.
+  const [moveTo, setMoveTo] = useState<Date | null>(null);
+  const move = (to: Date, occurrence?: number) => {
+    const shift = to.getTime() - task.date;
+    // O alerta anda junto: remarcar não pode deixar o lembrete no horário antigo.
+    void onPatch(
+      { date: to.getTime(), ...(task.alert === undefined ? {} : { alert: task.alert + shift }) },
+      occurrence,
+    );
+  };
 
   // Um caminho de edição por vez: no toque o cartão é só leitura e tudo acontece na folha.
   const edit = sheetEditing
     ? undefined
     : {
+        time: (chip: JSX.Element) => (
+          <DateTimePopover
+            value={new Date(task.date)}
+            onChange={(to) => (task.repeat === "Off" ? move(to) : setMoveTo(to))}
+          >
+            {chip}
+          </DateTimePopover>
+        ),
         link: (chip: JSX.Element) => (
           <LinksPopover value={task.links ?? []} onChange={(links) => void onPatch({ links })}>
             {chip}
@@ -92,13 +113,14 @@ export function DayTaskRow({
         remove: () => void onDelete(),
       };
 
-  const time = showTime ? (countdown ?? data.time) : "";
+  const time = hour ?? "";
   const card = (
     <TaskCard
       {...data}
       // No toque o horário sai do cartão e fica fora da faixa que desliza (ver abaixo).
       time={sheetEditing ? "" : time}
       upcoming={Boolean(countdown)}
+      at={countdown ?? data.time}
       selected={open}
       check={
         <ClockCheck
@@ -118,7 +140,7 @@ export function DayTaskRow({
     <EditTask open={open} onOpenChange={onOpenChange}>
       {sheetEditing ? (
         <div className="flex flex-col gap-1.5">
-          {time && <TimeLabel time={time} accent={Boolean(countdown)} />}
+          {time && <TimeLabel time={time} />}
           <SwipeActions
             onComplete={() => void (data.completed ? onUncomplete() : onComplete())}
             onDelete={() => void onDelete()}
@@ -132,6 +154,19 @@ export function DayTaskRow({
 
       <EditTaskContent task={task} day={day} open={open} onClose={() => setOpen(false)} />
       {deleteDialog}
+      <RecurrenceScopeDialog
+        open={moveTo !== null}
+        onOpenChange={(next) => !next && setMoveTo(null)}
+        description={copy.form.scopeDescription}
+        onOccurrence={() => {
+          if (moveTo) move(moveTo, task.date);
+          setMoveTo(null);
+        }}
+        onSeries={() => {
+          if (moveTo) move(moveTo);
+          setMoveTo(null);
+        }}
+      />
     </EditTask>
   );
 }

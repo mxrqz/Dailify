@@ -16,3 +16,6 @@ export const fieldClass =
 export const bareFieldClass =
   "h-11 rounded-none border-0 bg-transparent px-0 text-base shadow-none " +
   "focus-visible:border-0 focus-visible:ring-0";
+
+/** Tamanho do popover de calendário (o da faixa e o de remarcar); a cor vem do `PopoverContent`. */
+export const calendarPanel = "w-72 p-3";

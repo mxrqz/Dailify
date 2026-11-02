@@ -8,7 +8,7 @@ import {
   getTime,
   returnFractedDate,
   unixToDate,
-  groupTasksByTime,
+  groupTasksByHour,
   taskToCardData,
   nextGroupIndex,
   upsertTaskWithRecurrence,
@@ -169,42 +169,29 @@ describe("upsertTaskById", () => {
   });
 });
 
-describe("groupTasksByTime", () => {
-  test("groups tasks that share the same HH:MM", () => {
-    const a = makeTask({ id: "a", date: new Date(2026, 7, 10, 9, 0).getTime() });
-    const b = makeTask({ id: "b", date: new Date(2026, 7, 10, 9, 0).getTime() });
-    const groups = groupTasksByTime([a, b]);
+describe("groupTasksByHour", () => {
+  const at = (id: string, h: number, m: number) =>
+    makeTask({ id, date: new Date(2026, 7, 10, h, m).getTime() });
+
+  test("junta as tarefas da mesma hora cheia, ordenadas pelo minuto", () => {
+    const groups = groupTasksByHour([at("b", 9, 45), at("a", 9, 5)]);
     expect(groups).toHaveLength(1);
     expect(groups[0].time).toBe("09:00");
     expect(groups[0].tasks.map((t) => t.id)).toEqual(["a", "b"]);
   });
 
-  test("orders groups chronologically regardless of input order", () => {
-    const late = makeTask({ id: "late", date: new Date(2026, 7, 10, 14, 30).getTime() });
-    const early = makeTask({ id: "early", date: new Date(2026, 7, 10, 9, 5).getTime() });
-    const mid = makeTask({ id: "mid", date: new Date(2026, 7, 10, 11, 0).getTime() });
-    expect(groupTasksByTime([late, early, mid]).map((g) => g.time)).toEqual([
-      "09:05",
-      "11:00",
-      "14:30",
-    ]);
+  test("ordena as horas independente da ordem de entrada", () => {
+    const groups = groupTasksByHour([at("late", 14, 30), at("early", 9, 5), at("mid", 11, 0)]);
+    expect(groups.map((g) => g.time)).toEqual(["09:00", "11:00", "14:00"]);
   });
 
-  test("sorts by minutes too, not just by hour", () => {
-    const later = makeTask({ id: "later", date: new Date(2026, 7, 10, 9, 45).getTime() });
-    const sooner = makeTask({ id: "sooner", date: new Date(2026, 7, 10, 9, 5).getTime() });
-    expect(groupTasksByTime([later, sooner]).map((g) => g.time)).toEqual(["09:05", "09:45"]);
+  test("lista vazia vira lista vazia", () => {
+    expect(groupTasksByHour([])).toEqual([]);
   });
 
-  test("returns an empty array for no tasks", () => {
-    expect(groupTasksByTime([])).toEqual([]);
-  });
-
-  test("does not mutate the input array", () => {
-    const a = makeTask({ id: "a", date: new Date(2026, 7, 10, 14, 0).getTime() });
-    const b = makeTask({ id: "b", date: new Date(2026, 7, 10, 8, 0).getTime() });
-    const input = [a, b];
-    groupTasksByTime(input);
+  test("não muta a entrada", () => {
+    const input = [at("a", 14, 0), at("b", 8, 0)];
+    groupTasksByHour(input);
     expect(input.map((t) => t.id)).toEqual(["a", "b"]);
   });
 });

@@ -31,7 +31,7 @@
   --foreground: light-dark(oklch(14.1% 0.004 285.8), oklch(96.2% 0 0));
   --card: light-dark(oklch(100% 0 0), oklch(21.6% 0.006 56));
   --card-foreground: light-dark(oklch(14.1% 0.004 285.8), oklch(96.2% 0 0));
-  --popover: light-dark(oklch(100% 0 0), oklch(20.4% 0 0));
+  --popover: var(--surface-popover); /* o shadcn lê daqui: todo popover cai no mesmo token */
   --popover-foreground: light-dark(oklch(14.1% 0.004 285.8), oklch(96.2% 0 0));
   --primary: oklch(58.6% 0.222 17.6);
   --primary-foreground: oklch(97% 0.015 12.4);
@@ -106,6 +106,8 @@
   --surface-page: light-dark(oklch(100% 0 0), oklch(14.5% 0 0)); /* dark = #0a0a0a, preto neutro */
   --surface-card: light-dark(oklch(98% 0 0), oklch(16.8% 0 0)); /* dark = #0f0f0f, neutro sólido */
   --surface-panel: light-dark(oklch(100% 0 0), oklch(19.5% 0 0)); /* dark = #151515, neutro */
+  /* Fundo de TODO popover e menu (calendário, chips, dropdowns): um só, o mesmo do card. */
+  --surface-popover: var(--surface-card);
   --surface-raised: light-dark(
     oklch(98% 0 0),
     oklch(17.5% 0 0)
@@ -271,6 +273,7 @@
   --color-surface-page: var(--surface-page);
   --color-surface-card: var(--surface-card);
   --color-surface-panel: var(--surface-panel);
+  --color-surface-popover: var(--surface-popover);
   --color-surface-raised: var(--surface-raised);
   --color-surface-slab: var(--surface-slab);
   --color-surface-slab-card: var(--surface-slab-card);
@@ -344,6 +347,20 @@
     50% {
       opacity: 0;
     }
+  }
+}
+
+/* Largura da duração no pior caso ("12h30m", 6 caracteres em mono): toda duração ocupa o mesmo
+   espaço, e os chips ao lado não dançam de uma tarefa pra outra. */
+@utility min-w-duration {
+  min-width: 6ch;
+}
+
+/* Rola sem barra: a roda de hora já mostra pelo snap onde está. */
+@utility scrollbar-none {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
   }
 }
 

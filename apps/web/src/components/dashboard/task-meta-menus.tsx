@@ -2,7 +2,9 @@ import { useId, useState, type ReactNode } from "react";
 import { normalizeRepeat, weekDays, type Repeat } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
+import { DateTimePicker } from "@/components/dashboard/date-time-picker";
 import { LinksField } from "@/components/dashboard/links-field";
+import { calendarPanel } from "@/components/dashboard/styles";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -176,6 +178,33 @@ export function LinksPopover({
           {copy.form.links}
         </span>
         <LinksField value={links} onChange={setLinks} labelledBy={labelId} />
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/** Dia e horário no popover do horário do cartão. Salva no fechar, como o de links. */
+export function DateTimePopover({
+  value,
+  onChange,
+  children,
+}: {
+  value: Date;
+  onChange: (date: Date) => void;
+  children: ReactNode;
+}): JSX.Element {
+  const [date, setDate] = useState(value);
+
+  return (
+    <Popover
+      onOpenChange={(open) => {
+        if (open) setDate(value);
+        else if (date.getTime() !== value.getTime()) onChange(date);
+      }}
+    >
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverContent align="start" className={calendarPanel}>
+        <DateTimePicker value={date} onChange={setDate} />
       </PopoverContent>
     </Popover>
   );

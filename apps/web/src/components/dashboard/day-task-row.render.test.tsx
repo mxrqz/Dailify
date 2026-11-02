@@ -43,7 +43,7 @@ describe("DayTaskRow", () => {
       bumpUsage: vi.fn(),
     });
     api.completeTask.mockResolvedValue({});
-    const { container } = render(<DayTaskRow task={task} day={day} showTime={false} />);
+    const { container } = render(<DayTaskRow task={task} day={day} />);
 
     expect(container.querySelector("[data-dot]")?.getAttribute("cy")).not.toBe("10");
     fireEvent.click(screen.getByRole("checkbox"));

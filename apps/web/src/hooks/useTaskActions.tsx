@@ -208,22 +208,31 @@ export function useTaskActions(
    * Edição campo a campo pelo cartão (título, duração, prioridade, recorrência, links). Devolve
    * `false` pra quem chamou desfazer o que já mostrou na tela.
    */
-  const onPatch = async (patch: Partial<TaskInput>): Promise<boolean> => {
+  const onPatch = async (patch: Partial<TaskInput>, occurrence?: number): Promise<boolean> => {
     const at = Date.now();
     const previous = tasks ?? [];
     const stamped = { ...patch, updatedAt: at };
-    setTasks(upsertTaskWithRecurrence(previous, { ...task, ...stamped }, loadedMonths));
+    // Só esta ocorrência: mexe só na instância da tela; a série inteira fica como está.
+    setTasks(
+      occurrence === undefined
+        ? upsertTaskWithRecurrence(previous, { ...task, ...stamped }, loadedMonths)
+        : previous.map((t) =>
+            t.id === task.id && t.date === occurrence ? { ...t, ...stamped } : t,
+          ),
+    );
 
-    const mutation: Mutation = { op: "patch", taskId: task.id, patch: stamped, at };
+    const mutation: Mutation = { op: "patch", taskId: task.id, patch: stamped, at, occurrence };
     const { token, error: authError } = await authToken();
     if (!token) return settle(authError, previous, mutation, copy.task.patchError);
 
-    const { task: updated, error } = await updateTask(token, task.id, stamped);
+    const { task: updated, series, error } = await updateTask(token, task.id, stamped, occurrence);
     if (!settle(error, previous, mutation, copy.task.patchError)) return false;
     if (!updated) return true; // foi pra fila: o que está na tela já é o estado bom
 
     // A resposta do servidor ainda entra: ela traz o que o patch não mandou (recorrência expandida).
-    setTasks(upsertTaskWithRecurrence(previous, updated, loadedMonths));
+    // A série vem primeiro: reexpandi-la tira a ocorrência que virou tarefa própria (`exdates`).
+    const base = series ? upsertTaskWithRecurrence(previous, series, loadedMonths) : previous;
+    setTasks(upsertTaskWithRecurrence(base, updated, loadedMonths));
     return true;
   };
 

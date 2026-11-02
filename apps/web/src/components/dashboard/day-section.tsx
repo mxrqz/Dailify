@@ -10,12 +10,14 @@ import { DayTaskRow } from "@/components/dashboard/day-task-row";
 import { TaskCard } from "@/components/task-card";
 import {
   getTasksForDay,
-  groupTasksByTime,
+  getTime,
+  groupTasksByHour,
   minutesUntil,
   nextGroupIndex,
   type TimeGroup,
 } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
+import type { TaskProps } from "@/types/types";
 import { cn } from "@/lib/utils";
 
 const SKELETON_ROWS = 3;
@@ -24,22 +26,21 @@ const SKELETON_ROWS = 3;
 export const dayAnchorId = (day: Date) => `day-${format(day, "yyyy-MM-dd")}`;
 
 /**
- * Um grupo de horário. O rótulo aparece só no PRIMEIRO cartão do grupo — os seguintes recebem
- * `time: ""` e ficam com o gutter vazio. É isso que produz a leitura de coluna do tempo; repetir
- * "08:30" três vezes seria ruído.
+ * Uma hora cheia. O rótulo ("16:00") aparece só acima do primeiro cartão da hora; o horário exato
+ * de cada tarefa vai no chip dentro do cartão.
  */
 function TimeGroupRows({
   group,
   day,
   variants,
-  past,
-  countdown,
+  isPast,
+  countdownFor,
 }: {
   group: TimeGroup;
   day: Date;
   variants: Variants;
-  past?: boolean;
-  countdown?: string;
+  isPast: (task: TaskProps) => boolean;
+  countdownFor: (task: TaskProps) => string | undefined;
 }): JSX.Element {
   return (
     <>
@@ -47,12 +48,12 @@ function TimeGroupRows({
         <motion.li key={task.id} variants={variants}>
           {/* O recuo do passado mora AQUI, não no <li>: a variante `visible` anima opacity e o
               style inline do framer venceria a classe. Volta inteiro no hover — segue editável. */}
-          <div className={cn(past && "opacity-60 transition-opacity hover:opacity-100")}>
+          <div className={cn(isPast(task) && "opacity-60 transition-opacity hover:opacity-100")}>
             <DayTaskRow
               task={task}
               day={day}
-              showTime={index === 0}
-              countdown={index === 0 ? countdown : undefined}
+              hour={index === 0 ? group.time : undefined}
+              countdown={countdownFor(task)}
             />
           </div>
         </motion.li>
@@ -111,9 +112,17 @@ export function DaySection({ day }: { day: Date }): JSX.Element {
 
   const isCurrentDay = isToday(day);
   const dayTasks = tasks ? getTasksForDay(tasks, day) : [];
-  const groups = groupTasksByTime(dayTasks);
-  // -1 = nenhum grupo à frente: hoje já acabou, e aí tudo que está na tela é passado.
-  const nextAt = isCurrentDay ? nextGroupIndex(groups, now) : -1;
+  const groups = groupTasksByHour(dayTasks);
+  // Passado e contagem são por tarefa, não por hora: 16:00 pode já ter passado e 16:45 não.
+  const ordered = groups.flatMap((group) => group.tasks);
+  const times = ordered.map((task) => ({ time: getTime(task.date, "HH:MM") }));
+  // -1 = nada à frente: hoje já acabou, e aí tudo que está na tela é passado.
+  const nextAt = isCurrentDay ? nextGroupIndex(times, now) : -1;
+  const next = ordered[nextAt];
+  const isPast = (task: TaskProps) =>
+    isCurrentDay && (nextAt === -1 || ordered.indexOf(task) < nextAt);
+  const countdownFor = (task: TaskProps) =>
+    task === next ? countdownLabel(minutesUntil(times[nextAt].time, now)) : undefined;
 
   const listVariants: Variants = {
     hidden: {},
@@ -135,9 +144,7 @@ export function DaySection({ day }: { day: Date }): JSX.Element {
           <span
             className={cn(
               "size-2 rounded-full",
-              isCurrentDay
-                ? "bg-accent-primary shadow-[0_0_8px_var(--accent-glow)]"
-                : "bg-muted-foreground",
+              isCurrentDay ? "bg-accent-primary" : "bg-muted-foreground",
             )}
             aria-hidden="true"
           />
@@ -168,16 +175,14 @@ export function DaySection({ day }: { day: Date }): JSX.Element {
           initial={reduce ? "visible" : "hidden"}
           animate="visible"
         >
-          {groups.map((group, index) => (
+          {groups.map((group) => (
             <TimeGroupRows
               key={group.time}
               group={group}
               day={day}
               variants={rowVariants}
-              past={isCurrentDay && (nextAt === -1 || index < nextAt)}
-              countdown={
-                index === nextAt ? countdownLabel(minutesUntil(group.time, now)) : undefined
-              }
+              isPast={isPast}
+              countdownFor={countdownFor}
             />
           ))}
         </motion.ul>

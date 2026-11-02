@@ -165,22 +165,19 @@ export interface TimeGroup {
   tasks: TaskProps[];
 }
 
-/**
- * Agrupa as tarefas do dia por horário e ordena os grupos cronologicamente. Historicamente
- * extraído de `calendar-view.tsx` e do antigo `daily-tasks.tsx`, que tinham este mesmo
- * reduce+sort copiado. Não muta a entrada.
- */
-export function groupTasksByTime(tasks: ReadonlyArray<TaskProps>): TimeGroup[] {
-  const byTime = new Map<string, TaskProps[]>();
-  for (const task of tasks) {
-    const time = getTime(task.date, "HH:MM");
-    const bucket = byTime.get(time);
+/** Agrupa as tarefas do dia pela hora cheia ("16:00" junta 16:00 e 16:45), em ordem. Não muta. */
+export function groupTasksByHour(tasks: ReadonlyArray<TaskProps>): TimeGroup[] {
+  const sorted = [...tasks].sort(
+    (a, b) => timeToMinutes(getTime(a.date, "HH:MM")) - timeToMinutes(getTime(b.date, "HH:MM")),
+  );
+  const byHour = new Map<string, TaskProps[]>();
+  for (const task of sorted) {
+    const hour = `${getTime(task.date, "HH:MM").slice(0, 2)}:00`;
+    const bucket = byHour.get(hour);
     if (bucket) bucket.push(task);
-    else byTime.set(time, [task]);
+    else byHour.set(hour, [task]);
   }
-  return [...byTime.entries()]
-    .map(([time, group]) => ({ time, tasks: group }))
-    .sort((a, b) => timeToMinutes(a.time) - timeToMinutes(b.time));
+  return [...byHour.entries()].map(([time, group]) => ({ time, tasks: group }));
 }
 
 /** "HH:MM" → minutos desde a meia-noite. Interno; `getTime` já garante o zero-padding. */

@@ -16,7 +16,8 @@ import type { ApiError } from "./api";
  */
 export type Mutation =
   | { op: "create"; taskId: string; input: TaskInput; at: number }
-  | { op: "patch"; taskId: string; patch: Partial<TaskInput>; at: number }
+  // `occurrence`: a edição vale só pra essa instância da série (o servidor a destaca).
+  | { op: "patch"; taskId: string; patch: Partial<TaskInput>; at: number; occurrence?: number }
   | { op: "complete"; taskId: string; at: number }
   // `until` = desfazer o intervalo [day, until] (período de recorrência da Sem data), não o dia.
   | { op: "uncomplete"; taskId: string; day: number; at: number; until?: number }
@@ -114,14 +115,16 @@ export function collapseQueue(queue: Mutation[]): Mutation[] {
 
     if (mutation.op === "patch") {
       const create = out.find((m) => sameTask(m) && m.op === "create");
-      if (create && create.op === "create") {
+      if (create && create.op === "create" && mutation.occurrence === undefined) {
         // Editar algo que ainda nem subiu: a criação já vai com a edição embutida.
         create.input = { ...create.input, ...mutation.patch };
         create.at = mutation.at;
         continue;
       }
 
-      const previous = out.find((m) => sameTask(m) && m.op === "patch");
+      const previous = out.find(
+        (m) => sameTask(m) && m.op === "patch" && m.occurrence === mutation.occurrence,
+      );
       if (previous && previous.op === "patch") {
         previous.patch = { ...previous.patch, ...mutation.patch };
         previous.at = mutation.at;
@@ -198,7 +201,7 @@ async function send(token: string, mutation: Mutation): Promise<ApiError | undef
     case "create":
       return (await createTask(token, { ...mutation.input, id: mutation.taskId })).error;
     case "patch":
-      return (await updateTask(token, mutation.taskId, mutation.patch)).error;
+      return (await updateTask(token, mutation.taskId, mutation.patch, mutation.occurrence)).error;
     case "complete":
       return (await completeTask(token, mutation.taskId, mutation.at)).error;
     case "uncomplete":

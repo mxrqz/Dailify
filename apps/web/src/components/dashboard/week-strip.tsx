@@ -7,7 +7,8 @@ import { motion, MotionConfig } from "motion/react";
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { dayAnchorId } from "@/components/dashboard/day-section";
-import { MiniCalendar } from "@/components/dashboard/mini-calendar";
+import { DayPicker } from "@/components/dashboard/day-picker";
+import { calendarPanel } from "@/components/dashboard/styles";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { getTasksForDay } from "@/functions/functions";
 import { spring } from "@/consts/motion";
@@ -125,7 +126,7 @@ function useVisibleDay(days: Date[]): string | undefined {
  * o espaço do card fica reservado pra lista não pular.
  */
 export function WeekStrip(): JSX.Element {
-  const { tasks, goToDay } = useDailify();
+  const { tasks, goToDay, selectedDay } = useDailify();
   const days = weekDays();
   const visible = useVisibleDay(days);
   const sentinel = useRef<HTMLDivElement>(null);
@@ -256,8 +257,8 @@ export function WeekStrip(): JSX.Element {
               </motion.button>
             </PopoverTrigger>
 
-            <PopoverContent align="end" className="w-auto border-surface-line bg-surface-card p-3">
-              <MiniCalendar />
+            <PopoverContent align="end" className={calendarPanel}>
+              <DayPicker value={selectedDay} onSelect={(day) => void goToDay(day)} />
             </PopoverContent>
           </Popover>
         </motion.div>

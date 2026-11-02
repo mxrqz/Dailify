@@ -35,7 +35,7 @@ import { cn } from "@/lib/utils";
 /**
  * Cartão de task (mock decorativo do hero, mas modelado como componente real reutilizável).
  * O cartão cabe em UMA linha: título truncado à esquerda, e à direita os metadados na ordem
- * link → repetição → prioridade → duração → menu. `TagBadge` continua exportado pros mocks da
+ * link → repetição → prioridade → horário + duração. `TagBadge` continua exportado pros mocks da
  * landing, mas o cartão não mostra tags — elas vivem na edição.
  *
  * Cada peça é auto-contida: recebe `loading` e renderiza o próprio skeleton — o crossfade
@@ -242,6 +242,24 @@ const DurationChip = forwardRef<
   if (loading) return <span className="skeleton block h-5 w-10 shrink-0 rounded-md" />;
   return (
     <Chip ref={ref} editable={editable} label={value} className="font-mono" {...props}>
+      <span className="min-w-duration text-right">{value}</span>
+    </Chip>
+  );
+});
+
+/** O horário da própria tarefa; na próxima do dia vira a contagem ("EM 25 MIN"), em crimson. */
+const TimeChip = forwardRef<
+  HTMLButtonElement,
+  { value: string; upcoming?: boolean } & MetaChipProps
+>(function TimeChip({ value, upcoming, editable, className, ...props }, ref) {
+  return (
+    <Chip
+      ref={ref}
+      editable={editable}
+      label={editable ? copy.task.editTime : value}
+      className={cn("font-mono", upcoming ? "text-accent-primary" : "text-meta-time", className)}
+      {...props}
+    >
       {value}
     </Chip>
   );
@@ -266,8 +284,10 @@ export interface TaskCardProps extends TaskCardData {
   loading?: boolean;
   /** Borda crimson — a tarefa cuja sheet está aberta. */
   selected?: boolean;
-  /** A próxima do dia: o gutter vira contagem em crimson (o `time` já vem trocado). */
+  /** A próxima do dia: o chip do horário vira contagem em crimson (o `at` já vem trocado). */
   upcoming?: boolean;
+  /** Horário da própria tarefa, num chip antes dos outros; o `time` acima é o da hora cheia. */
+  at?: string;
   /** Concluída neste dia: título riscado (o check em si vem no slot `check`). */
   completed?: boolean;
   /** 0–4; só aparece a partir de 1 (0 = "sem prioridade" não merece ícone). */
@@ -290,6 +310,8 @@ export interface TaskCardProps extends TaskCardData {
     repeat?: ChipEditor;
     priority?: ChipEditor;
     duration?: ChipEditor;
+    /** O chip do horário abre o seletor de dia e hora. */
+    time?: ChipEditor;
     /** Depois do divisor: excluir e, na ponta, concluir/reabrir — a ação mais usada. */
     complete?: { done: boolean; toggle: () => void };
     remove?: () => void;
@@ -368,23 +390,15 @@ function TitleField({
  * desliza — se viajasse junto, os painéis de concluir/excluir teriam a altura dele somada e não
  * casariam mais com o cartão.
  */
-export function TimeLabel({ time, accent }: { time: string; accent?: boolean }): JSX.Element {
-  return (
-    <span
-      className={cn(
-        "cursor-default font-mono text-2xs",
-        accent ? "text-accent-primary" : "text-meta-time",
-      )}
-    >
-      {time}
-    </span>
-  );
+export function TimeLabel({ time }: { time: string }): JSX.Element {
+  return <span className="cursor-default font-mono text-2xs text-meta-time">{time}</span>;
 }
 
 /** Corpo do card — mesma estrutura em loading/ready (alturas casam, sem jump no crossfade). */
 function CardBody({
   time,
   upcoming,
+  at,
   title,
   duration,
   loading,
@@ -404,7 +418,7 @@ function CardBody({
   return (
     <div className="flex flex-col gap-1.5">
       {/* Só renderiza com hora: um span vazio em coluna vira respiro morto acima do cartão. */}
-      {time && <TimeLabel time={time} accent={upcoming} />}
+      {time && <TimeLabel time={time} />}
 
       <div
         className={cn(
@@ -499,11 +513,20 @@ function CardBody({
                 edit?.priority,
                 <PriorityChip priority={priority} editable={!!edit?.priority} />,
               )}
-            {loading ? (
-              <DurationChip value={duration} loading />
-            ) : (
-              wrap(edit?.duration, <DurationChip value={duration} editable={!!edit?.duration} />)
-            )}
+            {/* Horário e duração colados: lidos juntos ("16:45 1h"), cada um com o seu editor. */}
+            <span className="flex items-center">
+              {!loading &&
+                at &&
+                wrap(
+                  edit?.time,
+                  <TimeChip value={at} upcoming={upcoming} editable={!!edit?.time} />,
+                )}
+              {loading ? (
+                <DurationChip value={duration} loading />
+              ) : (
+                wrap(edit?.duration, <DurationChip value={duration} editable={!!edit?.duration} />)
+              )}
+            </span>
           </div>
         </div>
       </div>

@@ -56,6 +56,19 @@ describe("collapseQueue", () => {
     expect(out[0]).toMatchObject({ op: "patch", patch: { title: "dois", priority: 3 }, at: 4 });
   });
 
+  test("keeps an occurrence edit apart from the series edit", () => {
+    const occurrence: Mutation = {
+      op: "patch",
+      taskId: "a",
+      patch: { date: 5 },
+      at: 3,
+      occurrence: 1,
+    };
+    const out = collapseQueue([patch("a", { title: "série" }), occurrence]);
+    expect(out).toHaveLength(2);
+    expect(out[1]).toMatchObject({ patch: { date: 5 }, occurrence: 1 });
+  });
+
   test("folds an edit into a creation that hasn't gone up yet", () => {
     const out = collapseQueue([create("a"), patch("a", { title: "editado" })]);
     expect(out).toHaveLength(1);
