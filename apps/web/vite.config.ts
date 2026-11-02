@@ -29,7 +29,8 @@ export default defineConfig(async ({ mode }) => ({
       includeAssets: ['dailify_logo_2.png', 'push-sw.js'],
       // Em dev o SW só existe se pedirmos: sem isto, ligar notificações em `bun run dev` falharia
       // ao registrar /sw.js.
-      devOptions: { enabled: true, type: 'module', suppressWarnings: true },
+      // `classic`: o SW importa o push-sw.js por importScripts, que não existe em worker module.
+      devOptions: { enabled: true, type: 'classic', suppressWarnings: true },
       manifest: {
         name: 'Dailify',
         short_name: 'Dailify',

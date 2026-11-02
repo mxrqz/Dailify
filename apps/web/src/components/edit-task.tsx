@@ -270,7 +270,7 @@ export function EditTaskContent({
             <Button
               type="submit"
               form={formId}
-              className="h-12 cursor-pointer rounded-full bg-accent-primary text-primary-foreground hover:bg-accent-hover"
+              className="h-12 cursor-pointer rounded-md bg-accent-primary text-primary-foreground hover:bg-accent-hover"
               disabled={loading}
             >
               {loading ? <Loader2 className="animate-spin" /> : copy.form.save}

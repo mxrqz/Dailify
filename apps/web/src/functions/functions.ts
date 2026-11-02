@@ -207,6 +207,14 @@ export function taskToCardData(
   };
 }
 
+/** "HH:MM" como a config pede: igual em 24h; em 12h "04:45 PM", com o zero à frente (largura fixa). */
+export function formatClock(time: string, hour12: boolean): string {
+  if (!hour12) return time;
+  const [hours, minutes] = time.split(":");
+  const h = Number(hours);
+  return `${String(h % 12 || 12).padStart(2, "0")}:${minutes} ${h < 12 ? "AM" : "PM"}`;
+}
+
 /** Minutos daqui até o "HH:MM" de hoje. Negativo quando o horário já passou. */
 export function minutesUntil(time: string, now: Date): number {
   return timeToMinutes(time) - (now.getHours() * 60 + now.getMinutes());

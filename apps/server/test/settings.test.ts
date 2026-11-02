@@ -30,13 +30,39 @@ describe("GET/PUT /settings", () => {
 
   it("PUT grava e GET devolve; segundo PUT sobrescreve", async () => {
     const res = await put(JSON.stringify({ weekStart: 0 }));
-    expect(await res.json()).toEqual({ weekStart: 0 });
+    expect(await res.json()).toMatchObject({ weekStart: 0 });
     expect(await read()).toBe(0);
     await put(JSON.stringify({ weekStart: 6 }));
     expect(await read()).toBe(6);
   });
 
   it.each([{ weekStart: 7 }, { weekStart: -1 }, { weekStart: "mon" }, {}])(
+    "PUT %j -> 400",
+    async (body) => {
+      expect((await put(JSON.stringify(body))).status).toBe(400);
+    },
+  );
+
+  it("fuso começa automático (null) e 24h; PUT parcial não mexe no resto", async () => {
+    await deleteUserData(env.DB, "u1");
+    const all = async () =>
+      (await app.request("/settings", {}, env)).json<{
+        weekStart: number;
+        timeZone: string | null;
+        hour12: boolean;
+      }>();
+    expect(await all()).toEqual({ weekStart: 1, timeZone: null, hour12: false });
+
+    await put(JSON.stringify({ timeZone: "Europe/Lisbon" }));
+    await put(JSON.stringify({ hour12: true }));
+    expect(await all()).toEqual({ weekStart: 1, timeZone: "Europe/Lisbon", hour12: true });
+
+    // null volta pro automático.
+    await put(JSON.stringify({ timeZone: null }));
+    expect((await all()).timeZone).toBeNull();
+  });
+
+  it.each([{ timeZone: "Marte/Olimpo" }, { timeZone: 3 }, { hour12: "sim" }])(
     "PUT %j -> 400",
     async (body) => {
       expect((await put(JSON.stringify(body))).status).toBe(400);

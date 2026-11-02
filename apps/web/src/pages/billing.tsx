@@ -1,6 +1,6 @@
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { format } from "date-fns";
-import { CreditCard, Receipt } from "lucide-react";
+import { Receipt } from "lucide-react";
 import { FaCcAmex, FaCcVisa } from "react-icons/fa";
 import { RiMastercardFill } from "react-icons/ri";
 import { useEffect } from "react";
@@ -13,13 +13,11 @@ import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { copy as pricingCopy } from "@/components/pricing/copy";
 import { PlanCards, type Cycle } from "@/components/pricing/plan-cards";
-import { Badge } from "@/components/ui/badge";
+import { SettingsGroup, SettingsRow, settingsPage } from "@/components/settings-list";
 import ApplePayLogo from "@/components/ui/applePayLogo";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import GooglePayLogo from "@/components/ui/googlePayLogo";
 import { Progress } from "@/components/ui/progress";
-import { Separator } from "@/components/ui/separator";
 import { PLAN_ID, planMap } from "@/consts/conts";
 import type { PlanRole } from "@/consts/pricing";
 import { billingPortal, checkout } from "@/functions/api";
@@ -57,14 +55,14 @@ export default function BillingPage(): JSX.Element {
   const quotas = useQuotas();
 
   const brandIcons: Record<string, JSX.Element> = {
-    visa: <FaCcVisa className="text-foreground size-5" />,
-    mastercard: <RiMastercardFill className="text-foreground size-5" />,
-    amex: <FaCcAmex className="text-foreground size-5" />,
+    visa: <FaCcVisa className="text-foreground size-4" />,
+    mastercard: <RiMastercardFill className="text-foreground size-4" />,
+    amex: <FaCcAmex className="text-foreground size-4" />,
   };
 
   const walletIcons: Record<string, JSX.Element> = {
-    apple_pay: <ApplePayLogo className="fill-foreground h-5" />,
-    google_pay: <GooglePayLogo className="fill-foreground h-5" />,
+    apple_pay: <ApplePayLogo className="fill-foreground h-4" />,
+    google_pay: <GooglePayLogo className="fill-foreground h-4" />,
   };
 
   const amountFormatted = (amount: number, currency: string) => {
@@ -92,176 +90,139 @@ export default function BillingPage(): JSX.Element {
   };
 
   return (
-    <main className="flex w-full flex-col gap-6 py-6">
+    <main className={settingsPage}>
       {/* sr-only: a sidebar e o title do Helmet já nomeiam a página na tela */}
       <h1 className="sr-only">{copy.profile.billingPageTitle}</h1>
 
-      <Card className="rounded-2xl border-surface-line bg-surface-card">
-        <CardHeader>
-          <CardTitle>{copy.profile.billingTitle}</CardTitle>
-          <CardDescription className="text-content-secondary">
-            {copy.profile.billingDescription}
-          </CardDescription>
-        </CardHeader>
-
-        <CardContent className="space-y-6">
-          <div className="rounded-lg border p-4">
-            <div className="flex items-center justify-between">
-              <div>
-                <h3 className="text-lg font-semibold">
-                  {copy.profile.billingCurrentPlan.replace("{plan}", plan)}
-                </h3>
-
-                {sections.subscription && paymentDetails && (
-                  <p className="text-sm text-content-secondary">
-                    {copy.profile.billingNextCharge
-                      .replace(
-                        "{date}",
-                        format(new Date(paymentDetails.start * 1000), "dd/MM/yyyy"),
-                      )
-                      .replace(
-                        "{amount}",
-                        amountFormatted(paymentDetails.amount, paymentDetails.currency),
-                      )
-                      .replace("{cycle}", paymentDetails.recurring)}
-                  </p>
-                )}
-              </div>
-
-              {sections.subscription && (
-                <Button variant="outline" onClick={getBillingPortalUrl}>
-                  {copy.profile.billingManage}
-                </Button>
+      {/* O plano atual é um bloco, não uma lista: plano, próxima cobrança e o uso do mês juntos. */}
+      <section className="flex flex-col gap-2">
+        <h2 className="px-1 font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
+          {copy.profile.billingTitle}
+        </h2>
+        <div className="flex flex-col gap-5 rounded-xl border border-surface-line bg-surface-card p-5">
+          <div className="flex flex-wrap items-start justify-between gap-4">
+            <div className="flex flex-col gap-0.5">
+              <h3 className="text-lg font-medium">
+                {copy.profile.billingCurrentPlan.replace("{plan}", plan)}
+              </h3>
+              {sections.subscription && paymentDetails && (
+                <p className="text-sm text-content-secondary">
+                  {copy.profile.billingNextCharge
+                    .replace("{date}", format(new Date(paymentDetails.start * 1000), "dd/MM/yyyy"))
+                    .replace(
+                      "{amount}",
+                      amountFormatted(paymentDetails.amount, paymentDetails.currency),
+                    )
+                    .replace("{cycle}", paymentDetails.recurring)}
+                </p>
+              )}
+              {paymentDetails === null && (
+                <p className="text-sm text-content-secondary">
+                  {copy.profile.billingNoSubscription}
+                </p>
               )}
             </div>
 
-            <Separator className="my-4" />
-
-            {!quotas.loading && (
-              <div className="space-y-4">
-                {QUOTA_KEYS.map((key) => {
-                  const state = quotas.states[key];
-                  return (
-                    <div key={key} className="space-y-2">
-                      <div className="flex items-center justify-between text-sm">
-                        <span>{copy.quota.names[key]}</span>
-                        <span className="font-medium">
-                          {state.used} / {state.unlimited ? copy.quota.unlimited : state.limit}
-                        </span>
-                      </div>
-
-                      <Progress
-                        value={state.ratio === null ? null : state.ratio * 100}
-                        className="h-2"
-                        aria-label={quotaLabel(state, copy.quota.names[key])}
-                      />
-                    </div>
-                  );
-                })}
-              </div>
+            {sections.subscription && (
+              <Button variant="outline" size="sm" onClick={getBillingPortalUrl}>
+                {copy.profile.billingManage}
+              </Button>
             )}
           </div>
 
-          {paymentDetails === null && (
-            <p className="text-sm text-content-secondary">{copy.profile.billingNoSubscription}</p>
-          )}
-
-          <div className="space-y-4">
-            <div>
-              <h3 className="text-lg font-semibold">
-                {paymentDetails === null
-                  ? pricingCopy.billingSection.titleFree
-                  : pricingCopy.billingSection.titleSubscribed}
-              </h3>
-              <p className="text-sm text-content-secondary">
-                {pricingCopy.billingSection.description}
-              </p>
+          {!quotas.loading && (
+            <div className="flex flex-col gap-3">
+              {QUOTA_KEYS.map((key) => {
+                const state = quotas.states[key];
+                return (
+                  <div key={key} className="flex flex-col gap-1.5">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-content-secondary">{copy.quota.names[key]}</span>
+                      <span className="font-mono text-muted-foreground">
+                        {state.used} / {state.unlimited ? copy.quota.unlimited : state.limit}
+                      </span>
+                    </div>
+                    <Progress
+                      value={state.ratio === null ? null : state.ratio * 100}
+                      className="h-1"
+                      aria-label={quotaLabel(state, copy.quota.names[key])}
+                    />
+                  </div>
+                );
+              })}
             </div>
+          )}
+        </div>
+      </section>
 
-            <PlanCards
-              roles={PAID_ROLES}
-              recommended={PLAN_ID.proAi}
-              currentPlan={currentPlan}
-              renderCta={(role, cycle) =>
-                role === currentPlan ? (
-                  <Button className="w-full" variant="outline" disabled>
-                    {pricingCopy.page.currentPlan}
-                  </Button>
-                ) : (
-                  <Button
-                    className="w-full"
-                    variant={role === PLAN_ID.proAi ? "default" : "outline"}
-                    onClick={() => startCheckout(role, cycle)}
-                  >
-                    {pricingCopy.page.choosePlan}
-                  </Button>
-                )
-              }
-            />
-          </div>
+      <section className="flex flex-col gap-3">
+        <div className="flex flex-col gap-0.5 px-1">
+          <h2 className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
+            {paymentDetails === null
+              ? pricingCopy.billingSection.titleFree
+              : pricingCopy.billingSection.titleSubscribed}
+          </h2>
+          <p className="text-xs text-muted-foreground">{pricingCopy.billingSection.description}</p>
+        </div>
 
-          <div className="space-y-4">
-            <h3 className="text-lg font-semibold">{copy.profile.billingHistory}</h3>
-
-            {sections.invoices ? (
-              <div className="space-y-4">
-                {/* cópia antes de ordenar: `invoices` vem do contexto e `sort` é in-place */}
-                {[...(invoices ?? [])]
-                  .sort((a, b) => b.created - a.created)
-                  .map((invoice, index) => (
-                    <div className="flex flex-col gap-1" key={index}>
-                      <p className="text-sm text-content-secondary">
-                        {format(new Date(invoice.created * 1000), "dd/MM/yyyy")} -{" "}
-                        {amountFormatted(invoice.amount_paid, invoice.currency)}
-                      </p>
-
-                      <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg border p-3">
-                        <div className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-full bg-accent-subtle relative">
-                            <CreditCard className="h-5 w-5 text-foreground" />
-                          </div>
-
-                          <div className="flex justify-center flex-col">
-                            <div className="w-fit">
-                              {walletIcons[toText(invoice?.walletType)] ?? null}
-                            </div>
-
-                            <div className="flex gap-2">
-                              {brandIcons[toText(invoice?.brandName)]}
-
-                              <p className="font-medium">••••</p>
-
-                              <p className="font-medium">{invoice?.cardLast4}</p>
-                            </div>
-                          </div>
-                        </div>
-
-                        <div className="flex gap-5">
-                          <div className="flex items-center gap-2">
-                            <Badge variant="outline" className="capitalize">
-                              {invoice.status === "paid"
-                                ? copy.profile.billingPaid
-                                : invoice.status}
-                            </Badge>
-
-                            <Link to={invoice.hosted_invoice_url ?? "#"}>
-                              <Button variant="ghost" size="icon" className="h-8 w-8">
-                                <Receipt className="h-4 w-4" />
-                                <span className="sr-only">{copy.profile.billingViewInvoice}</span>
-                              </Button>
-                            </Link>
-                          </div>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-              </div>
+        <PlanCards
+          roles={PAID_ROLES}
+          recommended={PLAN_ID.proAi}
+          currentPlan={currentPlan}
+          renderCta={(role, cycle) =>
+            role === currentPlan ? (
+              <Button className="w-full" variant="outline" disabled>
+                {pricingCopy.page.currentPlan}
+              </Button>
             ) : (
-              <p className="text-sm text-content-secondary">{copy.profile.billingNoInvoices}</p>
-            )}
-          </div>
-        </CardContent>
-      </Card>
+              <Button
+                className="w-full"
+                variant={role === PLAN_ID.proAi ? "default" : "outline"}
+                onClick={() => startCheckout(role, cycle)}
+              >
+                {pricingCopy.page.choosePlan}
+              </Button>
+            )
+          }
+        />
+      </section>
+
+      <SettingsGroup title={copy.profile.billingHistory}>
+        {sections.invoices ? (
+          // cópia antes de ordenar: `invoices` vem do contexto e `sort` é in-place
+          [...(invoices ?? [])]
+            .sort((a, b) => b.created - a.created)
+            .map((invoice, index) => (
+              <SettingsRow
+                key={index}
+                label={format(new Date(invoice.created * 1000), "dd/MM/yyyy")}
+                hint={
+                  <span className="flex items-center gap-1.5">
+                    {walletIcons[toText(invoice?.walletType)] ??
+                      brandIcons[toText(invoice?.brandName)]}
+                    •••• {invoice?.cardLast4}
+                  </span>
+                }
+              >
+                <span className="font-mono text-xs text-content-secondary">
+                  {amountFormatted(invoice.amount_paid, invoice.currency)}
+                </span>
+                <span className="rounded-md bg-surface-hover px-2 py-0.5 text-2xs text-content-secondary">
+                  {invoice.status === "paid" ? copy.profile.billingPaid : invoice.status}
+                </span>
+                <Link
+                  to={invoice.hosted_invoice_url ?? "#"}
+                  aria-label={copy.profile.billingViewInvoice}
+                  className="flex size-8 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
+                >
+                  <Receipt className="size-4" />
+                </Link>
+              </SettingsRow>
+            ))
+        ) : (
+          <SettingsRow label={copy.profile.billingNoInvoices} />
+        )}
+      </SettingsGroup>
     </main>
   );
 }

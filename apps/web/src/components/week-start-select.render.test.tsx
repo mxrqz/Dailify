@@ -32,12 +32,12 @@ describe("<WeekStartSelect>", () => {
   });
 
   it("escolher domingo salva 0 e atualiza o contexto", async () => {
-    saveSettings.mockResolvedValue({ weekStart: 0 });
+    saveSettings.mockResolvedValue({ settings: { weekStart: 0, timeZone: null, hour12: false } });
     render(<WeekStartSelect />);
     await userEvent.click(screen.getByRole("radio", { name: copy.form.repeatDays[0] }));
 
     expect(setWeekStart).toHaveBeenCalledWith(0);
-    await waitFor(() => expect(saveSettings).toHaveBeenCalledWith("t", 0));
+    await waitFor(() => expect(saveSettings).toHaveBeenCalledWith("t", { weekStart: 0 }));
     expect(toastError).not.toHaveBeenCalled();
   });
 

@@ -154,7 +154,7 @@ export default function Waveform({ onResponse }: { onResponse: (response: TaskPr
           disabled={loading}
           onClick={record ? handleSendRequest : isRecording ? stopRecording : startRecording}
           aria-label={actionLabel}
-          className="size-12 shrink-0 rounded-full bg-accent-primary text-primary-foreground hover:bg-accent-hover"
+          className="size-12 shrink-0 rounded-lg bg-accent-primary text-primary-foreground hover:bg-accent-hover"
         >
           {record && !loading && <SendHorizontalIcon className="size-6" />}
 

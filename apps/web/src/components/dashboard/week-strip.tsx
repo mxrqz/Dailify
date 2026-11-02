@@ -1,7 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState, type RefObject } from "react";
 import { addDays, format, isToday, startOfDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, PlusIcon } from "lucide-react";
 import { motion, MotionConfig } from "motion/react";
 
 import { useDailify } from "@/components/dailifyContext";
@@ -10,6 +10,7 @@ import { dayAnchorId } from "@/components/dashboard/day-section";
 import { DayPicker } from "@/components/dashboard/day-picker";
 import { calendarPanel } from "@/components/dashboard/styles";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { Button } from "@/components/ui/button";
 import { getTasksForDay } from "@/functions/functions";
 import { spring } from "@/consts/motion";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -19,29 +20,28 @@ const DAYS_AHEAD = 7;
 const MAX_DOTS = 3;
 // Só desacopla alguns px abaixo de onde acoplou: com o dedo parado no limiar ela trocava a cada frame.
 const HYSTERESIS_PX = 8;
-// h-10.75 da faixa acoplada: para 1px acima da borda de baixo da top bar (h-11), que segue inteira.
-const DOCKED_PX = 43;
+// Altura da faixa acoplada: 1px a menos que a top bar (h-11 no mobile, h-10 no desktop), cuja borda segue inteira.
+const DOCKED_PX = { mobile: 43, desktop: 39 } as const;
 // Uma seção vira "o dia que se está vendo" quando o topo dela sobe até aqui (o goToDay a para em 56).
 const READING_LINE_PX = 64;
-// Espelham rounded-2xl/rounded-xl/rounded-lg. Números porque o motion só corrige o raio durante a
+// Espelham rounded-xl/rounded-lg/rounded-md. Números porque o motion só corrige o raio durante a
 // escala do morph quando ele vem pelo animate, não por classe.
-const RADIUS_STRIP = 16;
-const RADIUS_DAY = 12;
-const RADIUS_DAY_DOCKED = 8;
+const RADIUS_STRIP = 12;
+const RADIUS_DAY = 8;
+const RADIUS_DAY_DOCKED = 6;
 
 export const weekDays = (): Date[] => {
   const today = startOfDay(new Date());
   return Array.from({ length: DAYS_AHEAD }, (_, i) => addDays(today, i));
 };
 
-/** Mobile: o lugar da faixa na página (a sentinela logo acima dela) chegou ao topo da tela. */
+/** O lugar da faixa na página (a sentinela logo acima dela) chegou ao topo da tela. */
 function useDocked(sentinel: RefObject<HTMLElement>): boolean {
   const [docked, setDocked] = useState(false);
-  const mobile = useMediaQuery("(max-width: 767px)");
 
   useEffect(() => {
     const el = sentinel.current;
-    if (!el || !mobile) return;
+    if (!el) return;
     const line = (px: number) => ({ rootMargin: `-${px}px 0px 0px 0px` });
     const dockAt = new IntersectionObserver(([entry]) => {
       if (!entry.isIntersecting && entry.boundingClientRect.top < 0) setDocked(true);
@@ -56,7 +56,7 @@ function useDocked(sentinel: RefObject<HTMLElement>): boolean {
       undockAt.disconnect();
       setDocked(false);
     };
-  }, [sentinel, mobile]);
+  }, [sentinel]);
 
   // O header esconde marca e ações enquanto a faixa ocupa o centro dele.
   useLayoutEffect(() => {
@@ -121,18 +121,22 @@ function useVisibleDay(days: Date[]): string | undefined {
 /**
  * Os próximos sete dias em uma linha, com um ponto nos que têm tarefa; o mês inteiro fica no popover.
  *
- * No mobile é UM elemento com duas docas: o card na página e, ao rolar, o centro da top bar (entre o
+ * É UM elemento com duas docas: o card na página e, ao rolar, o centro da top bar (no mobile, entre o
  * ☰ e a mesma folga do outro lado). É o mesmo nó nas duas — o motion anima a troca (layout/FLIP) — e
  * o espaço do card fica reservado pra lista não pular.
  */
-export function WeekStrip(): JSX.Element {
+export function WeekStrip({ onCreateOn }: { onCreateOn: (day: Date) => void }): JSX.Element {
   const { tasks, goToDay, selectedDay } = useDailify();
   const days = weekDays();
   const visible = useVisibleDay(days);
   const sentinel = useRef<HTMLDivElement>(null);
   const strip = useRef<HTMLDivElement>(null);
   const docked = useDocked(sentinel);
+  const mobile = useMediaQuery("(max-width: 767px)");
   const [height, setHeight] = useState(0);
+  const [calendarOpen, setCalendarOpen] = useState(false);
+  const [picked, setPicked] = useState<Date | null>(null);
+  const creating = useRef(false);
 
   // Altura do card aberto: acoplada, a diferença vira um espaçador e a lista abaixo não se mexe.
   useLayoutEffect(() => {
@@ -156,10 +160,10 @@ export function WeekStrip(): JSX.Element {
           // Assim o morph é só de tamanho, ancorado no topo.
           className={cn(
             // Borda sempre de 1px (transparente acoplada): sumir com ela mudava a caixa no frame 0.
-            "z-30 flex items-center overflow-hidden border transition-colors duration-base max-md:sticky max-md:top-0",
+            "z-30 flex items-center overflow-hidden border transition-colors duration-base sticky top-0",
             docked
               ? // mx-10 + o gutter da página cobre o pl-3 + ☰ (size-11) e repete a folga do outro lado.
-                "mx-10 h-10.75 gap-0.5 border-transparent bg-surface-page"
+                "mx-10 h-10.75 gap-0.5 border-transparent bg-surface-page md:mx-0 md:h-9.75"
               : "gap-1 border-surface-line bg-surface-card p-2",
           )}
         >
@@ -181,7 +185,9 @@ export function WeekStrip(): JSX.Element {
                   "relative isolate flex min-w-0 flex-1 cursor-pointer items-center justify-center transition-colors",
                   // Acoplada, o fundo é um quadrado no centro (::before); o toque segue a célula toda.
                   "before:absolute before:top-1/2 before:left-1/2 before:-z-10 before:size-7.5 before:-translate-1/2 before:rounded-lg before:transition-colors",
-                  docked ? "h-10 flex-wrap content-center gap-0.5" : "flex-col gap-1 px-2 py-2",
+                  docked
+                    ? "h-10 flex-wrap content-center gap-0.5 md:h-9"
+                    : "flex-col gap-1 px-2 py-2",
                   // O fundo marca o dia que se está vendo na lista; hoje já se distingue pelo número.
                   docked
                     ? seen
@@ -251,7 +257,14 @@ export function WeekStrip(): JSX.Element {
 
           {/* Fica nas duas docas: sair com animação deixava a linha se reacomodar sem animar no fim
               do morph — o "pulo" ao acoplar. */}
-          <Popover>
+          <Popover
+            open={calendarOpen}
+            onOpenChange={(next) => {
+              setCalendarOpen(next);
+              if (next) creating.current = false;
+              else setPicked(null);
+            }}
+          >
             <PopoverTrigger asChild>
               <motion.button
                 {...box}
@@ -260,7 +273,7 @@ export function WeekStrip(): JSX.Element {
                 aria-label={copy.day.openCalendar}
                 className={cn(
                   "flex shrink-0 cursor-pointer items-center justify-center text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground",
-                  docked ? "size-10" : "size-9",
+                  docked ? "size-10 md:size-9" : "size-9",
                 )}
               >
                 <motion.span {...leaf} className="flex">
@@ -269,14 +282,45 @@ export function WeekStrip(): JSX.Element {
               </motion.button>
             </PopoverTrigger>
 
-            <PopoverContent align="end" className={calendarPanel}>
-              <DayPicker value={selectedDay} onSelect={(day) => void goToDay(day)} />
+            <PopoverContent
+              align="end"
+              className={calendarPanel}
+              // Fechou pra criar: o foco vai pro campo da criação, não volta pro ícone.
+              onCloseAutoFocus={(event) => creating.current && event.preventDefault()}
+            >
+              <DayPicker
+                value={picked ?? selectedDay}
+                onSelect={(day) => {
+                  setPicked(day);
+                  void goToDay(day);
+                }}
+              />
+              {picked && (
+                <Button
+                  className="mt-3 h-9 w-full cursor-pointer gap-2 rounded-md"
+                  onClick={() => {
+                    creating.current = true;
+                    setCalendarOpen(false);
+                    setPicked(null);
+                    onCreateOn(picked);
+                  }}
+                >
+                  <PlusIcon className="size-4" />
+                  {copy.day.createOn.replace(
+                    "{day}",
+                    format(picked, "EEE, d MMM", { locale: ptBR }),
+                  )}
+                </Button>
+              )}
             </PopoverContent>
           </Popover>
         </motion.div>
       </MotionConfig>
       {/* Espaçador e não margem: a margem colapsava com o mt-10 da lista e ela subia 40px. */}
-      <div aria-hidden="true" style={{ height: docked ? height - DOCKED_PX : 0 }} />
+      <div
+        aria-hidden="true"
+        style={{ height: docked ? height - DOCKED_PX[mobile ? "mobile" : "desktop"] : 0 }}
+      />
     </>
   );
 }

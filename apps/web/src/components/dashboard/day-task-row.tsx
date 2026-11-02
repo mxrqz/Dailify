@@ -13,7 +13,8 @@ import {
 import { ClockCheck } from "@/components/clock-check";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
 import { TaskCard, TimeLabel } from "@/components/task-card";
-import { taskToCardData } from "@/functions/functions";
+import { useDailify } from "@/components/dailifyContext";
+import { formatClock, taskToCardData } from "@/functions/functions";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import type { TaskProps } from "@/types/types";
@@ -52,6 +53,7 @@ export function DayTaskRow({
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const sheetEditing = useMediaQuery(SHEET_EDITING);
+  const { hour12 } = useDailify();
   const data = taskToCardData(task, day);
   const { onPatch, onRename, onComplete, onUncomplete, onDelete, deleteDialog } = useTaskActions(
     task,
@@ -113,14 +115,14 @@ export function DayTaskRow({
         remove: () => void onDelete(),
       };
 
-  const time = hour ?? "";
+  const time = hour ? formatClock(hour, hour12) : "";
   const card = (
     <TaskCard
       {...data}
       // No toque o horário sai do cartão e fica fora da faixa que desliza (ver abaixo).
       time={sheetEditing ? "" : time}
       upcoming={Boolean(countdown)}
-      at={countdown ?? data.time}
+      at={countdown ?? formatClock(data.time, hour12)}
       selected={open}
       check={
         <ClockCheck

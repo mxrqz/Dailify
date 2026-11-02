@@ -36,6 +36,7 @@ import { priorityText } from "@/consts/conts";
 import { useDailify } from "@/components/dailifyContext";
 import { useQuotas } from "@/hooks/useQuotas";
 import { DEFAULT_HOUR, undatedReminder } from "@/functions/compose-input";
+import { formatClock } from "@/functions/functions";
 import { linkLabel } from "@/functions/link-label";
 import { cn } from "@/lib/utils";
 import type { TaskProps } from "@/types/types";
@@ -131,7 +132,7 @@ export function TaskForm({
   onSubmit,
   onDirtyChange,
 }: TaskFormProps) {
-  const { tasks } = useDailify();
+  const { tasks, hour12 } = useDailify();
   // `exhausted`, não `blocked`: nenhum plano tem limite 0, então `blocked` nunca é true e o gate
   // seria morto. Tarefa que JÁ repete ocupa a vaga dela — mudar a cadência não cria linha nova.
   const recurrence = !useQuotas().states.recurring.exhausted || (task?.repeat ?? "Off") !== "Off";
@@ -280,7 +281,7 @@ export function TaskForm({
                   />
                 </FieldChip>
                 <FieldChip icon={<ClockIcon className={icon} />} filled tone={chipTime}>
-                  {format(date, "HH:mm")}
+                  {formatClock(format(date, "HH:mm"), hour12)}
                   <input
                     type="time"
                     aria-label={copy.form.time}
@@ -427,7 +428,7 @@ export function TaskForm({
                       setRepeat({ Weekly: on ? weekly.filter((d) => d !== day) : [...weekly, day] })
                     }
                     className={cn(
-                      "size-10 rounded-full border text-sm transition-colors outline-none",
+                      "size-10 rounded-md border text-sm transition-colors outline-none",
                       "focus-visible:ring-[3px] focus-visible:ring-ring/50",
                       on
                         ? "border-accent-primary bg-accent-subtle text-foreground"
@@ -478,7 +479,7 @@ export function TaskForm({
                     type="button"
                     onClick={() => toggleTag(tag)}
                     aria-label={`${copy.form.tags}: ${tag}`}
-                    className="flex h-8 items-center gap-1 rounded-full border border-surface-line px-3 text-2xs text-content-secondary transition-colors outline-none hover:bg-surface-hover focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    className="flex h-8 items-center gap-1 rounded-md border border-surface-line px-3 text-2xs text-content-secondary transition-colors outline-none hover:bg-surface-hover focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   >
                     {tag}
                     <XIcon className="size-3 shrink-0" aria-hidden="true" />

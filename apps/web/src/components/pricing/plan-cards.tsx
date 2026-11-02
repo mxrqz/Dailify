@@ -51,14 +51,14 @@ export function PlanCards({
   return (
     <div className={cn("flex flex-col gap-8", className)}>
       <div className="flex justify-center">
-        <div className="inline-flex items-center gap-1 rounded-full border border-surface-line bg-surface-page p-1">
+        <div className="inline-flex items-center gap-1 rounded-md border border-surface-line bg-surface-page p-1">
           {(["monthly", "yearly"] as const).map((c) => (
             <button
               key={c}
               type="button"
               onClick={() => setCycle(c)}
               className={cn(
-                "inline-flex items-center gap-2 rounded-full px-4 py-1.5 font-mono text-xs uppercase tracking-[0.04em] transition-colors",
+                "inline-flex items-center gap-2 rounded-sm px-4 py-1.5 font-mono text-xs uppercase tracking-[0.04em] transition-colors",
                 cycle === c
                   ? "bg-accent-primary text-primary-foreground"
                   : "text-muted-foreground hover:text-foreground",

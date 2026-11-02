@@ -27,6 +27,9 @@ export function PushToggle(): JSX.Element {
       const next = state === "on" ? await disablePush(token) : await enablePush(token);
       setState(next);
       if (next === "off" && state !== "on") toast.error(copy.form.notificationsError);
+    } catch {
+      // Registro do SW ou inscrição falhando estouravam calados e o botão parecia não fazer nada.
+      toast.error(copy.form.notificationsError);
     } finally {
       setBusy(false);
     }
@@ -45,19 +48,16 @@ export function PushToggle(): JSX.Element {
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <p className="text-sm text-content-secondary">
-        {state === "on" ? copy.form.notificationsOn : copy.form.notificationsOff}
-      </p>
-      <Button
-        variant={state === "on" ? "outline" : "default"}
-        disabled={busy}
-        onClick={() => void toggle()}
-        className="w-fit cursor-pointer gap-2 rounded-full"
-      >
-        {busy ? <Loader2Icon className="size-4 animate-spin" /> : <BellIcon className="size-4" />}
-        {state === "on" ? copy.form.notificationsDisable : copy.form.notificationsEnable}
-      </Button>
-    </div>
+    // O texto de estado é a ajuda da linha em /settings; aqui fica só a ação.
+    <Button
+      variant={state === "on" ? "outline" : "default"}
+      size="sm"
+      disabled={busy}
+      onClick={() => void toggle()}
+      className="w-fit cursor-pointer gap-2 rounded-md"
+    >
+      {busy ? <Loader2Icon className="size-4 animate-spin" /> : <BellIcon className="size-4" />}
+      {state === "on" ? copy.form.notificationsDisable : copy.form.notificationsEnable}
+    </Button>
   );
 }

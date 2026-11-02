@@ -117,7 +117,7 @@ export function TaskDetailView({ task, className }: TaskDetailViewProps) {
       <CardContent className="p-4">
         <div className="grid grid-cols-2 gap-4">
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-full bg-foreground/10 text-foreground">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-foreground/10 text-foreground">
               <Clock className="size-4" />
             </div>
 
@@ -128,7 +128,7 @@ export function TaskDetailView({ task, className }: TaskDetailViewProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-full bg-foreground/10 text-foreground">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-foreground/10 text-foreground">
               <Repeat className="size-4" />
             </div>
 
@@ -143,7 +143,7 @@ export function TaskDetailView({ task, className }: TaskDetailViewProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-full bg-foreground/10 text-foreground">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-foreground/10 text-foreground">
               <Bell className="size-4" />
             </div>
 
@@ -154,7 +154,7 @@ export function TaskDetailView({ task, className }: TaskDetailViewProps) {
           </div>
 
           <div className="flex items-center gap-2">
-            <div className="flex size-8 items-center justify-center rounded-full bg-foreground/10 text-foreground">
+            <div className="flex size-8 items-center justify-center rounded-lg bg-foreground/10 text-foreground">
               <BarChart2 className="size-4" />
             </div>
 

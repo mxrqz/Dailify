@@ -41,7 +41,7 @@ export function RecurrenceScopeDialog({
           <Button
             variant={destructive ? "destructive" : "default"}
             className={cn(
-              "h-12 cursor-pointer rounded-full",
+              "h-12 cursor-pointer rounded-md",
               // fora do destrutivo, a ação principal usa o accent do app, não o `primary` do shadcn
               !destructive && "bg-accent-primary text-primary-foreground hover:bg-accent-hover",
             )}
@@ -51,7 +51,7 @@ export function RecurrenceScopeDialog({
           </Button>
           <Button
             variant="outline"
-            className="h-12 cursor-pointer rounded-full border-surface-line"
+            className="h-12 cursor-pointer rounded-md border-surface-line"
             onClick={onSeries}
           >
             {copy.form.scopeSeries}

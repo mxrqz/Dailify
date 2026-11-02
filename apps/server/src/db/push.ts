@@ -138,7 +138,8 @@ export async function dueAlerts(
 
 /**
  * Séries com alerta cujos donos têm ao menos um device inscrito — só esses podem receber push, e
- * é do device que sai o fuso (o Worker roda em UTC e não sabe onde o dia do usuário começa).
+ * o fuso é o da config do usuário, ou o do device quando ela está no automático (o Worker roda em
+ * UTC e não sabe onde o dia do usuário começa).
  *
  * `alert_sent` aqui guarda o INSTANTE DO ALERTA da última ocorrência avisada, não a hora do envio:
  * é o que impede tanto o reenvio quanto pular a ocorrência seguinte.
@@ -149,9 +150,9 @@ export async function recurringAlertCandidates(
 ): Promise<RecurringCandidate[]> {
   const { results } = await db
     .prepare(
-      `SELECT t.*, (
+      `SELECT t.*, COALESCE(s.time_zone, (
          SELECT p.timezone FROM push_subscriptions p WHERE p.user_id = t.user_id LIMIT 1
-       ) AS timezone, s.week_start AS week_start
+       )) AS timezone, s.week_start AS week_start
        FROM tasks t
        LEFT JOIN user_settings s ON s.user_id = t.user_id
        WHERE t.alert IS NOT NULL AND t.repeat_kind != 'Off'

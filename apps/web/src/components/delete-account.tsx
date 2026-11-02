@@ -5,7 +5,7 @@ import { toast } from "sonner";
 
 import { copy } from "@/components/dashboard/copy";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SettingsRowButton } from "@/components/settings-list";
 import {
   Dialog,
   DialogContent,
@@ -58,70 +58,61 @@ export function DeleteAccount(): JSX.Element | null {
     });
   };
 
-  // Contorno normal, título em destructive: o vermelho marca o assunto sem transformar a página
-  // inteira num alerta — e a regra do projeto é cor sólida, sem `/opacity`.
+  // Uma linha do grupo Conta, com o nome em destructive: o vermelho marca o assunto sem transformar
+  // a página inteira num alerta.
   return (
-    <Card className="rounded-2xl border-surface-line bg-surface-card">
-      <CardHeader>
-        <CardTitle className="text-destructive">{copy.profile.dangerTitle}</CardTitle>
-        <CardDescription className="text-content-secondary">
-          {copy.profile.dangerDescription}
-        </CardDescription>
-      </CardHeader>
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        if (!next) setTyped("");
+      }}
+    >
+      <DialogTrigger asChild>
+        <SettingsRowButton
+          label={copy.profile.deleteAccount}
+          hint={copy.profile.dangerDescription}
+          danger
+        />
+      </DialogTrigger>
 
-      <CardContent>
-        <Dialog
-          open={open}
-          onOpenChange={(next) => {
-            setOpen(next);
-            if (!next) setTyped("");
-          }}
-        >
-          <DialogTrigger asChild>
-            <Button variant="outline" className="border-destructive text-destructive">
-              {copy.profile.deleteAccount}
-            </Button>
-          </DialogTrigger>
+      <DialogContent>
+        <DialogHeader>
+          <DialogTitle>{copy.profile.deleteConfirmTitle}</DialogTitle>
+          <DialogDescription>{copy.profile.deleteConfirmDescription}</DialogDescription>
+        </DialogHeader>
 
-          <DialogContent>
-            <DialogHeader>
-              <DialogTitle>{copy.profile.deleteConfirmTitle}</DialogTitle>
-              <DialogDescription>{copy.profile.deleteConfirmDescription}</DialogDescription>
-            </DialogHeader>
+        <div className="flex flex-col gap-2">
+          <Label htmlFor="confirm-email">
+            {copy.profile.deleteConfirmPrompt.replace("{email}", email)}
+          </Label>
+          <Input
+            id="confirm-email"
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            autoComplete="off"
+            placeholder={email}
+          />
+        </div>
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="confirm-email">
-                {copy.profile.deleteConfirmPrompt.replace("{email}", email)}
-              </Label>
-              <Input
-                id="confirm-email"
-                value={typed}
-                onChange={(e) => setTyped(e.target.value)}
-                autoComplete="off"
-                placeholder={email}
-              />
-            </div>
+        <DialogFooter className="gap-2">
+          <Button variant="outline" onClick={() => setOpen(false)} disabled={deleting}>
+            {copy.form.cancel}
+          </Button>
 
-            <DialogFooter className="gap-2">
-              <Button variant="outline" onClick={() => setOpen(false)} disabled={deleting}>
-                {copy.form.cancel}
-              </Button>
-
-              <Button
-                variant="destructive"
-                disabled={!confirmed || deleting}
-                onClick={() => void handleDelete()}
-              >
-                {deleting ? (
-                  <Loader2Icon className="size-4 animate-spin" />
-                ) : (
-                  copy.profile.deleteConfirmCta
-                )}
-              </Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
-      </CardContent>
-    </Card>
+          <Button
+            variant="destructive"
+            disabled={!confirmed || deleting}
+            onClick={() => void handleDelete()}
+          >
+            {deleting ? (
+              <Loader2Icon className="size-4 animate-spin" />
+            ) : (
+              copy.profile.deleteConfirmCta
+            )}
+          </Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   );
 }

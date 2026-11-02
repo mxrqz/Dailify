@@ -7,6 +7,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { segmented, segmentedItem } from "@/components/settings-list";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { isTheme, useTheme } from "./theme-provider";
 import { cn } from "@/lib/utils";
@@ -53,16 +54,22 @@ export function ThemeSelect(): JSX.Element {
   return (
     <ToggleGroup
       type="single"
-      variant="outline"
+      className={segmented}
       value={theme}
       onValueChange={(value) => {
         if (isTheme(value)) setTheme(value);
       }}
       aria-label={copy.header.themeToggle}
     >
-      <ToggleGroupItem value="light">{copy.header.themeLight}</ToggleGroupItem>
-      <ToggleGroupItem value="dark">{copy.header.themeDark}</ToggleGroupItem>
-      <ToggleGroupItem value="system">{copy.header.themeSystem}</ToggleGroupItem>
+      <ToggleGroupItem className={segmentedItem} value="light">
+        {copy.header.themeLight}
+      </ToggleGroupItem>
+      <ToggleGroupItem className={segmentedItem} value="dark">
+        {copy.header.themeDark}
+      </ToggleGroupItem>
+      <ToggleGroupItem className={segmentedItem} value="system">
+        {copy.header.themeSystem}
+      </ToggleGroupItem>
     </ToggleGroup>
   );
 }

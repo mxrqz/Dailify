@@ -87,22 +87,30 @@ export async function getUndatedTasks(token: string): Promise<{ tasks: Task[]; e
   return { tasks: data?.tasks ?? [], error };
 }
 
-export async function getSettings(
-  token: string,
-): Promise<{ weekStart?: WeekStart; error?: ApiError }> {
-  const { data, error } = await request<{ weekStart?: WeekStart }>("/settings", token);
-  return { weekStart: data?.weekStart, error };
+export interface Settings {
+  weekStart: WeekStart;
+  /** null = automático: o fuso do aparelho. */
+  timeZone: string | null;
+  hour12: boolean;
 }
 
+export async function getSettings(
+  token: string,
+): Promise<{ settings?: Settings; error?: ApiError }> {
+  const { data, error } = await request<Settings>("/settings", token);
+  return { settings: data, error };
+}
+
+/** Parcial: manda só o que mudou, o servidor mantém o resto. */
 export async function saveSettings(
   token: string,
-  weekStart: WeekStart,
-): Promise<{ weekStart?: WeekStart; error?: ApiError }> {
-  const { data, error } = await request<{ weekStart?: WeekStart }>("/settings", token, {
+  patch: Partial<Settings>,
+): Promise<{ settings?: Settings; error?: ApiError }> {
+  const { data, error } = await request<Settings>("/settings", token, {
     method: "PUT",
-    body: JSON.stringify({ weekStart }),
+    body: JSON.stringify(patch),
   });
-  return { weekStart: data?.weekStart, error };
+  return { settings: data, error };
 }
 
 export async function createTask(

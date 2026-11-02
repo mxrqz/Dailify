@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { composeTaskInput } from "./compose-input";
+import { composeTaskInput, onDay } from "./compose-input";
 import { parseTaskText } from "./parse-task";
 
 // Quarta-feira, 21 de outubro de 2026, 10:00.
@@ -85,5 +85,26 @@ describe("composeTaskInput", () => {
       date: at(22, 9),
       alert: at(22, 9),
     });
+  });
+});
+
+describe("onDay", () => {
+  const day = new Date(2026, 10, 12);
+
+  it("põe a hora da frase no dia escolhido", () => {
+    const parsed = onDay(parseTaskText("reunião 15h", NOW), day);
+    expect(parsed.date).toEqual(new Date(2026, 10, 12, 15));
+    expect(parsed.hasDay).toBe(true);
+  });
+
+  it("frase com dia próprio ganha do calendário", () => {
+    const parsed = parseTaskText("reunião amanhã 15h", NOW);
+    expect(onDay(parsed, day)).toBe(parsed);
+  });
+
+  it("sem hora vira Sem data com lembrete no dia", () => {
+    const input = composeTaskInput(onDay(parseTaskText("dentista", NOW), day), NOW);
+    expect(input.undated).toBe(true);
+    expect(input.alert).toBe(new Date(2026, 10, 12, 9).getTime());
   });
 });

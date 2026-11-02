@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, type KeyboardEvent, type PointerEvent } from "react";
 
+import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { DayPicker } from "@/components/dashboard/day-picker";
 import { cn } from "@/lib/utils";
@@ -19,6 +20,8 @@ const GLIDE_PER_FRAME = 0.14;
 const STILL_MS = 80;
 
 const HOURS = Array.from({ length: 24 }, (_, h) => h);
+const HOURS_12 = Array.from({ length: 12 }, (_, i) => i + 1);
+const MERIDIEM = [0, 1];
 const pad = (n: number) => String(n).padStart(2, "0");
 
 /** Minutos de 5 em 5, mais o minuto atual se ele não cair num deles (16:37 não vira 16:35 sozinho). */
@@ -36,11 +39,13 @@ function Wheel({
   value,
   label,
   onChange,
+  display = pad,
 }: {
   values: number[];
   value: number;
   label: string;
   onChange: (value: number) => void;
+  display?: (value: number) => string;
 }): JSX.Element {
   const id = useId();
   const ref = useRef<HTMLDivElement>(null);
@@ -210,14 +215,14 @@ function Wheel({
             v === value ? "text-foreground" : "text-muted-foreground",
           )}
         >
-          {pad(v)}
+          {display(v)}
         </div>
       ))}
     </div>
   );
 }
 
-/** Roda fina de hora e minuto, em 24h. */
+/** Roda fina de hora e minuto; em 12h (config) as horas vão de 1 a 12 e ganham AM/PM. */
 export function TimeWheel({
   value,
   onChange,
@@ -225,33 +230,55 @@ export function TimeWheel({
   value: Date;
   onChange: (date: Date) => void;
 }): JSX.Element {
-  const set = (hours: number, minutes: number) => {
+  const { hour12 } = useDailify();
+  const hours = value.getHours();
+  const pm = hours >= 12 ? 1 : 0;
+
+  const set = (h: number, minutes: number) => {
     const next = new Date(value);
-    next.setHours(hours, minutes, 0, 0);
+    next.setHours(h, minutes, 0, 0);
     onChange(next);
   };
 
   return (
     <div className="relative flex items-center justify-center gap-1">
-      {/* A faixa do meio marca a linha escolhida das duas colunas. */}
+      {/* A faixa do meio marca a linha escolhida das colunas. */}
       <div
         className="pointer-events-none absolute inset-x-0 top-5.5 h-5 rounded-md bg-surface-hover"
         aria-hidden="true"
       />
       <div className="relative flex items-center">
-        <Wheel
-          values={HOURS}
-          value={value.getHours()}
-          label={copy.form.hour}
-          onChange={(h) => set(h, value.getMinutes())}
-        />
+        {hour12 ? (
+          <Wheel
+            values={HOURS_12}
+            value={hours % 12 || 12}
+            label={copy.form.hour}
+            onChange={(h) => set((h % 12) + pm * 12, value.getMinutes())}
+          />
+        ) : (
+          <Wheel
+            values={HOURS}
+            value={hours}
+            label={copy.form.hour}
+            onChange={(h) => set(h, value.getMinutes())}
+          />
+        )}
         <span className="font-mono text-sm text-muted-foreground">:</span>
         <Wheel
           values={minuteOptions(value.getMinutes())}
           value={value.getMinutes()}
           label={copy.form.minute}
-          onChange={(m) => set(value.getHours(), m)}
+          onChange={(m) => set(hours, m)}
         />
+        {hour12 && (
+          <Wheel
+            values={MERIDIEM}
+            value={pm}
+            label={copy.form.meridiem}
+            display={(v) => (v ? "PM" : "AM")}
+            onChange={(next) => set((hours % 12) + next * 12, value.getMinutes())}
+          />
+        )}
       </div>
     </div>
   );

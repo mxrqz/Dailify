@@ -4,6 +4,7 @@ import { toast } from "sonner";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
+import { segmented, segmentedItem } from "@/components/settings-list";
 import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { saveSettings } from "@/functions/api";
 
@@ -19,7 +20,7 @@ export function WeekStartSelect(): JSX.Element {
     const previous = weekStart;
     setWeekStart(next);
     const token = await getToken();
-    const result = token ? await saveSettings(token, next) : undefined;
+    const result = token ? await saveSettings(token, { weekStart: next }) : undefined;
     if (!result || result.error) {
       setWeekStart(previous);
       toast.error(copy.profile.weekStartError);
@@ -29,13 +30,13 @@ export function WeekStartSelect(): JSX.Element {
   return (
     <ToggleGroup
       type="single"
-      variant="outline"
+      className={segmented}
       value={String(weekStart)}
       onValueChange={choose}
       aria-label={copy.profile.weekStartTitle}
     >
       {copy.form.repeatDays.map((day, index) => (
-        <ToggleGroupItem key={day} value={String(index)}>
+        <ToggleGroupItem key={day} className={segmentedItem} value={String(index)}>
           {day}
         </ToggleGroupItem>
       ))}

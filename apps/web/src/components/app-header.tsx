@@ -4,7 +4,6 @@ import { Link, useNavigate } from "react-router-dom";
 
 import { Brand } from "@/components/brand";
 import { MobileNav } from "@/components/dashboard/sidebar/mobile-nav";
-import { QuotaBar } from "@/components/quota-bar";
 import { SyncBadge } from "@/components/sync-badge";
 import { copy } from "@/components/dashboard/copy";
 import { Button } from "@/components/ui/button";
@@ -44,7 +43,8 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
         compact
         className={cn(
           "absolute left-1/2 -translate-x-1/2 pl-0 md:static md:translate-x-0 md:pl-3",
-          tucked,
+          // No desktop a faixa acopla na coluna da agenda, longe da marca: ela fica.
+          "transition-[opacity,visibility] duration-fast max-md:in-data-strip-docked:invisible max-md:in-data-strip-docked:opacity-0",
         )}
       />
 
@@ -71,15 +71,13 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
       </div>
 
       <div className={cn("ml-auto inline-flex items-center gap-2", tucked)}>
-        <QuotaBar />
-
         <SyncBadge />
 
         {isFree && (
           <Button
             asChild
             variant="outline"
-            className="h-6 rounded-full px-3 font-mono text-2xs uppercase tracking-[0.04em]"
+            className="h-6 rounded-md px-3 font-mono text-2xs uppercase tracking-[0.04em]"
           >
             <Link to="/premium" className="relative hit-target">
               {copy.header.upgrade}
@@ -91,7 +89,7 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
           <Button
             asChild
             variant="outline"
-            className="h-6 rounded-full px-3 font-mono text-2xs uppercase tracking-[0.04em]"
+            className="h-6 rounded-md px-3 font-mono text-2xs uppercase tracking-[0.04em]"
           >
             <Link to="/login">{copy.header.signIn}</Link>
           </Button>

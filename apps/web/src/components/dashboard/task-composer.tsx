@@ -17,6 +17,7 @@ import { copy } from "@/components/dashboard/copy";
 import { Label } from "@/components/ui/label";
 import { composeTaskInput } from "@/functions/compose-input";
 import { parseTaskText, type ParsedTask } from "@/functions/parse-task";
+import { onDay } from "@/functions/compose-input";
 import { repeatLabel } from "@/functions/repeat-label";
 import { linkLabel } from "@/functions/link-label";
 import {
@@ -27,6 +28,8 @@ import {
   chipRepeat,
   chipTime,
 } from "@/components/dashboard/styles";
+import { useDailify } from "@/components/dailifyContext";
+import { formatClock } from "@/functions/functions";
 import { cn } from "@/lib/utils";
 
 export interface ComposerValues {
@@ -39,6 +42,8 @@ interface TaskComposerProps {
   onSubmit: (values: ComposerValues, again: boolean) => void;
   /** Folha do mobile: título grande sem moldura, chips maiores e o enviar na linha deles. */
   large?: boolean;
+  /** Dia escolhido no calendário: vale quando a frase não cita um dia. */
+  day?: Date | null;
 }
 
 /**
@@ -46,10 +51,11 @@ interface TaskComposerProps {
  * "Vai para" diz onde a tarefa cai — sem esse eco o usuário só descobre no envio que a hora não
  * foi entendida.
  */
-export function TaskComposer({ submitting, onSubmit, large }: TaskComposerProps): JSX.Element {
+export function TaskComposer({ submitting, onSubmit, large, day }: TaskComposerProps): JSX.Element {
   const [input, setInput] = useState("");
+  const { hour12 } = useDailify();
 
-  const parsed = useMemo(() => parseTaskText(input), [input]);
+  const parsed = useMemo(() => onDay(parseTaskText(input), day), [input, day]);
   const task = useMemo(() => composeTaskInput(parsed, new Date()), [parsed]);
   const canSubmit = Boolean(parsed.text) && !submitting;
 
@@ -150,7 +156,7 @@ export function TaskComposer({ submitting, onSubmit, large }: TaskComposerProps)
           {parsed.hasTime && parsed.date ? (
             <>
               <ClockIcon className="size-3" aria-hidden="true" />
-              {format(parsed.date, "HH:mm")}
+              {formatClock(format(parsed.date, "HH:mm"), hour12)}
             </>
           ) : (
             copy.composer.addTime
@@ -168,7 +174,8 @@ export function TaskComposer({ submitting, onSubmit, large }: TaskComposerProps)
           {task.alert ? (
             <>
               <BellIcon className="size-3" aria-hidden="true" />
-              {format(task.alert, "EEEEEE HH:mm", { locale: ptBR })}
+              {format(task.alert, "EEEEEE", { locale: ptBR })}{" "}
+              {formatClock(format(task.alert, "HH:mm"), hour12)}
             </>
           ) : (
             copy.composer.addReminder

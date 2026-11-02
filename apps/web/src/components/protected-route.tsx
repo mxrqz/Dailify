@@ -44,6 +44,8 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     undatedTasks,
     setUndatedTasks,
     setWeekStart,
+    setTimeZone,
+    setHour12,
   } = useDailify();
 
   const location = useLocation();
@@ -62,8 +64,11 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       if (undated.status === "fulfilled" && !undated.value.error) {
         setUndatedTasks(undated.value.tasks);
       }
-      if (settings.status === "fulfilled" && settings.value.weekStart !== undefined) {
-        setWeekStart(settings.value.weekStart);
+      const saved = settings.status === "fulfilled" ? settings.value.settings : undefined;
+      if (saved) {
+        setWeekStart(saved.weekStart);
+        setTimeZone(saved.timeZone);
+        setHour12(saved.hour12);
       }
     } catch {
       /* sem sessão utilizável */

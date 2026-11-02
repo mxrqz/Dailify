@@ -25,7 +25,7 @@ export function SiteHeader({ className }: { className?: string }): JSX.Element {
 
       <div className="inline-flex items-center gap-3">
         <ModeToggle />
-        <Button asChild className="rounded-full">
+        <Button asChild className="rounded-md">
           <Link to={user ? "/dashboard" : "/login"}>
             {user ? copy.header.dashboard : copy.header.signIn}
           </Link>

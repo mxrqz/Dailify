@@ -64,3 +64,12 @@ function nextReminder(day: Date, repeat: Repeat, now: Date): Date | null {
   if (repeat === "Monthly") return at(0, 1);
   return repeat === "Yearly" ? at(0, 0, 1) : at(1);
 }
+
+/** Dia escolhido no calendário entra quando a frase não cita um; a hora da frase é mantida. */
+export function onDay(parsed: ParsedTask, day: Date | null | undefined): ParsedTask {
+  if (!day || parsed.hasDay) return parsed;
+  const date = new Date(day);
+  const time = parsed.hasTime ? parsed.date : null;
+  date.setHours(time?.getHours() ?? 0, time?.getMinutes() ?? 0, 0, 0);
+  return { ...parsed, date, hasDay: true };
+}

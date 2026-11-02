@@ -20,7 +20,7 @@ import { copy } from "@/components/dashboard/copy";
 import { cn } from "@/lib/utils";
 
 const navButton =
-  "flex size-7 cursor-pointer items-center justify-center rounded-full text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground";
+  "flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground";
 
 /**
  * Calendário de um dia: fechado mostra só a semana do dia escolhido numa linha; o chevron abre o

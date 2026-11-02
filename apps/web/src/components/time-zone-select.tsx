@@ -1,0 +1,87 @@
+import { useMemo, useState } from "react";
+import { useAuth } from "@clerk/clerk-react";
+import { CheckIcon, ChevronDownIcon } from "lucide-react";
+import { toast } from "sonner";
+
+import { useDailify } from "@/components/dailifyContext";
+import { copy } from "@/components/dashboard/copy";
+import {
+  Command,
+  CommandEmpty,
+  CommandInput,
+  CommandItem,
+  CommandList,
+} from "@/components/ui/command";
+import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
+import { saveSettings } from "@/functions/api";
+import { browserTimeZone } from "@/functions/undated";
+import { cn } from "@/lib/utils";
+
+const AUTO = "auto";
+
+/** "GMT-3" do fuso agora — o que a pessoa reconhece mais rápido que o nome da cidade. */
+function offsetOf(zone: string): string {
+  const part = new Intl.DateTimeFormat("en-US", { timeZone: zone, timeZoneName: "shortOffset" })
+    .formatToParts(new Date())
+    .find((p) => p.type === "timeZoneName");
+  return part?.value ?? "";
+}
+
+/** Fuso da conta. "Automático" segue o aparelho (e viaja com ele); escolher fixa um. Otimista. */
+export function TimeZoneSelect(): JSX.Element {
+  const { timeZone, setTimeZone } = useDailify();
+  const { getToken } = useAuth();
+  const [open, setOpen] = useState(false);
+  const device = browserTimeZone();
+  const zones = useMemo(
+    () => Intl.supportedValuesOf("timeZone").map((zone) => ({ zone, offset: offsetOf(zone) })),
+    [],
+  );
+
+  const choose = async (next: string | null) => {
+    setOpen(false);
+    if (next === timeZone) return;
+    const previous = timeZone;
+    setTimeZone(next);
+    const token = await getToken();
+    const result = token ? await saveSettings(token, { timeZone: next }) : undefined;
+    if (!result || result.error) {
+      setTimeZone(previous);
+      toast.error(copy.profile.timeZoneError);
+    }
+  };
+
+  const label = timeZone ?? copy.profile.timeZoneAuto.replace("{zone}", device);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger className="flex h-9 w-full max-w-72 cursor-pointer items-center justify-between gap-2 rounded-md border border-surface-line px-3 text-sm transition-colors hover:bg-surface-hover">
+        <span className="truncate">{label}</span>
+        <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
+      </PopoverTrigger>
+      <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-0">
+        <Command>
+          <CommandInput placeholder={copy.profile.timeZoneSearch} />
+          <CommandList>
+            <CommandEmpty>{copy.profile.timeZoneEmpty}</CommandEmpty>
+            <CommandItem value={`${AUTO} ${device}`} onSelect={() => void choose(null)}>
+              <CheckIcon className={cn("size-4", timeZone !== null && "invisible")} />
+              {copy.profile.timeZoneAuto.replace("{zone}", device)}
+            </CommandItem>
+            {zones.map(({ zone, offset }) => (
+              <CommandItem
+                key={zone}
+                value={`${zone} ${offset}`}
+                onSelect={() => void choose(zone)}
+              >
+                <CheckIcon className={cn("size-4", timeZone !== zone && "invisible")} />
+                <span className="flex-1 truncate">{zone.replace(/_/g, " ")}</span>
+                <span className="font-mono text-2xs text-muted-foreground">{offset}</span>
+              </CommandItem>
+            ))}
+          </CommandList>
+        </Command>
+      </PopoverContent>
+    </Popover>
+  );
+}

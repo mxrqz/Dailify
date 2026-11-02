@@ -1,6 +1,7 @@
 import { getPushKey, removePushSubscription, savePushSubscription } from "./api";
 
-const SW_URL = "/sw.js";
+// Em dev o vite-plugin-pwa serve o SW em outra URL; `/sw.js` cai no index.html e o registro falha.
+const SW_URL = import.meta.env.DEV ? "/dev-sw.js?dev-sw" : "/sw.js";
 
 export type PushState = "unsupported" | "denied" | "on" | "off";
 

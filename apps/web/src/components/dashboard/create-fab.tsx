@@ -15,17 +15,20 @@ const DOCKED_KEY = "dailify:composer-docked";
 // Botão, folha e campo fixo são a MESMA superfície: o framer morfa uma na outra pelo layoutId.
 const SURFACE = "composer-surface";
 
-// Espelham rounded-2xl e --radius-panel. Têm que ser números: o framer só corrige o raio durante a
+// Espelham rounded-xl e --radius-panel. Têm que ser números: o framer só corrige o raio durante a
 // escala do morph quando ele vem pelo style, não por classe.
-const RADIUS_FAB = 16;
-const RADIUS_PANEL = 22;
+const RADIUS_FAB = 12;
+const RADIUS_PANEL = 12;
 
 const iconButton =
-  "flex size-7 cursor-pointer items-center justify-center rounded-full border border-highlight bg-surface-panel text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground";
+  "flex size-7 cursor-pointer items-center justify-center rounded-md border border-highlight bg-surface-panel text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground";
 
 interface CreateFabProps {
   onSubmit: (values: ComposerValues) => void;
   submitting?: boolean;
+  /** Dia vindo do calendário: abre a criação já nele. */
+  day?: Date | null;
+  onDayDone?: () => void;
 }
 
 /**
@@ -33,7 +36,7 @@ interface CreateFabProps {
  * aberto no rodapé do painel (largura toda). Sem portal de propósito: no desktop a folha se ancora
  * no próprio botão, que mora no painel da agenda e desliza com ele.
  */
-export function CreateFab({ onSubmit, submitting }: CreateFabProps): JSX.Element {
+export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const [docked, setDocked] = useStoredFlag(DOCKED_KEY);
   // Desfixou: a folha fica aberta e some quando o mouse sai dela.
@@ -72,6 +75,14 @@ export function CreateFab({ onSubmit, submitting }: CreateFabProps): JSX.Element
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [docked]);
 
+  useEffect(() => {
+    if (!day) return;
+    if (!docked) setOpen(true);
+    // Depois do frame: a folha ainda está montando e o popover do calendário acabou de fechar.
+    const frame = requestAnimationFrame(() => document.getElementById("composer-text")?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [day]);
+
   const pin = () => {
     setDocked(true);
     setOpen(false);
@@ -85,7 +96,10 @@ export function CreateFab({ onSubmit, submitting }: CreateFabProps): JSX.Element
 
   const changeOpen = (next: boolean) => {
     setOpen(next);
-    if (!next) setCloseOnLeave(false);
+    if (!next) {
+      setCloseOnLeave(false);
+      onDayDone?.();
+    }
   };
 
   return (
@@ -100,7 +114,14 @@ export function CreateFab({ onSubmit, submitting }: CreateFabProps): JSX.Element
             className="relative border border-highlight bg-surface-panel p-1 shadow-panel"
           >
             <motion.div {...content}>
-              <TaskComposer submitting={submitting} onSubmit={(values) => onSubmit(values)} />
+              <TaskComposer
+                day={day}
+                submitting={submitting}
+                onSubmit={(values) => {
+                  onSubmit(values);
+                  onDayDone?.();
+                }}
+              />
             </motion.div>
             <motion.button
               {...content}
@@ -184,6 +205,7 @@ export function CreateFab({ onSubmit, submitting }: CreateFabProps): JSX.Element
                 <motion.div {...content}>
                   <TaskComposer
                     large={!desktop}
+                    day={day}
                     submitting={submitting}
                     onSubmit={(values, again) => {
                       onSubmit(values);

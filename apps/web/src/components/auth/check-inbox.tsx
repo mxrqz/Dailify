@@ -47,7 +47,7 @@ export function CheckInbox({
 
   return (
     <div className="flex flex-col items-center gap-4 text-center">
-      <div className="rounded-full bg-accent-subtle p-4">
+      <div className="rounded-xl bg-accent-subtle p-4">
         <MailIcon className="size-6 text-primary" />
       </div>
 

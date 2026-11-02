@@ -8,6 +8,7 @@ import {
   getTime,
   returnFractedDate,
   unixToDate,
+  formatClock,
   groupTasksByHour,
   taskToCardData,
   nextGroupIndex,
@@ -380,5 +381,21 @@ describe("monthsBetween", () => {
 describe("monthsBetween (dia passado)", () => {
   test("de um dia passado até hoje cobre todos os meses do meio", () => {
     expect(monthsBetween(new Date(2026, 7, 15), new Date(2026, 9, 31))).toHaveLength(3);
+  });
+});
+
+describe("formatClock", () => {
+  test("24h devolve o próprio HH:MM", () => {
+    expect(formatClock("09:05", false)).toBe("09:05");
+  });
+
+  test("12h com zero à frente e AM/PM", () => {
+    expect(formatClock("09:05", true)).toBe("09:05 AM");
+    expect(formatClock("16:45", true)).toBe("04:45 PM");
+  });
+
+  test("meia-noite e meio-dia viram 12, não 00", () => {
+    expect(formatClock("00:30", true)).toBe("12:30 AM");
+    expect(formatClock("12:00", true)).toBe("12:00 PM");
   });
 });

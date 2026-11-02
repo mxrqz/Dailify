@@ -3,6 +3,8 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+vi.mock("@/components/dailifyContext", () => ({ useDailify: () => ({ hour12: false }) }));
+
 import { CreateFab } from "./create-fab";
 
 const setup = () => {

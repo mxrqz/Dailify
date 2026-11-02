@@ -37,6 +37,11 @@ interface DailifyContextType {
   setUndatedTasks: (tasks: TaskProps[]) => void;
   weekStart: WeekStart;
   setWeekStart: (weekStart: WeekStart) => void;
+  /** Fuso escolhido em /settings; null = automático (o do aparelho). */
+  timeZone: string | null;
+  setTimeZone: (timeZone: string | null) => void;
+  hour12: boolean;
+  setHour12: (hour12: boolean) => void;
   /** Incremento otimista: sem ele a barra só se moveria no próximo fetch. */
   bumpUsage: (key: QuotaKey) => void;
 }
@@ -58,6 +63,8 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
 
   const [undatedTasks, setUndatedTasks] = useState<TaskProps[]>();
   const [weekStart, setWeekStart] = useState<WeekStart>(DEFAULT_WEEK_START);
+  const [timeZone, setTimeZone] = useState<string | null>(null);
+  const [hour12, setHour12] = useState(false);
 
   const { getToken } = useAuth();
   // Mês carregado ou em voo, pela chave do início do mês; falha sai daqui pra poder tentar de novo.
@@ -178,6 +185,10 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
         setUndatedTasks,
         weekStart,
         setWeekStart,
+        timeZone,
+        setTimeZone,
+        hour12,
+        setHour12,
         bumpUsage,
       }}
     >

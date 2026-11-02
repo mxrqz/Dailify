@@ -31,12 +31,12 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-describe("WeekStrip (mobile)", () => {
+describe("WeekStrip", () => {
   it("acopla ao chegar no topo e só desacopla com folga", () => {
     vi.stubGlobal("IntersectionObserver", FakeObserver);
     dailify.mockReturnValue({ tasks: [], goToDay: vi.fn() });
 
-    render(<WeekStrip />);
+    render(<WeekStrip onCreateOn={() => {}} />);
     expect(screen.getAllByRole("button")).toHaveLength(8);
     expect(screen.getByRole("button", { name: copy.day.openCalendar })).toBeTruthy();
 
@@ -66,7 +66,7 @@ describe("WeekStrip (mobile)", () => {
       return section;
     });
 
-    render(<WeekStrip />);
+    render(<WeekStrip onCreateOn={() => {}} />);
 
     const days = screen.getAllByRole("button");
     expect(days[2].className).toContain("bg-surface-hover");

@@ -54,7 +54,7 @@ const renderPage = () =>
 function currentPlanCard(): HTMLElement {
   // `/^Plano (Free|Pro)/` e não `/^Plano/`: o título do card é "Plano e assinatura" e casaria também.
   const heading = screen.getByRole("heading", { name: /^Plano (Free|Pro)/ });
-  const card = heading.closest("div.rounded-lg");
+  const card = heading.closest("section");
   if (!card) throw new Error("cartão do plano atual não encontrado");
   return card instanceof HTMLElement ? card : screen.getByRole("main");
 }

@@ -39,6 +39,10 @@ export function ThemeProvider({
     const root = window.document.documentElement;
 
     const apply = (value: Theme) => {
+      // Sem pausar as transições, tudo com `transition-colors` anima entre os temas e a borda pisca.
+      const pause = document.createElement("style");
+      pause.textContent = "*,*::before,*::after{transition:none!important}";
+      document.head.appendChild(pause);
       root.classList.remove("light", "dark");
       root.classList.add(
         value === "system"
@@ -47,6 +51,9 @@ export function ThemeProvider({
             : "light"
           : value,
       );
+      // Força o recálculo com o tema novo antes de devolver as transições.
+      void getComputedStyle(root).colorScheme;
+      setTimeout(() => pause.remove(), 1);
     };
 
     apply(theme);

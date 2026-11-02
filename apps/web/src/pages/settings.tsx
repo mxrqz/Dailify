@@ -1,55 +1,40 @@
 import { copy } from "@/components/dashboard/copy";
+import { HourFormatSelect } from "@/components/hour-format-select";
 import { ThemeSelect } from "@/components/mode-toggle";
-import { WeekStartSelect } from "@/components/week-start-select";
 import { PushToggle } from "@/components/dashboard/push-toggle";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import { SettingsGroup, SettingsRow, settingsPage } from "@/components/settings-list";
+import { TimeZoneSelect } from "@/components/time-zone-select";
+import { WeekStartSelect } from "@/components/week-start-select";
 
 export default function SettingsPage(): JSX.Element {
   return (
-    <main className="flex w-full flex-col gap-6 py-6">
+    <main className={settingsPage}>
       {/* sr-only: a sidebar e o title do Helmet já nomeiam a página na tela */}
       <h1 className="sr-only">{copy.profile.settingsPageTitle}</h1>
 
-      <div className="flex flex-col gap-6">
-        <Card className="rounded-2xl border-surface-line bg-surface-card">
-          <CardHeader>
-            <CardTitle>{copy.profile.themeTitle}</CardTitle>
-            <CardDescription className="text-content-secondary">
-              {copy.profile.themeDescription}
-            </CardDescription>
-          </CardHeader>
+      <SettingsGroup title={copy.profile.groupAppearance}>
+        <SettingsRow label={copy.profile.themeTitle}>
+          <ThemeSelect />
+        </SettingsRow>
+      </SettingsGroup>
 
-          <CardContent>
-            <ThemeSelect />
-          </CardContent>
-        </Card>
+      <SettingsGroup title={copy.profile.groupDateTime}>
+        <SettingsRow label={copy.profile.timeZoneTitle} hint={copy.profile.timeZoneDescription}>
+          <TimeZoneSelect />
+        </SettingsRow>
+        <SettingsRow label={copy.profile.hourFormatTitle}>
+          <HourFormatSelect />
+        </SettingsRow>
+        <SettingsRow label={copy.profile.weekStartTitle} hint={copy.profile.weekStartDescription}>
+          <WeekStartSelect />
+        </SettingsRow>
+      </SettingsGroup>
 
-        <Card className="rounded-2xl border-surface-line bg-surface-card">
-          <CardHeader>
-            <CardTitle>{copy.profile.weekStartTitle}</CardTitle>
-            <CardDescription className="text-content-secondary">
-              {copy.profile.weekStartDescription}
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent>
-            <WeekStartSelect />
-          </CardContent>
-        </Card>
-
-        <Card className="rounded-2xl border-surface-line bg-surface-card">
-          <CardHeader>
-            <CardTitle>{copy.profile.notificationsTitle}</CardTitle>
-            <CardDescription className="text-content-secondary">
-              {copy.profile.notificationsDescription}
-            </CardDescription>
-          </CardHeader>
-
-          <CardContent>
-            <PushToggle />
-          </CardContent>
-        </Card>
-      </div>
+      <SettingsGroup title={copy.profile.notificationsTitle}>
+        <SettingsRow label={copy.profile.pushTitle} hint={copy.form.notificationsOff}>
+          <PushToggle />
+        </SettingsRow>
+      </SettingsGroup>
     </main>
   );
 }
