@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { CheckIcon, EllipsisVerticalIcon, RotateCcwIcon, Trash2Icon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
 import { SwipeActions } from "@/components/dashboard/swipe-actions";
@@ -12,68 +11,10 @@ import {
 import { ClockCheck } from "@/components/clock-check";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
 import { TaskCard, TimeLabel } from "@/components/task-card";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { taskToCardData } from "@/functions/functions";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import type { TaskProps } from "@/types/types";
-
-/** Menu (⋮) da tarefa — o atalho para concluir/reabrir/excluir sem abrir a sheet. */
-function TaskActions({
-  task,
-  day,
-  completed,
-}: {
-  task: TaskProps;
-  day: Date;
-  completed: boolean;
-}): JSX.Element {
-  const { onComplete, onUncomplete, onDelete, deleteDialog } = useTaskActions(task, day);
-
-  return (
-    <>
-      <Popover>
-        <PopoverTrigger
-          aria-label={copy.task.options}
-          onClick={(e) => e.stopPropagation()}
-          className="rounded-md p-0.5 text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
-        >
-          <EllipsisVerticalIcon className="size-4" />
-        </PopoverTrigger>
-
-        <PopoverContent align="end" className="flex w-40 flex-col gap-1 p-1">
-          <Button
-            variant="ghost"
-            className="justify-start gap-2"
-            onClick={(e) => {
-              e.stopPropagation();
-              void (completed ? onUncomplete() : onComplete());
-            }}
-          >
-            {completed ? <RotateCcwIcon className="size-4" /> : <CheckIcon className="size-4" />}
-            {completed ? copy.task.uncomplete : copy.task.complete}
-          </Button>
-
-          <Button
-            variant="ghost"
-            className="justify-start gap-2 text-destructive hover:text-destructive"
-            onClick={(e) => {
-              e.stopPropagation();
-              void onDelete();
-            }}
-          >
-            <Trash2Icon className="size-4" />
-            {copy.task.delete}
-          </Button>
-        </PopoverContent>
-      </Popover>
-
-      {/* Fora do Popover: ele fecha no clique de excluir, e levaria o diálogo junto. */}
-      {deleteDialog}
-    </>
-  );
-}
 
 /**
  * Sem hover não há como alcançar a toolbar do cartão nem os chips, então é aí — e só aí — que o
@@ -144,6 +85,11 @@ export function DayTaskRow({
             {chip}
           </DurationMenu>
         ),
+        complete: {
+          done: data.completed,
+          toggle: () => void (data.completed ? onUncomplete() : onComplete()),
+        },
+        remove: () => void onDelete(),
       };
 
   const time = showTime ? (countdown ?? data.time) : "";
@@ -165,11 +111,6 @@ export function DayTaskRow({
       onClick={sheetEditing ? () => setOpen(true) : undefined}
       onTitleChange={sheetEditing ? undefined : onRename}
       edit={edit}
-      // No toque o (⋮) sai: o alvo é pequeno demais pro polegar, e quem faz o trabalho dele é o
-      // arrasto pro lado.
-      actions={
-        sheetEditing ? undefined : <TaskActions task={task} day={day} completed={data.completed} />
-      }
     />
   );
 

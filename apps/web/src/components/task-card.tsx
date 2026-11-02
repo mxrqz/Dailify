@@ -8,7 +8,15 @@ import {
   type ReactNode,
 } from "react";
 import { motion, useReducedMotion } from "motion/react";
-import { Flag, LinkIcon, RepeatIcon, TimerIcon } from "lucide-react";
+import {
+  CheckIcon,
+  Flag,
+  LinkIcon,
+  RepeatIcon,
+  RotateCcwIcon,
+  TimerIcon,
+  Trash2Icon,
+} from "lucide-react";
 
 import { Badge } from "@/components/ui/badge";
 /**
@@ -193,7 +201,7 @@ const PriorityChip = forwardRef<HTMLButtonElement, { priority?: number } & MetaC
  * painel que ela mesma abriu assim que o mouse saísse do cartão.
  */
 const toolbarClass =
-  "pointer-events-none absolute -top-6 right-2 z-20 flex items-center gap-0.5 rounded-md " +
+  "pointer-events-none absolute -top-7 right-2 z-20 flex items-center gap-0.5 rounded-md " +
   "border border-surface-line bg-surface-panel p-0.5 opacity-0 shadow-elevation-1 " +
   "transition-opacity " +
   "group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto " +
@@ -203,7 +211,7 @@ const toolbarClass =
 const ToolbarButton = forwardRef<
   HTMLButtonElement,
   { label: string; children: ReactNode } & ComponentPropsWithoutRef<"button">
->(function ToolbarButton({ label, children, ...props }, ref) {
+>(function ToolbarButton({ label, children, className, ...props }, ref) {
   // O `Tip` mora aqui dentro, e não em volta de cada uso, porque o botão já é quem carrega o
   // `label`. Funciona apesar do menu envolver isto num `asChild`: o `{...props}` do gatilho pousa
   // no `<button>`, não no `Tip` — que não repassa nada. Um `<Tip>` colado direto num
@@ -214,7 +222,10 @@ const ToolbarButton = forwardRef<
         ref={ref}
         type="button"
         aria-label={label}
-        className="flex size-7 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        className={cn(
+          "flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50",
+          className,
+        )}
         {...props}
       >
         {children}
@@ -265,8 +276,6 @@ export interface TaskCardProps extends TaskCardData {
   check?: JSX.Element;
   /** Abre o detalhe. Vira um overlay clicável — ver nota de acessibilidade no corpo. */
   onClick?: () => void;
-  /** Menu (⋮) do app, à direita da duração. Fica FORA do overlay clicável. */
-  actions?: ReactNode;
   /** URLs da tarefa; vira UM chip (o primeiro + `+N`). */
   links?: string[];
   /** Rótulo pronto da recorrência (`repeatLabel`); "" = não repete, sem chip. */
@@ -281,6 +290,9 @@ export interface TaskCardProps extends TaskCardData {
     repeat?: ChipEditor;
     priority?: ChipEditor;
     duration?: ChipEditor;
+    /** Depois do divisor: excluir e, na ponta, concluir/reabrir — a ação mais usada. */
+    complete?: { done: boolean; toggle: () => void };
+    remove?: () => void;
   };
 }
 
@@ -340,7 +352,8 @@ function TitleField({
       className={cn(
         // 15ch de piso: com `field-sizing-content` um título curto encolhia o campo a quase nada e
         // sobrava um alvo de clique minúsculo pra editar.
-        "relative z-10 -mx-2 min-w-[15ch] max-w-1/2 truncate rounded-md bg-transparent px-2 py-0.5",
+        // mr-auto: na linha `justify-between` o campo, que só tem a largura do texto, ia pro meio.
+        "relative z-10 mr-auto -ml-2 min-w-[15ch] max-w-1/2 truncate rounded-md bg-transparent px-2 py-0.5",
         "field-sizing-content",
         "text-sm font-medium outline-none transition-colors",
         "hover:bg-surface-panel focus:bg-surface-panel",
@@ -380,7 +393,6 @@ function CardBody({
   priority,
   onClick,
   check,
-  actions,
   links = [],
   repeat = "",
   onTitleChange,
@@ -401,9 +413,8 @@ function CardBody({
           onClick && !loading && "transition-colors hover:bg-surface-hover",
         )}
       >
-        {/* Overlay clicável em vez de envolver tudo num <button>: `actions` também é um botão, e
-            botão dentro de botão é HTML inválido. O overlay dá teclado e foco de graça; `actions`
-            fica acima dele no z, então o clique no menu não abre o detalhe. */}
+        {/* Overlay clicável em vez de envolver tudo num <button>: check e chips também são botões, e
+            botão dentro de botão é HTML inválido. O overlay dá teclado e foco de graça. */}
         {onClick && !loading && (
           <button
             type="button"
@@ -418,26 +429,46 @@ function CardBody({
             {wrap(
               edit.link,
               <ToolbarButton label={copy.task.editLinks}>
-                <LinkIcon className="size-3.5" aria-hidden="true" />
+                <LinkIcon className="size-4" aria-hidden="true" />
               </ToolbarButton>,
             )}
             {wrap(
               edit.repeat,
               <ToolbarButton label={copy.task.editRepeat}>
-                <RepeatIcon className="size-3.5" aria-hidden="true" />
+                <RepeatIcon className="size-4" aria-hidden="true" />
               </ToolbarButton>,
             )}
             {wrap(
               edit.priority,
               <ToolbarButton label={copy.task.editPriority}>
-                <Flag className="size-3.5" aria-hidden="true" />
+                <Flag className="size-4" aria-hidden="true" />
               </ToolbarButton>,
             )}
             {wrap(
               edit.duration,
               <ToolbarButton label={copy.task.editDuration}>
-                <TimerIcon className="size-3.5" aria-hidden="true" />
+                <TimerIcon className="size-4" aria-hidden="true" />
               </ToolbarButton>,
+            )}
+            {(edit.complete || edit.remove) && (
+              <span className="mx-0.5 h-5 w-px bg-surface-line" aria-hidden="true" />
+            )}
+            {edit.remove && (
+              <ToolbarButton label={copy.task.delete} onClick={edit.remove}>
+                <Trash2Icon className="size-4" aria-hidden="true" />
+              </ToolbarButton>
+            )}
+            {edit.complete && (
+              <ToolbarButton
+                label={edit.complete.done ? copy.task.uncomplete : copy.task.complete}
+                onClick={edit.complete.toggle}
+              >
+                {edit.complete.done ? (
+                  <RotateCcwIcon className="size-4" aria-hidden="true" />
+                ) : (
+                  <CheckIcon className="size-4" aria-hidden="true" />
+                )}
+              </ToolbarButton>
             )}
           </div>
         )}
@@ -473,7 +504,6 @@ function CardBody({
             ) : (
               wrap(edit?.duration, <DurationChip value={duration} editable={!!edit?.duration} />)
             )}
-            {!loading && actions && <span className="pointer-events-auto">{actions}</span>}
           </div>
         </div>
       </div>
@@ -513,7 +543,6 @@ export function TaskCard({ loading, ...data }: TaskCardProps): JSX.Element {
         <CardBody
           {...data}
           onClick={loading ? undefined : data.onClick}
-          actions={loading ? undefined : data.actions}
           onTitleChange={loading ? undefined : data.onTitleChange}
           edit={loading ? undefined : data.edit}
         />

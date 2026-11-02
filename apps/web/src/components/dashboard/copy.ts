@@ -264,7 +264,6 @@ export const copy = {
   task: {
     complete: "Concluir",
     delete: "Excluir",
-    options: "Opções da tarefa",
     completed: "Concluída",
     completeError: "Não foi possível concluir a tarefa",
     uncomplete: "Reabrir",
