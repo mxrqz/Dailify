@@ -12,7 +12,8 @@ import { PLAN_ID } from "@/consts/conts";
 import { cn, toText } from "@/lib/utils";
 
 /**
- * Barra do app: `h-10` fixo — `home.tsx` desconta esse valor pra centralizar; mexer aqui mexe lá.
+ * Barra do app: `h-11` no mobile (alvo de toque de 44px) e `h-10` no desktop — a `WeekStrip`
+ * acoplada mede a partir disso (`DOCKED_PX`); mexer aqui mexe lá.
  * Conta e tema ficam na sidebar e em `/settings`; "Entrar" sobrevive pq `/premium` reusa o layout.
  */
 export function AppHeader({ className }: { className?: string }): JSX.Element {
@@ -30,7 +31,7 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
   return (
     <header
       className={cn(
-        "sticky top-0 z-20 flex h-10 w-full shrink-0 items-center gap-3 border-b border-surface-line bg-surface-page",
+        "sticky top-0 z-20 flex h-11 md:h-10 w-full shrink-0 items-center gap-3 border-b border-surface-line bg-surface-page",
         className,
       )}
     >
@@ -80,7 +81,9 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
             variant="outline"
             className="h-6 rounded-full px-3 font-mono text-2xs uppercase tracking-[0.04em]"
           >
-            <Link to="/premium">{copy.header.upgrade}</Link>
+            <Link to="/premium" className="relative hit-target">
+              {copy.header.upgrade}
+            </Link>
           </Button>
         )}
 

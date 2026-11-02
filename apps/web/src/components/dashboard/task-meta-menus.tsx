@@ -173,7 +173,7 @@ export function LinksPopover({
       }}
     >
       <PopoverTrigger asChild>{children}</PopoverTrigger>
-      <PopoverContent align="end" className="w-auto max-w-80 p-3">
+      <PopoverContent align="end" className="w-96 p-3">
         <span id={labelId} className="sr-only">
           {copy.form.links}
         </span>

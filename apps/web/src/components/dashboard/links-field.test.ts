@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { normalizeUrl, withLink } from "./links-field";
+import { normalizeUrl } from "./links-field";
 
 describe("aceita", () => {
   it("URL http(s) unica", () => {
@@ -36,31 +36,5 @@ describe("rejeita", () => {
   it("URL acima do teto de 2048 caracteres — mesmo teto do servidor", () => {
     const long = `https://exemplo.com/${"a".repeat(2048)}`;
     expect(normalizeUrl(long)).toBeNull();
-  });
-});
-
-describe("withLink", () => {
-  it("adiciona no fim da lista", () => {
-    expect(withLink(["https://a.com"], "https://b.com", "new")).toEqual([
-      "https://a.com",
-      "https://b.com",
-    ]);
-  });
-
-  it("troca a URL do indice em edicao", () => {
-    expect(withLink(["https://a.com", "https://b.com"], "https://c.com", 0)).toEqual([
-      "https://c.com",
-      "https://b.com",
-    ]);
-  });
-
-  it("URL repetida nao vira um segundo chip — mesma regra do composer", () => {
-    expect(withLink(["https://a.com"], "https://a.com", "new")).toEqual(["https://a.com"]);
-  });
-
-  it("editar um chip pra URL que ja existe funde os dois", () => {
-    expect(withLink(["https://a.com", "https://b.com"], "https://a.com", 1)).toEqual([
-      "https://a.com",
-    ]);
   });
 });

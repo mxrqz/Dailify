@@ -1,20 +1,17 @@
-import { useEffect, useRef, useState } from "react";
-import { LinkIcon, PencilIcon, PlusIcon, XIcon } from "lucide-react";
+import { useState } from "react";
+import { LinkIcon, XIcon } from "lucide-react";
 
 import { TASK_LIMITS } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { fieldClass } from "@/components/dashboard/styles";
-import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { linkLabel } from "@/functions/link-label";
 import { parseLinks } from "@/functions/parse-links";
+import { cn } from "@/lib/utils";
 
 // A régua é uma só (`@dailify/shared`): estes dois números eram cópia do servidor, com o
 // comentário apontando pra um arquivo que o refactor já tinha movido.
-const { linksMax: MAX_LINKS, urlMax: MAX_URL_LEN } = TASK_LIMITS;
-
-const inputClass = `h-9 w-64 ${fieldClass}`;
+const { urlMax: MAX_URL_LEN } = TASK_LIMITS;
 
 /**
  * A mesma regra do detector do composer decide o que é URL aqui — sem segunda definição.
@@ -35,12 +32,11 @@ export function normalizeUrl(raw: string): string | null {
   return url;
 }
 
-/** Mesma regra do composer: URL repetida vira um chip só, e uma linha só no D1. */
-export function withLink(links: string[], url: string, at: number | "new"): string[] {
-  const next = at === "new" ? [...links, url] : links.map((v, i) => (i === at ? url : v));
-  return [...new Set(next)];
-}
-
+/**
+ * O link da tarefa — um só. O campo já abre com ele, pronto pra editar; apagar o texto também
+ * remove. Cada tecla válida já sobe pro `onChange` (quem guarda salva no fechar, e o blur chegaria
+ * tarde); rascunho inválido fica marcado e não sobe.
+ */
 export function LinksField({
   value,
   onChange,
@@ -50,151 +46,66 @@ export function LinksField({
   onChange: (links: string[]) => void;
   labelledBy: string;
 }): JSX.Element {
-  const groupRef = useRef<HTMLDivElement>(null);
-  // índice em edição, ou "new" pro input de adicionar; null = nenhum input aberto
-  const [editing, setEditing] = useState<number | "new" | null>(null);
-  const [draft, setDraft] = useState("");
+  const [draft, setDraft] = useState(value[0] ?? "");
   const [invalid, setInvalid] = useState(false);
+  const url = normalizeUrl(draft);
 
-  // O Radix escuta o Escape em `document` na fase de captura, ou seja antes de qualquer handler do
-  // React (que ficam no container do portal, `body`) — um `onKeyDown` aqui só rodaria com a Sheet
-  // já fechada e a edição inteira perdida. `window` é o primeiro alvo da captura, então este
-  // listener chega antes e cancela o evento; o Radix desiste quando ele já vem cancelado.
-  useEffect(() => {
-    if (editing === null) return;
-    const onEscape = (e: KeyboardEvent) => {
-      if (e.key !== "Escape") return;
-      if (!(e.target instanceof Node) || !groupRef.current?.contains(e.target)) return;
-      e.preventDefault();
-      setEditing(null);
-      setDraft("");
-      setInvalid(false);
-    };
-    window.addEventListener("keydown", onEscape, true);
-    return () => window.removeEventListener("keydown", onEscape, true);
-  }, [editing]);
-
-  const openEditor = (target: number | "new") => {
-    setEditing(target);
-    setDraft(typeof target === "number" ? value[target] : "");
-    setInvalid(false);
-  };
-
-  const commit = () => {
-    const url = normalizeUrl(draft);
-    if (!url) {
-      // rascunho vazio (usuario abriu o campo e saiu sem digitar) fecha sem erro; texto
-      // realmente invalido fica marcado e o input aberto, pra nao descartar o que a pessoa digitou
-      if (draft.trim() === "") {
-        setEditing(null);
-        setDraft("");
-        return;
-      }
-      setInvalid(true);
-      return;
-    }
-    if (editing !== null) onChange(withLink(value, url, editing));
-    setEditing(null);
-    setDraft("");
+  const change = (next: string) => {
+    setDraft(next);
+    const normalized = normalizeUrl(next);
+    const empty = next.trim() === "";
+    setInvalid(!empty && !normalized);
+    if (empty) onChange([]);
+    else if (normalized) onChange([normalized]);
   };
 
   return (
-    <div
-      ref={groupRef}
-      role="group"
-      aria-labelledby={labelledBy}
-      className="flex flex-col items-start gap-1 py-1.5"
-    >
-      {value.map((url, index) =>
-        editing === index ? (
-          <Input
-            key={url}
-            autoFocus
-            value={draft}
-            onChange={(e) => {
-              setDraft(e.target.value);
-              setInvalid(false);
-            }}
-            onBlur={commit}
-            onKeyDown={(e) => {
-              if (e.key === "Enter") {
-                e.preventDefault();
-                commit();
-              }
-            }}
-            aria-label={copy.form.linkEdit}
-            aria-invalid={invalid}
-            title={invalid ? copy.form.linkInvalid : undefined}
-            className={inputClass}
-          />
-        ) : (
-          // Link é leitura antes de ser campo: texto sublinhado, como em qualquer lugar da web,
-          // com os controles ao lado em vez de um chip que disfarça o que ele é.
-          <span key={url} className="group/link flex max-w-full items-center gap-1.5 text-sm">
-            <LinkIcon className="size-3.5 shrink-0 text-muted-foreground" aria-hidden="true" />
-            <a
-              href={url}
-              target="_blank"
-              rel="noopener noreferrer"
-              title={url}
-              className="truncate text-foreground underline decoration-surface-line underline-offset-4 transition-colors hover:decoration-accent-primary"
-            >
-              {linkLabel(url)}
-            </a>
-            <button
-              type="button"
-              aria-label={copy.form.linkEdit}
-              onClick={() => openEditor(index)}
-              className="shrink-0 text-muted-foreground transition-colors hover:text-foreground"
-            >
-              <PencilIcon className="size-3.5" />
-            </button>
-            <button
-              type="button"
-              aria-label={copy.form.linkRemove}
-              onClick={() => onChange(value.filter((_, i) => i !== index))}
-              className="shrink-0 text-muted-foreground transition-colors hover:text-destructive"
-            >
-              <XIcon className="size-3.5" />
-            </button>
-          </span>
-        ),
-      )}
-
-      {editing === "new" ? (
-        <Input
-          autoFocus
-          value={draft}
-          placeholder={copy.form.linkPlaceholder}
-          onChange={(e) => {
-            setDraft(e.target.value);
-            setInvalid(false);
-          }}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") {
-              e.preventDefault();
-              commit();
-            }
-          }}
-          aria-label={copy.form.linkAdd}
-          aria-invalid={invalid}
-          title={invalid ? copy.form.linkInvalid : undefined}
-          className={inputClass}
-        />
-      ) : (
-        <Button
-          type="button"
-          variant="ghost"
-          disabled={value.length >= MAX_LINKS}
-          title={value.length >= MAX_LINKS ? copy.form.linkLimit : undefined}
-          onClick={() => openEditor("new")}
-          className="h-8 gap-1.5 text-2xs"
+    <div role="group" aria-labelledby={labelledBy} className="flex items-center gap-2">
+      {/* O ícone abre o link: o campo é pra editar, e um clique nele não pode sair da página. */}
+      {url ? (
+        <a
+          href={url}
+          target="_blank"
+          rel="noopener noreferrer"
+          aria-label={copy.form.linkOpen}
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
         >
-          <PlusIcon className="size-3" />
-          {copy.form.linkAdd}
-        </Button>
+          <LinkIcon className="size-4" />
+        </a>
+      ) : (
+        <span className="flex size-8 shrink-0 items-center justify-center text-muted-foreground">
+          <LinkIcon className="size-4" aria-hidden="true" />
+        </span>
       )}
+      <Input
+        autoFocus
+        value={draft}
+        placeholder={copy.form.linkPlaceholder}
+        maxLength={MAX_URL_LEN}
+        onChange={(e) => change(e.target.value)}
+        aria-label={copy.form.links}
+        aria-invalid={invalid}
+        // Erro na própria borda (e no title), não numa linha embaixo: o painel não cresce nem
+        // ganha um respiro desigual só pra guardar lugar pra mensagem.
+        title={invalid ? copy.form.linkInvalid : undefined}
+        className={cn(
+          "h-10 min-w-0 flex-1 truncate",
+          fieldClass,
+          invalid && "border-destructive focus-visible:border-destructive",
+        )}
+      />
+      {/* Sempre no lugar (invisível sem texto): sumir com ele mudava a largura do campo. */}
+      <button
+        type="button"
+        aria-label={copy.form.linkRemove}
+        onClick={() => change("")}
+        className={cn(
+          "flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground",
+          !draft && "invisible",
+        )}
+      >
+        <XIcon className="size-4" />
+      </button>
     </div>
   );
 }

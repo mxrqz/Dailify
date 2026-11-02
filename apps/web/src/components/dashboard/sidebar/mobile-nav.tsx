@@ -19,7 +19,7 @@ export function MobileNav(): JSX.Element {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         aria-label={copy.header.openNav}
-        className="flex size-9 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground md:hidden"
+        className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground md:hidden"
       >
         <MenuIcon className="size-5" />
       </SheetTrigger>

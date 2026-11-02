@@ -156,6 +156,7 @@ describe("<AnytimeBlock>", () => {
     act(() => screen.getByRole("button", { name: /Pagar/ }).click());
     const sheet = within(screen.getByRole("dialog"));
     fireEvent.change(sheet.getByLabelText(copy.form.reminder), { target: { value: "" } });
+    touch(sheet);
     await act(async () => sheet.getByRole("button", { name: copy.form.save }).click());
     expect(api.updateTask).toHaveBeenCalledWith(
       "token",
@@ -172,6 +173,9 @@ describe("<AnytimeBlock>", () => {
     act(() => screen.getByRole("button", { name: /Pagar/ }).click());
     return within(screen.getByRole("dialog"));
   };
+  // "Salvar" só aparece depois de alguma mudança: mexe na duração pra ele existir.
+  const touch = (sheet: ReturnType<typeof openEdit>) =>
+    fireEvent.change(sheet.getByLabelText(copy.form.duration), { target: { value: "1h" } });
 
   it("avulsa com 09:00 passado mostra e salva sem lembrete", async () => {
     const sheet = openEdit({});
@@ -179,6 +183,7 @@ describe("<AnytimeBlock>", () => {
     expect(sheet.getByLabelText(copy.form.reminder)).toHaveValue("");
     expect(sheet.getByLabelText(copy.form.reminder)).toHaveAttribute("min", "2026-10-23");
 
+    touch(sheet);
     await act(async () => sheet.getByRole("button", { name: copy.form.save }).click());
     expect(api.updateTask).toHaveBeenCalledWith(
       "token",
@@ -192,6 +197,7 @@ describe("<AnytimeBlock>", () => {
     const sheet = openEdit({ repeat: { Weekly: ["Monday"] } });
     expect(sheet.getByLabelText(copy.form.reminder)).toHaveValue("2026-10-26");
 
+    touch(sheet);
     await act(async () => sheet.getByRole("button", { name: copy.form.save }).click());
     const next = MONDAY_9H + WEEK;
     expect(api.updateTask).toHaveBeenCalledWith(

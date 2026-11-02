@@ -17,5 +17,13 @@ export const bareFieldClass =
   "h-11 rounded-none border-0 bg-transparent px-0 text-base shadow-none " +
   "focus-visible:border-0 focus-visible:ring-0";
 
+/** Chips de metadado da criação e da folha da tarefa: preenchido tem a cor do campo, vazio é tracejado. */
+export const chip = "inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-xs";
+export const chipGot = "border-highlight bg-surface-hover text-foreground";
+export const chipDate = "border-transparent bg-meta-date-subtle text-meta-date";
+export const chipTime = "border-transparent bg-meta-time-subtle text-meta-time";
+export const chipRepeat = "border-transparent bg-meta-repeat-subtle text-meta-repeat";
+export const chipGhost = "border-dashed border-surface-line text-muted-foreground";
+
 /** Tamanho do popover de calendário (o da faixa e o de remarcar); a cor vem do `PopoverContent`. */
 export const calendarPanel = "w-72 p-3";

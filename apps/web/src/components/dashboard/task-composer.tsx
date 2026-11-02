@@ -19,6 +19,14 @@ import { composeTaskInput } from "@/functions/compose-input";
 import { parseTaskText, type ParsedTask } from "@/functions/parse-task";
 import { repeatLabel } from "@/functions/repeat-label";
 import { linkLabel } from "@/functions/link-label";
+import {
+  chip,
+  chipDate,
+  chipGhost,
+  chipGot,
+  chipRepeat,
+  chipTime,
+} from "@/components/dashboard/styles";
 import { cn } from "@/lib/utils";
 
 export interface ComposerValues {
@@ -29,21 +37,16 @@ interface TaskComposerProps {
   submitting?: boolean;
   /** `again`: ⇧⏎, criar e continuar — quem abriu a folha a mantém aberta. */
   onSubmit: (values: ComposerValues, again: boolean) => void;
+  /** Folha do mobile: título grande sem moldura, chips maiores e o enviar na linha deles. */
+  large?: boolean;
 }
-
-const chip = "inline-flex items-center gap-1 rounded-lg border px-2 py-0.5 text-xs";
-const got = "border-highlight bg-surface-hover text-foreground";
-const metaDate = "border-transparent bg-meta-date-subtle text-meta-date";
-const metaTime = "border-transparent bg-meta-time-subtle text-meta-time";
-const metaRepeat = "border-transparent bg-meta-repeat-subtle text-meta-repeat";
-const ghost = "border-dashed border-surface-line text-muted-foreground";
 
 /**
  * A frase da folha de criação. O que o parser tirou dela aparece em chips logo abaixo, e a linha
  * "Vai para" diz onde a tarefa cai — sem esse eco o usuário só descobre no envio que a hora não
  * foi entendida.
  */
-export function TaskComposer({ submitting, onSubmit }: TaskComposerProps): JSX.Element {
+export function TaskComposer({ submitting, onSubmit, large }: TaskComposerProps): JSX.Element {
   const [input, setInput] = useState("");
 
   const parsed = useMemo(() => parseTaskText(input), [input]);
@@ -64,6 +67,22 @@ export function TaskComposer({ submitting, onSubmit }: TaskComposerProps): JSX.E
     setInput("");
   };
 
+  const pill = cn(chip, large && "py-1.5");
+  const send = (
+    <button
+      type="submit"
+      aria-label={copy.composer.submit}
+      disabled={!canSubmit}
+      className="relative flex size-8.5 hit-target shrink-0 items-center justify-center rounded-xl bg-accent-primary text-primary-foreground transition-colors hover:bg-accent-hover disabled:bg-surface-hover disabled:text-muted-foreground"
+    >
+      {submitting ? (
+        <Loader2Icon className="size-4 animate-spin" />
+      ) : (
+        <ArrowUpIcon className="size-4" />
+      )}
+    </button>
+  );
+
   return (
     <form
       onSubmit={(e: FormEvent) => {
@@ -71,7 +90,14 @@ export function TaskComposer({ submitting, onSubmit }: TaskComposerProps): JSX.E
         submit(false);
       }}
     >
-      <div className="rounded-field border border-surface-line bg-surface-page px-3.5 py-3 transition-colors focus-within:border-accent-primary">
+      <div
+        className={cn(
+          "transition-colors",
+          large
+            ? "px-2 pt-2 pb-1"
+            : "rounded-field border border-surface-line bg-surface-page px-3.5 py-3 focus-within:border-accent-primary",
+        )}
+      >
         <Label htmlFor="composer-text" className="sr-only">
           {copy.composer.text}
         </Label>
@@ -89,13 +115,22 @@ export function TaskComposer({ submitting, onSubmit }: TaskComposerProps): JSX.E
           maxLength={TASK_LIMITS.titleMax}
           placeholder={copy.composer.textPlaceholder}
           autoComplete="off"
-          className="w-full bg-transparent text-base text-foreground placeholder:text-muted-foreground outline-none"
+          className={cn(
+            "w-full bg-transparent text-foreground placeholder:text-muted-foreground outline-none",
+            large ? "text-2xl font-medium" : "text-base",
+          )}
         />
       </div>
 
       {/* Slots sempre montados, na mesma ordem: chip que some e aparece mexe o layout a cada tecla. */}
-      <div aria-live="polite" className="flex flex-wrap gap-1.5 px-2 pt-2.5 pb-1.5">
-        <span className={cn(chip, recurring ? metaRepeat : parsed.date ? metaDate : ghost)}>
+      <div
+        aria-live="polite"
+        className={cn(
+          "flex flex-wrap items-center gap-1.5 px-2",
+          large ? "pt-5 pb-2" : "pt-2.5 pb-1.5",
+        )}
+      >
+        <span className={cn(pill, recurring ? chipRepeat : parsed.date ? chipDate : chipGhost)}>
           {recurring ? (
             <>
               <RepeatIcon className="size-3" aria-hidden="true" />
@@ -111,7 +146,7 @@ export function TaskComposer({ submitting, onSubmit }: TaskComposerProps): JSX.E
             copy.composer.addDay
           )}
         </span>
-        <span className={cn(chip, parsed.hasTime ? metaTime : ghost)}>
+        <span className={cn(pill, parsed.hasTime ? chipTime : chipGhost)}>
           {parsed.hasTime && parsed.date ? (
             <>
               <ClockIcon className="size-3" aria-hidden="true" />
@@ -121,13 +156,13 @@ export function TaskComposer({ submitting, onSubmit }: TaskComposerProps): JSX.E
             copy.composer.addTime
           )}
         </span>
-        <span className={cn(chip, parsed.duration ? got : ghost)}>
+        <span className={cn(pill, parsed.duration ? chipGot : chipGhost)}>
           {parsed.duration ?? copy.composer.addDuration}
         </span>
         <span
           className={cn(
             chip,
-            task.alert ? "border-accent-line bg-accent-subtle text-accent-primary" : ghost,
+            task.alert ? "border-accent-line bg-accent-subtle text-accent-primary" : chipGhost,
           )}
         >
           {task.alert ? (
@@ -139,12 +174,13 @@ export function TaskComposer({ submitting, onSubmit }: TaskComposerProps): JSX.E
             copy.composer.addReminder
           )}
         </span>
-        {parsed.links.map((url) => (
-          <span key={url} className={cn(chip, got)}>
+        {parsed.links.slice(0, 1).map((url) => (
+          <span key={url} className={cn(pill, chipGot)}>
             <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
             {linkLabel(url)}
           </span>
         ))}
+        {large && <span className="ml-auto">{send}</span>}
       </div>
 
       <div className="flex items-center justify-between gap-2 px-2 pt-1.5 pb-1 text-xs text-muted-foreground">
@@ -158,18 +194,7 @@ export function TaskComposer({ submitting, onSubmit }: TaskComposerProps): JSX.E
             <kbd className="rounded-md border border-surface-line px-1 font-mono text-2xs">⇧⏎</kbd>{" "}
             {copy.composer.hintContinue}
           </span>
-          <button
-            type="submit"
-            aria-label={copy.composer.submit}
-            disabled={!canSubmit}
-            className="flex size-8.5 shrink-0 items-center justify-center rounded-xl bg-accent-primary text-primary-foreground transition-colors hover:bg-accent-hover disabled:bg-surface-hover disabled:text-muted-foreground"
-          >
-            {submitting ? (
-              <Loader2Icon className="size-4 animate-spin" />
-            ) : (
-              <ArrowUpIcon className="size-4" />
-            )}
-          </button>
+          {send}
         </span>
       </div>
     </form>

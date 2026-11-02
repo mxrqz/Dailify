@@ -125,7 +125,7 @@ export function CreateFab({ onSubmit, submitting }: CreateFabProps): JSX.Element
               aria-label={label}
               onClick={() => changeOpen(true)}
               whileTap={reduce ? undefined : { scale: 0.96 }}
-              className="absolute right-4 bottom-4 flex size-12 cursor-pointer items-center justify-center bg-accent-primary text-primary-foreground shadow-fab transition-colors hover:bg-accent-hover md:right-6 md:bottom-6"
+              className="absolute right-4 bottom-4 flex size-12 cursor-pointer items-center justify-center bg-accent-primary text-primary-foreground transition-colors hover:bg-accent-hover md:right-6 md:bottom-6"
             >
               <motion.span {...content} className="flex">
                 <PlusIcon className="size-5" strokeWidth={2.2} aria-hidden="true" />
@@ -177,8 +177,13 @@ export function CreateFab({ onSubmit, submitting }: CreateFabProps): JSX.Element
                 )}
               >
                 <DialogTitle className="sr-only">{label}</DialogTitle>
+                <div
+                  className="mx-auto mb-1 h-1 w-9 rounded-full bg-surface-line md:hidden"
+                  aria-hidden="true"
+                />
                 <motion.div {...content}>
                   <TaskComposer
+                    large={!desktop}
                     submitting={submitting}
                     onSubmit={(values, again) => {
                       onSubmit(values);

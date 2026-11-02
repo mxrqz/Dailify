@@ -304,8 +304,6 @@
   --width-undated: var(--width-undated);
   --width-sheet: var(--width-sheet);
   --color-surface-scrim: var(--surface-scrim);
-  /* O botão + flutua em cima da agenda: a sombra é o brilho crimson dele, não um cinza. */
-  --shadow-fab: 0 8px 24px var(--accent-glow);
   --shadow-panel: 0 24px 60px -20px light-dark(oklch(0% 0 0 / 0.18), oklch(0% 0 0 / 0.55));
   /* Elevação 1 — o degrau mais baixo: o que flutua encostado na superfície (a toolbar do cartão).
      Duas camadas de BOX-shadow, contato + difusa; nunca `drop-shadow`, que é filtro e se empilha
@@ -347,6 +345,22 @@
     50% {
       opacity: 0;
     }
+  }
+}
+
+/*
+ * Área de toque de no mínimo 44px (guia da Apple) em volta de um controle menor, sem mudar o
+ * desenho dele. O elemento precisa estar posicionado (`relative`/`absolute`) pra ancorar o ::after.
+ */
+@utility hit-target {
+  &::after {
+    content: "";
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: max(100%, 2.75rem);
+    height: max(100%, 2.75rem);
+    translate: -50% -50%;
   }
 }
 

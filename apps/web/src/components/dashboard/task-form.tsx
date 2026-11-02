@@ -1,7 +1,18 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { BellIcon, CalendarIcon, ChevronDownIcon, ChevronRightIcon, XIcon } from "lucide-react";
+import {
+  BellIcon,
+  CalendarIcon,
+  ClockIcon,
+  FlagIcon,
+  HourglassIcon,
+  LinkIcon,
+  RepeatIcon,
+  SunIcon,
+  TagIcon,
+  XIcon,
+} from "lucide-react";
 import { toast } from "sonner";
 import { dayMap, weekDays, type Repeat } from "@dailify/shared";
 
@@ -12,7 +23,15 @@ import { LinksField } from "@/components/dashboard/links-field";
 import { DURATIONS } from "@/components/dashboard/task-meta-menus";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { bareFieldClass } from "@/components/dashboard/styles";
+import {
+  bareFieldClass,
+  chip,
+  chipDate,
+  chipGhost,
+  chipGot,
+  chipRepeat,
+  chipTime,
+} from "@/components/dashboard/styles";
 import { priorityText } from "@/consts/conts";
 import { useDailify } from "@/components/dailifyContext";
 import { useQuotas } from "@/hooks/useQuotas";
@@ -41,12 +60,13 @@ export interface TaskFormValues {
  * celular sem espremer controle nenhum — e é por isso que cada página escolhe seu próprio formato
  * (lista pra escolha única, campo com busca pras tags).
  */
-export type FormView = "root" | "title" | "links";
+export type FormView = "root" | "title" | "tags" | "links";
 
 /** Título de cada página — quem desenha o cromo da folha lê daqui. */
 export const FORM_VIEWS: Record<FormView, { title: string }> = {
   root: { title: copy.form.editTitle },
   title: { title: copy.form.title },
+  tags: { title: copy.form.tags },
   links: { title: copy.form.links },
 };
 
@@ -66,154 +86,38 @@ interface TaskFormProps {
   view: FormView;
   onView: (view: FormView) => void;
   onSubmit: (values: TaskFormValues) => void;
+  /** Avisa quando algo difere do que abriu: a folha só mostra "Salvar" aí. */
+  onDirtyChange?: (dirty: boolean) => void;
 }
 
-/** Uma linha da raiz: o rótulo, o valor de hoje e a seta que leva pra página do campo. */
-function SummaryRow({
-  label,
-  value,
-  onClick,
-}: {
-  label: string;
-  value: string;
-  onClick: () => void;
-}): JSX.Element {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className="flex h-14 items-center gap-3 rounded-md px-3 text-left transition-colors outline-none hover:bg-surface-hover focus-visible:ring-[3px] focus-visible:ring-ring/50"
-    >
-      <span className="font-mono text-2xs tracking-[0.04em] text-muted-foreground uppercase">
-        {label}
-      </span>
-      <span className="ml-auto min-w-0 truncate text-sm text-foreground">{value}</span>
-      <ChevronRightIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-    </button>
-  );
-}
-
-const rowLabelClass = "font-mono text-2xs tracking-[0.04em] text-muted-foreground uppercase";
-const rowClass =
-  "relative flex h-14 items-center gap-3 rounded-md px-3 transition-colors " +
-  "focus-within:bg-surface-hover hover:bg-surface-hover";
-/** O controle nativo cobre a linha inteira e é quem recebe o toque; o visual é o de baixo. */
+/** O controle NATIVO invisível cobre o chip e recebe o toque: o sistema abre o próprio seletor. */
 const nativeControlClass = "absolute inset-0 cursor-pointer opacity-0 outline-none";
-
-/**
- * A linha do resumo com um controle NATIVO invisível por cima: no celular o sistema é quem abre o
- * seletor (roda no iOS, folha no Android; calendário no caso da data) — melhor que uma página
- * inteira da drawer pra cinco opções, e de graça em acessibilidade e teclado.
- */
-function SelectRow({
-  label,
-  value,
-  options,
-  onChange,
-}: {
-  label: string;
-  value: string;
-  options: { value: string; label: string; disabled?: boolean }[];
-  onChange: (value: string) => void;
-}): JSX.Element {
-  const current = options.find((option) => option.value === value);
-  return (
-    <div className={rowClass}>
-      <span className={rowLabelClass}>{label}</span>
-      <span className="ml-auto min-w-0 truncate text-sm text-foreground">
-        {current?.label ?? value}
-      </span>
-      <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-
-      <select
-        aria-label={label}
-        value={value}
-        onChange={(e) => onChange(e.target.value)}
-        className={nativeControlClass}
-      >
-        {options.map((option) => (
-          <option key={option.value} value={option.value} disabled={option.disabled}>
-            {option.label}
-          </option>
-        ))}
-      </select>
-    </div>
-  );
-}
-
-/** `datetime-local`: o calendário e o relógio do próprio aparelho, já no formato e no locale dele. */
-function DateRow({
-  label,
-  value,
-  onChange,
-}: {
-  label: string;
-  value: Date;
-  onChange: (date: Date) => void;
-}): JSX.Element {
-  return (
-    <div className={rowClass}>
-      <span className={rowLabelClass}>{label}</span>
-      <span className="ml-auto min-w-0 truncate text-sm text-foreground">
-        {/* EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso. */}
-        {format(value, "EEEEEE · d MMM · HH:mm", { locale: ptBR })}
-      </span>
-      <CalendarIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-
-      <input
-        type="datetime-local"
-        aria-label={label}
-        // Sem fuso na string: "2026-08-23T09:00" é lido como hora LOCAL nas duas pontas, e um
-        // toISOString() aqui adiantaria a tarefa em três horas.
-        value={format(value, "yyyy-MM-dd'T'HH:mm")}
-        onChange={(e) => {
-          const next = new Date(e.target.value);
-          if (!Number.isNaN(next.getTime())) onChange(next);
-        }}
-        className={nativeControlClass}
-      />
-    </div>
-  );
-}
 
 const reminderHour = `${String(DEFAULT_HOUR).padStart(2, "0")}:00`;
 
-/** `date` só-dia, mesmo padrão do DateRow; limpar no seletor nativo tira o lembrete. */
-function ReminderRow({
-  value,
-  repeat,
-  onChange,
+/** Um campo da raiz como chip: preenchido ganha a cor do campo, vazio fica tracejado. */
+function FieldChip({
+  icon,
+  filled,
+  tone = chipGot,
+  children,
 }: {
-  value?: Date;
-  repeat: Repeat;
-  onChange: (date?: Date) => void;
+  icon: ReactNode;
+  filled: boolean;
+  tone?: string;
+  children: ReactNode;
 }): JSX.Element {
-  const now = new Date();
-  // Mostra o que o salvar grava: 09:00 passado avança na série e some na avulsa.
-  const shown = value && undatedReminder(value, repeat, now);
   return (
-    <div className={rowClass}>
-      <span className={rowLabelClass}>{copy.form.reminder}</span>
-      <span className="ml-auto min-w-0 truncate text-sm text-foreground">
-        {shown
-          ? `${format(shown, "EEEEEE · d MMM", { locale: ptBR })} · ${reminderHour}`
-          : copy.form.noReminder}
-      </span>
-      <BellIcon className="size-4 shrink-0 text-muted-foreground" aria-hidden="true" />
-
-      <input
-        type="date"
-        aria-label={copy.form.reminder}
-        min={format(now, "yyyy-MM-dd")}
-        value={shown ? format(shown, "yyyy-MM-dd") : ""}
-        onChange={(e) => {
-          // "2026-10-23" puro é lido como UTC; com "T00:00" vira meia-noite LOCAL.
-          const next = new Date(`${e.target.value}T00:00`);
-          onChange(Number.isNaN(next.getTime()) ? undefined : next);
-        }}
-        className={nativeControlClass}
-      />
-    </div>
+    <span
+      className={cn(
+        chip,
+        "relative h-8 gap-1.5 px-2.5 focus-within:ring-[3px] focus-within:ring-ring/50",
+        filled ? tone : chipGhost,
+      )}
+    >
+      {icon}
+      {children}
+    </span>
   );
 }
 
@@ -225,6 +129,7 @@ export function TaskForm({
   view,
   onView,
   onSubmit,
+  onDirtyChange,
 }: TaskFormProps) {
   const { tasks } = useDailify();
   // `exhausted`, não `blocked`: nenhum plano tem limite 0, então `blocked` nunca é true e o gate
@@ -269,6 +174,25 @@ export function TaskForm({
     return [...all].sort((a, b) => a.localeCompare(b, "pt-BR"));
   }, [tasks, tags]);
 
+  const values = JSON.stringify([
+    title,
+    undated,
+    reminder,
+    date,
+    duration,
+    priority,
+    repeat,
+    tags,
+    links,
+  ]);
+  const [opened] = useState(values);
+  const dirty = values !== opened;
+  useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
+
+  // Mostra o que o salvar grava: 09:00 passado avança na série e some na avulsa.
+  const shownReminder = reminder && undatedReminder(reminder, repeat, new Date());
+  const icon = "size-3.5 shrink-0";
+
   const [tagDraft, setTagDraft] = useState("");
   const tagsListId = `${id}-tags`;
 
@@ -306,84 +230,192 @@ export function TaskForm({
   return (
     <form id={id} onSubmit={handleSubmit} noValidate className={cn("flex flex-col", className)}>
       {view === "root" && (
-        <div className="flex flex-col">
-          <SummaryRow
-            label={copy.form.title}
-            value={title || copy.form.titlePlaceholder}
+        <div className="flex flex-col gap-5">
+          <button
+            type="button"
             onClick={() => onView("title")}
-          />
-          <div className={rowClass}>
-            <span className={rowLabelClass}>{copy.form.undated}</span>
-            <span className="ml-auto text-sm text-foreground">
-              {undated ? copy.form.undatedOn : copy.form.undatedOff}
-            </span>
-            <input
-              type="checkbox"
-              role="switch"
-              aria-label={copy.form.undated}
-              checked={undated}
-              onChange={(e) => {
-                setUndated(e.target.checked);
-                // O dia escolhido de um lado vira o do outro; a hora da agenda fica.
-                if (e.target.checked) setReminder(date);
-                else if (reminder)
-                  setDate(
-                    new Date(
-                      reminder.getFullYear(),
-                      reminder.getMonth(),
-                      reminder.getDate(),
-                      date.getHours(),
-                      date.getMinutes(),
-                    ),
+            className={cn(
+              "text-left text-2xl font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+              !title && "text-muted-foreground",
+            )}
+          >
+            {title || copy.form.titlePlaceholder}
+          </button>
+
+          <div className="flex flex-wrap gap-2">
+            {undated ? (
+              <FieldChip icon={<BellIcon className={icon} />} filled={Boolean(shownReminder)}>
+                {shownReminder
+                  ? `${format(shownReminder, "EEEEEE · d MMM", { locale: ptBR })} · ${reminderHour}`
+                  : copy.form.noReminder}
+                <input
+                  type="date"
+                  aria-label={copy.form.reminder}
+                  min={format(new Date(), "yyyy-MM-dd")}
+                  value={shownReminder ? format(shownReminder, "yyyy-MM-dd") : ""}
+                  onChange={(e) => {
+                    // "2026-10-23" puro é lido como UTC; com "T00:00" vira meia-noite LOCAL.
+                    const next = new Date(`${e.target.value}T00:00`);
+                    setReminder(Number.isNaN(next.getTime()) ? undefined : next);
+                  }}
+                  className={nativeControlClass}
+                />
+              </FieldChip>
+            ) : (
+              <>
+                <FieldChip icon={<CalendarIcon className={icon} />} filled tone={chipDate}>
+                  {/* EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso. */}
+                  {format(date, "EEEEEE · d MMM", { locale: ptBR })}
+                  <input
+                    type="date"
+                    aria-label={copy.form.date}
+                    value={format(date, "yyyy-MM-dd")}
+                    onChange={(e) => {
+                      const next = new Date(`${e.target.value}T00:00`);
+                      if (Number.isNaN(next.getTime())) return;
+                      next.setHours(date.getHours(), date.getMinutes());
+                      setDate(next);
+                    }}
+                    className={nativeControlClass}
+                  />
+                </FieldChip>
+                <FieldChip icon={<ClockIcon className={icon} />} filled tone={chipTime}>
+                  {format(date, "HH:mm")}
+                  <input
+                    type="time"
+                    aria-label={copy.form.time}
+                    value={format(date, "HH:mm")}
+                    onChange={(e) => {
+                      const [hours, minutes] = e.target.value.split(":").map(Number);
+                      if (Number.isNaN(hours) || Number.isNaN(minutes)) return;
+                      const next = new Date(date);
+                      next.setHours(hours, minutes);
+                      setDate(next);
+                    }}
+                    className={nativeControlClass}
+                  />
+                </FieldChip>
+              </>
+            )}
+
+            <FieldChip icon={<HourglassIcon className={icon} />} filled>
+              {duration}
+              <select
+                aria-label={copy.form.duration}
+                value={duration}
+                onChange={(e) => setDuration(e.target.value)}
+                className={nativeControlClass}
+              >
+                {durations.map((value) => (
+                  <option key={value} value={value}>
+                    {value}
+                  </option>
+                ))}
+              </select>
+            </FieldChip>
+
+            <FieldChip
+              icon={<RepeatIcon className={icon} />}
+              filled={repeatMode !== "Off"}
+              tone={chipRepeat}
+            >
+              {repeatMode === "Off"
+                ? copy.form.repeat
+                : REPEAT_MODES.find((mode) => mode.value === repeatMode)?.label}
+              <select
+                aria-label={copy.form.repeat}
+                value={repeatMode}
+                onChange={(e) => {
+                  const next = e.target.value;
+                  setRepeat(
+                    next === "Weekly"
+                      ? // Semanal já nasce no dia da própria tarefa: lista vazia não repete nunca.
+                        { Weekly: weekly.length ? weekly : [weekDays[date.getDay()]] }
+                      : next === "Daily" || next === "Monthly" || next === "Yearly"
+                        ? next
+                        : "Off",
                   );
-              }}
-              className={nativeControlClass}
-            />
+                }}
+                className={nativeControlClass}
+              >
+                {REPEAT_MODES.map(({ value, label }) => (
+                  <option key={value} value={value} disabled={value !== "Off" && !recurrence}>
+                    {label + (value !== "Off" && !recurrence ? copy.form.repeatLimit : "")}
+                  </option>
+                ))}
+              </select>
+            </FieldChip>
+
+            <FieldChip icon={<SunIcon className={icon} />} filled={undated}>
+              {copy.form.undatedChip}
+              <input
+                type="checkbox"
+                role="switch"
+                aria-label={copy.form.undated}
+                checked={undated}
+                onChange={(e) => {
+                  setUndated(e.target.checked);
+                  // O dia escolhido de um lado vira o do outro; a hora da agenda fica.
+                  if (e.target.checked) setReminder(date);
+                  else if (reminder)
+                    setDate(
+                      new Date(
+                        reminder.getFullYear(),
+                        reminder.getMonth(),
+                        reminder.getDate(),
+                        date.getHours(),
+                        date.getMinutes(),
+                      ),
+                    );
+                }}
+                className={nativeControlClass}
+              />
+            </FieldChip>
+
+            <FieldChip icon={<FlagIcon className={icon} />} filled={priority > 0}>
+              {priority > 0 ? priorityText[priority] : copy.form.priority}
+              <select
+                aria-label={copy.form.priority}
+                value={String(priority)}
+                onChange={(e) => setPriority(Number(e.target.value))}
+                className={nativeControlClass}
+              >
+                {priorityText.map((label, index) => (
+                  <option key={label} value={String(index)}>
+                    {label}
+                  </option>
+                ))}
+              </select>
+            </FieldChip>
+
+            <FieldChip icon={<TagIcon className={icon} />} filled={tags.length > 0}>
+              {tags.length
+                ? tags[0] + (tags.length > 1 ? ` +${tags.length - 1}` : "")
+                : copy.form.tags}
+              <button
+                type="button"
+                aria-label={copy.form.tags}
+                onClick={() => onView("tags")}
+                className={nativeControlClass}
+              />
+            </FieldChip>
+
+            <FieldChip icon={<LinkIcon className={icon} />} filled={Boolean(links?.length)}>
+              {links?.length
+                ? linkLabel(links[0]) + (links.length > 1 ? ` +${links.length - 1}` : "")
+                : copy.form.links}
+              <button
+                type="button"
+                aria-label={copy.form.links}
+                onClick={() => onView("links")}
+                className={nativeControlClass}
+              />
+            </FieldChip>
           </div>
-          {undated ? (
-            <ReminderRow value={reminder} repeat={repeat} onChange={setReminder} />
-          ) : (
-            <DateRow label={copy.form.date} value={date} onChange={setDate} />
-          )}
-          <SelectRow
-            label={copy.form.duration}
-            value={duration}
-            onChange={setDuration}
-            options={durations.map((value) => ({ value, label: value }))}
-          />
-          <SelectRow
-            label={copy.form.priority}
-            value={String(priority)}
-            onChange={(next) => setPriority(Number(next))}
-            options={priorityText.map((label, index) => ({ value: String(index), label }))}
-          />
-          <SelectRow
-            label={copy.form.repeat}
-            value={repeatMode}
-            onChange={(next) =>
-              setRepeat(
-                next === "Weekly"
-                  ? // Semanal já nasce no dia da própria tarefa: lista vazia não repete nunca.
-                    { Weekly: weekly.length ? weekly : [weekDays[date.getDay()]] }
-                  : next === "Daily" || next === "Monthly" || next === "Yearly"
-                    ? next
-                    : "Off",
-              )
-            }
-            options={REPEAT_MODES.map(({ value, label }) => ({
-              value,
-              label: label + (value !== "Off" && !recurrence ? copy.form.repeatLimit : ""),
-              disabled: value !== "Off" && !recurrence,
-            }))}
-          />
 
           {/* Os dias ficam na própria raiz, não numa página: sem eles "semanal" não diz QUANDO. */}
           {repeatMode === "Weekly" && (
-            <div
-              role="group"
-              aria-label={copy.form.repeatWeekly}
-              className="flex gap-1.5 px-3 pb-2"
-            >
+            <div role="group" aria-label={copy.form.repeatWeekly} className="flex gap-1.5">
               {weekDays.map((day) => {
                 const on = weekly.includes(day);
                 return (
@@ -408,61 +440,53 @@ export function TaskForm({
               })}
             </div>
           )}
-          <SummaryRow
-            label={copy.form.links}
-            value={
-              links?.length
-                ? linkLabel(links[0]) + (links.length > 1 ? ` +${links.length - 1}` : "")
-                : copy.form.empty
-            }
-            onClick={() => onView("links")}
-          />
-          {/* Tags: `<datalist>` — o autocomplete é o do navegador, alimentado pelas tags que você
-              já usou nas outras tarefas. Enter adiciona a que estiver escrita, o × tira. */}
-          <div className="flex flex-col">
-            <div className={rowClass}>
-              <span className={rowLabelClass}>{copy.form.tags}</span>
-              <input
-                list={tagsListId}
-                value={tagDraft}
-                onChange={(e) => setTagDraft(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key !== "Enter") return;
-                  e.preventDefault();
-                  addTag(tagDraft);
-                }}
-                onBlur={() => addTag(tagDraft)}
-                maxLength={TASK_LIMITS.tagMax}
-                disabled={tags.length >= TASK_LIMITS.tagsMax}
-                placeholder={copy.form.tagSearch}
-                aria-label={copy.form.tags}
-                className="ml-auto min-w-0 flex-1 bg-transparent text-right text-sm text-foreground outline-none placeholder:text-muted-foreground"
-              />
-              <datalist id={tagsListId}>
-                {knownTags.map((tag) => (
-                  <option key={tag} value={tag} />
-                ))}
-              </datalist>
-            </div>
+        </div>
+      )}
 
-            {tags.length > 0 && (
-              <ul className="flex flex-wrap gap-1.5 px-3 pb-3">
-                {tags.map((tag) => (
-                  <li key={tag}>
-                    <button
-                      type="button"
-                      onClick={() => toggleTag(tag)}
-                      aria-label={`${copy.form.tags}: ${tag}`}
-                      className="flex h-8 items-center gap-1 rounded-full border border-surface-line px-3 text-2xs text-content-secondary transition-colors outline-none hover:bg-surface-hover focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                    >
-                      {tag}
-                      <XIcon className="size-3 shrink-0" aria-hidden="true" />
-                    </button>
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
+      {/* Tags: `<datalist>` — o autocomplete é o do navegador, alimentado pelas tags que você já
+          usou nas outras tarefas. Enter adiciona a que estiver escrita, o × tira. */}
+      {view === "tags" && (
+        <div className="flex flex-col gap-3">
+          <input
+            autoFocus
+            list={tagsListId}
+            value={tagDraft}
+            onChange={(e) => setTagDraft(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter") return;
+              e.preventDefault();
+              addTag(tagDraft);
+            }}
+            onBlur={() => addTag(tagDraft)}
+            maxLength={TASK_LIMITS.tagMax}
+            disabled={tags.length >= TASK_LIMITS.tagsMax}
+            placeholder={copy.form.tagSearch}
+            aria-label={copy.form.tags}
+            className={bareFieldClass}
+          />
+          <datalist id={tagsListId}>
+            {knownTags.map((tag) => (
+              <option key={tag} value={tag} />
+            ))}
+          </datalist>
+
+          {tags.length > 0 && (
+            <ul className="flex flex-wrap gap-1.5">
+              {tags.map((tag) => (
+                <li key={tag}>
+                  <button
+                    type="button"
+                    onClick={() => toggleTag(tag)}
+                    aria-label={`${copy.form.tags}: ${tag}`}
+                    className="flex h-8 items-center gap-1 rounded-full border border-surface-line px-3 text-2xs text-content-secondary transition-colors outline-none hover:bg-surface-hover focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                  >
+                    {tag}
+                    <XIcon className="size-3 shrink-0" aria-hidden="true" />
+                  </button>
+                </li>
+              ))}
+            </ul>
+          )}
         </div>
       )}
 

@@ -20,7 +20,8 @@ export function composeTaskInput(
     duration: parsed.duration ?? DEFAULT_DURATION,
     priority: 0,
     repeat: parsed.repeat,
-    links: parsed.links.length ? parsed.links : undefined,
+    // Um link por tarefa: a frase pode trazer vários, fica o primeiro.
+    links: parsed.links.length ? parsed.links.slice(0, 1) : undefined,
   };
 
   if (parsed.date && parsed.hasTime && !opts.undatedOnly) {

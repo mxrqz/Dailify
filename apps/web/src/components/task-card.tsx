@@ -391,7 +391,7 @@ function TitleField({
  * casariam mais com o cartão.
  */
 export function TimeLabel({ time }: { time: string }): JSX.Element {
-  return <span className="cursor-default font-mono text-2xs text-meta-time">{time}</span>;
+  return <span className="cursor-default font-mono text-xs text-meta-time">{time}</span>;
 }
 
 /** Corpo do card — mesma estrutura em loading/ready (alturas casam, sem jump no crossfade). */

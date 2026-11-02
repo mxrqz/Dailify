@@ -19,8 +19,8 @@ const DAYS_AHEAD = 7;
 const MAX_DOTS = 3;
 // Só desacopla alguns px abaixo de onde acoplou: com o dedo parado no limiar ela trocava a cada frame.
 const HYSTERESIS_PX = 8;
-// h-9.75 da faixa acoplada: para 1px acima da borda de baixo da top bar (h-10), que segue inteira.
-const DOCKED_PX = 39;
+// h-10.75 da faixa acoplada: para 1px acima da borda de baixo da top bar (h-11), que segue inteira.
+const DOCKED_PX = 43;
 // Uma seção vira "o dia que se está vendo" quando o topo dela sobe até aqui (o goToDay a para em 56).
 const READING_LINE_PX = 64;
 // Espelham rounded-2xl/rounded-xl/rounded-lg. Números porque o motion só corrige o raio durante a
@@ -158,14 +158,15 @@ export function WeekStrip(): JSX.Element {
             // Borda sempre de 1px (transparente acoplada): sumir com ela mudava a caixa no frame 0.
             "z-30 flex items-center overflow-hidden border transition-colors duration-base max-md:sticky max-md:top-0",
             docked
-              ? // mx-8 + o px-gutter da página = 48px de cada lado: o ☰ continua livre.
-                "mx-8 h-9.75 gap-0.5 border-transparent bg-surface-page"
+              ? // mx-10 + o gutter da página cobre o pl-3 + ☰ (size-11) e repete a folga do outro lado.
+                "mx-10 h-10.75 gap-0.5 border-transparent bg-surface-page"
               : "gap-1 border-surface-line bg-surface-card p-2",
           )}
         >
           {days.map((day) => {
             const current = isToday(day);
             const dots = Math.min(tasks ? getTasksForDay(tasks, day).length : 0, MAX_DOTS);
+            const seen = dayAnchorId(day) === visible;
 
             return (
               <motion.button
@@ -177,10 +178,18 @@ export function WeekStrip(): JSX.Element {
                 onClick={() => void goToDay(day)}
                 aria-current={current ? "date" : undefined}
                 className={cn(
-                  "flex min-w-0 flex-1 cursor-pointer items-center justify-center transition-colors",
-                  docked ? "h-8 gap-0.5" : "flex-col gap-1 px-2 py-2",
+                  "relative isolate flex min-w-0 flex-1 cursor-pointer items-center justify-center transition-colors",
+                  // Acoplada, o fundo é um quadrado no centro (::before); o toque segue a célula toda.
+                  "before:absolute before:top-1/2 before:left-1/2 before:-z-10 before:size-7.5 before:-translate-1/2 before:rounded-lg before:transition-colors",
+                  docked ? "h-10 flex-wrap content-center gap-0.5" : "flex-col gap-1 px-2 py-2",
                   // O fundo marca o dia que se está vendo na lista; hoje já se distingue pelo número.
-                  dayAnchorId(day) === visible ? "bg-surface-hover" : "hover:bg-surface-hover",
+                  docked
+                    ? seen
+                      ? "before:bg-surface-hover"
+                      : "hover:before:bg-surface-hover"
+                    : seen
+                      ? "bg-surface-hover"
+                      : "hover:bg-surface-hover",
                 )}
               >
                 {/* Os dois rótulos ficam montados e cruzam opacidade: trocar o texto no commit era
@@ -219,13 +228,16 @@ export function WeekStrip(): JSX.Element {
                 </motion.span>
 
                 {/* Altura reservada mesmo sem tarefa: senão os dias sobem e descem na faixa. Acoplada,
-                    a faixa só tem espaço pra um ponto. */}
+                    quebra pra linha de baixo e só cabe um ponto. */}
                 <motion.span
                   {...box}
-                  className={cn("flex h-1 items-center gap-0.5 overflow-hidden", docked && "w-1")}
+                  className={cn(
+                    "flex h-1 items-center justify-center gap-0.5 overflow-hidden",
+                    docked && "basis-full",
+                  )}
                   aria-hidden="true"
                 >
-                  {Array.from({ length: dots }).map((_, index) => (
+                  {Array.from({ length: docked ? Math.min(dots, 1) : dots }).map((_, index) => (
                     <motion.span
                       key={index}
                       {...leaf}
@@ -248,7 +260,7 @@ export function WeekStrip(): JSX.Element {
                 aria-label={copy.day.openCalendar}
                 className={cn(
                   "flex shrink-0 cursor-pointer items-center justify-center text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground",
-                  docked ? "size-8" : "size-9",
+                  docked ? "size-10" : "size-9",
                 )}
               >
                 <motion.span {...leaf} className="flex">
