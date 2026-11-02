@@ -35,7 +35,7 @@ describe("enforce", () => {
   });
 
   it("barra no limite exato", async () => {
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < limitsFor("free").recurring; i++) {
       await insertTask(env.DB, "le3", task({ id: `le3-${i}`, repeat: "Daily" }));
     }
     const err = await enforce(env.DB, "le3", limitsFor("free"), "recurring", new Date(2026, 5, 1));
@@ -43,7 +43,7 @@ describe("enforce", () => {
   });
 
   it("conta voz do período corrente do servidor, seja qual for a data recebida", async () => {
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < limitsFor("free").voice; i++) {
       await bumpStoredUsage(env.DB, "le4", "voice", periodFor("voice", new Date()));
     }
     // Voz é ancorada em AGORA: o mês que o cliente pede não muda o período lido, senão navegar pro

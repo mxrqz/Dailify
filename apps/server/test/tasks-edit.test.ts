@@ -14,7 +14,7 @@ import { env } from "cloudflare:test";
 import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
 import { insertTask, getTask } from "../src/db/tasks";
-import type { Task } from "@dailify/shared";
+import { limitsFor, type Task } from "@dailify/shared";
 
 beforeAll(async () => {
   await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
@@ -257,5 +257,25 @@ describe("PATCH /tasks/:id?occurrence — editar só esta ocorrência", () => {
   it("400 em occurrence não numérico", async () => {
     const res = await patchOccurrence("serie", NaN, { title: "x" });
     expect(res.status).toBe(400);
+  });
+
+  it("tornar recorrente respeita a quota de recorrentes do Free", async () => {
+    const base: Pick<Task, "date" | "duration" | "priority" | "completed"> = {
+      date: new Date(2026, 4, 5, 9).getTime(),
+      duration: "10m",
+      priority: 0,
+      completed: [],
+    };
+    for (let i = 0; i < limitsFor("free").recurring; i++)
+      await insertTask(env.DB, "u3", { ...base, id: `rec-${i}`, title: "r", repeat: "Daily" });
+    await insertTask(env.DB, "u3", { ...base, id: "rec-off", title: "avulsa", repeat: "Off" });
+
+    const blocked = await patch("rec-off", { repeat: "Daily" });
+    expect(blocked.status).toBe(429);
+    expect((await blocked.json<{ error: string }>()).error).toBe("Recurring Tasks Limit Reached");
+    expect((await getTask(env.DB, "u3", "rec-off"))?.repeat).toBe("Off");
+
+    // Trocar o tipo de uma série que já existe não ocupa vaga nova.
+    expect((await patch("rec-0", { repeat: "Monthly" })).status).toBe(200);
   });
 });

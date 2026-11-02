@@ -71,16 +71,17 @@ describe("<BillingPage>", () => {
     expect(screen.queryByText(copy.profile.billingManage)).not.toBeInTheDocument();
   });
 
-  // O segundo bug: a derivação sem dados devolvia unlimited, e quem tinha 30/mês lia "ilimitado".
-  it("Free não anuncia nada de ilimitado", () => {
+  // O segundo bug: a derivação sem dados devolvia unlimited, e quem tinha limite lia "ilimitado".
+  it("Free mostra o teto real do que é limitado", () => {
     dailify.mockReturnValue(context({ quotas: FREE }));
     renderPage();
 
     const card = within(currentPlanCard());
     expect(card.getByText(copy.quota.names.tasks)).toBeInTheDocument();
-    expect(card.getByText("0 / 30")).toBeInTheDocument();
-    // nenhuma das três quotas do Free é ilimitada
-    expect(card.queryByText(new RegExp(copy.quota.unlimited))).not.toBeInTheDocument();
+    expect(card.getByText(`0 / ${limitsFor("free").recurring}`)).toBeInTheDocument();
+    expect(card.getByText(`0 / ${limitsFor("free").voice}`)).toBeInTheDocument();
+    // só tarefas é ilimitada no Free
+    expect(card.getAllByText(`0 / ${copy.quota.unlimited}`)).toHaveLength(1);
   });
 
   it("as três quotas aparecem, não só tarefas", () => {
@@ -123,7 +124,7 @@ describe("<BillingPage>", () => {
     const card = within(currentPlanCard());
     // tarefas e recorrentes são ilimitadas no Pro+AI; a voz TEM teto mesmo no plano de cima.
     expect(card.getAllByText(`0 / ${copy.quota.unlimited}`)).toHaveLength(2);
-    expect(card.getByText("0 / 200")).toBeInTheDocument();
+    expect(card.getByText(`0 / ${limitsFor("pro+ai").voice}`)).toBeInTheDocument();
   });
 
   /**
@@ -134,7 +135,13 @@ describe("<BillingPage>", () => {
   it("as barras de quota expoem o valor pra leitor de tela", () => {
     useUser.mockReturnValue({ user: { publicMetadata: { plan: "free" } } });
     dailify.mockReturnValue(
-      context({ quotas: { limits: limitsFor("free"), usage: { ...NO_USAGE, tasks: 15 } } }),
+      // Limites fixos: o teste é do ARIA, não da tabela de planos.
+      context({
+        quotas: {
+          limits: { tasks: 30, recurring: 15, voice: 5 },
+          usage: { ...NO_USAGE, tasks: 15 },
+        },
+      }),
     );
     renderPage();
 

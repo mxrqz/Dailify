@@ -54,6 +54,12 @@ export async function readAllUsage(db: D1Database, userId: string, at: Date): Pr
   return usage;
 }
 
+/** Editar uma tarefa avulsa pra repetir ocupa uma vaga de recorrente, como criar uma. */
+export async function enforceRepeat(env: Env, userId: string): Promise<string | null> {
+  const limits = limitsFor(await getUserRole(env, userId));
+  return enforce(env.DB, userId, limits, "recurring", new Date());
+}
+
 /**
  * Uma leitura de papel só: `getUserRole` bate no Clerk pela rede, e criar uma tarefa recorrente
  * consulta duas quotas.

@@ -15,6 +15,7 @@ vi.mock("../src/lib/clerk", async (importOriginal) => {
 import { env } from "cloudflare:test";
 import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
+import { limitsFor } from "@dailify/shared";
 import { insertTask, getTask } from "../src/db/tasks";
 import type { Task, TaskInput } from "@dailify/shared";
 
@@ -50,9 +51,9 @@ describe("POST /tasks", () => {
     expect(saved).toMatchObject({ title: "Under limit" });
   });
 
-  it("429s a free user creating a 4th recurring task", async () => {
+  it("429s a free user past the recurring quota", async () => {
     role = "free";
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < limitsFor("free").recurring; i++) {
       await insertTask(env.DB, "u2", {
         id: `rec-${i}`,
         title: `R${i}`,
@@ -77,7 +78,7 @@ describe("POST /tasks", () => {
     expect(body.error).toBe("Recurring Tasks Limit Reached");
   });
 
-  it("429s a free user at the 30-task monthly cap", async () => {
+  it("free não tem teto de tarefas no mês", async () => {
     role = "free";
     const month = new Date(2026, 3, 1, 9).getTime();
     for (let i = 0; i < 30; i++) {
@@ -100,9 +101,7 @@ describe("POST /tasks", () => {
       },
       env,
     );
-    expect(res.status).toBe(429);
-    const body = await res.json<{ error: string }>();
-    expect(body.error).toBe("Monthly Tasks Limit Reached");
+    expect(res.status).toBe(200);
   });
 });
 

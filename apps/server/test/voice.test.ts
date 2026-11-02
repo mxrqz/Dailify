@@ -36,7 +36,7 @@ import { env } from "cloudflare:test";
 import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
 import { getTask } from "../src/db/tasks";
-import type { Task } from "@dailify/shared";
+import { limitsFor, type Task } from "@dailify/shared";
 import { bumpStoredUsage, periodFor, readStoredUsage } from "../src/db/usage";
 
 beforeAll(async () => {
@@ -194,7 +194,7 @@ describe("POST /tasks/voice — quota e tamanho", () => {
     role = "free";
     userId = "vq2";
     getUserMock.mockResolvedValue({ id: "vq2", unsafeMetadata: { timezone: "UTC" } });
-    for (let i = 0; i < 3; i++) {
+    for (let i = 0; i < limitsFor("free").voice; i++) {
       await bumpStoredUsage(env.DB, "vq2", "voice", periodFor("voice", new Date()));
     }
     const res = await audioRequest();

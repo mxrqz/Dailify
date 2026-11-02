@@ -16,12 +16,11 @@ export const copy = {
     },
     pro: {
       name: "Pro",
-      description:
-        "Dez vezes mais tarefas e dez vezes mais recorrência pra quem já vive no Dailify.",
+      description: "Recorrência sem teto e voz pra criar falando no dia a dia.",
     },
     "pro+ai": {
       name: "Pro+AI",
-      description: "Tarefas e recorrência sem teto, e voz de sobra pra criar falando.",
+      description: "Tudo do Pro, com voz de sobra pra quem cria tudo falando.",
     },
   },
 

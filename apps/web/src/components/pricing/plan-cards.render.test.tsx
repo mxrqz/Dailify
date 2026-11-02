@@ -39,7 +39,7 @@ describe("<PlanCards>", () => {
   // O bug que motivou a issue 040: a página anunciava "ilimitado" para quem tinha limite.
   it("Free anuncia o limite real, não 'ilimitado'", () => {
     renderCards();
-    expect(screen.getByText(/30 tarefas\/mês/i)).toBeInTheDocument();
+    expect(screen.getByText(/30 tarefas recorrentes/i)).toBeInTheDocument();
   });
 
   it("marca o plano recomendado e rende um CTA por plano", () => {

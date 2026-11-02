@@ -3,9 +3,9 @@ import { QUOTAS, QUOTA_KEYS, limitsFor, quotaState, computeQuotas } from "./quot
 
 describe("QUOTAS", () => {
   it("declara as três quotas com os limites da tabela", () => {
-    expect(QUOTAS.tasks.limits).toEqual({ free: 30, pro: 300, "pro+ai": -1, admin: -1 });
-    expect(QUOTAS.recurring.limits).toEqual({ free: 3, pro: 30, "pro+ai": -1, admin: -1 });
-    expect(QUOTAS.voice.limits).toEqual({ free: 3, pro: 5, "pro+ai": 200, admin: -1 });
+    expect(QUOTAS.tasks.limits).toEqual({ free: -1, pro: -1, "pro+ai": -1, admin: -1 });
+    expect(QUOTAS.recurring.limits).toEqual({ free: 30, pro: -1, "pro+ai": -1, admin: -1 });
+    expect(QUOTAS.voice.limits).toEqual({ free: 5, pro: 30, "pro+ai": 300, admin: -1 });
   });
 
   it("declara o escopo de cada quota", () => {
@@ -21,13 +21,13 @@ describe("QUOTAS", () => {
 
 describe("limitsFor", () => {
   it("free", () => {
-    expect(limitsFor("free")).toEqual({ tasks: 30, recurring: 3, voice: 3 });
+    expect(limitsFor("free")).toEqual({ tasks: -1, recurring: 30, voice: 5 });
   });
   it("pro", () => {
-    expect(limitsFor("pro")).toEqual({ tasks: 300, recurring: 30, voice: 5 });
+    expect(limitsFor("pro")).toEqual({ tasks: -1, recurring: -1, voice: 30 });
   });
   it("pro+ai", () => {
-    expect(limitsFor("pro+ai")).toEqual({ tasks: -1, recurring: -1, voice: 200 });
+    expect(limitsFor("pro+ai")).toEqual({ tasks: -1, recurring: -1, voice: 300 });
   });
   it("admin é ilimitado em tudo", () => {
     expect(limitsFor("admin")).toEqual({ tasks: -1, recurring: -1, voice: -1 });

@@ -3,17 +3,17 @@ import { planFeatures } from "./plan-cards";
 
 describe("planFeatures", () => {
   it("anuncia recorrência no free — o bullet que o if por quota escondia", () => {
-    expect(planFeatures("free")).toContain("3 tarefas recorrentes");
+    expect(planFeatures("free")).toContain("30 tarefas recorrentes");
   });
 
-  it("anuncia recorrência no pro", () => {
-    expect(planFeatures("pro")).toContain("30 tarefas recorrentes");
+  it("pro não tem teto de recorrência", () => {
+    expect(planFeatures("pro")).toContain("Recorrência ilimitada");
   });
 
   it("anuncia voz em todos os planos", () => {
-    expect(planFeatures("free")).toContain("3 comandos de voz/mês");
-    expect(planFeatures("pro")).toContain("5 comandos de voz/mês");
-    expect(planFeatures("pro+ai")).toContain("200 comandos de voz/mês");
+    expect(planFeatures("free")).toContain("5 comandos de voz/mês");
+    expect(planFeatures("pro")).toContain("30 comandos de voz/mês");
+    expect(planFeatures("pro+ai")).toContain("300 comandos de voz/mês");
   });
 
   it("ilimitado usa a frase de ilimitado, não um número", () => {
