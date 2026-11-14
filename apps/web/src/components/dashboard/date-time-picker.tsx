@@ -4,6 +4,7 @@ import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { DayPicker } from "@/components/dashboard/day-picker";
 import { cn } from "@/lib/utils";
+import { zoned } from "@/functions/zone";
 
 // h-5 de cada linha; a roda tem h-16 e a linha do meio (py-5.5 acima e abaixo) é a escolhida.
 const ROW_PX = 20;
@@ -235,7 +236,7 @@ export function TimeWheel({
   const pm = hours >= 12 ? 1 : 0;
 
   const set = (h: number, minutes: number) => {
-    const next = new Date(value);
+    const next = zoned(value);
     next.setHours(h, minutes, 0, 0);
     onChange(next);
   };
@@ -297,7 +298,7 @@ export function DateTimePicker({
       <DayPicker
         value={value}
         onSelect={(day) => {
-          const next = new Date(day);
+          const next = zoned(day);
           next.setHours(value.getHours(), value.getMinutes(), 0, 0);
           onChange(next);
         }}

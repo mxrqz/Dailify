@@ -15,6 +15,7 @@ import { getTasksForDay } from "@/functions/functions";
 import { spring } from "@/consts/motion";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { cn } from "@/lib/utils";
+import { zoned } from "@/functions/zone";
 
 const DAYS_AHEAD = 7;
 const MAX_DOTS = 3;
@@ -31,7 +32,7 @@ const RADIUS_DAY = 8;
 const RADIUS_DAY_DOCKED = 6;
 
 export const weekDays = (): Date[] => {
-  const today = startOfDay(new Date());
+  const today = startOfDay(zoned());
   return Array.from({ length: DAYS_AHEAD }, (_, i) => addDays(today, i));
 };
 

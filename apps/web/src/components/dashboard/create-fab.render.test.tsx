@@ -4,6 +4,11 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 vi.mock("@/components/dailifyContext", () => ({ useDailify: () => ({ hour12: false }) }));
+// A voz fala com Clerk, rota e quotas; aqui só importa o composer de texto.
+vi.mock("@/hooks/useVoiceCreate", () => ({
+  useVoiceCreate: () => ({ state: "idle", start: vi.fn(), stop: vi.fn() }),
+  voiceSupported: () => false,
+}));
 
 import { CreateFab } from "./create-fab";
 

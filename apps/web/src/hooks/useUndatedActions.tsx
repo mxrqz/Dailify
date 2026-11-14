@@ -7,7 +7,8 @@ import { copy } from "@/components/dashboard/copy";
 import { completeTask, createTask, deleteTask, uncompleteTaskRange } from "@/functions/api";
 import type { ApiError } from "@/functions/api";
 import { enqueue, type Mutation } from "@/functions/offline";
-import { browserTimeZone, removeUndated, upsertUndated } from "@/functions/undated";
+import { removeUndated, upsertUndated } from "@/functions/undated";
+import { appTimeZone } from "@/functions/zone";
 
 /**
  * Marcar/desmarcar/excluir na lista Sem data. Mesmo contrato de `useTaskActions` (otimista; erro de
@@ -21,7 +22,7 @@ export function useUndatedActions(task: Task) {
   const done =
     task.repeat === "Off"
       ? task.completed.length > 0
-      : doneThisPeriod(task, Date.now(), weekStart, browserTimeZone());
+      : doneThisPeriod(task, Date.now(), weekStart, appTimeZone());
 
   /** Sem rede o Clerk também não renova o token — e isso não pode custar a escrita. */
   const authToken = async (): Promise<{ token?: string; error: ApiError | undefined }> => {
@@ -59,7 +60,7 @@ export function useUndatedActions(task: Task) {
   const reopen = async (list: Task[], current: Task) => {
     const at = Date.now();
     const from =
-      current.repeat === "Off" ? 0 : periodStart(current.repeat, at, weekStart, browserTimeZone());
+      current.repeat === "Off" ? 0 : periodStart(current.repeat, at, weekStart, appTimeZone());
     setUndatedTasks(
       upsertUndated(list, {
         ...current,

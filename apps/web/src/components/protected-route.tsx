@@ -23,6 +23,7 @@ import { initialMonths } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
 import { motion } from "motion/react";
 import { toast } from "sonner";
+import { zoned } from "@/functions/zone";
 
 /** Piso entre revalidações: alternar de aba não pode virar rajada de fetch. */
 const REVALIDATE_AFTER_MS = 30_000;
@@ -190,11 +191,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       loadUndated();
 
       // Hoje e o seguinte já no boot: a lista contínua não pode esperar a rolagem chegar no fim.
-      const error = await reloadMonths([
-        ...loadedMonths,
-        ...initialMonths(new Date()),
-        selectedDay,
-      ]);
+      const error = await reloadMonths([...loadedMonths, ...initialMonths(zoned()), selectedDay]);
 
       // Erro de carga não é mês vazio: sem o aviso, quem está sem rede lê "nada agendado" e acha
       // que perdeu as tarefas. Offline com cache na tela é silencioso — o indicador já conta.

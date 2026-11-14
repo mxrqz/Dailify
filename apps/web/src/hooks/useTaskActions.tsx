@@ -11,6 +11,7 @@ import { upsertTaskWithRecurrence } from "@/functions/functions";
 import { enqueue, type Mutation } from "@/functions/offline";
 import type { TaskInput } from "@dailify/shared";
 import type { TaskProps } from "@/types/types";
+import { zoned } from "@/functions/zone";
 
 /**
  * Concluir/reabrir/editar/excluir — compartilhado pelo menu (⋮) do cartão e pela folha de edição.
@@ -21,7 +22,7 @@ import type { TaskProps } from "@/types/types";
  */
 export function useTaskActions(
   task: TaskProps,
-  day: Date = new Date(),
+  day: Date = zoned(),
   { onDeleted }: { onDeleted?: () => void } = {},
 ) {
   const { tasks, setTasks, loadedMonths, bumpUsage } = useDailify();
@@ -80,8 +81,8 @@ export function useTaskActions(
   const onUncomplete = async () => {
     const at = Date.now();
     const previous = tasks ?? [];
-    const from = new Date(day).setHours(0, 0, 0, 0);
-    const to = new Date(day).setHours(23, 59, 59, 999);
+    const from = zoned(day).setHours(0, 0, 0, 0);
+    const to = zoned(day).setHours(23, 59, 59, 999);
     const reopened: TaskProps = {
       ...task,
       completed: task.completed.filter((done) => done < from || done > to),

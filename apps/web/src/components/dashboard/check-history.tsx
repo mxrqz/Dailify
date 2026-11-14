@@ -1,7 +1,7 @@
 import { periodStart, type Task, type WeekStart } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
-import { browserTimeZone } from "@/functions/undated";
+import { appTimeZone } from "@/functions/zone";
 import { cn } from "@/lib/utils";
 
 export type PeriodKind = "Daily" | "Weekly" | "Monthly" | "Yearly";
@@ -41,7 +41,7 @@ export function CheckHistory({
 
   const now = Date.now();
   const origin = Math.min(task.date, ...task.completed);
-  const starts = periodStarts(task.repeat, origin, now, weekStart, browserTimeZone(), periods);
+  const starts = periodStarts(task.repeat, origin, now, weekStart, appTimeZone(), periods);
   const filled = starts.map((start, i) => {
     const end = starts[i + 1] ?? Infinity;
     return task.completed.some((c) => c >= start && c < end);

@@ -13,6 +13,7 @@ import { enqueue, newTaskId } from "@/functions/offline";
 import type { ParsedTask } from "@/functions/parse-task";
 import { upsertUndated } from "@/functions/undated";
 import { useQuotas } from "@/hooks/useQuotas";
+import { zoned } from "@/functions/zone";
 
 /**
  * Criar a partir do texto já interpretado — o composer do dashboard e o campo do bloco A qualquer hora.
@@ -45,7 +46,7 @@ export function useCreateTask() {
     // uma identidade estável, e o upsert do servidor aceita o id do cliente sem duplicar.
     const at = Date.now();
     const input = {
-      ...composeTaskInput(parsed, new Date(at), { undatedOnly }),
+      ...composeTaskInput(parsed, zoned(at), { undatedOnly }),
       id: newTaskId(),
       updatedAt: at,
     };

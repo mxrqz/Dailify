@@ -14,7 +14,7 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { saveSettings } from "@/functions/api";
-import { browserTimeZone } from "@/functions/undated";
+import { deviceTimeZone } from "@/functions/zone";
 import { cn } from "@/lib/utils";
 
 const AUTO = "auto";
@@ -32,7 +32,7 @@ export function TimeZoneSelect(): JSX.Element {
   const { timeZone, setTimeZone } = useDailify();
   const { getToken } = useAuth();
   const [open, setOpen] = useState(false);
-  const device = browserTimeZone();
+  const device = deviceTimeZone();
   const zones = useMemo(
     () => Intl.supportedValuesOf("timeZone").map((zone) => ({ zone, offset: offsetOf(zone) })),
     [],

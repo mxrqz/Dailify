@@ -12,6 +12,7 @@ import type { TaskCardData } from "@/components/task-card";
 import { expandRecurringTask } from "@dailify/shared";
 
 import { repeatLabel } from "@/functions/repeat-label";
+import { appTimeZone, zoned } from "@/functions/zone";
 
 export const returnFractedDate = (date: Date) => {
   const day = date.getDate();
@@ -27,7 +28,7 @@ export function getTime(
 ): { hours: number; minutes: number };
 export function getTime(time: number, format: "HH:MM"): string;
 export function getTime(time: number, format: "{hours, minutes}" | "HH:MM") {
-  const date = new Date(time);
+  const date = zoned(time);
   const hours = date.getHours();
   const minutes = date.getMinutes();
 
@@ -47,7 +48,7 @@ export const formatDateByLocale = (date: Date, locale: string) => {
 export function getCompletionDate(task: TaskProps, selectedDay: Date) {
   if (!Array.isArray(task.completed)) return;
   const haveBeenCompletedToday = task.completed.some(
-    (completedAt) => format(new Date(completedAt), "P") === format(selectedDay, "P"),
+    (completedAt) => format(zoned(completedAt), "P") === format(selectedDay, "P"),
   )
     ? true
     : false;
@@ -56,7 +57,7 @@ export function getCompletionDate(task: TaskProps, selectedDay: Date) {
 }
 
 export function getTasksForDay(tasks: TaskProps[], day: Date): TaskProps[] {
-  return tasks.filter((task) => isSameDay(new Date(task.date), day));
+  return tasks.filter((task) => isSameDay(zoned(task.date), day));
 }
 
 /** Append `task` to the list, or replace the existing entry with the same id. */
@@ -80,7 +81,11 @@ export function upsertTaskWithRecurrence(
   months: Date[],
 ): TaskProps[] {
   const others = tasks.filter((t) => t.id !== task.id);
-  return [...others, task, ...months.flatMap((month) => expandRecurringTask(task, month))];
+  return [
+    ...others,
+    task,
+    ...months.flatMap((month) => expandRecurringTask(task, month, appTimeZone())),
+  ];
 }
 
 /** Mês de hoje e o seguinte: a lista contínua não pode esperar a rolagem chegar no fim. */
@@ -103,9 +108,7 @@ export function listDays({
   keepStart?: boolean;
 }): Date[] {
   // Uma passada nas tarefas, não uma por dia: com meses carregados o filtro virava O(dias × tarefas).
-  const keep = new Set(
-    [...tasks.map((t) => t.date), ...extra].map((d) => new Date(d).toDateString()),
-  );
+  const keep = new Set([...tasks.map((t) => t.date), ...extra].map((d) => zoned(d).toDateString()));
   return eachDayOfInterval({ start, end }).filter(
     (day, i) => (keepStart && i === 0) || keep.has(day.toDateString()),
   );
@@ -156,7 +159,7 @@ export function isTaskModified(task: TaskProps, updated: TaskProps): boolean {
 }
 
 export function unixToDate(unix: number): Date {
-  return new Date(unix * 1000);
+  return zoned(unix * 1000);
 }
 
 export interface TimeGroup {

@@ -21,9 +21,16 @@ access anymore — `functions/firebase.ts` and the Clerk→Firebase custom-token
 
 ## Dates: epoch-ms numbers, not `Date | Timestamp`
 
-`TaskProps.date`/`alert`/`completed` (= shared `Task`) are plain **epoch-ms `number`s**. Do date math
-with `new Date(task.date)` directly — there is no `toJsDate()`/`Timestamp` union to normalize
-anymore. Writes that mark completion push `Date.now()` (a number), not a `Date`.
+`TaskProps.date`/`alert`/`completed` (= shared `Task`) are plain **epoch-ms `number`s**. Writes that
+mark completion push `Date.now()` (a number), not a `Date`.
+
+**Never `new Date()` in app code — use `zone.ts`.** The app computes and shows dates in the account's
+time zone (Settings; `null` = the device's), not the browser's. `zoned(ms?)` replaces `new Date(x)`,
+`zonedAt(y, m, d, …)` replaces `new Date(y, m, d, …)`, `appTimeZone()` goes wherever a zone is sent
+(`?tz=`, voice, push). They return a `TZDate`, and date-fns keeps the zone of a `TZDate` argument —
+but a raw epoch passed to date-fns (`startOfMonth(task.date)`) falls back to the device zone, so wrap
+it: `startOfMonth(zoned(task.date))`. `setAppTimeZone` is called by `dailifyContext`'s `setTimeZone`,
+which also refetches the loaded months (their boundaries move with the zone).
 
 ## Recurrence — owned by `@dailify/shared`
 

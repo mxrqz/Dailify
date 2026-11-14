@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { zoned } from "@/functions/zone";
 
 /**
  * Relógio que re-renderiza a cada `intervalMs`. Existe pela linha do "agora": um app de agenda fica
@@ -8,10 +9,10 @@ import { useEffect, useState } from "react";
  * é dado, não movimento.
  */
 export function useNow(intervalMs: number): Date {
-  const [now, setNow] = useState(() => new Date());
+  const [now, setNow] = useState(() => zoned());
 
   useEffect(() => {
-    const id = setInterval(() => setNow(new Date()), intervalMs);
+    const id = setInterval(() => setNow(zoned()), intervalMs);
     return () => clearInterval(id);
   }, [intervalMs]);
 

@@ -1,7 +1,7 @@
 import { InvoicesProps, PaymentDetailsProps, TaskProps } from "@/types/types";
 import { createContext, useContext, useRef, useState, ReactNode } from "react";
 import { useAuth } from "@clerk/clerk-react";
-import { startOfDay, startOfMonth } from "date-fns";
+import { addDays, startOfDay, startOfMonth } from "date-fns";
 import { toast } from "sonner";
 import { DEFAULT_WEEK_START } from "@dailify/shared";
 import type { QuotaKey, WeekStart } from "@dailify/shared";
@@ -9,6 +9,7 @@ import { getTasksForMonth } from "@/functions/api";
 import type { ApiError, QuotaSnapshot } from "@/functions/api";
 import { initialMonths, mergeMonth, monthsBetween } from "@/functions/functions";
 import { copy } from "@/components/dashboard/copy";
+import { appTimeZone, setAppTimeZone, zoned } from "@/functions/zone";
 
 interface DailifyContextType {
   selectedDay: Date;
@@ -51,19 +52,19 @@ const DailifyContext = createContext<DailifyContextType | undefined>(undefined);
 
 // Criando o provider
 export function DailifyProvider({ children }: { children: ReactNode }) {
-  const [selectedDay, setSelectedDay] = useState<Date>(new Date());
+  const [selectedDay, setSelectedDay] = useState<Date>(() => zoned());
   const [targetDay, setTargetDay] = useState<Date>();
   const [tasks, setTasks] = useState<TaskProps[]>();
   const [isLoading, setIsLoading] = useState<null | string>(null);
   // Já começa com os do boot: com o cache na tela antes da 1ª leitura, `[]` apagava as instâncias.
-  const [loadedMonths, setLoadedMonths] = useState<Date[]>(() => initialMonths(new Date()));
+  const [loadedMonths, setLoadedMonths] = useState<Date[]>(() => initialMonths(zoned()));
   const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsProps | null>();
   const [quotas, setQuotas] = useState<QuotaSnapshot>();
   const [invoices, setInvoices] = useState<InvoicesProps[]>();
 
   const [undatedTasks, setUndatedTasks] = useState<TaskProps[]>();
   const [weekStart, setWeekStart] = useState<WeekStart>(DEFAULT_WEEK_START);
-  const [timeZone, setTimeZone] = useState<string | null>(null);
+  const [timeZone, setTimeZoneState] = useState<string | null>(null);
   const [hour12, setHour12] = useState(false);
 
   const { getToken } = useAuth();
@@ -109,12 +110,12 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
 
   const reloadMonths = async (months: Date[]) => {
     const keys = [...new Set(months.map((m) => startOfMonth(m).getTime()))];
-    const errors = await Promise.all(keys.map((key) => fetchMonth(new Date(key))));
+    const errors = await Promise.all(keys.map((key) => fetchMonth(zoned(key))));
     const error = errors.find(Boolean);
     // O cache traz meses que ninguém rebusca e ficariam velhos pra sempre; só poda com tudo em mãos.
     if (!error && keys.every((key) => monthRequests.current.has(key))) {
       setTasks((prev) =>
-        prev?.filter((t) => monthRequests.current.has(startOfMonth(t.date).getTime())),
+        prev?.filter((t) => monthRequests.current.has(startOfMonth(zoned(t.date)).getTime())),
       );
     }
     return error;
@@ -144,14 +145,28 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
   };
 
   const goToDay = async (day: Date) => {
-    const today = startOfDay(new Date());
+    const today = startOfDay(zoned());
     // Todos os meses entre hoje e o dia: a lista só vai até o primeiro buraco, passado ou futuro.
     const [from, to] = day < today ? [day, today] : [today, day];
     await Promise.all(monthsBetween(from, to).map(loadMonth));
     // Só depois de carregar, pra a lista não trocar de início antes de ter os meses.
     setSelectedDay(day);
     // Data nova a cada clique: clicar no mesmo dia de novo rola de novo.
-    setTargetDay(new Date(day));
+    setTargetDay(zoned(day));
+  };
+
+  const setTimeZone = (next: string | null) => {
+    const before = appTimeZone();
+    setAppTimeZone(next);
+    setTimeZoneState(next);
+    if (appTimeZone() === before) return;
+    // Dia e mês mudam de fronteira com o fuso: tudo é relido nas janelas novas. O meio do mês
+    // (+14d) ainda cai no mesmo mês em qualquer fuso; o início dele, não.
+    const months = loadedMonths.map((m) => zoned(addDays(m, 14)));
+    monthRequests.current.clear();
+    setSelectedDay((day) => zoned(day));
+    setLoadedMonths([]);
+    void reloadMonths(months);
   };
 
   const bumpUsage = (key: QuotaKey) =>

@@ -63,7 +63,6 @@ export const copy = {
     oneTask: "1 tarefa",
     manyTasks: "{n} tarefas",
     newTask: "Nova tarefa",
-    voiceTask: "Criar por voz",
   },
 
   aside: {
@@ -284,13 +283,19 @@ export const copy = {
   },
 
   voice: {
-    title: "Criar tarefa por voz",
-    description: "Grave sua voz dizendo a tarefa, a data, o horário e a duração.",
-    record: "Gravar",
-    stop: "Parar gravação",
-    send: "Criar tarefa",
-    sending: "Criando tarefa",
+    record: "Criar por voz",
+    stop: "Parar e criar",
+    sending: "Criando pela voz",
+    listening: "Ouvindo… toque em parar quando terminar",
     maxLength: "Gravação encerrada no limite de 60 segundos.",
+    createdOne: "Tarefa criada pela voz",
+    createdMany: "{n} tarefas criadas pela voz",
+    nothing: "Não entendi nenhuma tarefa nessa fala",
+    error: "Não foi possível criar pela voz",
+    micDenied: "Sem acesso ao microfone",
+    micDeniedHint: "Libere o microfone nas permissões do navegador.",
+    limitReached: "Limite de voz atingido",
+    limitReachedHint: "Você usou os comandos de voz do seu plano neste mês.",
   },
 
   task: {

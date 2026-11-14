@@ -1,6 +1,7 @@
 import { weekDays, type Repeat, type TaskInput } from "@dailify/shared";
 
 import type { ParsedTask } from "./parse-task";
+import { zoned, zonedAt } from "./zone";
 
 export const DEFAULT_HOUR = 9; // dia sem hora ("amanhã" puro) cai no começo do dia útil, não em 00:00
 export const DEFAULT_DURATION = "10m";
@@ -37,7 +38,7 @@ export function composeTaskInput(
 /** Lembrete de Sem data: o dia às 09:00, ou `null` se já passou e não há próxima ocorrência. */
 export function undatedReminder(day: Date, repeat: Repeat, now: Date): Date | null {
   // Cópia: quem chama pode estar usando o mesmo objeto (o composer, pros chips).
-  const at = new Date(day);
+  const at = zoned(day);
   at.setHours(DEFAULT_HOUR, 0, 0, 0);
   // Lembrete no passado dispararia push logo após criar (o cron tem tolerância de 1h).
   return at > now ? at : nextReminder(at, repeat, now);
@@ -47,12 +48,7 @@ export function undatedReminder(day: Date, repeat: Repeat, now: Date): Date | nu
 function nextReminder(day: Date, repeat: Repeat, now: Date): Date | null {
   if (repeat === "Off") return null;
   const at = (days: number, months = 0, years = 0) =>
-    new Date(
-      day.getFullYear() + years,
-      day.getMonth() + months,
-      day.getDate() + days,
-      DEFAULT_HOUR,
-    );
+    zonedAt(day.getFullYear() + years, day.getMonth() + months, day.getDate() + days, DEFAULT_HOUR);
 
   if (typeof repeat === "object") {
     for (let i = 1; i <= 7; i++) {
@@ -68,7 +64,7 @@ function nextReminder(day: Date, repeat: Repeat, now: Date): Date | null {
 /** Dia escolhido no calendário entra quando a frase não cita um; a hora da frase é mantida. */
 export function onDay(parsed: ParsedTask, day: Date | null | undefined): ParsedTask {
   if (!day || parsed.hasDay) return parsed;
-  const date = new Date(day);
+  const date = zoned(day);
   const time = parsed.hasTime ? parsed.date : null;
   date.setHours(time?.getHours() ?? 0, time?.getMinutes() ?? 0, 0, 0);
   return { ...parsed, date, hasDay: true };

@@ -17,6 +17,7 @@ import { priorityText, priorityTextColor } from "@/consts/conts";
 import { useQuotas } from "@/hooks/useQuotas";
 import { cn } from "@/lib/utils";
 import { Flag } from "lucide-react";
+import { zoned } from "@/functions/zone";
 
 /**
  * Os editores dos chips do cartão. Cada um recebe o chip como `children` e o usa de gatilho — o
@@ -126,7 +127,7 @@ export function RepeatMenu({
             // `normalizeRepeat` em vez de assertion: o valor vem como string crua do rádio.
             onChange(
               next === "Weekly"
-                ? { Weekly: [weekDays[new Date(date).getDay()]] }
+                ? { Weekly: [weekDays[zoned(date).getDay()]] }
                 : normalizeRepeat(next),
             );
           }}

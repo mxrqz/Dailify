@@ -15,15 +15,16 @@ import { pendingUndated, splitUndated } from "@/functions/undated";
 import { useCreateTask } from "@/hooks/useCreateTask";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
+import { format } from "date-fns";
 import { cn } from "@/lib/utils";
+import { zoned } from "@/functions/zone";
 
 const weekday = (day: number) => copy.form.repeatDays[day].toLowerCase();
-const hhmm = (date: Date) =>
-  date.toLocaleTimeString("pt-BR", { hour: "2-digit", minute: "2-digit" });
+const hhmm = (date: Date) => format(date, "HH:mm");
 
 /** "🔔 qui 09:00" — crimson é a cor do lembrete. */
 function ReminderChip({ at }: { at: number }): JSX.Element {
-  const date = new Date(at);
+  const date = zoned(at);
   return (
     <span className="inline-flex items-center gap-1 rounded-md border border-accent-line bg-accent-subtle px-1.5 text-accent-primary">
       <Bell className="size-3" role="img" aria-label={copy.undated.reminder} />
@@ -94,7 +95,7 @@ function AnytimeRow({ task, swipe }: { task: Task; swipe: boolean }): JSX.Elemen
       )}
       <EditTaskContent
         task={task}
-        day={new Date(task.date)}
+        day={zoned(task.date)}
         open={open}
         onClose={() => setOpen(false)}
       />
@@ -111,7 +112,7 @@ function CaptureField(): JSX.Element {
     e.preventDefault();
     const value = text.trim();
     if (!value || submitting) return;
-    if (await create(parseTaskText(value, new Date()), { undatedOnly: true })) setText("");
+    if (await create(parseTaskText(value, zoned()), { undatedOnly: true })) setText("");
   };
 
   return (

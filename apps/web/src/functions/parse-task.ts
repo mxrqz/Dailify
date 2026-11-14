@@ -1,5 +1,6 @@
 import { weekDays, type Repeat } from "@dailify/shared";
 import { parseLinks } from "./parse-links";
+import { zoned, zonedAt } from "./zone";
 
 /**
  * `parseTaskText` é a porta de entrada: recebe a frase inteira do composer ("reunião com o time
@@ -225,8 +226,8 @@ export function normalize(input: string): string {
     .join("");
 }
 
-const startOfDay = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate());
-const addDays = (d: Date, n: number) => new Date(d.getFullYear(), d.getMonth(), d.getDate() + n);
+const startOfDay = (d: Date) => zonedAt(d.getFullYear(), d.getMonth(), d.getDate());
+const addDays = (d: Date, n: number) => zonedAt(d.getFullYear(), d.getMonth(), d.getDate() + n);
 
 /** Vira alternativa de regex com as chaves mais longas primeiro — senão "vinte" come "vinte e uma". */
 const alternation = (keys: string[]) =>
@@ -352,7 +353,7 @@ function parseTime(
   if (relative) {
     const amount = Number(relative[1]);
     const isMinutes = /^min/.test(relative[2]);
-    const target = new Date(now.getTime() + amount * (isMinutes ? 60_000 : 3_600_000));
+    const target = zoned(now.getTime() + amount * (isMinutes ? 60_000 : 3_600_000));
     return hit(relative, { hour: target.getHours(), minute: target.getMinutes() });
   }
 
@@ -497,7 +498,7 @@ function parseDay(text: string, now: Date): Hit<Date> | null {
     const month = Number(numeric[2]) - 1;
     const rawYear = numeric[3] ? Number(numeric[3]) : now.getFullYear();
     const year = rawYear < 100 ? 2000 + rawYear : rawYear;
-    const date = new Date(year, month, day);
+    const date = zonedAt(year, month, day);
     if (date.getDate() === day && date.getMonth() === month) return hit(numeric, date);
   }
 
@@ -511,7 +512,7 @@ function parseDay(text: string, now: Date): Hit<Date> | null {
       ? { day: Number(monthFirst[2]), month: MONTHS[monthFirst[1]] }
       : null;
   if (named && namedMatch) {
-    const date = new Date(now.getFullYear(), named.month, named.day);
+    const date = zonedAt(now.getFullYear(), named.month, named.day);
     if (date.getDate() === named.day) return hit(namedMatch, date);
   }
 
@@ -536,12 +537,12 @@ function parseDay(text: string, now: Date): Hit<Date> | null {
   const monthDay = text.match(/\b(?:dia|day)\s+(\d{1,2})\b/);
   if (monthDay) {
     const day = Number(monthDay[1]);
-    const thisMonth = new Date(now.getFullYear(), now.getMonth(), day);
+    const thisMonth = zonedAt(now.getFullYear(), now.getMonth(), day);
     if (thisMonth.getDate() !== day) return null;
     const date =
       thisMonth >= startOfDay(now)
         ? thisMonth
-        : new Date(now.getFullYear(), now.getMonth() + 1, day);
+        : zonedAt(now.getFullYear(), now.getMonth() + 1, day);
     return hit(monthDay, date);
   }
 
@@ -633,7 +634,7 @@ export function parseDuration(text: string): (ParsedDuration & { spans: Span[] }
 // Recorrência lê a hora literal: o "9h" de uma série é 9h, não as 21h que seriam a próxima "9" de hoje.
 export function parseWhen(
   input: string,
-  now: Date = new Date(),
+  now: Date = zoned(),
   literalTime = false,
 ): ParsedWhen | null {
   const text = normalize(input);
@@ -645,7 +646,7 @@ export function parseWhen(
 
   const time = parseTime(text, now, baseIsToday, literalTime);
   if (!day && !time) return null;
-  const date = new Date(
+  const date = zonedAt(
     base.getFullYear(),
     base.getMonth(),
     base.getDate(),
@@ -691,7 +692,7 @@ const RECURRENCES: [RegExp, (match: RegExpMatchArray, now: Date) => Exclude<Repe
 /** Recorrência no texto já normalizado; sem gatilho ("toda", "every", "diariamente"…) é `null`. */
 export function parseRepeat(
   text: string,
-  now: Date = new Date(),
+  now: Date = zoned(),
 ): { value: Exclude<Repeat, "Off">; spans: Span[] } | null {
   for (const [re, toRepeat] of RECURRENCES) {
     const match = text.match(re);
@@ -704,7 +705,7 @@ export function parseRepeat(
 function nextOccurrence(repeat: Exclude<Repeat, "Off">, date: Date, hasTime: boolean, now: Date) {
   const passed = (d: Date) => (hasTime ? d < now : d < startOfDay(now));
   const shift = (days: number, months = 0, years = 0) =>
-    new Date(
+    zonedAt(
       date.getFullYear() + years,
       date.getMonth() + months,
       date.getDate() + days,
@@ -818,7 +819,7 @@ const mask = (text: string, spans: Span[]) =>
     .map((char, i) => (spans.some(([s, e]) => i >= s && i < e) ? " " : char))
     .join("");
 
-export function parseTaskText(input: string, now: Date = new Date()): ParsedTask {
+export function parseTaskText(input: string, now: Date = zoned()): ParsedTask {
   const normalized = normalize(input);
   const links = parseLinks(input);
 
@@ -846,7 +847,7 @@ export function parseTaskText(input: string, now: Date = new Date()): ParsedTask
   // o parseWhen não enxerga mais o trecho da duração.
   const base = when?.date ?? startOfDay(now);
   const explicitDate = duration?.start
-    ? new Date(
+    ? zonedAt(
         base.getFullYear(),
         base.getMonth(),
         base.getDate(),

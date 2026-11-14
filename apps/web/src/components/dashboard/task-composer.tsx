@@ -8,7 +8,9 @@ import {
   ClockIcon,
   LinkIcon,
   Loader2Icon,
+  MicIcon,
   RepeatIcon,
+  SquareIcon,
 } from "lucide-react";
 
 import { TASK_LIMITS } from "@dailify/shared";
@@ -18,6 +20,7 @@ import { Label } from "@/components/ui/label";
 import { composeTaskInput } from "@/functions/compose-input";
 import { parseTaskText, type ParsedTask } from "@/functions/parse-task";
 import { onDay } from "@/functions/compose-input";
+import { useVoiceCreate, voiceSupported } from "@/hooks/useVoiceCreate";
 import { repeatLabel } from "@/functions/repeat-label";
 import { linkLabel } from "@/functions/link-label";
 import {
@@ -31,6 +34,7 @@ import {
 import { useDailify } from "@/components/dailifyContext";
 import { formatClock } from "@/functions/functions";
 import { cn } from "@/lib/utils";
+import { zoned } from "@/functions/zone";
 
 export interface ComposerValues {
   parsed: ParsedTask;
@@ -44,6 +48,8 @@ interface TaskComposerProps {
   large?: boolean;
   /** Dia escolhido no calendário: vale quando a frase não cita um dia. */
   day?: Date | null;
+  /** A voz criou tarefas (direto no servidor): quem abriu a folha pode fechá-la. */
+  onVoiceCreated?: () => void;
 }
 
 /**
@@ -51,13 +57,21 @@ interface TaskComposerProps {
  * "Vai para" diz onde a tarefa cai — sem esse eco o usuário só descobre no envio que a hora não
  * foi entendida.
  */
-export function TaskComposer({ submitting, onSubmit, large, day }: TaskComposerProps): JSX.Element {
+export function TaskComposer({
+  submitting,
+  onSubmit,
+  large,
+  day,
+  onVoiceCreated,
+}: TaskComposerProps): JSX.Element {
   const [input, setInput] = useState("");
   const { hour12 } = useDailify();
 
   const parsed = useMemo(() => onDay(parseTaskText(input), day), [input, day]);
-  const task = useMemo(() => composeTaskInput(parsed, new Date()), [parsed]);
-  const canSubmit = Boolean(parsed.text) && !submitting;
+  const task = useMemo(() => composeTaskInput(parsed, zoned()), [parsed]);
+  const voice = useVoiceCreate(onVoiceCreated);
+  const listening = voice.state === "recording";
+  const canSubmit = Boolean(parsed.text) && !submitting && voice.state === "idle";
 
   const destination = !task.undated
     ? copy.composer.toAgenda
@@ -74,6 +88,30 @@ export function TaskComposer({ submitting, onSubmit, large, day }: TaskComposerP
   };
 
   const pill = cn(chip, large && "py-1.5");
+  const mic = voiceSupported() && (
+    <button
+      type="button"
+      aria-label={listening ? copy.voice.stop : copy.voice.record}
+      aria-pressed={listening}
+      disabled={voice.state === "sending"}
+      onClick={() => (listening ? voice.stop() : void voice.start())}
+      className={cn(
+        "relative flex size-8.5 hit-target shrink-0 items-center justify-center rounded-xl transition-colors",
+        listening
+          ? "bg-accent-primary text-primary-foreground hover:bg-accent-hover"
+          : "text-muted-foreground hover:bg-surface-hover hover:text-foreground",
+      )}
+    >
+      {voice.state === "sending" ? (
+        <Loader2Icon className="size-4 animate-spin" aria-label={copy.voice.sending} />
+      ) : listening ? (
+        <SquareIcon className="size-3.5 fill-current" />
+      ) : (
+        <MicIcon className="size-4" />
+      )}
+    </button>
+  );
+
   const send = (
     <button
       type="submit"
@@ -119,7 +157,9 @@ export function TaskComposer({ submitting, onSubmit, large, day }: TaskComposerP
             submit(true);
           }}
           maxLength={TASK_LIMITS.titleMax}
-          placeholder={copy.composer.textPlaceholder}
+          // Gravando, o campo vira o aviso: a fala vai direto pro servidor, não pra este texto.
+          readOnly={voice.state !== "idle"}
+          placeholder={listening ? copy.voice.listening : copy.composer.textPlaceholder}
           autoComplete="off"
           className={cn(
             "w-full bg-transparent text-foreground placeholder:text-muted-foreground outline-none",
@@ -174,8 +214,8 @@ export function TaskComposer({ submitting, onSubmit, large, day }: TaskComposerP
           {task.alert ? (
             <>
               <BellIcon className="size-3" aria-hidden="true" />
-              {format(task.alert, "EEEEEE", { locale: ptBR })}{" "}
-              {formatClock(format(task.alert, "HH:mm"), hour12)}
+              {format(zoned(task.alert), "EEEEEE", { locale: ptBR })}{" "}
+              {formatClock(format(zoned(task.alert), "HH:mm"), hour12)}
             </>
           ) : (
             copy.composer.addReminder
@@ -187,7 +227,12 @@ export function TaskComposer({ submitting, onSubmit, large, day }: TaskComposerP
             {linkLabel(url)}
           </span>
         ))}
-        {large && <span className="ml-auto">{send}</span>}
+        {large && (
+          <span className="ml-auto flex items-center gap-1">
+            {mic}
+            {send}
+          </span>
+        )}
       </div>
 
       <div className="flex items-center justify-between gap-2 px-2 pt-1.5 pb-1 text-xs text-muted-foreground">
@@ -201,6 +246,7 @@ export function TaskComposer({ submitting, onSubmit, large, day }: TaskComposerP
             <kbd className="rounded-md border border-surface-line px-1 font-mono text-2xs">⇧⏎</kbd>{" "}
             {copy.composer.hintContinue}
           </span>
+          {mic}
           {send}
         </span>
       </div>

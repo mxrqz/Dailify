@@ -1,4 +1,5 @@
 import { getPushKey, removePushSubscription, savePushSubscription } from "./api";
+import { appTimeZone } from "./zone";
 
 // Em dev o vite-plugin-pwa serve o SW em outra URL; `/sw.js` cai no index.html e o registro falha.
 const SW_URL = import.meta.env.DEV ? "/dev-sw.js?dev-sw" : "/sw.js";
@@ -66,7 +67,7 @@ export async function enablePush(token: string): Promise<PushState> {
     endpoint: subscription.endpoint,
     p256dh: bytesToBase64url(subscription.getKey("p256dh")),
     auth: bytesToBase64url(subscription.getKey("auth")),
-    timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    timezone: appTimeZone(),
   });
   if (!saved) {
     await subscription.unsubscribe(); // não deixar o device inscrito num servidor que não o conhece

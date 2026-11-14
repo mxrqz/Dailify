@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { toPng } from "html-to-image";
 import { BellIcon } from "lucide-react";
+import { zoned } from "@/functions/zone";
 
 export default function TaskPreview() {
   const [searchParams] = useSearchParams();
@@ -26,7 +27,7 @@ export default function TaskPreview() {
     const type = searchParams.get("type");
 
     if (!date || !task || !time || !type) return;
-    const newDate = new Date(date);
+    const newDate = zoned(Date.parse(date));
     setDate(newDate);
     setTask(task);
     setTime(time);

@@ -154,4 +154,29 @@ describe("flushQueue", () => {
     expect(first).toBe(second);
     expect(api.completeTask).toHaveBeenCalledTimes(1);
   });
+
+  test("o que entra durante a subida sobe junto, sem se perder", async () => {
+    api.completeTask.mockResolvedValue({}).mockImplementationOnce(async () => {
+      enqueue("u", { op: "complete", taskId: "b", at: 2 });
+      return {};
+    });
+    enqueue("u", { op: "complete", taskId: "a", at: 1 });
+
+    await expect(flushQueue("u", "tk")).resolves.toMatchObject({ sent: 2, offline: false });
+    expect(api.completeTask.mock.calls.map((c) => c[1])).toEqual(["a", "b"]);
+    expect(readQueue("u")).toEqual([]);
+  });
+
+  test("excluir durante a subida da criação não some com a exclusão", async () => {
+    api.createTask.mockImplementationOnce(async () => {
+      enqueue("u", { op: "delete", taskId: "a", at: 5 });
+      return {};
+    });
+    api.deleteTask.mockResolvedValue({});
+    enqueue("u", create("a"));
+
+    await flushQueue("u", "tk");
+    expect(api.deleteTask).toHaveBeenCalledWith("tk", "a");
+    expect(readQueue("u")).toEqual([]);
+  });
 });

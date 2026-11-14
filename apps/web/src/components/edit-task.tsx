@@ -30,6 +30,7 @@ import { useTaskActions } from "@/hooks/useTaskActions";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
 import { editTaskInput } from "@/functions/edit-input";
 import { removeUndated, upsertUndated } from "@/functions/undated";
+import { zoned } from "@/functions/zone";
 
 type EditTaskProps = Record<string, never>;
 
@@ -141,7 +142,7 @@ export function EditTaskContent({
       return;
     }
 
-    const input = editTaskInput(values, new Date());
+    const input = editTaskInput(values, zoned());
     // Sem data sem lembrete mantém a `date` (é a ordem da lista); salvar não a joga pro fim.
     const date =
       values.undated && !input.alert && wasUndated ? task.date : (input.date ?? task.date);

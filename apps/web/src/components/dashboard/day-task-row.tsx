@@ -18,6 +18,7 @@ import { formatClock, taskToCardData } from "@/functions/functions";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import type { TaskProps } from "@/types/types";
+import { zoned } from "@/functions/zone";
 
 /**
  * Sem hover não há como alcançar a toolbar do cartão nem os chips, então é aí — e só aí — que o
@@ -78,7 +79,7 @@ export function DayTaskRow({
     : {
         time: (chip: JSX.Element) => (
           <DateTimePopover
-            value={new Date(task.date)}
+            value={zoned(task.date)}
             onChange={(to) => (task.repeat === "Off" ? move(to) : setMoveTo(to))}
           >
             {chip}

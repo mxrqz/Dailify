@@ -40,6 +40,7 @@ import { formatClock } from "@/functions/functions";
 import { linkLabel } from "@/functions/link-label";
 import { cn } from "@/lib/utils";
 import type { TaskProps } from "@/types/types";
+import { fromDateInput, zoned, zonedAt } from "@/functions/zone";
 
 export interface TaskFormValues {
   title: string;
@@ -140,15 +141,15 @@ export function TaskForm({
   const [title, setTitle] = useState(task?.title ?? "");
   const [undated, setUndated] = useState(task?.undated === true);
   const [reminder, setReminder] = useState<Date | undefined>(() =>
-    task?.undated && task.alert ? new Date(task.alert) : undefined,
+    task?.undated && task.alert ? zoned(task.alert) : undefined,
   );
   // Em Sem data a `date` só ordena a lista: a agenda parte do lembrete, ou do próximo 09:00
   // ("Daily" = hoje se ainda não passou, senão amanhã).
   const [date, setDate] = useState<Date>(() => {
-    if (!task) return defaultDate ?? new Date();
-    if (!task.undated) return new Date(task.date);
-    if (task.alert) return new Date(task.alert);
-    const now = new Date();
+    if (!task) return defaultDate ?? zoned();
+    if (!task.undated) return zoned(task.date);
+    if (task.alert) return zoned(task.alert);
+    const now = zoned();
     return undatedReminder(now, "Daily", now) ?? now;
   });
   const [duration, setDuration] = useState(task?.duration ?? "10m");
@@ -191,7 +192,7 @@ export function TaskForm({
   useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
 
   // Mostra o que o salvar grava: 09:00 passado avança na série e some na avulsa.
-  const shownReminder = reminder && undatedReminder(reminder, repeat, new Date());
+  const shownReminder = reminder && undatedReminder(reminder, repeat, zoned());
   const icon = "size-3.5 shrink-0";
 
   const [tagDraft, setTagDraft] = useState("");
@@ -252,11 +253,10 @@ export function TaskForm({
                 <input
                   type="date"
                   aria-label={copy.form.reminder}
-                  min={format(new Date(), "yyyy-MM-dd")}
+                  min={format(zoned(), "yyyy-MM-dd")}
                   value={shownReminder ? format(shownReminder, "yyyy-MM-dd") : ""}
                   onChange={(e) => {
-                    // "2026-10-23" puro é lido como UTC; com "T00:00" vira meia-noite LOCAL.
-                    const next = new Date(`${e.target.value}T00:00`);
+                    const next = fromDateInput(e.target.value);
                     setReminder(Number.isNaN(next.getTime()) ? undefined : next);
                   }}
                   className={nativeControlClass}
@@ -272,7 +272,7 @@ export function TaskForm({
                     aria-label={copy.form.date}
                     value={format(date, "yyyy-MM-dd")}
                     onChange={(e) => {
-                      const next = new Date(`${e.target.value}T00:00`);
+                      const next = fromDateInput(e.target.value);
                       if (Number.isNaN(next.getTime())) return;
                       next.setHours(date.getHours(), date.getMinutes());
                       setDate(next);
@@ -289,7 +289,7 @@ export function TaskForm({
                     onChange={(e) => {
                       const [hours, minutes] = e.target.value.split(":").map(Number);
                       if (Number.isNaN(hours) || Number.isNaN(minutes)) return;
-                      const next = new Date(date);
+                      const next = zoned(date);
                       next.setHours(hours, minutes);
                       setDate(next);
                     }}
@@ -360,7 +360,7 @@ export function TaskForm({
                   if (e.target.checked) setReminder(date);
                   else if (reminder)
                     setDate(
-                      new Date(
+                      zonedAt(
                         reminder.getFullYear(),
                         reminder.getMonth(),
                         reminder.getDate(),

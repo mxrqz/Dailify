@@ -9,6 +9,7 @@ import {
   updateTask,
 } from "./api";
 import type { ApiError } from "./api";
+import { zoned } from "./zone";
 
 /**
  * O que ainda não chegou no servidor. Cada entrada é uma chamada da API que falhou por rede — a
@@ -139,8 +140,15 @@ export function collapseQueue(queue: Mutation[]): Mutation[] {
 }
 
 export function enqueue(userId: string, mutation: Mutation): void {
-  writeQueue(userId, collapseQueue([...readQueue(userId), mutation]));
+  const queue = [...readQueue(userId), mutation];
+  // Com a cabeça no ar, colapsar com ela apagaria o que o servidor já recebeu (criar + excluir).
+  writeQueue(userId, flushing.has(userId) ? queue : collapseQueue(queue));
 }
+
+type FlushResult = { sent: number; dropped: number; offline: boolean };
+
+// Duas subidas juntas reenviariam a mesma entrada; a segunda chamada espera a que já está no ar.
+const flushing = new Map<string, Promise<FlushResult>>();
 
 export const pendingCount = (userId: string): number => readQueue(userId).length;
 
@@ -155,11 +163,6 @@ export function clearLocal(userId: string): void {
   }
 }
 
-type FlushResult = { sent: number; dropped: number; offline: boolean };
-
-// Duas subidas juntas reenviariam a mesma entrada; a segunda chamada espera a que já está no ar.
-const flushing = new Map<string, Promise<FlushResult>>();
-
 /**
  * Sobe a fila em ordem. Para no primeiro erro de REDE (a ordem importa: criar antes de editar), e
  * descarta a entrada num erro de servidor — quota estourada, tarefa que não existe mais. Retentar
@@ -168,31 +171,32 @@ const flushing = new Map<string, Promise<FlushResult>>();
 export function flushQueue(userId: string, token: string): Promise<FlushResult> {
   const running = flushing.get(userId);
   if (running) return running;
-  const flush = drainQueue(userId, token).finally(() => flushing.delete(userId));
+  // Começa no próximo tique: o `flushing` já tem que estar marcado quando o primeiro envio sair.
+  const flush = Promise.resolve()
+    .then(() => drainQueue(userId, token))
+    .finally(() => flushing.delete(userId));
   flushing.set(userId, flush);
   return flush;
 }
 
+// Lê a fila guardada a cada passo, não um retrato do começo: o que entra durante a subida não se perde.
 async function drainQueue(userId: string, token: string): Promise<FlushResult> {
-  const queue = readQueue(userId);
   let sent = 0;
   let dropped = 0;
 
-  while (queue.length) {
-    const mutation = queue[0];
+  for (let mutation = readQueue(userId)[0]; mutation; mutation = readQueue(userId)[0]) {
     const error = await send(token, mutation);
 
     if (error?.offline) {
-      writeQueue(userId, queue);
+      writeQueue(userId, collapseQueue(readQueue(userId)));
       return { sent, dropped, offline: true };
     }
 
-    queue.shift();
+    writeQueue(userId, readQueue(userId).slice(1));
     if (error) dropped++;
     else sent++;
   }
 
-  writeQueue(userId, queue);
   return { sent, dropped, offline: false };
 }
 
@@ -206,7 +210,7 @@ async function send(token: string, mutation: Mutation): Promise<ApiError | undef
       return (await completeTask(token, mutation.taskId, mutation.at)).error;
     case "uncomplete":
       return mutation.until === undefined
-        ? (await uncompleteTask(token, mutation.taskId, new Date(mutation.day))).error
+        ? (await uncompleteTask(token, mutation.taskId, zoned(mutation.day))).error
         : (await uncompleteTaskRange(token, mutation.taskId, mutation.day, mutation.until)).error;
     case "delete":
       return (await deleteTask(token, mutation.taskId)).error;

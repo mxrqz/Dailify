@@ -21,6 +21,7 @@ import { TaskProps } from "@/types/types";
 import { priorityBgColor, priorityText, priorityTextColor } from "@/consts/conts";
 import { deleteTask } from "@/functions/api";
 import { useAuth } from "@clerk/clerk-react";
+import { zoned } from "@/functions/zone";
 
 interface TaskDetailViewProps {
   task: TaskProps;
@@ -33,12 +34,12 @@ export function TaskDetailView({ task, className }: TaskDetailViewProps) {
   // Sheet controlada localmente: EditTaskContent agora exige onClose pra fechar após concluir/excluir.
   const [editOpen, setEditOpen] = useState(false);
 
-  const taskDate = new Date(task.date);
+  const taskDate = zoned(task.date);
   const formattedDate = format(taskDate, "PPP", { locale: ptBR });
   const formattedTime = format(taskDate, "HH:mm", { locale: ptBR });
   // const formattedFullDate = format(taskDate, "EEEE, d 'de' MMMM 'às' HH:mm", { locale: ptBR })
 
-  const alertDate = new Date(task.alert ?? task.date);
+  const alertDate = zoned(task.alert ?? task.date);
   const alertTime = format(alertDate, "HH:mm", { locale: ptBR });
 
   const timeUntil = formatDistanceToNow(taskDate, { locale: ptBR, addSuffix: true });
@@ -175,11 +176,7 @@ export function TaskDetailView({ task, className }: TaskDetailViewProps) {
             </Button>
           </EditTaskTrigger>
 
-          <EditTaskContent
-            task={task}
-            day={new Date(task.date)}
-            onClose={() => setEditOpen(false)}
-          />
+          <EditTaskContent task={task} day={zoned(task.date)} onClose={() => setEditOpen(false)} />
         </EditTask>
 
         <Button

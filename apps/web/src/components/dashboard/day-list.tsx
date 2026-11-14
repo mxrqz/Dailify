@@ -13,6 +13,7 @@ import { copy } from "@/components/dashboard/copy";
 import { DaySection, TaskSkeletons, dayAnchorId } from "@/components/dashboard/day-section";
 import { listDays, nextMonthToLoad } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
+import { zoned } from "@/functions/zone";
 
 // Sem tarefa em tantos meses seguidos, a sentinela desiste de pedir o próximo.
 const MAX_EMPTY_MONTHS = 12;
@@ -40,8 +41,10 @@ export function DayList(): JSX.Element {
   // Meses carregados desde a última tarefa: passou do limite, não há por que continuar pedindo.
   const lastTask = tasks?.reduce((max, t) => Math.max(max, t.date), 0);
   const emptyMonths =
-    differenceInCalendarMonths(nextMonth, lastTask ? startOfMonth(lastTask) : startOfMonth(today)) -
-    1;
+    differenceInCalendarMonths(
+      nextMonth,
+      lastTask ? startOfMonth(zoned(lastTask)) : startOfMonth(today),
+    ) - 1;
   const canLoadMore = emptyMonths < MAX_EMPTY_MONTHS;
 
   // Hoje entra também quando há tarefa sem data: o bloco "A qualquer hora" mora nele.
@@ -50,8 +53,8 @@ export function DayList(): JSX.Element {
   const days = useMemo(
     () =>
       listDays({
-        start: new Date(startKey),
-        end: endOfMonth(addMonths(new Date(nextKey), -1)),
+        start: zoned(startKey),
+        end: endOfMonth(addMonths(zoned(nextKey), -1)),
         tasks: tasks ?? [],
         extra: targetDay ? [targetDay] : [],
         keepStart,
@@ -66,7 +69,7 @@ export function DayList(): JSX.Element {
     if (!el || !booted || isLoading || !canLoadMore) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting)) void loadMonth(new Date(nextKey));
+        if (entries.some((e) => e.isIntersecting)) void loadMonth(zoned(nextKey));
       },
       { rootMargin: "0px 0px 200% 0px" },
     );

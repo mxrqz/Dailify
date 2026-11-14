@@ -8,6 +8,7 @@ import type {
   WeekStart,
 } from "@dailify/shared";
 import { apiURL } from "@/consts/conts";
+import { appTimeZone, zoned } from "./zone";
 
 /**
  * Falha de rede e falha de servidor pedem reações diferentes — uma volta sozinha quando a conexão
@@ -77,7 +78,7 @@ export async function getTasksForMonth(
   const m = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
   // O fuso vai junto: o Worker roda em UTC e sem isto a expansão da recorrência e a janela do mês
   // saem na hora errada para quem não está em Greenwich.
-  const tz = encodeURIComponent(Intl.DateTimeFormat().resolvedOptions().timeZone);
+  const tz = encodeURIComponent(appTimeZone());
   const { data, error } = await request<{ tasks?: Task[] }>(`/tasks?month=${m}&tz=${tz}`, token);
   return { tasks: data?.tasks ?? [], error };
 }
@@ -171,8 +172,8 @@ export async function uncompleteTask(
   return uncompleteTaskRange(
     token,
     id,
-    new Date(day).setHours(0, 0, 0, 0),
-    new Date(day).setHours(23, 59, 59, 999),
+    zoned(day).setHours(0, 0, 0, 0),
+    zoned(day).setHours(23, 59, 59, 999),
   );
 }
 
@@ -204,12 +205,27 @@ export async function deleteTask(
   return { series: data?.series, error };
 }
 
-export async function createTaskVoice(token: string, formData: FormData): Promise<Response> {
-  return fetch(`${apiURL}/tasks/voice`, {
-    method: "POST",
-    headers: { Authorization: `Bearer ${token}` },
-    body: formData,
-  });
+/** Sem `request`: o corpo é FormData, e o Content-Type JSON dele quebraria o upload. */
+export async function createTaskVoice(
+  token: string,
+  formData: FormData,
+): Promise<{ tasks: Task[]; response?: string; error?: ApiError }> {
+  let res: Response;
+  try {
+    res = await fetch(`${apiURL}/tasks/voice`, {
+      method: "POST",
+      headers: { Authorization: `Bearer ${token}` },
+      body: formData,
+    });
+  } catch {
+    return { tasks: [], error: OFFLINE };
+  }
+  const body = await res.json().catch(() => undefined);
+  if (!res.ok) {
+    const message = serverMessage(body) ?? `O servidor falhou (${res.status}).`;
+    return { tasks: [], error: { message, offline: false } };
+  }
+  return { tasks: body?.tasks ?? [], response: body?.response };
 }
 
 export async function getPushKey(): Promise<string | null> {

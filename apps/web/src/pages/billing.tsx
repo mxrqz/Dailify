@@ -25,6 +25,7 @@ import { billingSections } from "@/functions/billing-sections";
 import { quotaLabel } from "@/functions/quota-label";
 import { useQuotas } from "@/hooks/useQuotas";
 import { toText } from "@/lib/utils";
+import { zoned } from "@/functions/zone";
 
 const PAID_ROLES: readonly PlanRole[] = [PLAN_ID.pro, PLAN_ID.proAi];
 
@@ -108,7 +109,7 @@ export default function BillingPage(): JSX.Element {
               {sections.subscription && paymentDetails && (
                 <p className="text-sm text-content-secondary">
                   {copy.profile.billingNextCharge
-                    .replace("{date}", format(new Date(paymentDetails.start * 1000), "dd/MM/yyyy"))
+                    .replace("{date}", format(zoned(paymentDetails.start * 1000), "dd/MM/yyyy"))
                     .replace(
                       "{amount}",
                       amountFormatted(paymentDetails.amount, paymentDetails.currency),
@@ -195,7 +196,7 @@ export default function BillingPage(): JSX.Element {
             .map((invoice, index) => (
               <SettingsRow
                 key={index}
-                label={format(new Date(invoice.created * 1000), "dd/MM/yyyy")}
+                label={format(zoned(invoice.created * 1000), "dd/MM/yyyy")}
                 hint={
                   <span className="flex items-center gap-1.5">
                     {walletIcons[toText(invoice?.walletType)] ??
