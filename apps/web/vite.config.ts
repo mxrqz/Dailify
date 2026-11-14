@@ -27,10 +27,10 @@ export default defineConfig(async ({ mode }) => ({
     VitePWA({
       registerType: 'autoUpdate',
       includeAssets: ['dailify_logo_2.png', 'push-sw.js'],
-      // Em dev o SW só existe se pedirmos: sem isto, ligar notificações em `bun run dev` falharia
-      // ao registrar /sw.js.
+      // SW em dev só com `PWA_DEV=1 bun run dev` (pra testar push): ligado sempre, o Firefox
+      // quebrava os módulos do Vite interceptados (NS_ERROR) e a tela ficava branca.
       // `classic`: o SW importa o push-sw.js por importScripts, que não existe em worker module.
-      devOptions: { enabled: true, type: 'classic', suppressWarnings: true },
+      devOptions: { enabled: !!process.env.PWA_DEV, type: 'classic', suppressWarnings: true },
       manifest: {
         name: 'Dailify',
         short_name: 'Dailify',
