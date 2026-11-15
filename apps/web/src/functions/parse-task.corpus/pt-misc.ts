@@ -375,7 +375,8 @@ export default [
       TODAY,
       "13:00",
       {
-        alt: [{ time: "14:00" }],
+        // Período sem dia que já passou rola pra amanhã, como "water plants at lunchtime".
+        alt: [{ time: "14:00" }, { day: MON }],
       },
     ],
     ["amanha 8h ligar pro contador", "ligar pro contador", MON, "08:00"],
@@ -497,6 +498,10 @@ export default [
     ["pagar R$ 12,50 de taxa", "pagar R$ 12,50 de taxa"],
     ["pagar R$ 50", "pagar R$ 50"],
     ["atualizar app pra versão 2.10", "atualizar app pra versão 2.10"],
+    ["pedir a 2a via do boleto", "pedir a 2a via do boleto"],
+    ["pagar a 3a parcela", "pagar a 3a parcela"],
+    ["comprar 2 pra 3 pessoas", "comprar 2 pra 3 pessoas"],
+    ["dormir cedo", "dormir cedo"],
     ["atualizar pro Windows 11", "atualizar pro Windows 11"],
     ["ligar pro Marco 15h", "ligar pro Marco", TODAY, "15:00"],
     ["ligar pro Marco 15 horas", "ligar pro Marco", TODAY, "15:00"],

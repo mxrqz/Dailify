@@ -226,6 +226,8 @@ export default [
     ["send monthly newsletter", "send monthly newsletter"],
     ["clean up daily logs", "clean up daily logs"],
     ["pay $12.50 fee", "pay $12.50 fee"],
+    ["lunch with Ana", "lunch with Ana"],
+    ["21st century history essay", "21st century history essay"],
     ["sun cream", "sun cream"],
     ["buy wed dress", "buy wed dress", null, null, { note: "typo de wedding; sem dia" }],
     ["call Mark at 3pm", "call Mark", TODAY, "15:00"],
