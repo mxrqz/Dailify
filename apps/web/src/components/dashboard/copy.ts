@@ -296,6 +296,9 @@ export const copy = {
     unitWeekly: "semanas",
     unitMonthly: "meses",
     unitYearly: "anos",
+    // Arrastar uma linha pra um dia (desktop): a roda de horário que abre ao soltar.
+    scheduleTitle: "Horário em {day}",
+    schedule: "Agendar",
   },
 
   voice: {

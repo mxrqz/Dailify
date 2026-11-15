@@ -4,7 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { motion, useReducedMotion, type Variants } from "motion/react";
 
 import { useDailify } from "@/components/dailifyContext";
-import { AnytimeBlock } from "@/components/dashboard/anytime-block";
+import { AnytimeBlock, ScheduleDrop } from "@/components/dashboard/anytime-block";
 import { copy } from "@/components/dashboard/copy";
 import { DayTaskRow } from "@/components/dashboard/day-task-row";
 import { TaskCard } from "@/components/task-card";
@@ -138,55 +138,60 @@ export function DaySection({ day }: { day: Date }): JSX.Element {
   };
 
   return (
-    <section id={dayAnchorId(day)} className="flex scroll-mt-14 flex-col">
-      <header className="flex items-center gap-5 py-4">
-        <div className="flex items-center gap-2.5">
+    <ScheduleDrop day={day}>
+      <section
+        id={dayAnchorId(day)}
+        className="flex scroll-mt-14 flex-col rounded-field outline-offset-4 data-drop-over:outline-2 data-drop-over:outline-dashed data-drop-over:outline-accent-primary"
+      >
+        <header className="flex items-center gap-5 py-4">
+          <div className="flex items-center gap-2.5">
+            <span
+              className={cn(
+                "size-2 rounded-full",
+                isCurrentDay ? "bg-accent-primary" : "bg-muted-foreground",
+              )}
+              aria-hidden="true"
+            />
+            <span className="text-sm font-medium text-foreground">{dayLabel(day, now)}</span>
+          </div>
+
           <span
-            className={cn(
-              "size-2 rounded-full",
-              isCurrentDay ? "bg-accent-primary" : "bg-muted-foreground",
-            )}
+            className="h-px flex-1 border-t border-dashed border-surface-line"
             aria-hidden="true"
           />
-          <span className="text-sm font-medium text-foreground">{dayLabel(day, now)}</span>
-        </div>
 
-        <span
-          className="h-px flex-1 border-t border-dashed border-surface-line"
-          aria-hidden="true"
-        />
+          <span className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
+            {/* Dia sem tarefa já tem o bloco A qualquer hora ou "Nada neste dia" no corpo. */}
+            {dayTasks.length > 0 && taskCountLabel(dayTasks.length)}
+          </span>
+        </header>
 
-        <span className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
-          {/* Dia sem tarefa já tem o bloco A qualquer hora ou "Nada neste dia" no corpo. */}
-          {dayTasks.length > 0 && taskCountLabel(dayTasks.length)}
-        </span>
-      </header>
+        {isCurrentDay && <AnytimeBlock />}
 
-      {isCurrentDay && <AnytimeBlock />}
+        {!isCurrentDay && dayTasks.length === 0 && (
+          <p className="text-sm text-content-secondary">{copy.day.emptyDay}</p>
+        )}
 
-      {!isCurrentDay && dayTasks.length === 0 && (
-        <p className="text-sm text-content-secondary">{copy.day.emptyDay}</p>
-      )}
-
-      {groups.length > 0 && (
-        <motion.ul
-          className="flex flex-col gap-3"
-          variants={listVariants}
-          initial={reduce ? "visible" : "hidden"}
-          animate="visible"
-        >
-          {groups.map((group) => (
-            <TimeGroupRows
-              key={group.time}
-              group={group}
-              day={day}
-              variants={rowVariants}
-              isPast={isPast}
-              countdownFor={countdownFor}
-            />
-          ))}
-        </motion.ul>
-      )}
-    </section>
+        {groups.length > 0 && (
+          <motion.ul
+            className="flex flex-col gap-3"
+            variants={listVariants}
+            initial={reduce ? "visible" : "hidden"}
+            animate="visible"
+          >
+            {groups.map((group) => (
+              <TimeGroupRows
+                key={group.time}
+                group={group}
+                day={day}
+                variants={rowVariants}
+                isPast={isPast}
+                countdownFor={countdownFor}
+              />
+            ))}
+          </motion.ul>
+        )}
+      </section>
+    </ScheduleDrop>
   );
 }

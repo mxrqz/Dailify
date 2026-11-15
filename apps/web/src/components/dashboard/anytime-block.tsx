@@ -1,4 +1,4 @@
-import { useState, type FormEvent } from "react";
+import { useState, type DragEvent, type FormEvent, type ReactNode } from "react";
 import { Bell, Plus, RepeatIcon } from "lucide-react";
 import { PERIOD_ROLLOVER_HOUR, parseTaskText, type Task } from "@dailify/shared";
 
@@ -7,19 +7,30 @@ import { useDailify } from "@/components/dailifyContext";
 import { CheckHistory, periodKind } from "@/components/dashboard/check-history";
 import { copy } from "@/components/dashboard/copy";
 import { SHEET_EDITING } from "@/components/dashboard/day-task-row";
+import { TimeWheel } from "@/components/dashboard/date-time-picker";
+import { calendarPanel } from "@/components/dashboard/styles";
 import { SwipeActions } from "@/components/dashboard/swipe-actions";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
+import { Button } from "@/components/ui/button";
+import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import { DEFAULT_HOUR } from "@/functions/compose-input";
 import { repeatLabel } from "@/functions/repeat-label";
 import { pendingUndated, splitUndated } from "@/functions/undated";
 import { useCreateTask } from "@/hooks/useCreateTask";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
-import { format } from "date-fns";
+import { format, isSameDay } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import { cn } from "@/lib/utils";
 import { zoned } from "@/functions/zone";
 
 const weekday = (day: number) => copy.form.repeatDays[day].toLowerCase();
 const hhmm = (date: Date) => format(date, "HH:mm");
+
+/** Só uma linha daqui vira alvo de soltar: arquivo ou texto arrastado de fora não. */
+export const DRAG_TYPE = "application/x-mewki-task";
+/** Arrastar é do mouse: no toque a linha já desliza (swipe) e segue só com a folha de edição. */
+const NO_DRAG = "(max-width: 767px), (pointer: coarse)";
 
 /** "🔔 qui 09:00" — crimson é a cor do lembrete. */
 function ReminderChip({ at }: { at: number }): JSX.Element {
@@ -32,7 +43,15 @@ function ReminderChip({ at }: { at: number }): JSX.Element {
   );
 }
 
-function AnytimeRow({ task, swipe }: { task: Task; swipe: boolean }): JSX.Element {
+function AnytimeRow({
+  task,
+  swipe,
+  drag,
+}: {
+  task: Task;
+  swipe: boolean;
+  drag: boolean;
+}): JSX.Element {
   const { weekStart } = useDailify();
   const { done, toggle, remove } = useUndatedActions(task);
   const [open, setOpen] = useState(false);
@@ -53,7 +72,14 @@ function AnytimeRow({ task, swipe }: { task: Task; swipe: boolean }): JSX.Elemen
     );
 
   const row = (
-    <div className="flex items-start gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-surface-hover">
+    <div
+      draggable={drag}
+      onDragStart={(e) => {
+        e.dataTransfer.setData(DRAG_TYPE, task.id);
+        e.dataTransfer.effectAllowed = "move";
+      }}
+      className="flex items-start gap-2.5 rounded-lg px-2.5 py-2 transition-colors hover:bg-surface-hover"
+    >
       <ClockCheck
         checked={done}
         onCheckedChange={() => void toggle()}
@@ -147,6 +173,7 @@ function SectionHeader({ title, hint }: { title: string; hint?: string }): JSX.E
 export function AnytimeBlock(): JSX.Element {
   const { undatedTasks, weekStart } = useDailify();
   const swipe = useMediaQuery(SHEET_EDITING);
+  const drag = !useMediaQuery(NO_DRAG);
   const { recurring, todo } = splitUndated(undatedTasks ?? []);
 
   const pending = pendingUndated(undatedTasks ?? [], Date.now(), weekStart);
@@ -170,7 +197,7 @@ export function AnytimeBlock(): JSX.Element {
         <>
           <SectionHeader title={copy.undated.recurring} hint={hasWeekly ? rollover : undefined} />
           {recurring.map((task) => (
-            <AnytimeRow key={task.id} task={task} swipe={swipe} />
+            <AnytimeRow key={task.id} task={task} swipe={swipe} drag={drag} />
           ))}
         </>
       )}
@@ -183,12 +210,114 @@ export function AnytimeBlock(): JSX.Element {
         <>
           <SectionHeader title={copy.undated.todo} />
           {todo.map((task) => (
-            <AnytimeRow key={task.id} task={task} swipe={swipe} />
+            <AnytimeRow key={task.id} task={task} swipe={swipe} drag={drag} />
           ))}
         </>
       )}
 
       <CaptureField />
     </section>
+  );
+}
+
+/** 09:00 do dia; hoje, com as 09:00 já passadas, a próxima hora cheia. */
+function dropTime(day: Date): Date {
+  const at = zoned(day);
+  const now = zoned();
+  const late = isSameDay(at, now) && now.getHours() >= DEFAULT_HOUR;
+  at.setHours(late ? Math.min(23, now.getHours() + 1) : DEFAULT_HOUR, 0, 0, 0);
+  return at;
+}
+
+function SchedulePicker({
+  task,
+  day,
+  label,
+  onDone,
+}: {
+  task: Task;
+  day: Date;
+  label: string;
+  onDone: () => void;
+}): JSX.Element {
+  const { schedule } = useUndatedActions(task);
+  const [at, setAt] = useState(() => dropTime(day));
+
+  return (
+    <div className="flex flex-col gap-3">
+      <div className="min-w-0">
+        <p className="text-xs text-muted-foreground">{label}</p>
+        <p className="truncate text-sm text-foreground">{task.title}</p>
+      </div>
+      <TimeWheel value={at} onChange={setAt} />
+      <div className="grid grid-cols-2 gap-2">
+        <Button variant="ghost" className="h-9 rounded-sm" onClick={onDone}>
+          {copy.form.cancel}
+        </Button>
+        <Button
+          className="h-9 rounded-sm bg-accent-primary text-primary-foreground hover:bg-accent-hover"
+          onClick={() => {
+            void schedule(at.getTime());
+            onDone();
+          }}
+        >
+          {copy.undated.schedule}
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/**
+ * Um dia da lista ou da faixa como alvo de uma linha da Sem data (desktop). Soltar abre a roda de
+ * horário ancorada no dia; só "Agendar" grava — fechar de qualquer outro jeito é cancelar. Quem
+ * desenha o destaque é o filho, com `data-drop-over:`. Pelo teclado, a folha de edição faz o mesmo.
+ */
+export function ScheduleDrop({ day, children }: { day: Date; children: ReactNode }): JSX.Element {
+  const { undatedTasks } = useDailify();
+  const [over, setOver] = useState(false);
+  const [dropped, setDropped] = useState<Task | null>(null);
+  const accepts = (e: DragEvent) => e.dataTransfer.types.includes(DRAG_TYPE);
+  const label = copy.undated.scheduleTitle.replace(
+    "{day}",
+    format(day, "EEEEEE · d MMM", { locale: ptBR }),
+  );
+
+  return (
+    <Popover open={dropped !== null} onOpenChange={(open) => !open && setDropped(null)}>
+      <PopoverAnchor
+        asChild
+        data-drop-over={over || undefined}
+        onDragOver={(e) => {
+          if (!accepts(e)) return;
+          e.preventDefault();
+          e.dataTransfer.dropEffect = "move";
+          setOver(true);
+        }}
+        // Passar por cima de um filho também dispara o leave: só sai de fato quem saiu do dia.
+        onDragLeave={(e) => {
+          const to = e.relatedTarget;
+          if (!(to instanceof Node && e.currentTarget.contains(to))) setOver(false);
+        }}
+        onDrop={(e) => {
+          if (!accepts(e)) return;
+          e.preventDefault();
+          setOver(false);
+          const id = e.dataTransfer.getData(DRAG_TYPE);
+          setDropped(undatedTasks?.find((t) => t.id === id) ?? null);
+        }}
+      >
+        {children}
+      </PopoverAnchor>
+      <PopoverContent
+        align="start"
+        aria-label={label}
+        className={cn(calendarPanel, "motion-reduce:animate-none")}
+      >
+        {dropped && (
+          <SchedulePicker task={dropped} day={day} label={label} onDone={() => setDropped(null)} />
+        )}
+      </PopoverContent>
+    </Popover>
   );
 }

@@ -4,19 +4,26 @@ import { doneThisPeriod, periodStart, type Task } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { completeTask, createTask, deleteTask, uncompleteTaskRange } from "@/functions/api";
+import {
+  completeTask,
+  createTask,
+  deleteTask,
+  uncompleteTaskRange,
+  updateTask,
+} from "@/functions/api";
 import type { ApiError } from "@/functions/api";
+import { upsertTaskWithRecurrence } from "@/functions/functions";
 import { enqueue, type Mutation } from "@/functions/offline";
 import { removeUndated, upsertUndated } from "@/functions/undated";
 import { appTimeZone } from "@/functions/zone";
 
 /**
- * Marcar/desmarcar/excluir na lista Sem data. Mesmo contrato de `useTaskActions` (otimista; erro de
+ * Marcar/desmarcar/excluir/agendar na lista Sem data. Mesmo contrato de `useTaskActions` (otimista; erro de
  * rede vai pra fila, recusa do servidor desfaz), mas contra `undatedTasks` e com marcação por
  * PERÍODO: a recorrente fica feita até o período virar, não só no dia.
  */
 export function useUndatedActions(task: Task) {
-  const { undatedTasks, setUndatedTasks, weekStart } = useDailify();
+  const { undatedTasks, setUndatedTasks, tasks, setTasks, loadedMonths, weekStart } = useDailify();
   const { getToken, userId } = useAuth();
 
   const done =
@@ -143,5 +150,23 @@ export function useUndatedActions(task: Task) {
     });
   };
 
-  return { done, toggle, remove };
+  /** Sai da Sem data pra agenda em `at` (soltar num dia). O alerta vira o horário, como na edição. */
+  const schedule = async (at: number) => {
+    const now = Date.now();
+    const previous = undatedTasks ?? [];
+    const agenda = tasks ?? [];
+    const patch = { date: at, alert: at, undated: false, updatedAt: now };
+    setUndatedTasks(removeUndated(previous, task.id));
+    setTasks(upsertTaskWithRecurrence(agenda, { ...task, ...patch }, loadedMonths));
+
+    const ok = await run(
+      previous,
+      { op: "patch", taskId: task.id, patch, at: now },
+      copy.task.patchError,
+      (t) => updateTask(t, task.id, patch),
+    );
+    if (!ok) setTasks(agenda);
+  };
+
+  return { done, toggle, remove, schedule };
 }

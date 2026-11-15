@@ -6,6 +6,7 @@ import { motion, MotionConfig } from "motion/react";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
+import { ScheduleDrop } from "@/components/dashboard/anytime-block";
 import { dayAnchorId } from "@/components/dashboard/day-section";
 import { DayPicker } from "@/components/dashboard/day-picker";
 import { calendarPanel } from "@/components/dashboard/styles";
@@ -174,85 +175,87 @@ export function WeekStrip({ onCreateOn }: { onCreateOn: (day: Date) => void }): 
             const seen = dayAnchorId(day) === visible;
 
             return (
-              <motion.button
-                key={day.toISOString()}
-                {...box}
-                initial={false}
-                animate={{ borderRadius: docked ? RADIUS_DAY_DOCKED : RADIUS_DAY }}
-                type="button"
-                onClick={() => void goToDay(day)}
-                aria-current={current ? "date" : undefined}
-                className={cn(
-                  "relative isolate flex min-w-0 flex-1 cursor-pointer items-center justify-center transition-colors",
-                  // Acoplada, o fundo é um quadrado no centro (::before); o toque segue a célula toda.
-                  "before:absolute before:top-1/2 before:left-1/2 before:-z-10 before:size-7.5 before:-translate-1/2 before:rounded-lg before:transition-colors",
-                  docked
-                    ? "h-10 flex-wrap content-center gap-0.5 md:h-9"
-                    : "flex-col gap-1 px-2 py-2",
-                  // O fundo marca o dia que se está vendo na lista; hoje já se distingue pelo número.
-                  docked
-                    ? seen
-                      ? "before:bg-surface-hover"
-                      : "hover:before:bg-surface-hover"
-                    : seen
-                      ? "bg-surface-hover"
-                      : "hover:bg-surface-hover",
-                )}
-              >
-                {/* Os dois rótulos ficam montados e cruzam opacidade: trocar o texto no commit era
-                    um pop no meio do morph. O de fora sai do fluxo pra não ocupar largura. */}
-                <motion.span
-                  {...leaf}
-                  className="relative font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground"
-                >
-                  <span
-                    className={cn(
-                      "transition-opacity duration-base",
-                      docked && "absolute top-0 left-0 opacity-0",
-                    )}
-                  >
-                    {format(day, "EEEEEE", { locale: ptBR })}
-                  </span>
-                  <span
-                    aria-hidden="true"
-                    className={cn(
-                      "transition-opacity duration-base",
-                      !docked && "absolute top-0 left-0 opacity-0",
-                    )}
-                  >
-                    {format(day, "EEEEE", { locale: ptBR })}
-                  </span>
-                </motion.span>
-
-                <motion.span
-                  {...leaf}
-                  className={cn(
-                    "text-sm font-medium",
-                    current ? "text-brand-text" : "text-foreground",
-                  )}
-                >
-                  {format(day, "d")}
-                </motion.span>
-
-                {/* Altura reservada mesmo sem tarefa: senão os dias sobem e descem na faixa. Acoplada,
-                    quebra pra linha de baixo e só cabe um ponto. */}
-                <motion.span
+              <ScheduleDrop key={day.toISOString()} day={day}>
+                <motion.button
                   {...box}
+                  initial={false}
+                  animate={{ borderRadius: docked ? RADIUS_DAY_DOCKED : RADIUS_DAY }}
+                  type="button"
+                  onClick={() => void goToDay(day)}
+                  aria-current={current ? "date" : undefined}
                   className={cn(
-                    "flex h-1 items-center justify-center gap-0.5 overflow-hidden",
-                    docked && "basis-full",
+                    "relative isolate flex min-w-0 flex-1 cursor-pointer items-center justify-center transition-colors",
+                    // Acoplada, o fundo é um quadrado no centro (::before); o toque segue a célula toda.
+                    "before:absolute before:top-1/2 before:left-1/2 before:-z-10 before:size-7.5 before:-translate-1/2 before:rounded-lg before:transition-colors",
+                    docked
+                      ? "h-10 flex-wrap content-center gap-0.5 md:h-9"
+                      : "flex-col gap-1 px-2 py-2",
+                    // O fundo marca o dia que se está vendo na lista; hoje já se distingue pelo número.
+                    docked
+                      ? seen
+                        ? "before:bg-surface-hover"
+                        : "hover:before:bg-surface-hover"
+                      : seen
+                        ? "bg-surface-hover"
+                        : "hover:bg-surface-hover",
+                    "data-drop-over:bg-accent-subtle data-drop-over:outline-2 data-drop-over:-outline-offset-2 data-drop-over:outline-accent-primary",
                   )}
-                  aria-hidden="true"
                 >
-                  {Array.from({ length: docked ? Math.min(dots, 1) : dots }).map((_, index) => (
-                    <motion.span
-                      key={index}
-                      {...leaf}
-                      className="size-1 shrink-0 rounded-full bg-accent-primary"
-                    />
-                  ))}
-                </motion.span>
-              </motion.button>
+                  {/* Os dois rótulos ficam montados e cruzam opacidade: trocar o texto no commit era
+                    um pop no meio do morph. O de fora sai do fluxo pra não ocupar largura. */}
+                  <motion.span
+                    {...leaf}
+                    className="relative font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground"
+                  >
+                    <span
+                      className={cn(
+                        "transition-opacity duration-base",
+                        docked && "absolute top-0 left-0 opacity-0",
+                      )}
+                    >
+                      {format(day, "EEEEEE", { locale: ptBR })}
+                    </span>
+                    <span
+                      aria-hidden="true"
+                      className={cn(
+                        "transition-opacity duration-base",
+                        !docked && "absolute top-0 left-0 opacity-0",
+                      )}
+                    >
+                      {format(day, "EEEEE", { locale: ptBR })}
+                    </span>
+                  </motion.span>
+
+                  <motion.span
+                    {...leaf}
+                    className={cn(
+                      "text-sm font-medium",
+                      current ? "text-brand-text" : "text-foreground",
+                    )}
+                  >
+                    {format(day, "d")}
+                  </motion.span>
+
+                  {/* Altura reservada mesmo sem tarefa: senão os dias sobem e descem na faixa. Acoplada,
+                    quebra pra linha de baixo e só cabe um ponto. */}
+                  <motion.span
+                    {...box}
+                    className={cn(
+                      "flex h-1 items-center justify-center gap-0.5 overflow-hidden",
+                      docked && "basis-full",
+                    )}
+                    aria-hidden="true"
+                  >
+                    {Array.from({ length: docked ? Math.min(dots, 1) : dots }).map((_, index) => (
+                      <motion.span
+                        key={index}
+                        {...leaf}
+                        className="size-1 shrink-0 rounded-full bg-accent-primary"
+                      />
+                    ))}
+                  </motion.span>
+                </motion.button>
+              </ScheduleDrop>
             );
           })}
 
