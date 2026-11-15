@@ -4,15 +4,8 @@
  * Gerado por `bun run parser:failures`; não edite à mão.
  */
 export const knownFailures: string[] = [
-  // absolute-date (en)
-  "12.24 wrap presents", // day, time
-  // absolute-date (pt)
-  "entrevista 23.11", // day, time
-  "17.11 entrega do projeto", // day, time
   // informal (pt)
-  "reunião amanhã a s 10", // title, time
-  "reuniao 14 30 amanha", // title, time
   "pagar luz amanhã!!! 🙏", // title
-  // time (en)
-  "1730 PT session", // title, day, time
+  // trap (en)
+  "email the team about friday's offsite", // title, day
 ];

@@ -150,8 +150,20 @@ export default [
     unrep("gym 3 times a week", "gym"),
     unrep("gym every monday until december", "gym", MON),
     unrep("meds every day for 7 days", "meds"),
-    unrep("meds at 8am and 8pm every day", "meds"),
-    unrep("pay installment on the 10th and 25th", "pay installment", FRI),
+    [
+      "meds at 8am and 8pm every day",
+      "meds",
+      TODAY,
+      null,
+      { outOfScope: "recurrence", unsure: ["list-values"] },
+    ],
+    [
+      "pay installment on the 10th and 25th",
+      "pay installment",
+      FRI,
+      null,
+      { outOfScope: "recurrence", unsure: ["list-values"] },
+    ],
     unrep("standup every weekday except holidays", "standup", MON),
   ]),
 

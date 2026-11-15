@@ -422,7 +422,13 @@ export default [
     ["call 9h", "call", MON, "09:00", { alt: [{ day: TODAY }] }],
     ["reunião 10:30", "reunião", MON, "10:30", { alt: [{ day: TODAY }] }],
     ["reunião 11h", "reunião", MON, "11:00", { alt: [{ day: TODAY }] }],
-    ["pagar conta dia 15 às 10h", "pagar conta", TODAY, "10:00", { alt: [{ day: "2026-12-15" }] }],
+    [
+      "pagar conta dia 15 às 10h",
+      "pagar conta",
+      TODAY,
+      "10:00",
+      { alt: [{ day: "2026-12-15" }], unsure: ["past"] },
+    ],
     [
       "lavar louça hoje de manhã",
       "lavar louça",

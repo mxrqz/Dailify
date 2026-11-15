@@ -712,3 +712,18 @@ describe("hasDay", () => {
     expect(parseTaskText(input, NOW).hasDay).toBe(expected);
   });
 });
+
+// O corpus cobra os códigos; aqui, o formato: o span aponta pro trecho do input original.
+describe("unsure", () => {
+  it.each([
+    ["entrevista 23.11", { code: "ambiguous-number", span: [11, 16] }],
+    ["dentista amanhã 9h, me lembra 30 min antes", { code: "alert", span: [30, 42] }],
+    ["comprar pão; levar o lixo", { code: "multi" }],
+  ])("%s", (input, expected) => {
+    expect(parseTaskText(input, NOW).unsure).toContainEqual(expected);
+  });
+
+  it("frase simples sai confiante", () => {
+    expect(parseTaskText("reunião amanhã às 15h", NOW).unsure).toEqual([]);
+  });
+});

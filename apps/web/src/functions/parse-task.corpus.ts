@@ -10,6 +10,7 @@ import ptDates from "./parse-task.corpus/pt-dates";
 import ptMisc from "./parse-task.corpus/pt-misc";
 import ptRepeat from "./parse-task.corpus/pt-repeat";
 import ptTimes from "./parse-task.corpus/pt-times";
+import unsure from "./parse-task.corpus/unsure";
 
 /** O golden do parser (fase 1 do bd Dailify-1rb). Formato e convenções em `parse-task.corpus/kit.ts`. */
 export const corpus: CorpusEntry[] = [
@@ -22,5 +23,6 @@ export const corpus: CorpusEntry[] = [
   ...enRepeat,
   ...enMisc,
   ...mix,
+  ...unsure,
   ...[...holdoutPt, ...holdoutEn].map((entry) => ({ ...entry, holdout: true })),
 ];

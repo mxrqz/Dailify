@@ -1,6 +1,6 @@
 import { weekDays, type Repeat } from "@dailify/shared";
 import { format } from "date-fns";
-import { normalize, parseTaskText } from "../parse-task";
+import { normalize, parseTaskText, type UnsureCode } from "../parse-task";
 import { zoned, zonedAt } from "../zone";
 
 /**
@@ -25,8 +25,18 @@ export type Category =
   | "past-edge"
   | "trap"
   | "out-of-scope";
-/** Frases que a fase 4 deve marcar como `unsure` (caminho da IA) em vez de parsear com confiança. */
+/** Frases que o parser deve marcar como `unsure` (caminho da IA) em vez de parsear com confiança. */
 export type OutOfScope = "multi-task" | "question" | "command" | "recurrence" | "alert" | "vague";
+
+/** O motivo que cada `outOfScope` cobra quando a linha não diz outro. */
+const OUT_OF_SCOPE_CODE: Record<OutOfScope, UnsureCode> = {
+  "multi-task": "multi",
+  question: "question",
+  command: "command",
+  recurrence: "repeat-unsupported",
+  alert: "alert",
+  vague: "vague",
+};
 
 export interface Expect {
   title: string;
@@ -45,13 +55,16 @@ export interface CorpusEntry {
   alt?: Partial<Expect>[];
   tags: { category: Category; lang: Lang };
   outOfScope?: OutOfScope;
+  /** Motivos que o parser tem que dar (pode dar outros). Com algum, os campos não contam — a IA
+   * conserta; sem nenhum (o padrão fora de `outOfScope`), a frase tem que sair sem dúvida. */
+  unsure?: UnsureCode[];
   note?: string;
   /** Do holdout cego (`holdout-*.ts`): escrito sem olhar o parser, pontuado à parte. */
   holdout?: boolean;
 }
 
 type More = Partial<Pick<Expect, "duration" | "repeat" | "links">> &
-  Pick<CorpusEntry, "now" | "alt" | "outOfScope" | "note">;
+  Pick<CorpusEntry, "now" | "alt" | "outOfScope" | "unsure" | "note">;
 export type Row = [
   input: string,
   title: string,
@@ -121,7 +134,9 @@ function nowOf(entry: CorpusEntry): Date {
   return zonedAt(y, m - 1, d, h, min);
 }
 
-export function actualOf(entry: CorpusEntry): Expect {
+export type Actual = Expect & { unsure: UnsureCode[] };
+
+export function actualOf(entry: CorpusEntry): Actual {
   const parsed = parseTaskText(entry.input, nowOf(entry));
   const date = parsed.date ? zoned(parsed.date) : null;
   return {
@@ -131,8 +146,12 @@ export function actualOf(entry: CorpusEntry): Expect {
     duration: parsed.duration,
     repeat: parsed.repeat,
     links: parsed.links,
+    unsure: parsed.unsure.map(({ code }) => code),
   };
 }
+
+export const expectedUnsure = (entry: CorpusEntry): UnsureCode[] =>
+  entry.unsure ?? (entry.outOfScope ? [OUT_OF_SCOPE_CODE[entry.outOfScope]] : []);
 
 const FIELDS = ["title", "day", "time", "duration", "repeat", "links"] as const;
 
@@ -148,10 +167,25 @@ function mismatches(expect: Expect, actual: Expect): (keyof Expect)[] {
   return FIELDS.filter((field) => !ok[field]);
 }
 
-/** Campos errados contra a leitura principal; vazio quando ela ou alguma `alt` bate inteira. */
-export function evaluate(entry: CorpusEntry): { actual: Expect; failed: (keyof Expect)[] } {
+/**
+ * O que falhou; vazio = passou. Com `unsure` esperado, só os motivos contam (falta algum = "unsure").
+ * Sem, contam os campos contra a leitura principal (vazio quando ela ou alguma `alt` bate) — e,
+ * com os campos certos, qualquer motivo é alarme falso ("unsure"). `wrong`: os campos errados,
+ * sempre, pra medir quanto erro o `unsure` avisa.
+ */
+export function evaluate(entry: CorpusEntry): {
+  actual: Actual;
+  failed: (keyof Expect | "unsure")[];
+  wrong: (keyof Expect)[];
+} {
   const actual = actualOf(entry);
   const readings = [entry.expect, ...(entry.alt ?? []).map((alt) => ({ ...entry.expect, ...alt }))];
   const passes = readings.some((reading) => mismatches(reading, actual).length === 0);
-  return { actual, failed: passes ? [] : mismatches(entry.expect, actual) };
+  const wrong = passes ? [] : mismatches(entry.expect, actual);
+  const want = expectedUnsure(entry);
+  if (want.length) {
+    const flagged = want.every((code) => actual.unsure.includes(code));
+    return { actual, wrong, failed: flagged ? [] : ["unsure"] };
+  }
+  return { actual, wrong, failed: wrong.length ? wrong : actual.unsure.length ? ["unsure"] : [] };
 }

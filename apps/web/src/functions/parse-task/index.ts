@@ -5,6 +5,7 @@ import { parseDuration } from "./durations";
 import { BOUNDED_REPEAT_RE, UNSUPPORTED_REPEAT_RE, nextOccurrence, parseRepeat } from "./repeat";
 import { type Span, mask, mergeSpans } from "./spans";
 import { cut, properNouns } from "./title";
+import { type Unsure, unsureOf } from "./unsure";
 import { WEEKDAY_RE, normalize, startOfDay } from "./vocab";
 import { parseWhen } from "./when";
 
@@ -20,14 +21,15 @@ import { parseWhen } from "./when";
  * chama decidir o horário padrão.
  *
  * Um módulo por detector: `times` (hora), `dates` (dia), `when` (os dois juntos), `durations`
- * (duração e intervalo), `repeat` (série), `title` (recorte e nomes próprios); `vocab` e `spans`
- * são as tabelas e o encanamento que todos dividem.
+ * (duração e intervalo), `repeat` (série), `title` (recorte e nomes próprios), `unsure` (por que a
+ * leitura pode estar errada); `vocab` e `spans` são as tabelas e o encanamento que todos dividem.
  */
 
 export { type ParsedDuration, parseDuration } from "./durations";
 export { parseRepeat } from "./repeat";
 export { type Span } from "./spans";
 export { cut } from "./title";
+export { type Unsure, type UnsureCode } from "./unsure";
 export { normalize } from "./vocab";
 export { type ParsedWhen, parseWhen } from "./when";
 
@@ -41,21 +43,36 @@ export interface ParsedTask {
   duration: string | null;
   links: string[];
   repeat: Repeat;
+  /** Por que a leitura pode estar errada; vazio = confiante. */
+  unsure: Unsure[];
 }
 
 /** `keep`: trechos que ficam no título e fora da vista dos detectores. */
 export function parseTaskText(input: string, now: Date = zoned(), keep: Span[] = []): ParsedTask {
   const normalized = normalize(input);
   const links = parseLinks(input);
-  const unsupported = {
-    text: cut(input, links.spans),
+  const title = cut(input, links.spans);
+  const unsupported: ParsedTask = {
+    text: title,
     date: null,
     hasTime: false,
     hasDay: false,
     duration: null,
     links: links.urls,
     repeat: "Off",
-  } satisfies ParsedTask;
+    unsure: unsureOf({
+      input,
+      normalized,
+      rest: null,
+      visible: normalized,
+      title,
+      consumed: false,
+      date: null,
+      hasTime: false,
+      repeat: "Off",
+      now,
+    }),
+  };
   if (UNSUPPORTED_REPEAT_RE.test(normalized)) return unsupported;
 
   // "youtu.be/15h30" não pode virar horário nem duração; "Sessão da Tarde" e "Dom Casmurro" também não.
@@ -80,12 +97,14 @@ export function parseTaskText(input: string, now: Date = zoned(), keep: Span[] =
   // "practice 7 minute workout", "The 4-Hour Workweek": sem data nem hora, o adjetivo "N minute X" é
   // nome; "30 minute call tomorrow at 9am" continua duração.
   const [durationStart, durationEnd] = duration?.spans[0] ?? [0, 0];
+  const titleSpans: Span[] = [];
   if (
     !when &&
     !repeat &&
     /^\d{1,3}\s+(?:minute|hour)$/.test(normalized.slice(durationStart, durationEnd)) &&
     /^\s+[a-z]/.test(normalized.slice(durationEnd))
   ) {
+    titleSpans.push([durationStart, durationEnd]);
     duration = null;
   }
 
@@ -121,14 +140,26 @@ export function parseTaskText(input: string, now: Date = zoned(), keep: Span[] =
     return parseTaskText(input, now, [...keep, ...repeat.spans]);
   }
 
+  const value = repeat?.value ?? "Off";
   return {
     text,
     date,
-
     hasTime,
     hasDay: Boolean(when?.hasDay) || citesWeekday,
     duration: duration?.duration ?? null,
     links: links.urls,
-    repeat: repeat?.value ?? "Off",
+    repeat: value,
+    unsure: unsureOf({
+      input,
+      normalized,
+      rest: mask(forDuration, [...spans, ...titleSpans]),
+      visible: forDuration,
+      title: text,
+      consumed: Boolean(when || duration || repeat),
+      date,
+      hasTime,
+      repeat: value,
+      now,
+    }),
   };
 }

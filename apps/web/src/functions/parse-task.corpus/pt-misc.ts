@@ -272,8 +272,14 @@ export default [
     ["reunião amanhã 9h30min", "reunião", MON, "09:30"],
     ["reunião amanhã ás 10", "reunião", MON, "10:00", { alt: [{ time: "22:00" }] }],
     ["reunião amanhã as 10", "reunião", MON, "10:00", { alt: [{ time: "22:00" }] }],
-    ["reunião amanhã a s 10", "reunião", MON, "10:00", { alt: [{ time: "22:00" }] }],
-    ["reuniao 14 30 amanha", "reuniao", MON, "14:30"],
+    [
+      "reunião amanhã a s 10",
+      "reunião",
+      MON,
+      "10:00",
+      { alt: [{ time: "22:00" }], unsure: ["leftover"] },
+    ],
+    ["reuniao 14 30 amanha", "reuniao", MON, "14:30", { unsure: ["ambiguous-number"] }],
     ["dentista 10hs amanha", "dentista", MON, "10:00"],
     ["dentista amanhã 10 horas", "dentista", MON, "10:00"],
     ["AMANHÃ ÀS 10 REUNIÃO", "REUNIÃO", MON, "10:00", { alt: [{ time: "22:00" }] }],
@@ -737,9 +743,7 @@ export default [
       "ver aquele negócio que o Pedro falou",
       null,
       null,
-      {
-        outOfScope: "vague",
-      },
+      { outOfScope: "vague", unsure: ["long"] },
     ],
     [
       "reunião amanhã entre 10 e 11 ou quinta de manhã",
