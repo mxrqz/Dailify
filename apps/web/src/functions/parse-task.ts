@@ -158,7 +158,9 @@ const WEEKDAYS: Record<string, number> = {
   thurs: 4,
   fri: 5,
   sat: 6,
+  qta: 4,
   sabdo: 6,
+  segnda: 1,
   wensday: 3,
   thrusday: 4,
 };
@@ -265,8 +267,12 @@ const MINUTE_SUFFIX_RE = `(?:\\s+(?:e|and)\\s+(${MINUTE_WORD_RE}|\\d{1,2}))?`;
 const AT_RE =
   "(?:\\b(?:as|at|por\\s+volta\\s+d[ae]s?|la\\s+pel[ao]s|pel[ao]s|around|about)\\s+|@\\s*)";
 const CONNECTOR_RE = `${AT_RE}?`;
-// "7a"/"3p" só no fim ou antes do dia: "2a via" e "3a parcela" são ordinais.
-const SHORT_MERIDIEM_END = String.raw`\s*$|\s*[,.;!]|\s+(?:tomorrow|today|tmrw?|on|every)\b`;
+// "7a"/"3p" só no fim, antes do dia ou logo depois de um ("tues 6p"): "2a via" e "3a parcela" são
+// ordinais. Com minutos ("4:30p") não tem como ser ordinal.
+const DAY_WORD_RE = `${WEEKDAY_RE}|tomorrow|today|tmrw?|tonight|amanha|hoje`;
+const SHORT_MERIDIEM_END = String.raw`\s*$|\s*[,.;!]|\s+(?:${DAY_WORD_RE}|on|every)\b`;
+const shortMeridiem = (letter: "a" | "p") =>
+  String.raw`\d${letter}(?=${SHORT_MERIDIEM_END})|:\d{2}${letter}\b|(?<=\b(?:${DAY_WORD_RE})\s+\d{1,2})${letter}\b(?!\s+(?:via|chamada|vez|parcela)\b)`;
 
 /** Os minutos de um "… e meia" / "… e 15"; 0 quando o sufixo não veio. */
 function suffixMinutes(raw: string | undefined): number {
@@ -305,18 +311,19 @@ function applyMeridiem(
 ): Hit<Time> {
   const pm = text.match(
     new RegExp(
-      String.raw`\b(da|de|a|na|pela|at|in|this)\s+(?:the\s+)?(tarde|noite|afternoon|evening|night)\b|\d\s*p\.?m\b\.?|\bp\.?m\b\.?|\dp(?=${SHORT_MERIDIEM_END})|\bton(?:ight|ite)\b`,
+      String.raw`\b(da|de|a|na|pela|at|in|this)\s+(?:the\s+)?(tarde|noite|afternoon|evening|night)\b|\d\s*p\.?m\b\.?|\bp\.?m\b\.?|${shortMeridiem("p")}|\bton(?:ight|ite)\b|\b2ni(?:gh)?te\b`,
     ),
   );
   const am = text.match(
     new RegExp(
-      String.raw`\b(da|de|a|na|pela|at|in|this)\s+(?:the\s+)?(manha|madrugada|morning|dawn)\b|\d\s*a\.?m\b\.?|\ba\.?m\b\.?|\da(?=${SHORT_MERIDIEM_END})`,
+      String.raw`\b(da|de|a|na|pela|at|in|this)\s+(?:the\s+)?(manha|madrugada|morning|dawn)\b|\d\s*a\.?m\b\.?|\ba\.?m\b\.?|${shortMeridiem("a")}`,
     ),
   );
   const period = periodHour(text);
 
-  const isPM = pm !== null;
-  const isAM = am !== null;
+  // "6:30 tomorrow morning": o período sozinho também diz manhã ou tarde.
+  const isPM = pm !== null || (am === null && period !== null && period.value >= 12);
+  const isAM = am !== null || (pm === null && period !== null && period.value < 12);
 
   let { hour } = time;
   const { minute } = time;
@@ -356,17 +363,27 @@ function periodHour(text: string): Hit<number> | null {
     // Os específicos antes: "no fim da tarde" também casaria "da tarde".
     [/\b(?:n?o\s+)?(?:fim|final)\s+da\s+tarde\b|\blate\s+afternoon\b/, 18],
     [/\b(?:[ao]\s+|de\s+)?(?:tardinha|tardezinha)\b/, 17],
-    [/\b(?:n?o\s+)?(?:inicio|comeco)\s+da\s+manha\b|\bearly\s+morning\b/, 7],
+    [
+      /\b(?:n?o\s+)?(?:inicio|comeco)\s+da\s+manha\b|\bearly\s+(?:(?:tomorrow|today)\s+)?morning\b|\b(?:de|da|pela)\s+manha\s+cedo\b|\bcedo\s+de\s+manha\b/,
+      7,
+    ],
     [/\b(?:depois|dps|apos)\s+do\s+almoco\b|\bafter\s+lunch\b/, 13],
     [
       /\b(?:n?a\s+)?hora\s+do\s+almoco\b|\bno\s+almoco\b|\b(?:at\s+)?lunchtime\b|\bat\s+lunch\b/,
       12,
     ],
-    [/\b(?:at\s+(?:the\s+)?)?end\s+of\s+(?:the\s+)?day\b|\beod\b/, 18],
+    [
+      /\b(?:at\s+(?:the\s+)?)?end\s+of\s+(?:the\s+)?day\b|\beod\b|\b(?:ate\s+o\s+)?(?:fim|final)\s+do\s+dia\b/,
+      18,
+    ],
     // "amanhã cedo" — "dormir cedo" é título.
     [/\bcedinho\b|\bearly(?=\s+tomorrow\b)/, 7],
     [/(?<=\b(?:amanha|hoje)\s+)cedo\b/, 8],
     [new RegExp(`(?<=\\b(?:tomorrow|today|${WEEKDAY_RE})\\s+)night\\b`), PERIOD_HOURS.evening],
+    // "Sat am", "tmrw pm": sem número, o am/pm colado no dia é o período.
+    [new RegExp(`(?<=\\b(?:${DAY_WORD_RE})\\s+)am\\b`), PERIOD_HOURS.morning],
+    [new RegExp(`(?<=\\b(?:${DAY_WORD_RE})\\s+)pm\\b`), PERIOD_HOURS.afternoon],
+
     [
       /\b(ton(?:ight|ite)|(?:esta|essa|nesta|nessa)\s+noite|a\s+noite|da\s+noite|de\s+noite|(?:this\s+|in\s+the\s+)?evening|at\s+night)\b/,
       PERIOD_HOURS.evening,
@@ -391,16 +408,23 @@ function periodHour(text: string): Hit<number> | null {
 function parseTime(text: string, now: Date, base: Base, literalTime = false): Hit<Time> | null {
   // daqui a 2 horas · in 90 minutes · em meia hora · daqui a 1h30 · in an hour and a half — `days`
   // porque "em 24 horas" cai amanhã na mesma hora
-  const relative = text.match(
-    new RegExp(
-      `\\b(?:daqui(?:\\s+a)?|em|in|dentro\\s+de|within)\\s+(?:(meia\\s+hora|half\\s+an?\\s+hour)|(${AMOUNT_RE})\\s*(h|hs|hrs?|horas?|hours?|min|mins|minutos?|minutes?)(?![a-z])(?:(\\d{2})(?!\\d)|\\s+(?:e|and)\\s+(?:(meia|a\\s+half)|(\\d{1,2}|${MINUTE_WORD_RE})\\s*${MINUTE_UNIT})\\b)?)`,
-    ),
-  );
+  const relative =
+    text.match(
+      new RegExp(
+        `\\b(?:da?qui(?:\\s+a)?|em|in|dentro\\s+de|within)\\s+(?:(meia\\s+hora|half\\s+an?\\s+hour)|(${AMOUNT_RE})\\s*(h|hs|hrs?|horas?|hours?|m|min|mins|minutos?|minutes?)(?![a-z])(?:(\\d{2})(?!\\d)|\\s+(?:e|and)\\s+(?:(meia|a\\s+half)|(\\d{1,2}|${MINUTE_WORD_RE})\\s*${MINUTE_UNIT})\\b)?)`,
+      ),
+    ) ??
+    // half an hour from now · 20 minutes from now
+    text.match(
+      new RegExp(
+        `\\b(?:(meia\\s+hora|half\\s+an?\\s+hour)|(${AMOUNT_RE})\\s*(h|hrs?|hours?|m|min|mins|minutes?))\\s+from\\s+now\\b`,
+      ),
+    );
   if (relative) {
     const [, half, rawAmount, unit, clockMinutes, andHalf, rawMinutes] = relative;
     const minutes = half
       ? 30
-      : /^min/.test(unit)
+      : /^m/.test(unit)
         ? amountOf(rawAmount)
         : amountOf(rawAmount) * 60 +
           (andHalf ? 30 : clockMinutes ? Number(clockMinutes) : suffixMinutes(rawMinutes));
@@ -455,9 +479,26 @@ function parseTime(text: string, now: Date, base: Base, literalTime = false): Hi
     const hour = Number(withMinutes[1]);
     const minute = Number(withMinutes[2]);
     if (hour <= 24 && minute < 60) {
-      const meridiem = applyMeridiem({ hour, minute }, text, now, base, true);
+      // "at 3:15"/"@ 2:30" é relógio de 12h: segue a hora plausível, como o "às 3" seco.
+      const twelveHour = /^(?:at\b|@)/.test(withMinutes[0]) && withMinutes[1].length === 1;
+      const meridiem = applyMeridiem({ hour, minute }, text, now, base, literalTime || !twelveHour);
       return hit(withMinutes, meridiem.value, meridiem.spans);
     }
+  }
+
+  // 0900 · 1730 — hora militar só com cara de hora (conector ou dia antes; depois, só com o zero na
+  // frente — "assistir 1917 hoje" é filme): "0800" solto é telefone.
+  const military = text.match(
+    new RegExp(
+      `${AT_RE}\\b([01]\\d|2[0-3])([0-5]\\d)\\b|(?<=\\b(?:${DAY_WORD_RE})\\s+)\\b([01]\\d|2[0-3])([0-5]\\d)\\b|\\b(0\\d)([0-5]\\d)\\b(?=\\s+(?:${DAY_WORD_RE})\\b)`,
+    ),
+  );
+  if (military) {
+    const [hour, minute] = military
+      .slice(1)
+      .filter((group) => group !== undefined)
+      .map(Number);
+    return hit(military, { hour, minute });
   }
 
   // 14 e 30 · 2 e meia
@@ -504,14 +545,14 @@ function parseTime(text: string, now: Date, base: Base, literalTime = false): Hi
   // sobra no título — e no ramo am/pm o ramo "as|at" nem ajuda, porque "9a" não tem \b no meio.
   const wholeHour = text.match(
     new RegExp(
-      `${CONNECTOR_RE}\\b(\\d{1,2})\\s*(?:h\\b|hs\\b|hrs?\\b|horas?\\b|o\\s*clock\\b)|${AT_RE}(\\d{1,2})\\b|${CONNECTOR_RE}\\b(\\d{1,2})(?:\\s*[ap]\\.?m\\b|[ap](?=${SHORT_MERIDIEM_END}))|\\b(\\d{1,2})\\s+(?:da|de|pela|at|in|this)\\s+(?:the\\s+)?(?:manha|tarde|noite|madrugada|morning|afternoon|evening|night)\\b`,
+      `${CONNECTOR_RE}\\b(\\d{1,2})\\s*(?:h\\b|hs\\b|hrs?\\b|horas?\\b|o\\s*clock\\b|em\\s+ponto\\b)|${AT_RE}(\\d{1,2})(?:\\b|[ap]\\b)|${CONNECTOR_RE}\\b(\\d{1,2})(?:\\s*[ap]\\.?m\\b|[ap](?=${SHORT_MERIDIEM_END})|[ap]\\b(?<=\\b(?:${DAY_WORD_RE})\\s+\\d{1,2}[ap]))|\\b(\\d{1,2})\\s+(?:da|de|pela|at|in|this)\\s+(?:the\\s+)?(?:manha|tarde|noite|madrugada|morning|afternoon|evening|night)\\b|(?<=\\b(?:${WEEKDAY_RE})\\s+)(\\d{1,2})(?=\\s*$)`,
     ),
   );
   if (wholeHour) {
     const digits = wholeHour.slice(1).find((group) => group !== undefined);
     const hour = Number(digits);
     if (hour <= 24) {
-      const clock = /\d\s*(?:h|hs|hrs?|horas?)\b/.test(wholeHour[0]);
+      const clock = /\d\s*(?:h|hs|hrs?|horas?)\b|em\s+ponto/.test(wholeHour[0]);
       const meridiem = applyMeridiem({ hour, minute: 0 }, text, now, base, literalTime || clock);
       return hit(wholeHour, meridiem.value, meridiem.spans);
     }
@@ -520,8 +561,14 @@ function parseTime(text: string, now: Date, base: Base, literalTime = false): Hi
   // às duas · às duas e meia · at two thirty · duas horas · duas da tarde — sem conector, "uma
   // pizza" e "cinco capítulos" virariam 13h e 17h.
   const spelledTail = `(${HOUR_WORD_RE})\\b(?:\\s+(?:e\\s+)?(${MINUTE_WORD_RE})\\b)?`;
+  // "nove e quinze"/"sete e meia" soltos: hora de relógio (1–12) com os minutos de relógio —
+  // "vinte e cinco reais" e "um e meio" não casam.
+  const clockWords = `(${alternation(Object.keys(HOUR_WORDS).filter((key) => HOUR_WORDS[key] <= 12))})\\s+e\\s+(meia|quinze|trinta|quarenta\\s+e\\s+cinco|dez|vinte|cinco)\\b`;
   const spelled =
     text.match(new RegExp(`${AT_RE}${spelledTail}(?:\\s+(?:horas?|o\\s*clock)\\b)?`)) ??
+    text.match(
+      new RegExp(`\\b${clockWords}(?!\\s+(?:horas?|hours?|minutos?|minutes?|anos?|years?)\\b)`),
+    ) ??
     text.match(
       new RegExp(
         `\\b${spelledTail}(?:\\s+(?:horas?|o\\s*clock)\\b|(?=\\s+(?:da|de|pela|in|at)\\s+(?:the\\s+)?(?:manha|tarde|noite|madrugada|morning|afternoon|evening|night)\\b))`,
@@ -579,14 +626,21 @@ const WEEKDAY_MATCH_RE = new RegExp(
 // conta perto de uma preposição, de uma hora ou no fim da frase.
 const AMBIGUOUS_WEEKDAYS = ["ter", "sex", "dom", "sab", "qua", "seg", "sun", "wed", "sat"];
 const DAY_BEFORE_RE =
-  /\b(?:na|no|nesta|neste|nessa|nesse|essa|esse|esta|este|ate|proxim[ao]|prox|toda|todo|on|by|this|next|every|until|before)\s+$/;
+  /\b(?:na|no|nesta|neste|nessa|nesse|essa|esse|esta|este|ate|proxim[ao]|prox|toda|todo|on|by|this|next|every|each|until|before)\s+$/;
 const DAY_AFTER_RE =
-  /^(?:\s*feira|\s*$|\s*[,.]|\s+\d|\s+(?:as|at|que\s+vem|de\s+(?:manha|tarde|noite)|morning|afternoon|evening|night|noon|meio\s*dia)\b)/;
+  /^(?:\s*feira|\s*$|\s*[,.]|\s+\d|\s+(?:as|at|am|pm|que\s+vem|de\s+(?:manha|tarde|noite)|morning|afternoon|evening|night|noon|meio\s*dia)\b)/;
+// "ter levar o dog", "sex entregar relatório": abrindo a frase antes de um verbo no infinitivo.
+const DAY_THEN_VERB_RE = /^\s+[a-z]{2,}(?:ar|er|ir)\b/;
 
 function weekdayInContext(text: string, match: RegExpMatchArray): boolean {
   if (!AMBIGUOUS_WEEKDAYS.includes(match[1])) return true;
   const [start, end] = spanOf(match);
-  return DAY_BEFORE_RE.test(text.slice(0, start)) || DAY_AFTER_RE.test(text.slice(end));
+  const after = text.slice(end);
+  return (
+    DAY_BEFORE_RE.test(text.slice(0, start)) ||
+    DAY_AFTER_RE.test(after) ||
+    (!text.slice(0, start).trim() && DAY_THEN_VERB_RE.test(after))
+  );
 }
 
 // "segunda, 23 de novembro" / "4 de dezembro, sexta": o dia da semana colado na data só a confirma.
@@ -605,7 +659,7 @@ function withWeekday(text: string, match: RegExpMatchArray, date: Date): Hit<Dat
 /** `weekday`: veio de um dia da semana, que pula uma semana se hoje já passou da hora. */
 function parseDay(text: string, now: Date): (Hit<Date> & { weekday?: boolean }) | null {
   const today = text.match(
-    /\b(?:ainda\s+|later\s+)?(?:hoje|hj|today)(?:\s+mesmo)?\b|\b(?:daqui\s+a\s+pouco|in\s+a\s+bit)\b/,
+    /\b(?:ainda\s+|later\s+)?(?<!\bfrom\s+)(?:hoje|hj|today|2day)(?:\s+mesmo)?\b|\b(?:daqui\s+a\s+pouco|in\s+a\s+bit)\b/,
   );
   if (today) return hit(today, startOfDay(now));
 
@@ -627,7 +681,7 @@ function parseDay(text: string, now: Date): (Hit<Date> & { weekday?: boolean }) 
   if (yesterday) return hit(yesterday, addDays(now, -1));
 
   const tonight = text.match(
-    /\bton(?:ight|ite)\b|\b(?:esta|essa|nesta|nessa)\s+(?:noite|manha|tarde)\b|\bthis\s+(?:morning|afternoon|evening)\b/,
+    /\bton(?:ight|ite)\b|\b2ni(?:gh)?te\b|\b(?:esta|essa|nesta|nessa)\s+(?:noite|manha|tarde)\b|\bthis\s+(?:morning|afternoon|evening)\b/,
   );
   if (tonight) return hit(tonight, startOfDay(now));
 
@@ -637,7 +691,10 @@ function parseDay(text: string, now: Date): (Hit<Date> & { weekday?: boolean }) 
       new RegExp(
         `\\b(?:daqui(?:\\s+a)?|em|in|dentro\\s+de|within)\\s+(${AMOUNT_RE})\\s*(dias?|days?|semanas?|weeks?|mes(?:es)?|months?|anos?|years?)\\b`,
       ),
-    ) ?? text.match(new RegExp(`\\b(${AMOUNT_RE})\\s+(days?|weeks?|months?)\\s+from\\s+now\\b`));
+    ) ??
+    text.match(
+      new RegExp(`\\b(${AMOUNT_RE})\\s+(days?|weeks?|months?)\\s+from\\s+(?:now|today)\\b`),
+    );
   if (relative) {
     const amount = amountOf(relative[1]);
     const unit = relative[2];
@@ -663,11 +720,11 @@ function parseDay(text: string, now: Date): (Hit<Date> & { weekday?: boolean }) 
   );
   if (weekend) return hit(weekend, nextWeekday(now, 6));
   const monthEnd = text.match(
-    /\b(?:(?:n?o|at\s+the|by)\s+)?(?:(?:fim|final)\s+d[oe]\s+mes|end\s+of\s+(?:the\s+)?month)\b/,
+    /\b(?:(?:n?o|at\s+the|by)\s+)?(?:(?:fim|final)\s+d[oe]\s+mes|end\s+of\s+(?:the\s+)?month|eom)\b/,
   );
   if (monthEnd) return hit(monthEnd, zonedAt(now.getFullYear(), now.getMonth() + 1, 0));
   const weekEnd = text.match(
-    /\b(?:(?:n?o|at\s+the|by)\s+)?(?:(?:fim|final)\s+da\s+semana|end\s+of\s+(?:the\s+)?week)\b/,
+    /\b(?:(?:n?o|at\s+the|by)\s+)?(?:(?:fim|final)\s+da\s+semana|end\s+of\s+(?:the\s+)?week|eow)\b/,
   );
   if (weekEnd) return hit(weekEnd, nextWeekday(now, 5));
   const monthStart = text.match(
@@ -812,7 +869,8 @@ function parseDay(text: string, now: Date): (Hit<Date> & { weekday?: boolean }) 
 
   // semana que vem · next week, sem dia da semana junto
   const nextWord = text.match(NEXT_RE);
-  const weekWord = text.match(/\b(semana|week)\b/);
+  const weekWord = text.match(/\b(semana|week|wk)\b/);
+
   if (nextWord && weekWord) return hit(nextWord, addDays(now, 7), [spanOf(weekWord)]);
 
   return null;
@@ -864,7 +922,8 @@ const to24 = ({ hour, meridiem }: Clock) =>
   meridiem === "pm" && hour < 12 ? hour + 12 : meridiem === "am" && hour === 12 ? 0 : hour;
 
 // Com cara de compromisso, "de 10 a 11" é horário; "jogo de 2 a 3" e "páginas de 15 a 20" não.
-const MEETING_RE = /\b(?:reuniao|meeting|call|aula|consulta|entrevista|plantao|turno|expediente)\b/;
+const MEETING_RE =
+  /\b(?:reuniao|meeting|call|aula|consulta|entrevista|plantao|turno|expediente|shift)\b/;
 
 const RANGE_RE = new RegExp(
   String.raw`(?<![/:.,])\b(?:(das|da|do|de|from|between|entre)\s+)?(${CLOCK})(\s+(?:(as|a|ate|to|until|till|e|and)\s+)?)(${CLOCK})(?![\d/:])`,
@@ -898,7 +957,13 @@ function parseRange(text: string, original: string): (ParsedDuration & { spans: 
     } else if (word === "e" || word === "and") {
       ok = prefix === "entre" || prefix === "between";
     } else if (!prefix) {
-      ok = a.marked && b.marked;
+      // "9 to 5 monday": seco, só com dia ou compromisso na frase — "pages 3 to 5" é contagem.
+      ok =
+        (a.marked && b.marked) ||
+        (["to", "as"].includes(word) &&
+          a.hour <= 12 &&
+          b.hour <= 12 &&
+          (MEETING_RE.test(text) || new RegExp(`\\b(?:${DAY_WORD_RE})\\b`).test(text)));
     } else {
       // Sem marca, "ate" e "de N a M" são contagem ("das 5 até 10", "páginas de 15 a 20").
       ok =
@@ -922,7 +987,11 @@ function parseRange(text: string, original: string): (ParsedDuration & { spans: 
       // "das 3 às 4" é de tarde (mesma regra do `applyMeridiem`, que aqui não vê o dia); "12-1" é 12h–13h.
       if (start >= 1 && start < 7) start += 12;
       if (end < start && end + 12 > start) end += 12;
+    } else if (!a.meridiem && !b.meridiem && b.hour < 12 && end < start && end + 12 > start) {
+      // "12:30–1:30" é relógio de 12h, não virada de meia-noite.
+      end += 12;
     }
+
     if (start > 24 || end > 24 || a.minute > 59 || b.minute > 59) continue;
 
     let minutes = end * 60 + b.minute - (start * 60 + a.minute);
@@ -940,9 +1009,11 @@ function parseRange(text: string, original: string): (ParsedDuration & { spans: 
 }
 
 // Palavra que só anuncia a duração ("call de 1h", "for 2 hours") e sai do título junto.
-const LASTS = String.raw`((?:de|por|durante|for|lasting|com\s+duracao\s+de)\s+)?`;
+const LASTS = String.raw`((?:de|por|durante|dura|for|lasting|lasts|com\s+duracao\s+de)\s+)?`;
 // "daqui a 2 horas"/"in 30 min" é hora relativa; "às 2 horas" é hora; "a cada 2 horas" é série.
-const NOT_DURATION = String.raw`(?<!(?:\b(?:daqui(?:\s+a)?|em|in|dentro|de|as|das|pelas|at|ate|every|cada|half|meia)|[:.,])\s*)`;
+const NOT_DURATION = String.raw`(?<!\b(?:da?qui(?:\s+a)?|em|in|dentro|de|as|das|pelas|at|ate|every|cada|half|meia)\s*)(?<![:.,])`;
+
+const NOT_FROM_NOW = String.raw`(?!\s+from\s+now\b)`;
 const HOUR_UNIT = String.raw`(h|hs|hrs?|horas?|hours?)`;
 const MINUTE_UNIT = String.raw`(?:min|mins|minutos?|minutes?)`;
 
@@ -970,7 +1041,7 @@ export function parseDuration(
     minutes > 0 ? { spans: [spanOf(match)], duration: formatDuration(minutes), start: null } : null;
 
   const half = text.match(
-    new RegExp(`${NOT_DURATION}\\b${LASTS}(?:meia\\s+hora|half\\s+an?\\s+hour)\\b`),
+    new RegExp(`${NOT_DURATION}\\b${LASTS}(?:meia\\s+hora|half\\s+an?\\s+hour)\\b${NOT_FROM_NOW}`),
   );
   if (half) return found(half, 30);
 
@@ -978,7 +1049,7 @@ export function parseDuration(
   const allHours = [
     ...text.matchAll(
       new RegExp(
-        `${NOT_DURATION}\\b${LASTS}(\\d{1,3}(?:[.,]\\d)?|an|${HOUR_WORD_RE})\\s*${HOUR_UNIT}(?![a-z])(?!\\s*[ap]\\.?m\\b|\\s+(?:da|de|pela)\\s+(?:manha|tarde|noite|madrugada)\\b)(?:\\s*(?:e|and)\\s+(meia|a\\s+half)\\b|\\s*(?:(?:e|and)\\s+)?(\\d{1,2}|${MINUTE_WORD_RE})\\s*(?:${MINUTE_UNIT}|m)?\\b)?`,
+        `${NOT_DURATION}\\b${LASTS}(\\d{1,3}(?:[.,]\\d)?|an|${HOUR_WORD_RE})\\s*${HOUR_UNIT}(?![a-z])(?!\\s*[ap]\\.?m\\b|\\s+(?:da|de|pela)\\s+(?:manha|tarde|noite|madrugada)\\b)(?:\\s*(?:e|and)\\s+(meia|a\\s+half)\\b|\\s*(?:(?:e|and)\\s+)?(\\d{1,2}|${MINUTE_WORD_RE})\\s*(?:${MINUTE_UNIT}|m)?\\b)?${NOT_FROM_NOW}`,
         "g",
       ),
     ),
@@ -990,7 +1061,9 @@ export function parseDuration(
     // Sem prefixo, "14h"/"9h30" é horário: só vira duração o que é por extenso ("duas horas"), o
     // que não pode ser hora de tarefa (1h–4h, 24h+) ou a frase que já tem outra hora ("2h workshop
     // thursday 1pm"). "Nh" (letra) ainda precisa estar no fim: "reunião sala 3h andar" não é 3 horas.
-    const spelled = !/^\d/.test(rawAmount);
+    // "vinte e duas horas" é hora; "vinte e quatro horas", duração.
+    const spelled = !/^\d/.test(rawAmount) && (amount < 13 || amount > 23);
+
     const implausible = (amount >= 1 && amount <= 4) || amount >= 24;
     const atEnd =
       !/^hs?$/.test(unit) || /^[\s,.;!?]*$/.test(text.slice((hours.index ?? 0) + whole.length));
@@ -1005,7 +1078,7 @@ export function parseDuration(
   // 10 min · 30 minutos · quarenta minutos · 90 minutes
   const minutes = text.match(
     new RegExp(
-      `${NOT_DURATION}(?<!\\b(?:horas?|hours?)\\s+(?:e|and)\\s+)\\b${LASTS}(\\d{1,3}|${MINUTE_WORD_RE})\\s*${MINUTE_UNIT}\\b`,
+      `${NOT_DURATION}(?<!\\b(?:horas?|hours?)\\s+(?:e|and)\\s+)\\b${LASTS}(\\d{1,3}|${MINUTE_WORD_RE})\\s*${MINUTE_UNIT}\\b${NOT_FROM_NOW}`,
     ),
   );
   if (minutes) {
@@ -1110,14 +1183,15 @@ const RECURRENCES: [RegExp, (match: RegExpMatchArray, now: Date) => Exclude<Repe
   ],
   [
     new RegExp(
-      `\\b(?:${EVERY}\\s+(?:[ao]s\\s+)?|every\\s+)${WEEKDAY_ITEM}(?:${LIST_SEP}${WEEKDAY_ITEM})*`,
+      `\\b(?:${EVERY}\\s+(?:[ao]s\\s+)?|every\\s+|each\\s+)${WEEKDAY_ITEM}(?:${LIST_SEP}${WEEKDAY_ITEM})*`,
     ),
     (match) => weekly(weekdaysIn(match[0])),
   ],
-  // às segundas · aos sábados · on Mondays · segundas e quartas · seg qua sex
+  // às segundas · aos sábados · on Mondays · segundas e quartas · seg qua sex · Fridays 4pm
+  // ("Tuesdays with Morrie" é título: o plural solto só vale antes de hora ou no fim)
   [
     new RegExp(
-      `\\b(?:(?:[ao]s|aos|nas|nos|on)\\s+${PLURAL_WEEKDAY}|${WEEKDAY_ITEM}(?=${LIST_SEP}${WEEKDAY_ITEM}))(?:${LIST_SEP}${WEEKDAY_ITEM})*`,
+      `\\b(?:(?:[ao]s|aos|nas|nos|on)\\s+${PLURAL_WEEKDAY}|${WEEKDAY_ITEM}(?=${LIST_SEP}${WEEKDAY_ITEM})|${PLURAL_WEEKDAY}(?=\\s*$|\\s*[,.;]|\\s+(?:at|as|@|\\d)))(?:${LIST_SEP}${WEEKDAY_ITEM})*`,
     ),
     (match) => weekly(weekdaysIn(match[0])),
   ],
@@ -1154,7 +1228,7 @@ const RECURRENCES: [RegExp, (match: RegExpMatchArray, now: Date) => Exclude<Repe
   ],
   [MONTHLY_RE, () => "Monthly"],
   [
-    /\b(?:tod[ao]s?\s+(?:os\s+)?anos?|anualmente|every\s+year|(?:a\s+)?cada\s+ano|uma\s+vez\s+por\s+ano|once\s+a\s+year)\b/,
+    /\b(?:tod[ao]s?\s+(?:os\s+)?anos?|anualmente|annually|every\s+year|(?:a\s+)?cada\s+ano|uma\s+vez\s+por\s+ano|once\s+a\s+year)\b/,
     () => "Yearly",
   ],
 ];
@@ -1167,6 +1241,18 @@ const ADVERB_RE =
 // todas as manhãs · toda noite · every morning: diária com a hora do período
 const DAILY_PERIOD_RE =
   /\b(?:(?:tod[ao]s?|td[ao]?s?)\s+(?:as\s+)?|every\s+|each\s+)(manhas?|tardes?|noites?|madrugadas?|morning|afternoon|evening|night)\b/;
+
+const EXCEPT_RE = new RegExp(
+  `^\\s+(?:exceto|menos|except|but\\s+not)\\s+(?:(?:[ao]s?|on)\\s+)?${WEEKDAY_ITEM}(?:${LIST_SEP}${WEEKDAY_ITEM})*`,
+);
+const WEEKLY_PERIOD_RE =
+  /^\s+(?:(?:a|de|da|in\s+the)\s+)?(manhas?|tardes?|noites?|madrugadas?|morning|afternoon|evening|night)\b/;
+
+function periodWordHour(word: string): number {
+  if (/^(?:manha|morning)/.test(word)) return PERIOD_HOURS.morning;
+  if (/^(?:tarde|afternoon)/.test(word)) return PERIOD_HOURS.afternoon;
+  return /^madrugada/.test(word) ? PERIOD_HOURS.dawn : PERIOD_HOURS.evening;
+}
 
 /** Recorrência no texto já normalizado; sem gatilho ("toda", "every", "diariamente"…) é `null`.
  * `hour` vem de "todas as manhãs": a série diz a hora quando o texto não diz. `original` (o input
@@ -1183,17 +1269,7 @@ export function parseRepeat(
   }
 
   const daily = text.match(DAILY_PERIOD_RE);
-  if (daily) {
-    const word = daily[1];
-    const hour = /^(?:manha|morning)/.test(word)
-      ? PERIOD_HOURS.morning
-      : /^(?:tarde|afternoon)/.test(word)
-        ? PERIOD_HOURS.afternoon
-        : /^madrugada/.test(word)
-          ? PERIOD_HOURS.dawn
-          : PERIOD_HOURS.evening;
-    return { ...hit(daily, "Daily"), hour };
-  }
+  if (daily) return { ...hit(daily, "Daily"), hour: periodWordHour(daily[1]) };
 
   const adverb = text.match(ADVERB_RE);
   if (adverb) {
@@ -1213,7 +1289,7 @@ export function parseRepeat(
   for (const [re, toRepeat] of RECURRENCES) {
     const match = text.match(re);
     if (!match) continue;
-    const value = toRepeat(match, now);
+    let value = toRepeat(match, now);
     const [start, end] = spanOf(match);
     const extra =
       value === "Monthly"
@@ -1221,7 +1297,21 @@ export function parseRepeat(
             .map(spanOf)
             .filter(([s, e]) => e <= start || s >= end)
         : [];
-    return hit(match, value, extra);
+    if (typeof value !== "object") return hit(match, value, extra);
+
+    // "dias úteis exceto quarta" · "every weekday except wed": a exceção sai do conjunto.
+    let tail = end;
+    const except = text.slice(tail).match(EXCEPT_RE);
+    if (except) {
+      const skip = weekdaysIn(except[0]).map((i) => weekDays[i]);
+      value = { Weekly: value.Weekly.filter((day) => !skip.includes(day)) };
+      tail += except[0].length;
+    }
+    // "every thursday night": o período colado na série é a hora dela, como em "toda noite".
+    const period = text.slice(tail).match(WEEKLY_PERIOD_RE);
+    if (period) extra.push([tail, tail + period[0].length]);
+    if (tail > end) extra.push([end, tail]);
+    return { ...hit(match, value, extra), hour: period ? periodWordHour(period[1]) : undefined };
   }
   return null;
 }
@@ -1265,13 +1355,13 @@ export interface ParsedTask {
 }
 
 /** Tira os spans do texto, do fim pro começo — cortar de frente invalidaria os índices seguintes. */
-const ORPHAN_PUNCT = /[,;.!?]/;
+const ORPHAN_PUNCT = /[,;:.!?]/;
 
 // Preposição que só existia pra apontar pro trecho recortado ("reunião NO meet…"). Sem o trecho,
 // ela aponta pro nada — perde o referente no fim ou no meio da frase, não importa o que vem depois.
 // Vale pro conector do tempo também: "até [sexta]", "essa [sexta]", "consulta dia [23/11]", "on [monday]".
 const ORPHAN_PREP =
-  /(?:^|\s)(no|na|nos|nas|em|pelo|pela|pelos|pelas|via|pro|pra|com|de|do|da|ate|até|essa|esse|esta|este|nesta|neste|nessa|nesse|dia|ao|à|a|o|the|on|by|this|at|in|until|before|antes)$/i;
+  /(?:^|\s)(no|na|nos|nas|em|pelo|pela|pelos|pelas|via|pro|pra|com|de|do|da|ate|até|essa|esse|esta|este|nesta|neste|nessa|nesse|dia|ao|à|a|o|the|on|by|this|at|in|until|before|antes|due)$/i;
 
 /**
  * Reconcilia só o que ficou colado nas duas pontas de UM corte — nunca varre o título inteiro.
@@ -1292,7 +1382,7 @@ function joinAcrossCut(left: string, right: string, isLast: boolean): string {
   }
 
   // "[meia hora] de caminhada": sem nada antes, o "de" ligava o corte ao resto
-  if (!leftTrimmed && /^de\s/i.test(rightTrimmed))
+  if (!leftTrimmed && /^(?:de|of)\s/i.test(rightTrimmed))
     return joinAcrossCut("", rightTrimmed.slice(3), isLast);
 
   // parenteses/colchetes que ficaram vazios na fronteira do corte
@@ -1354,7 +1444,8 @@ const mask = (text: string, spans: Span[]) =>
 // próprio ("Sessão da Tarde", "Rua 7 de Setembro", "Dom Casmurro", "O Quinze"). Vale igual pros
 // "Morning"/"Tonight"/"Tomorrow" e números por extenso do inglês ("Good Morning America").
 const CAPITALIZED_NAME_WORDS = new Set([
-  ...["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado"],
+  ...["domingo", "segunda", "terca", "quarta", "quinta", "sexta", "sabado", "domingos"],
+
   ...["dom", "seg", "ter", "qua", "qui", "sex", "sab"],
   ...["janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto"],
   ...["setembro", "outubro", "novembro", "dezembro"],
@@ -1378,7 +1469,7 @@ const CAPITALIZED_NAME_WORDS = new Set([
 const EN_DATE_WORD = new RegExp(`^(?:${WEEKDAY_RE}|${MONTH_RE})$`);
 // "na Sexta", "until Monday": com a preposição na frente é dia mesmo.
 const BEFORE_DAY_WORD =
-  /^(?:na|no|ate|essa|esta|nesta|neste|nessa|proxima|proximo|toda|todo|on|by|this|next|every|until)$/;
+  /^(?:na|no|ate|essa|esta|nesta|neste|nessa|proxima|proximo|toda|todo|on|by|this|next|every|each|until)$/;
 
 const PT_FUNCTION_WORDS = new Set(["na", "no", "da", "do", "pra", "pro", "com", "um", "uma"]);
 
@@ -1392,12 +1483,30 @@ function properNouns(input: string): Span[] {
       capital: /^\p{Lu}/u.test(match[0]),
     };
   });
-  const spans = [...input.matchAll(/\bfriday the 13th\b|\bcaf[eé] da manh[aã](?!\p{L})/giu)].map(
-    spanOf,
-  );
+  // Endereço com cara de data ou hora: "rua 7 de Setembro", "1600 Pennsylvania Ave".
+  const spans = [
+    ...input.matchAll(
+      /\bfriday the 13th\b|\bcaf[eé] da manh[aã](?!\p{L})|\b(?:rua|r\.|av\.?|avenida|pra[cç]a|travessa|alameda|largo|estrada|rodovia)\s+\d{1,2}\s+de\s+\p{L}+/giu,
+    ),
+    ...input.matchAll(
+      /\b\d{1,5}\s+(?:\p{Lu}\p{L}*\s+)+(?:Ave|Avenue|St|Street|Rd|Road|Blvd|Boulevard|Lane|Ln|Dr|Drive|Way)\b/gu,
+    ),
+  ].map(spanOf);
   // Título Em Caixa Alta Ou Tudo Maiúsculo: a maiúscula não diz mais nada.
   if (words.every(({ key, capital }) => capital || !/^[a-z]/.test(key))) return spans;
   words.forEach(({ key, span, capital }, i) => {
+    const after = input.slice(span[1]);
+    // "watch Wednesday season 2", "read Saturday by Ian McEwan", "na Quinta da Boa Vista",
+    // "Friday's party": o dia com maiúscula que abre um nome é título, mesmo depois de "na".
+    if (
+      capital &&
+      i > 0 &&
+      key in WEEKDAYS &&
+      /^(?:['’]s\b|\s+(?:season|episode|part|by\s+\p{Lu}|d[aeo]s?\s+\p{Lu}))/u.test(after)
+    ) {
+      spans.push(span);
+      return;
+    }
     if (!capital || i === 0 || BEFORE_DAY_WORD.test(words[i - 1].key)) return;
     const glued = (j: number) => {
       const other = words[j];
@@ -1406,16 +1515,23 @@ function properNouns(input: string): Span[] {
       return /^[\s-]+$/.test(input.slice(left[1], right[0]));
     };
     // "Robinson Crusoe and Friday": dia da semana ligado por "and" a outro nome é nome.
-    const joined = /^(?:and|e)$/.test(words[i - 1].key) && words[i - 2]?.capital && i - 2 > 0;
+    const joined =
+      /^(?:and|e)$/.test(words[i - 1].key) &&
+      words[i - 2]?.capital &&
+      !EN_DATE_WORD.test(words[i - 2].key) &&
+      i - 2 > 0;
+
     // "assistir Wednesday na Netflix": dia em inglês numa frase em pt, solto, é título.
     const englishInPt =
       key in WEEKDAYS &&
       key.length > 5 &&
       words.some((word) => PT_FUNCTION_WORDS.has(word.key)) &&
       !DAY_AFTER_RE.test(normalize(input.slice(span[1])));
+    // "Taylor Swift Dec 12": com o número colado é data, mesmo grudado num nome.
+    const dated = /^\s+\d/.test(after);
     if (
       CAPITALIZED_NAME_WORDS.has(key) ||
-      (EN_DATE_WORD.test(key) && (glued(i - 1) || glued(i + 1) || joined || englishInPt))
+      (EN_DATE_WORD.test(key) && !dated && (glued(i - 1) || glued(i + 1) || joined || englishInPt))
     ) {
       spans.push(span);
     }
@@ -1423,13 +1539,46 @@ function properNouns(input: string): Span[] {
   return spans;
 }
 
-export function parseTaskText(input: string, now: Date = zoned()): ParsedTask {
+const ORDINAL_WORD = String.raw`(?:primeir|segund|terceir|quart|penultim|ultim)[ao]s?|first|second|third|fourth|last|1st|2nd|3rd|4th`;
+const COUNT = String.raw`(?:\d{1,3}|${HOUR_WORD_RE}|other)`;
+const UNIT = String.raw`(?:h|hrs?|horas?|hours?|min|minutos?|minutes?|dias?|days?|semanas?|weeks?|mes|meses|months?|anos?|years?)`;
+// Séries que o `Repeat` não guarda: de 8 em 8 horas · a cada 15 dias · quinzenalmente · dia sim dia
+// não · 2x por semana · toda última sexta do mês · first monday of every month. Ficam no título, sem
+// data nem série — leitura confiante aqui seria dado errado (a fase 4 marca como dúvida).
+const UNSUPPORTED_REPEAT_RE = new RegExp(
+  [
+    String.raw`\b(?:de|a\s+cada)\s+\d{1,3}\s+em\s+\d{1,3}\s+${UNIT}\b`,
+    String.raw`\b(?:a\s+)?cada\s+${COUNT}\s+${UNIT}\b|\bevery\s+${COUNT}\s+${UNIT}\b|\bevery\s+other\s+(?:${WEEKDAY_RE})\b`,
+    String.raw`\b(?:quinzenal(?:mente)?|bi\s*(?:weekly|monthly)|fortnightly|(?:bi|tri)mestralmente|semestralmente)\b`,
+    String.raw`\bdia\s+sim,?\s+dia\s+nao\b|\bdias\s+alternados\b|\b(?:nos\s+)?dias\s+(?:pares|impares)\b|\b(?:on\s+)?(?:even|odd)\s+days\b`,
+    String.raw`\b(?:\d|${HOUR_WORD_RE})\s*(?:x|vezes)\s+(?:por|ao|na)\s+(?:dia|semana|mes|ano)\b|\b(?:twice|\w+\s+times|\d\s*x)\s+(?:a|per)\s+(?:day|week|month|year)\b`,
+    String.raw`\b(?:${ORDINAL_WORD})\s+(?:${WEEKDAY_RE}|semana|week|dia\s+util|weekday)(?:\s*feira)?\s+(?:d[oe]|of)\s+(?:cada\s+|every\s+|each\s+|the\s+)?(?:mes|month)\b`,
+    String.raw`\bsemanas\s+alternadas\b|\balternate\s+weeks\b|\b(?:exceto|menos|fora|except|but)\s+(?:(?:os|no|nos|on|o)\s+)?(?:feriados?|holidays?|dia\s+\d|the\s+\d)`,
+  ].join("|"),
+);
+// Série com fim (todo dia por 7 dias · every monday until december): o `Repeat` não tem fim.
+const BOUNDED_REPEAT_RE = new RegExp(
+  `\\b(?:por|durante|for)\\s+${COUNT}\\s+(?:dias|semanas|meses|days|weeks|months)\\b|\\b(?:ate|until|till)\\s+(?:${MONTH_RE})\\b`,
+);
+
+/** `keep`: trechos que ficam no título e fora da vista dos detectores. */
+export function parseTaskText(input: string, now: Date = zoned(), keep: Span[] = []): ParsedTask {
   const normalized = normalize(input);
   const links = parseLinks(input);
+  const unsupported = {
+    text: cut(input, links.spans),
+    date: null,
+    hasTime: false,
+    hasDay: false,
+    duration: null,
+    links: links.urls,
+    repeat: "Off",
+  } satisfies ParsedTask;
+  if (UNSUPPORTED_REPEAT_RE.test(normalized)) return unsupported;
 
   // "youtu.be/15h30" não pode virar horário nem duração; "Sessão da Tarde" e "Dom Casmurro" também não.
-  const forDuration = mask(normalized, [...links.spans, ...properNouns(input)]);
-  const duration = parseDuration(forDuration, input);
+  const forDuration = mask(normalized, [...links.spans, ...properNouns(input), ...keep]);
+  let duration = parseDuration(forDuration, input);
 
   // A duração também sai da vista do parseWhen: o "1h" de "call de 1h hoje às 16h" casa como hora
   // e, por ter o span maior, ganhava do horário de verdade.
@@ -1440,9 +1589,22 @@ export function parseTaskText(input: string, now: Date = zoned()): ParsedTask {
   // começa 15:00, e o parseWhen só põe o dia (ou rola pra amanhã se já passou).
   const repeat = parseRepeat(forWhen, now, input);
   const forDay = mask(forWhen, repeat?.spans ?? []);
+  if (repeat && BOUNDED_REPEAT_RE.test(forDay)) return unsupported;
+
   let when = parseWhen(forDay, now, repeat !== null, duration?.start ?? null);
   if (repeat?.hour !== undefined && !when?.hasTime) {
     when = parseWhen(forDay, now, true, { hour: repeat.hour, minute: 0 });
+  }
+  // "practice 7 minute workout", "The 4-Hour Workweek": sem data nem hora, o adjetivo "N minute X" é
+  // nome; "30 minute call tomorrow at 9am" continua duração.
+  const [durationStart, durationEnd] = duration?.spans[0] ?? [0, 0];
+  if (
+    !when &&
+    !repeat &&
+    /^\d{1,3}\s+(?:minute|hour)$/.test(normalized.slice(durationStart, durationEnd)) &&
+    /^\s+[a-z]/.test(normalized.slice(durationEnd))
+  ) {
+    duration = null;
   }
 
   const spans = mergeSpans([
@@ -1466,9 +1628,21 @@ export function parseTaskText(input: string, now: Date = zoned()): ParsedTask {
       ).test(forWhen.slice(start, end)),
     );
 
+  const text = cut(input, spans);
+  // "seg 8h daily": o advérbio que come o título inteiro é o nome da reunião (a "daily").
+  const [repeatStart, repeatEnd] = repeat?.spans[0] ?? [0, 0];
+  if (
+    !text &&
+    repeat &&
+    /^(?:daily|weekly|monthly)$/.test(normalized.slice(repeatStart, repeatEnd))
+  ) {
+    return parseTaskText(input, now, [...keep, ...repeat.spans]);
+  }
+
   return {
-    text: cut(input, spans),
+    text,
     date,
+
     hasTime,
     hasDay: Boolean(when?.hasDay) || citesWeekday,
     duration: duration?.duration ?? null,

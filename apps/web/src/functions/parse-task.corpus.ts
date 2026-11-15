@@ -2,6 +2,8 @@ import enDates from "./parse-task.corpus/en-dates";
 import enMisc from "./parse-task.corpus/en-misc";
 import enRepeat from "./parse-task.corpus/en-repeat";
 import enTimes from "./parse-task.corpus/en-times";
+import holdoutEn from "./parse-task.corpus/holdout-en";
+import holdoutPt from "./parse-task.corpus/holdout-pt";
 import type { CorpusEntry } from "./parse-task.corpus/kit";
 import mix from "./parse-task.corpus/mix";
 import ptDates from "./parse-task.corpus/pt-dates";
@@ -20,4 +22,5 @@ export const corpus: CorpusEntry[] = [
   ...enRepeat,
   ...enMisc,
   ...mix,
+  ...[...holdoutPt, ...holdoutEn].map((entry) => ({ ...entry, holdout: true })),
 ];

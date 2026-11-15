@@ -678,6 +678,26 @@ describe("recorrência no texto", () => {
     expect(parseTaskText(input, WED).repeat).toEqual(repeat);
     expect(parseRepeat(normalize(input), WED)?.value).toEqual(repeat);
   });
+
+  // O corpus não pontua outOfScope: aqui a garantia de que série que o `Repeat` não guarda não vira
+  // dado confiante e errado — fica tudo no título.
+  it.each([
+    "remédio a cada 6 horas",
+    "remédio de 8 em 8 horas",
+    "toda segunda semana do mês plantão",
+    "first monday of every month board meeting",
+    "last friday of the month happy hour",
+    "reunião toda segunda e quinta de semanas alternadas",
+    "meds every day for 7 days",
+    "toda terça exceto dia 10",
+  ])("%s fica intocada", (input) => {
+    expect(parseTaskText(input, WED)).toMatchObject({
+      text: input,
+      date: null,
+      duration: null,
+      repeat: "Off",
+    });
+  });
 });
 
 describe("hasDay", () => {

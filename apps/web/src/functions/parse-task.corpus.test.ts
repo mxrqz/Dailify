@@ -47,7 +47,9 @@ it("catraca: falha conhecida que passou sai da lista", () => {
 afterAll(() => {
   const rows = new Map<string, { pass: number; total: number }>();
   for (const { entry, failed } of scored) {
-    for (const key of [`${entry.tags.category} ${entry.tags.lang}`, "TOTAL"]) {
+    const keys = [`${entry.tags.category} ${entry.tags.lang}`, "TOTAL"];
+    if (entry.holdout) keys.push(`HOLDOUT ${entry.tags.lang}`, "HOLDOUT");
+    for (const key of keys) {
       const row = rows.get(key) ?? { pass: 0, total: 0 };
       row.total++;
       if (!failed.length) row.pass++;

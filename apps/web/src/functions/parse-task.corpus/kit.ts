@@ -46,6 +46,8 @@ export interface CorpusEntry {
   tags: { category: Category; lang: Lang };
   outOfScope?: OutOfScope;
   note?: string;
+  /** Do holdout cego (`holdout-*.ts`): escrito sem olhar o parser, pontuado à parte. */
+  holdout?: boolean;
 }
 
 type More = Partial<Pick<Expect, "duration" | "repeat" | "links">> &
