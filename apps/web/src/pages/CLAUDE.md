@@ -3,6 +3,10 @@
 Routes are declared in `src/App.tsx` (react-router). Provider nesting (from `main.tsx`):
 `ClerkProvider → HelmetProvider → DailifyProvider → Router → ThemeProvider`.
 
+Every page except `home.tsx` is `React.lazy` (one chunk per route; the landing and its Mew/scenes
+stay out of the dashboard entry). A new page gets a `lazy()` import too, unless it's the PWA's
+`start_url`.
+
 | Path            | Page                   | Notes                                                                  |
 | --------------- | ---------------------- | ---------------------------------------------------------------------- |
 | `/`             | `landingPage.tsx`      | public marketing page                                                  |
