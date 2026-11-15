@@ -1,8 +1,10 @@
 import {
+  quotedSpans,
   weekDays,
   type ParsedTask,
   type ParsedTaskWire,
   type Repeat,
+  type Span,
   type TaskInput,
 } from "@dailify/shared";
 
@@ -83,6 +85,44 @@ export const fromWire = (wire: ParsedTaskWire): ParsedTask => ({
   unsure: [],
   fields: { day: [], time: [], duration: [], repeat: [], links: [] },
 });
+
+export interface Segment {
+  text: string;
+  /** Deu um campo (dia, hora, duração, série, link). */
+  field: boolean;
+  /** Disparou um motivo de dúvida. */
+  unsure: boolean;
+}
+
+/**
+ * O input em pedaços pro espelho do composer, um a cada troca de marca. Trecho ignorado (chip
+ * tirado) ou entre aspas nunca marca — a dúvida é lida no texto cru e pode cair neles.
+ */
+export function markSegments(
+  text: string,
+  { fields, unsure }: Pick<ParsedTask, "fields" | "unsure">,
+  ignore: Span[],
+): Segment[] {
+  const skip = [...ignore, ...quotedSpans(text)];
+  const read = Object.values(fields).flat();
+  // A pergunta de "o que tenho" dispara em "o que t": a marca vai até o fim da palavra.
+  const doubt = unsure.flatMap(({ span }): Span[] =>
+    span
+      ? [[span[0], span[1] + (text.slice(span[1]).match(/^[\p{L}\p{N}]*/u)?.[0].length ?? 0)]]
+      : [],
+  );
+  const at = (spans: Span[], i: number) => spans.some(([s, e]) => i >= s && i < e);
+  const out: Segment[] = [];
+  text.split("").forEach((char, i) => {
+    const kept = at(skip, i);
+    const field = !kept && at(read, i);
+    const flagged = !kept && at(doubt, i);
+    const last = out.at(-1);
+    if (last && last.field === field && last.unsure === flagged) last.text += char;
+    else out.push({ text: char, field, unsure: flagged });
+  });
+  return out;
+}
 
 /** O que foi mexido nos chips do composer. `null` = tirado (sem dia, sem hora, "Off", sem link). */
 export type Edits = Partial<{

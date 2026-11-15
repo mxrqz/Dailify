@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 
-import { composeTaskInput, fromWire, onDay, withEdits } from "./compose-input";
-import { parseTaskText } from "@dailify/shared";
+import { composeTaskInput, fromWire, markSegments, onDay, withEdits } from "./compose-input";
+import { parseTaskText, type ParsedTask } from "@dailify/shared";
 import { zonedAt } from "./zone";
 
 // Quarta-feira, 21 de outubro de 2026, 10:00.
@@ -154,5 +154,38 @@ describe("withEdits", () => {
       duration: null,
       repeat: "Off",
     });
+  });
+});
+
+describe("markSegments", () => {
+  const parse = (text: string) => parseTaskText(text, NOW);
+  const marked = (text: string) =>
+    markSegments(text, parse(text), []).filter((s) => s.field || s.unsure);
+  const doubt = (start: number, end: number): Pick<ParsedTask, "fields" | "unsure"> => ({
+    fields: { day: [], time: [], duration: [], repeat: [], links: [] },
+    unsure: [{ code: "ambiguous-number", span: [start, end] }],
+  });
+
+  it("corta o input nos campos lidos, e a dúvida vai até o fim da palavra", () => {
+    expect(markSegments("pagar luz amanhã às 15h", parse("pagar luz amanhã às 15h"), [])).toEqual([
+      { text: "pagar luz ", field: false, unsure: false },
+      { text: "amanhã", field: true, unsure: false },
+      { text: " ", field: false, unsure: false },
+      { text: "às 15h", field: true, unsure: false },
+    ]);
+    expect(marked("o que tenho amanhã?")).toEqual([
+      { text: "o que tenho", field: false, unsure: true },
+      { text: "amanhã", field: true, unsure: false },
+    ]);
+    expect(marked("ligar 1430")).toEqual([{ text: "1430", field: false, unsure: true }]);
+  });
+
+  it("trecho ignorado e entre aspas não marcam, nem com dúvida em cima", () => {
+    expect(markSegments("ligar 1430", doubt(6, 10), [[6, 10]])).toEqual([
+      { text: "ligar 1430", field: false, unsure: false },
+    ]);
+    expect(markSegments('ligar "14"', doubt(7, 9), [])).toEqual([
+      { text: 'ligar "14"', field: false, unsure: false },
+    ]);
   });
 });

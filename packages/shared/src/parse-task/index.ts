@@ -54,13 +54,15 @@ export interface ParsedTask extends Omit<ParsedTaskWire, "date"> {
 // Entre aspas duplas é literal: nunca parseado, e as aspas saem do título.
 const QUOTED_RE = /"([^"\n]+)"|“([^”\n]+)”/g;
 
+export const quotedSpans = (input: string): Span[] => [...input.matchAll(QUOTED_RE)].map(spanOf);
+
 /** `ignore`: trechos que ficam no título como texto e fora da vista dos detectores. */
 export function parseTaskText(
   input: string,
   now: TZDate,
   { ignore = [] }: { ignore?: Span[] } = {},
 ): ParsedTask {
-  const keep = [...ignore, ...[...input.matchAll(QUOTED_RE)].map(spanOf)];
+  const keep = [...ignore, ...quotedSpans(input)];
   const normalized = normalize(input);
   const open = mask(input, keep);
   const links = parseLinks(open);

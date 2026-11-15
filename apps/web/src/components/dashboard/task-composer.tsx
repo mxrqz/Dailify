@@ -1,4 +1,12 @@
-import { FormEvent, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import {
+  FormEvent,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type ReactNode,
+  type SyntheticEvent,
+} from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -33,6 +41,7 @@ import {
   DEFAULT_HOUR,
   composeTaskInput,
   fromWire,
+  markSegments,
   onDay,
   withEdits,
   type Edits,
@@ -232,6 +241,15 @@ export function TaskComposer({
     () => (drafts.length === 1 ? onDay(drafts[0], day) : local),
     [drafts, local, day],
   );
+  // Rascunho da Mew não tem trechos no texto: sem marcas.
+  const marks = useMemo(
+    () => (drafts.length ? [] : markSegments(input, local, ignore)),
+    [drafts, input, local, ignore],
+  );
+  const mirror = useRef<HTMLSpanElement>(null);
+  // Texto longo rola dentro do input; o espelho anda junto, direto no DOM como a onda.
+  const follow = (e: SyntheticEvent<HTMLInputElement>) =>
+    mirror.current?.style.setProperty("translate", `${-e.currentTarget.scrollLeft}px`);
   const parsed = useMemo(() => withEdits(read, edits, zoned()), [read, edits]);
   const task = useMemo(() => composeTaskInput(parsed, zoned()), [parsed]);
   const voice = useVoiceCreate(onCreated);
@@ -392,32 +410,65 @@ export function TaskComposer({
         <Label htmlFor="composer-text" className="sr-only">
           {copy.composer.text}
         </Label>
-        {/* text-base: abaixo de 16px o iOS dá zoom na página ao focar o campo. */}
-        <input
-          id="composer-text"
-          type="text"
-          value={input}
-          onChange={(e) => {
-            const next = e.target.value;
-            setIgnore((current) => remapSpans(current, input, next));
-            setInput(next);
-            mew.reset();
-          }}
-          onKeyDown={(e) => {
-            if (e.key !== "Enter" || !e.shiftKey) return;
-            e.preventDefault();
-            submit(true);
-          }}
-          maxLength={TASK_LIMITS.titleMax}
-          // Gravando, o campo vira o aviso: a fala vai direto pro servidor, não pra este texto.
-          readOnly={voice.state !== "idle" || mew.pending}
-          placeholder={listening ? copy.voice.listening : copy.composer.textPlaceholder}
-          autoComplete="off"
-          className={cn(
-            "min-w-0 flex-1 bg-transparent text-foreground placeholder:text-muted-foreground outline-none",
-            large ? "text-2xl font-medium" : "text-base",
-          )}
-        />
+        {/* Espelho atrás do input, com a mesma fonte: o texto dele é transparente e só os sublinhados
+            aparecem. Caret, seleção, IME e autofill continuam sendo do input de verdade. */}
+        <div className="relative min-w-0 flex-1">
+          <div
+            aria-hidden="true"
+            className={cn(
+              "pointer-events-none absolute inset-0 overflow-hidden whitespace-pre text-transparent",
+              large ? "text-2xl font-medium" : "text-base",
+            )}
+          >
+            <span ref={mirror} className="inline-block">
+              {marks.map(({ text, field, unsure }, i) =>
+                field || unsure ? (
+                  <mark
+                    key={i}
+                    className={cn(
+                      "bg-transparent text-transparent underline underline-offset-3",
+                      unsure
+                        ? "decoration-ink-tertiary decoration-dotted decoration-2"
+                        : "decoration-brand-text",
+                    )}
+                  >
+                    {text}
+                  </mark>
+                ) : (
+                  text
+                ),
+              )}
+            </span>
+          </div>
+          {/* text-base: abaixo de 16px o iOS dá zoom na página ao focar o campo. */}
+          <input
+            id="composer-text"
+            type="text"
+            value={input}
+            onChange={(e) => {
+              const next = e.target.value;
+              setIgnore((current) => remapSpans(current, input, next));
+              setInput(next);
+              mew.reset();
+            }}
+            onKeyDown={(e) => {
+              if (e.key !== "Enter" || !e.shiftKey) return;
+              e.preventDefault();
+              submit(true);
+            }}
+            onScroll={follow}
+            onSelect={follow}
+            maxLength={TASK_LIMITS.titleMax}
+            // Gravando, o campo vira o aviso: a fala vai direto pro servidor, não pra este texto.
+            readOnly={voice.state !== "idle" || mew.pending}
+            placeholder={listening ? copy.voice.listening : copy.composer.textPlaceholder}
+            autoComplete="off"
+            className={cn(
+              "relative block w-full bg-transparent text-foreground placeholder:text-muted-foreground outline-none",
+              large ? "text-2xl font-medium" : "text-base",
+            )}
+          />
+        </div>
         {listening && (
           <>
             <VoiceWave analyser={voice.analyser} />

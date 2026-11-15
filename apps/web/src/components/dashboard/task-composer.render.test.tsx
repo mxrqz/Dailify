@@ -205,6 +205,23 @@ describe("<TaskComposer> Melhorar com a Mew", () => {
   });
 });
 
+describe("<TaskComposer> marcas no texto", () => {
+  // O espelho é aria-hidden: não há papel acessível, então vai pelo elemento.
+  const marks = () => [...document.querySelectorAll("mark")].map((mark) => mark.textContent);
+
+  it("sublinha o que foi lido, acompanha a digitação, e o trecho de chip tirado não marca", async () => {
+    const { user } = setup();
+    await user.type(screen.getByRole("textbox"), "pagar luz amanhã");
+    expect(marks()).toEqual(["amanhã"]);
+
+    await user.type(screen.getByRole("textbox"), " às 15h");
+    expect(marks()).toEqual(["amanhã", "às 15h"]);
+
+    await user.click(screen.getByRole("button", { name: copy.composer.removeDay }));
+    expect(marks()).toEqual(["às 15h"]);
+  });
+});
+
 describe("<TaskComposer> chips", () => {
   const submitted = (onSubmit: ReturnType<typeof vi.fn>) => onSubmit.mock.calls[0][0].parsed;
 
