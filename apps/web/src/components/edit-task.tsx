@@ -29,6 +29,7 @@ import { copy } from "@/components/dashboard/copy";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
 import { editTaskInput } from "@/functions/edit-input";
+import { enqueue } from "@/functions/offline";
 import { removeUndated, upsertUndated } from "@/functions/undated";
 import { zoned } from "@/functions/zone";
 
@@ -90,7 +91,7 @@ export function EditTaskContent({
   onClose: () => void;
 }) {
   const { tasks, setTasks, undatedTasks, setUndatedTasks, loadedMonths } = useDailify();
-  const { getToken } = useAuth();
+  const { getToken, userId } = useAuth();
   const { user } = useUser();
   const navigate = useNavigate();
   const formId = useId();
@@ -135,25 +136,20 @@ export function EditTaskContent({
 
     setLoading(true);
 
-    const token = await getToken();
-    if (!token) {
-      toast.error(copy.form.authError);
-      setLoading(false);
-      return;
-    }
-
     const input = editTaskInput(values, zoned());
     // Sem data sem lembrete mantém a `date` (é a ordem da lista); salvar não a joga pro fim.
     const date =
       values.undated && !input.alert && wasUndated ? task.date : (input.date ?? task.date);
     // Agenda: o alerta acompanha a tarefa; o lembrete das 09:00 de Sem data não vale lá.
     const alert = values.undated ? input.alert : wasUndated ? date : (task.alert ?? date);
+    const at = Date.now();
     const taskData = {
       ...task,
       ...input,
       repeatEvery: input.repeatEvery ?? undefined,
       date,
       alert,
+      updatedAt: at,
     };
 
     // Salvar sem mexer em nada ainda é "terminei aqui": a folha fecha do mesmo jeito.
@@ -170,14 +166,37 @@ export function EditTaskContent({
       return;
     }
 
-    // `alert: null` limpa o lembrete no servidor; ausente ele manteria o antigo.
-    const {
-      task: updated,
-      series,
-      error,
-    } = await updateTask(token, task.id, { ...input, date, alert: alert ?? null }, occurrence);
+    // Sem rede o Clerk também não renova o token — e isso não pode custar a edição.
+    const token = await getToken().catch(() => null);
+    if (!token && navigator.onLine) {
+      toast.error(copy.form.authError);
+      setLoading(false);
+      return;
+    }
 
-    if (error || !updated) {
+    // `alert: null` limpa o lembrete no servidor; ausente ele manteria o antigo. `updatedAt` é a
+    // hora da edição (LWW), não a do envio — vale também quando ela sobe pela fila.
+    const patch = { ...input, date, alert: alert ?? null, updatedAt: at };
+    const result: Awaited<ReturnType<typeof updateTask>> = token
+      ? await updateTask(token, task.id, patch, occurrence)
+      : { error: { message: copy.task.queued, offline: true } };
+    const { series, error } = result;
+    let updated = result.task;
+
+    if (error?.offline && userId) {
+      enqueue(userId, { op: "patch", taskId: task.id, patch, at, occurrence });
+      toast(copy.task.queued);
+      if (occurrence !== undefined) {
+        // O destaque da ocorrência é do servidor; até lá só a instância da tela muda.
+        setTasks(
+          (tasks ?? []).map((t) => (t.id === task.id && t.date === occurrence ? taskData : t)),
+        );
+        onClose();
+        setLoading(false);
+        return;
+      }
+      updated = taskData;
+    } else if (error || !updated) {
       toast(copy.form.createError, {
         description: error?.message,
         action: {
@@ -185,24 +204,26 @@ export function EditTaskContent({
           onClick: () => navigate("/premium"),
         },
       });
+      setLoading(false);
+      return;
     } else {
       toast.success(occurrence === undefined ? copy.form.updated : copy.form.scopeDetached);
-      // A série vem primeiro: reexpandi-la é o que tira da lista a ocorrência que virou tarefa
-      // própria (ela some pelo `exdates` novo), antes de inserir a tarefa destacada.
-      const base = series
-        ? upsertTaskWithRecurrence(tasks ?? [], series, loadedMonths)
-        : (tasks ?? []);
-      // Mudar de lado tira de uma lista e põe na outra; série só expande na agenda.
-      if (updated.undated) {
-        setTasks(occurrence === undefined ? base.filter((t) => t.id !== updated.id) : base);
-        setUndatedTasks(upsertUndated(undatedTasks ?? [], updated));
-      } else {
-        setTasks(upsertTaskWithRecurrence(base, updated, loadedMonths));
-        if (wasUndated) setUndatedTasks(removeUndated(undatedTasks ?? [], updated.id));
-      }
-      onClose();
     }
 
+    // A série vem primeiro: reexpandi-la é o que tira da lista a ocorrência que virou tarefa
+    // própria (ela some pelo `exdates` novo), antes de inserir a tarefa destacada.
+    const base = series
+      ? upsertTaskWithRecurrence(tasks ?? [], series, loadedMonths)
+      : (tasks ?? []);
+    // Mudar de lado tira de uma lista e põe na outra; série só expande na agenda.
+    if (updated.undated) {
+      setTasks(occurrence === undefined ? base.filter((t) => t.id !== updated.id) : base);
+      setUndatedTasks(upsertUndated(undatedTasks ?? [], updated));
+    } else {
+      setTasks(upsertTaskWithRecurrence(base, updated, loadedMonths));
+      if (wasUndated) setUndatedTasks(removeUndated(undatedTasks ?? [], updated.id));
+    }
+    onClose();
     setLoading(false);
   };
 

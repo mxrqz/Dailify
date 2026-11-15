@@ -133,7 +133,7 @@ describe("delete-occurrence", () => {
 describe("flushQueue", () => {
   afterEach(() => {
     localStorage.clear();
-    vi.clearAllMocks();
+    vi.resetAllMocks();
   });
 
   test("uncomplete com until sobe como intervalo", async () => {
@@ -178,5 +178,40 @@ describe("flushQueue", () => {
     await flushQueue("u", "tk");
     expect(api.deleteTask).toHaveBeenCalledWith("tk", "a");
     expect(readQueue("u")).toEqual([]);
+  });
+
+  test("servidor recusa a cabeça enquanto outra aba já a tirou: não leva a seguinte", async () => {
+    api.completeTask
+      .mockImplementationOnce(async () => {
+        localStorage.setItem("dailify:outbox:u", JSON.stringify([readQueue("u")[1]]));
+        return { error: { message: "não existe", offline: false } };
+      })
+      .mockResolvedValueOnce({ error: { message: "rede", offline: true } });
+    enqueue("u", { op: "complete", taskId: "a", at: 1 });
+    enqueue("u", { op: "complete", taskId: "b", at: 2 });
+
+    await flushQueue("u", "tk");
+    expect(readQueue("u").map((m) => m.taskId)).toEqual(["b"]);
+  });
+
+  test("rede cai no meio da subida: o que não subiu continua na fila", async () => {
+    api.completeTask
+      .mockResolvedValueOnce({})
+      .mockResolvedValueOnce({ error: { message: "rede", offline: true } });
+    enqueue("u", { op: "complete", taskId: "a", at: 1 });
+    enqueue("u", { op: "complete", taskId: "b", at: 2 });
+    enqueue("u", { op: "complete", taskId: "c", at: 3 });
+
+    await expect(flushQueue("u", "tk")).resolves.toEqual({ sent: 1, dropped: 0, offline: true });
+    expect(readQueue("u").map((m) => m.taskId)).toEqual(["b", "c"]);
+  });
+
+  test("patch com alert: null dobrado na criação vira criação sem lembrete", () => {
+    const out = collapseQueue([
+      { op: "create", taskId: "a", input: { ...input, alert: 5 }, at: 1 },
+      { op: "patch", taskId: "a", patch: { alert: null }, at: 2 },
+    ]);
+    expect(out[0]).toMatchObject({ op: "create" });
+    expect(out[0].op === "create" && out[0].input.alert).toBeUndefined();
   });
 });

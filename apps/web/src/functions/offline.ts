@@ -11,6 +11,9 @@ import {
 import type { ApiError } from "./api";
 import { zoned } from "./zone";
 
+/** O corpo do PATCH: `alert: null` limpa o lembrete. */
+type TaskPatch = Parameters<typeof updateTask>[2];
+
 /**
  * O que ainda não chegou no servidor. Cada entrada é uma chamada da API que falhou por rede — a
  * fila não inventa um protocolo próprio, ela repete as rotas que já existem.
@@ -18,7 +21,7 @@ import { zoned } from "./zone";
 export type Mutation =
   | { op: "create"; taskId: string; input: TaskInput; at: number }
   // `occurrence`: a edição vale só pra essa instância da série (o servidor a destaca).
-  | { op: "patch"; taskId: string; patch: Partial<TaskInput>; at: number; occurrence?: number }
+  | { op: "patch"; taskId: string; patch: TaskPatch; at: number; occurrence?: number }
   | { op: "complete"; taskId: string; at: number }
   // `until` = desfazer o intervalo [day, until] (período de recorrência da Sem data), não o dia.
   | { op: "uncomplete"; taskId: string; day: number; at: number; until?: number }
@@ -118,7 +121,12 @@ export function collapseQueue(queue: Mutation[]): Mutation[] {
       const create = out.find((m) => sameTask(m) && m.op === "create");
       if (create && create.op === "create" && mutation.occurrence === undefined) {
         // Editar algo que ainda nem subiu: a criação já vai com a edição embutida.
-        create.input = { ...create.input, ...mutation.patch };
+        const { alert } = mutation.patch;
+        create.input = {
+          ...create.input,
+          ...mutation.patch,
+          alert: alert === undefined ? create.input.alert : (alert ?? undefined),
+        };
         create.at = mutation.at;
         continue;
       }
@@ -192,7 +200,13 @@ async function drainQueue(userId: string, token: string): Promise<FlushResult> {
       return { sent, dropped, offline: true };
     }
 
-    writeQueue(userId, readQueue(userId).slice(1));
+    // Pela entrada, não pela posição: outra aba pode ter subido (e tirado) a cabeça nesse meio-tempo,
+    // e um `slice(1)` levaria junto a entrada seguinte, que ninguém enviou.
+    const sentKey = JSON.stringify(mutation);
+    const queue = readQueue(userId);
+    const index = queue.findIndex((m) => JSON.stringify(m) === sentKey);
+    if (index >= 0) queue.splice(index, 1);
+    writeQueue(userId, queue);
     if (error) dropped++;
     else sent++;
   }
