@@ -13,6 +13,7 @@ import { copy } from "@/components/dashboard/copy";
 import { DaySection, TaskSkeletons, dayAnchorId } from "@/components/dashboard/day-section";
 import { listDays, nextMonthToLoad } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
+import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { zoned } from "@/functions/zone";
 
 // Sem tarefa em tantos meses seguidos, a sentinela desiste de pedir o próximo.
@@ -62,6 +63,7 @@ export function DayList(): JSX.Element {
     [startKey, nextKey, tasks, targetDay, keepStart],
   );
 
+  const loadMonthOf = useEffectEvent(loadMonth);
   // Reobserva a cada mês novo: o observer só avisa quando a interseção muda, e um mês sem tarefa
   // deixa a sentinela onde estava.
   useEffect(() => {
@@ -69,7 +71,7 @@ export function DayList(): JSX.Element {
     if (!el || !booted || isLoading || !canLoadMore) return;
     const observer = new IntersectionObserver(
       (entries) => {
-        if (entries.some((e) => e.isIntersecting)) void loadMonth(zoned(nextKey));
+        if (entries.some((e) => e.isIntersecting)) void loadMonthOf(zoned(nextKey));
       },
       { rootMargin: "0px 0px 200% 0px" },
     );
@@ -77,12 +79,15 @@ export function DayList(): JSX.Element {
     return () => observer.disconnect();
   }, [nextKey, booted, isLoading, canLoadMore]);
 
+  // Rola só quando o alvo muda, não quando o `reduce` muda.
+  const scrollTo = useEffectEvent((day: Date) =>
+    document
+      .getElementById(dayAnchorId(day))
+      ?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }),
+  );
   // O alvo entrou na lista neste mesmo commit, então o elemento já existe quando o effect roda.
   useEffect(() => {
-    if (!targetDay) return;
-    document
-      .getElementById(dayAnchorId(targetDay))
-      ?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" });
+    if (targetDay) scrollTo(targetDay);
   }, [targetDay]);
 
   const sentinelEl = <div ref={sentinel} aria-hidden />;

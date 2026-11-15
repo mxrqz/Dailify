@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { getTasksForDay } from "@/functions/functions";
 import { spring } from "@/consts/motion";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { cn } from "@/lib/utils";
 import { zoned } from "@/functions/zone";
 
@@ -74,9 +75,10 @@ function useVisibleDay(days: Date[]): string | undefined {
   const [visible, setVisible] = useState<string>();
   const [pinned, setPinned] = useState<string>();
   const firstDay = days[0].getTime();
+  // `days` é um array novo a cada render; quem dispara a releitura é o `firstDay`.
+  const inWeek = useEffectEvent((id: string) => days.some((day) => dayAnchorId(day) === id));
 
   useEffect(() => {
-    const week = new Set(days.map(dayAnchorId));
     let frame = 0;
     // O dia "atual" é a última seção cujo topo já passou da linha de leitura (logo abaixo da barra);
     // lido na rolagem, e não por observer, porque as seções nascem depois (cache, meses chegando).
@@ -88,7 +90,7 @@ function useVisibleDay(days: Date[]): string | undefined {
         if (section.getBoundingClientRect().top > READING_LINE_PX) break;
         current = section;
       }
-      setVisible(current && week.has(current.id) ? current.id : undefined);
+      setVisible(current && inWeek(current.id) ? current.id : undefined);
     };
     const schedule = () => {
       if (!frame) frame = requestAnimationFrame(update);

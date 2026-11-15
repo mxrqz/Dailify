@@ -17,8 +17,9 @@ re-renders (the whole Home, measuring every swipe row) — the docked week strip
   `tasks` with `mergeMonth` — a month never replaces the others. `loadMonth(month)` adds one more
   month on demand, idempotent (loaded or in flight → no refetch). `goToDay(day)` loads every month
   between today and `day`, then sets `selectedDay` and `targetDay` (the list scrolls to it).
-  Payment/invoices load once in the boot effect (deps `[isLoaded, userId]`); quotas load in their
-  own effect keyed by TODAY's month (`useNow`), not `selectedDay`'s.
+  Payment/invoices load once in the boot effect (keyed on `isLoaded`/`userId`; `getToken` and the
+  setters are stable); quotas load in their own effect keyed by TODAY's month (`useNow`), not
+  `selectedDay`'s. `protected-route.render.test.tsx` pins "loads once".
 - **`dashboard/day-list.tsx`** is the continuous list: one `DaySection` per day with tasks (via
   `listDays`) up to the contiguous run of `loadedMonths`; a sentinel asks for the next month. The
   skeleton shows only at boot (`isLoading && !tasks`) — revalidation keeps the list and its scroll.
@@ -88,8 +89,10 @@ passariam por qualquer suíte de função pura.
 - `edit-task.tsx` is a compound component (`EditTask` / `EditTaskTrigger` / `EditTaskContent`).
 - Toasts via `sonner`. Navigate only to routes that exist (see `src/pages/CLAUDE.md`) — link to
   `/premium`, not `/prices`.
-- `react-hooks/exhaustive-deps` is a warning here; several effects intentionally omit deps — think
-  before "fixing" one (can cause refetch loops). See bd `0g7`.
+- `react-hooks/exhaustive-deps` has 0 warnings — keep it so. An effect that must read a value
+  without re-running on it calls a `useEffectEvent` (`hooks/useEffectEvent.ts`, the React 19.2 hook
+  for React 18; the lint knows the name) instead of omitting the dep. Context functions like
+  `loadMonth`/`reloadMonths` are new every render: in deps they'd refetch in a loop. See bd `0g7`.
 
 ## Motion
 

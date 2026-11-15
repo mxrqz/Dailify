@@ -5,6 +5,7 @@ import { toPng } from "html-to-image";
 import { BellIcon } from "lucide-react";
 import { zoned } from "@/functions/zone";
 import { MewStatic } from "@/components/mew/mew-static";
+import { useEffectEvent } from "@/hooks/useEffectEvent";
 
 export default function TaskPreview() {
   const [searchParams] = useSearchParams();
@@ -35,7 +36,7 @@ export default function TaskPreview() {
     setType(type);
   }, [searchParams]);
 
-  const getPng = async () => {
+  const getPng = useEffectEvent(async () => {
     if (type === "create") {
       if (!createRef.current) return;
       const createPng = await toPng(createRef.current);
@@ -45,7 +46,7 @@ export default function TaskPreview() {
       const alertPng = await toPng(alertRef.current);
       setAlertImage(alertPng);
     }
-  };
+  });
 
   useEffect(() => {
     if (!createRef.current) return;

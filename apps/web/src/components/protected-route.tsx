@@ -1,5 +1,5 @@
 import { duration } from "@/consts/motion";
-import { ReactNode, useEffect, useCallback, useRef, useState } from "react";
+import { ReactNode, useEffect, useRef, useState } from "react";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { Navigate, useLocation } from "react-router-dom";
 import { Loader2Icon } from "lucide-react";
@@ -21,9 +21,10 @@ import {
 } from "@/functions/offline";
 import { initialMonths } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
+import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { motion } from "motion/react";
 import { toast } from "sonner";
-import { zoned } from "@/functions/zone";
+import { zoned, zonedAt } from "@/functions/zone";
 
 /** Piso entre revalidações: alternar de aba não pode virar rajada de fetch. */
 const REVALIDATE_AFTER_MS = 30_000;
@@ -53,7 +54,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const { getToken, userId } = useAuth();
 
   // Sem dependência de mês: Sem data e preferências valem para a conta toda.
-  const loadUndated = useCallback(async () => {
+  const loadUndated = async () => {
     if (!userId) return;
     try {
       const token = await getToken();
@@ -74,7 +75,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     } catch {
       /* sem sessão utilizável */
     }
-  }, [userId]);
+  };
 
   // Depende de `isLoaded`/`userId`: com deps `[]` o efeito rodava uma vez só, antes do Clerk ficar
   // pronto, e o `getToken()` nulo deixava os dados de cobrança undefined pelo resto da sessão.
@@ -98,7 +99,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
         /* sem sessão utilizável */
       }
     })();
-  }, [isLoaded, userId]);
+  }, [isLoaded, userId, getToken, setPaymentDetails, setInvoices]);
 
   // Efeito próprio porque quota de escopo mensal vira com o mês de HOJE (não o do dia olhado: a
   // cota que bloqueia a criação é a do mês corrente); os outros dados, não.
@@ -107,7 +108,8 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   // Relê também no `quotaNonce`, que a revalidação lá embaixo incrementa: `bumpUsage` só sobe,
   // então sem uma releitura quem cria 30 tarefas e apaga 20 fica travado no 30 a sessão inteira.
   const now = useNow(60_000);
-  const quotaMonth = `${now.getFullYear()}-${now.getMonth()}`;
+  const quotaYear = now.getFullYear();
+  const quotaMonth = now.getMonth();
   const [quotaNonce, setQuotaNonce] = useState(0);
   useEffect(() => {
     if (!isLoaded || !userId) return;
@@ -117,7 +119,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       try {
         const token = await getToken();
         if (!token) return;
-        const snapshot = await getQuotas(token, now);
+        const snapshot = await getQuotas(token, zonedAt(quotaYear, quotaMonth));
         if (current && snapshot) setQuotas(snapshot);
       } catch {
         /* sem sessão utilizável */
@@ -126,7 +128,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     return () => {
       current = false;
     };
-  }, [isLoaded, userId, quotaMonth, quotaNonce]);
+  }, [isLoaded, userId, getToken, setQuotas, quotaYear, quotaMonth, quotaNonce]);
 
   // 🌐 Salvar timezone no metadata do usuário
   useEffect(() => {
@@ -147,7 +149,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     if (!userId || undatedTasks) return;
     const cached = readCachedUndated(userId);
     if (cached) setUndatedTasks(cached);
-  }, [userId]);
+  }, [userId, undatedTasks, setUndatedTasks]);
 
   useEffect(() => {
     if (userId && undatedTasks) cacheUndated(userId, undatedTasks);
@@ -160,7 +162,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       setTasks(cached);
       setIsLoading(null);
     }
-  }, [userId]);
+  }, [userId, tasks, setTasks, setIsLoading]);
 
   // O cache acompanha a TELA, não só o que veio do servidor: uma tarefa criada offline vive no
   // estado e na fila, e sem isto ela sumia ao fechar o app — só voltava depois do sync.
@@ -169,7 +171,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   }, [userId, tasks]);
 
   // 📅 Função principal para carregar as tasks
-  const getTasks = useCallback(async () => {
+  const getTasks = useEffectEvent(async () => {
     if (!userId || !user) return;
 
     setIsLoading(copy.loading.tasks);
@@ -214,14 +216,15 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     } finally {
       setIsLoading(null);
     }
-  }, [userId, user, selectedDay, tasks, loadedMonths, loadUndated]);
+  });
+  const loadMonthOf = useEffectEvent(loadMonth);
 
   // O boot passa pela fila (`getTasks`); depois, dia em outro mês só soma aquele mês à lista.
   const booted = useRef(false);
   useEffect(() => {
     if (!isLoaded || !userId) return;
     if (booted.current) {
-      loadMonth(selectedDay);
+      loadMonthOf(selectedDay);
       return;
     }
     booted.current = true;
@@ -253,7 +256,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       document.removeEventListener("visibilitychange", onVisible);
       window.removeEventListener("online", onOnline);
     };
-  }, [isLoaded, userId, getTasks]);
+  }, [isLoaded, userId]);
 
   // 🧭 Redirecionar se não estiver logado
   if (!isLoaded || (isLoading && !tasks)) {

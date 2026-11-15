@@ -1,9 +1,9 @@
 /** @vitest-environment jsdom */
-import { describe, expect, it, vi } from "vitest";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-const { api, offline, dailify } = vi.hoisted(() => ({
+const { api, offline, dailify, getToken } = vi.hoisted(() => ({
   api: {
     getTasksForMonth: vi.fn(async () => ({ tasks: [] })),
     getQuotas: vi.fn(async () => undefined),
@@ -35,6 +35,8 @@ const { api, offline, dailify } = vi.hoisted(() => ({
     setUndatedTasks: vi.fn(),
     setWeekStart: vi.fn(),
   },
+  // Estável como o do Clerk (`useCallback` na instância): efeitos que dependem dele não refazem.
+  getToken: async () => "token",
 }));
 vi.mock("@/functions/api", () => api);
 vi.mock("@/functions/offline", () => offline);
@@ -45,12 +47,25 @@ vi.mock("@clerk/clerk-react", () => ({
     isLoaded: true,
     user: { unsafeMetadata: { timezone: "x" } },
   }),
-  useAuth: () => ({ getToken: async () => "token", userId: "u1" }),
+  useAuth: () => ({ getToken, userId: "u1" }),
 }));
 
 import ProtectedRoute from "./protected-route";
 
+// Elemento novo a cada chamada: `rerender` com o mesmo elemento nem re-renderiza.
+const app = () => (
+  <MemoryRouter>
+    <ProtectedRoute>app</ProtectedRoute>
+  </MemoryRouter>
+);
+
 describe("<ProtectedRoute>", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    offline.flushQueue.mockResolvedValue({ sent: 0, dropped: 0, offline: false });
+    dailify.selectedDay = new Date(2026, 9, 23);
+  });
+
   it("lê a Sem data só depois que a fila offline subiu", async () => {
     let flushed!: () => void;
     offline.flushQueue.mockReturnValue(
@@ -59,16 +74,47 @@ describe("<ProtectedRoute>", () => {
       }),
     );
 
-    render(
-      <MemoryRouter>
-        <ProtectedRoute>app</ProtectedRoute>
-      </MemoryRouter>,
-    );
+    render(app());
 
     await waitFor(() => expect(offline.flushQueue).toHaveBeenCalled());
     expect(api.getUndatedTasks).not.toHaveBeenCalled();
 
     await act(async () => flushed());
     expect(api.getUndatedTasks).toHaveBeenCalledTimes(1);
+  });
+
+  it("carrega uma vez: re-render com tarefas novas não refaz nenhuma leitura", async () => {
+    const { rerender } = render(app());
+    await waitFor(() => expect(dailify.reloadMonths).toHaveBeenCalledTimes(1));
+
+    for (let i = 0; i < 3; i++) {
+      dailify.tasks = [];
+      rerender(app());
+    }
+    await act(async () => {});
+
+    expect(dailify.reloadMonths).toHaveBeenCalledTimes(1);
+    expect(offline.flushQueue).toHaveBeenCalledTimes(1);
+    expect(api.getUndatedTasks).toHaveBeenCalledTimes(1);
+    expect(api.getPaymentDetails).toHaveBeenCalledTimes(1);
+    expect(api.getQuotas).toHaveBeenCalledTimes(1);
+    expect(dailify.loadMonth).not.toHaveBeenCalled();
+  });
+
+  it("dia em outro mês só soma aquele mês; a revalidação usa o dia de agora", async () => {
+    const { rerender } = render(app());
+    await waitFor(() => expect(dailify.reloadMonths).toHaveBeenCalledTimes(1));
+
+    const later = new Date(2027, 2, 10);
+    dailify.selectedDay = later;
+    rerender(app());
+    await waitFor(() => expect(dailify.loadMonth).toHaveBeenCalledWith(later));
+    expect(dailify.loadMonth).toHaveBeenCalledTimes(1);
+    expect(dailify.reloadMonths).toHaveBeenCalledTimes(1);
+
+    // Reconectar ignora o piso de 30s.
+    await act(async () => window.dispatchEvent(new Event("online")));
+    await waitFor(() => expect(dailify.reloadMonths).toHaveBeenCalledTimes(2));
+    expect(dailify.reloadMonths).toHaveBeenLastCalledWith(expect.arrayContaining([later]));
   });
 });

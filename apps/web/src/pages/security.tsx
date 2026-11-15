@@ -8,6 +8,7 @@ import { MonitorIcon, SmartphoneIcon } from "lucide-react";
 import { copy } from "@/components/dashboard/copy";
 import { SettingsGroup, SettingsRow, settingsPage } from "@/components/settings-list";
 import { Button } from "@/components/ui/button";
+import { useEffectEvent } from "@/hooks/useEffectEvent";
 
 export default function SecurityPage(): JSX.Element {
   const { user } = useUser();
@@ -19,8 +20,10 @@ export default function SecurityPage(): JSX.Element {
     if (all) setSessions(all);
   };
 
+  // Uma vez ao abrir; depois, só o revogar relê.
+  const loadOnOpen = useEffectEvent(load);
   useEffect(() => {
-    void load();
+    void loadOnOpen();
   }, []);
 
   const revoke = async (session: SessionWithActivitiesResource) => {

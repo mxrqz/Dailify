@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -67,19 +67,20 @@ export function useVoiceCreate(onCreated?: () => void) {
     }
   };
 
-  const stop = () => {
+  // Só refs: estáveis, então o efeito abaixo roda no desmonte e em mais nenhum render.
+  const stop = useCallback(() => {
     clearTimeout(cap.current);
     recorder.current?.stop();
     recorder.current = null;
-  };
+  }, []);
 
-  const cancel = () => {
+  const cancel = useCallback(() => {
     discard.current = true;
     stop();
-  };
+  }, [stop]);
 
   // A folha fechou (Esc, toque fora) no meio da gravação: descarta, não cria nada às cegas.
-  useEffect(() => cancel, []);
+  useEffect(() => cancel, [cancel]);
 
   const start = async () => {
     if (starting.current || recorder.current) return;

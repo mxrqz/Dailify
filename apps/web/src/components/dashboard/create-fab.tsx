@@ -9,6 +9,7 @@ import { Dialog, DialogTitle } from "@/components/ui/dialog";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { duration, reveal, spring } from "@/consts/motion";
 import { useStoredFlag } from "@/hooks/useStoredFlag";
+import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { cn } from "@/lib/utils";
 
 const DOCKED_KEY = "dailify:composer-docked";
@@ -78,9 +79,13 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
     return () => window.removeEventListener("keydown", onKeyDown);
   }, [docked]);
 
+  // Só o `day` reabre: fixar ou desfixar com um dia pendente não mexe na folha.
+  const openForDay = useEffectEvent(() => {
+    if (!docked) setOpen(true);
+  });
   useEffect(() => {
     if (!day) return;
-    if (!docked) setOpen(true);
+    openForDay();
     // Depois do frame: a folha ainda está montando e o popover do calendário acabou de fechar.
     const frame = requestAnimationFrame(() => document.getElementById("composer-text")?.focus());
     return () => cancelAnimationFrame(frame);
