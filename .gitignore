@@ -33,6 +33,7 @@ dist-ssr
 .dolt/
 *.db
 .beads-credential-key
+.beads.gate.lock
 
 # Superpowers brainstorm mockups (visual companion)
 .superpowers/
