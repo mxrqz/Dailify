@@ -10,7 +10,13 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
   secrets interface) lives here — import `Env` from `../index`, don't redeclare it.
 - **`src/routes/`** — `tasks.ts` (CRUD + month read + `GET /tasks/undated`), `settings.ts` (`GET`/`PUT /settings`, `weekStart`), `voice.ts` (`POST /tasks/voice` + `POST /tasks/parse`, the AI routes),
   `billing.ts` (checkout, portal, payment details, invoices, `POST /webhooks/stripe`),
-  `push.ts` (VAPID key + subscriptions), `clerk-webhook.ts` (`user.deleted` → wipe).
+  `push.ts` (VAPID key + subscriptions), `clerk-webhook.ts` (`user.deleted` → wipe),
+  `integrations.ts` (`GET /integrations`, `POST /:p/connect`, `POST /:p/callback`, `DELETE /:p`).
+- **`src/integrations/`** — providers externos (epic `zpq`): `types.ts` (`Provider`, `Ctx`),
+  `oauth.ts` (code + PKCE em fetch puro, `InvalidGrantError`), `crypto.ts` (AES-GCM dos tokens),
+  `connection.ts` (`loadCtx`/`makeCtx`: bearer + refresh preguiçoso, revogação best-effort),
+  `registry.ts` (`PROVIDERS`), um diretório por provider. Provider novo = id em `INTEGRATIONS`
+  (`@dailify/shared`) + módulo aqui; o teste de contrato em `test/integrations.test.ts` cobra o resto.
 - **`src/alerts.ts`** — `dispatchAlerts`, the Cron Trigger pass that sends due task alerts.
 - **`src/db/`** — `tasks.ts` (all D1 queries), `settings.ts` (`weekStart` por usuário), `limits.ts` (`enforceCreate` tier gate),
   `push.ts` (subscriptions + due-alert query).
@@ -69,6 +75,13 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
   no fuso do cliente; sem `unsure` e com título, vira o rascunho direto e o GPT nem é chamado. Senão,
   `interpretText`. Os dois caminhos passam por `draftToTask` (= `composeTaskInput` do shared, a regra do composer) e custam o mesmo 1 crédito (a transcrição
   é IA); falha na transcrição não debita.
+- **Integrações**: o `redirect_uri` é **rota do SPA** (`${appOrigin}/integrations/<p>/callback`),
+  não do worker — o SPA posta `{ code, state }` com o bearer, e o callback exige
+  `state.user_id === userId` (o state é de uso único, `DELETE … RETURNING`, 10 min). Sem isso dá pra
+  vincular a conta Google de alguém à sessão de outro. Scope obrigatório (`oauth.required`) que não
+  veio concedido → 400 sem gravar. Tokens só em repouso cifrados (`v1.<iv>.<ct>`, AAD
+  `user:provider`); `invalid_grant` no refresh marca a conexão `revoked`. Gate por plano em
+  `INTEGRATIONS[id].roles`, não em `QUOTAS`; o `DELETE` não tem gate (desconectar sempre pode).
 - **Stripe webhook** needs the **raw body** for signature verification — keep it off any body
   parser and verify async (`constructEventAsync`).
 
@@ -76,7 +89,9 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
 
 `Env` fields beyond `DB`/`ALLOWED_ORIGIN`/limiters are secrets (`wrangler secret put`, or `.env`
 locally — see `.env.example`). O par VAPID sai de `bun run vapid`; o `CLERK_WEBHOOK_SECRET` sai do
-endpoint de webhook criado no dashboard do Clerk (evento `user.deleted`, URL `/webhooks/clerk`). `wrangler.toml` holds the D1 `database_id` and
+endpoint de webhook criado no dashboard do Clerk (evento `user.deleted`, URL `/webhooks/clerk`).
+`GOOGLE_CLIENT_ID`/`_SECRET` saem do OAuth client do Google Cloud; `TOKEN_KEY_V1` = `openssl rand
+-base64 32` e **nunca muda** (rotação = `TOKEN_KEY_V2` em `integrations/crypto.ts`). `wrangler.toml` holds the D1 `database_id` and
 `[vars] ALLOWED_ORIGIN` — the **prod** origins, comma-separated (`lib/origin.ts`: CORS accepts any of them, Stripe redirects return to the caller's), so `.env` must override it locally
 (`https://localhost:1420`; vite uses mkcert + `strictPort`). Wrangler doesn't hot-reload `.env`.
 `bun run dev` applies pending D1 migrations locally (`CI=1` skips the prompt) before `wrangler dev`. Clerk + Stripe keys are **paired per instance**: a `pk_live` front end

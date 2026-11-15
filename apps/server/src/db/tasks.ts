@@ -181,6 +181,10 @@ export async function deleteUserData(db: D1Database, userId: string): Promise<vo
     db.prepare(`DELETE FROM tasks WHERE user_id=?`).bind(userId),
     db.prepare(`DELETE FROM push_subscriptions WHERE user_id=?`).bind(userId),
     db.prepare(`DELETE FROM user_settings WHERE user_id=?`).bind(userId),
+    db.prepare(`DELETE FROM usage WHERE user_id=?`).bind(userId),
+    db.prepare(`DELETE FROM integration_connections WHERE user_id=?`).bind(userId),
+    db.prepare(`DELETE FROM integration_links WHERE user_id=?`).bind(userId),
+    db.prepare(`DELETE FROM oauth_states WHERE user_id=?`).bind(userId),
   ]);
 }
 

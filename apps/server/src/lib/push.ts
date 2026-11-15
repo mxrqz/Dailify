@@ -12,7 +12,7 @@ export interface PushSubscriptionKeys {
   auth: string; // segredo de autenticação, base64url (16 bytes)
 }
 
-function base64urlToBytes(value: string): Uint8Array {
+export function base64urlToBytes(value: string): Uint8Array {
   const padded = value.replace(/-/g, "+").replace(/_/g, "/");
   const binary = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
   const bytes = new Uint8Array(binary.length);
@@ -20,7 +20,7 @@ function base64urlToBytes(value: string): Uint8Array {
   return bytes;
 }
 
-function bytesToBase64url(input: ArrayBuffer | Uint8Array): string {
+export function bytesToBase64url(input: ArrayBuffer | Uint8Array): string {
   const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);

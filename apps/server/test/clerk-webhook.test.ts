@@ -18,6 +18,9 @@ import { env } from "cloudflare:test";
 import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
 import { insertTask, getTask } from "../src/db/tasks";
+import { bumpStoredUsage, readStoredUsage } from "../src/db/usage";
+import { insertState, upsertConnection } from "../src/db/integrations";
+import { sealTokens } from "../src/integrations/connection";
 
 beforeAll(async () => {
   await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
@@ -139,5 +142,48 @@ describe("POST /webhooks/clerk", () => {
 
     expect(res.status).toBe(200);
     expect(await getTask(env.DB, "unlucky", "wh3")).toBeNull();
+  });
+
+  it("revoga as integrações e apaga elas, os states e o usage", async () => {
+    const revoked: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
+      revoked.push(new URLSearchParams(String(init?.body)).get("token") ?? "");
+      return new Response(null, { status: 200 });
+    });
+    const now = Date.now();
+    const tokens = await sealTokens(env, "wiped", "google-calendar", {
+      accessToken: "a",
+      refreshToken: "r",
+      expiresAt: now + 3600_000,
+      scope: "",
+    });
+    await upsertConnection(
+      env.DB,
+      "wiped",
+      "google-calendar",
+      { accountId: "g1", email: null, scopes: "", tokens },
+      now,
+    );
+    await env.DB.prepare(
+      `INSERT INTO integration_links (user_id, provider, task_id, external_id, updated_at)
+       VALUES ('wiped', 'google-calendar', 't', 'e', 0)`,
+    ).run();
+    const state = { user_id: "wiped", provider: "google-calendar", code_verifier: "v" };
+    await insertState(env.DB, "st-wiped", state, now + 60_000, now);
+    await bumpStoredUsage(env.DB, "wiped", "ai", "2026-11");
+
+    const body = JSON.stringify({ type: "user.deleted", data: { id: "wiped" } });
+    const res = await post(body, await svixHeaders(body));
+    vi.restoreAllMocks();
+
+    expect(res.status).toBe(200);
+    expect(revoked).toEqual(["r"]);
+    expect(await readStoredUsage(env.DB, "wiped", "ai", "2026-11")).toBe(0);
+    for (const table of ["integration_connections", "integration_links", "oauth_states"]) {
+      const { results } = await env.DB.prepare(
+        `SELECT 1 FROM ${table} WHERE user_id='wiped'`,
+      ).all();
+      expect(results, table).toHaveLength(0);
+    }
   });
 });

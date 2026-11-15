@@ -7,6 +7,7 @@ import voice from "./routes/voice";
 import settings from "./routes/settings";
 import clerkWebhook from "./routes/clerk-webhook";
 import push from "./routes/push";
+import integrations from "./routes/integrations";
 import { dispatchAlerts } from "./alerts";
 import { fail } from "./lib/errors";
 import { allowedOrigins } from "./lib/origin";
@@ -31,6 +32,10 @@ export interface Env {
   STRIPE_PRICE_PRO_YEAR: string;
   STRIPE_PRICE_MAX: string;
   STRIPE_PRICE_MAX_YEAR: string;
+  GOOGLE_CLIENT_ID: string;
+  GOOGLE_CLIENT_SECRET: string;
+  // Cifra os tokens de integração em repouso (integrations/crypto.ts): base64 de 32 bytes.
+  TOKEN_KEY_V1: string;
 }
 
 const app = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
@@ -49,6 +54,7 @@ app.route("/", billing);
 app.route("/", clerkWebhook);
 app.route("/", push);
 app.route("/", settings);
+app.route("/", integrations);
 
 app.onError((err, c) => {
   console.error(err);

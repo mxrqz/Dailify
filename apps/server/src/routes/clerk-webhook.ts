@@ -4,6 +4,7 @@ import { deleteUserData } from "../db/tasks";
 import { cancelSubscriptionsOf, stripeClient } from "../lib/stripe";
 import { verifySvix } from "../lib/svix";
 import { fail } from "../lib/errors";
+import { revokeAll } from "../integrations/connection";
 
 const clerkWebhook = new Hono<{ Bindings: Env }>();
 
@@ -55,6 +56,8 @@ clerkWebhook.post("/webhooks/clerk", async (c) => {
         console.error(`Falha ao cancelar assinatura de ${userId}`, err);
       }
     }
+    // Antes do wipe: depois dele não sobra token pra revogar. É best-effort (revokeAll não lança).
+    await revokeAll(c.env, userId);
     await deleteUserData(c.env.DB, userId);
   }
 
