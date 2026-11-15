@@ -243,6 +243,17 @@ export const copy = {
     addTime: "+ horário",
     addDuration: "+ duração",
     addReminder: "+ lembrete",
+    // Chips: tocar edita o valor, o × devolve as palavras ao título.
+    editDay: "Editar dia: {value}",
+    editTime: "Editar horário: {value}",
+    editDuration: "Editar duração: {value}",
+    editRepeat: "Editar repetição: {value}",
+    editLinks: "Editar link: {value}",
+    removeDay: "Tirar o dia",
+    removeTime: "Tirar o horário",
+    removeDuration: "Tirar a duração",
+    removeRepeat: "Tirar a repetição",
+    removeLinks: "Tirar o link",
     // "Vai para Agenda | A qualquer hora | A qualquer hora · Recorrentes", antes de enviar.
     goesTo: "Vai para",
     toAgenda: "Agenda",

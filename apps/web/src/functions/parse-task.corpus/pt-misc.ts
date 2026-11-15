@@ -392,6 +392,10 @@ export default [
 
   ...section("pt", "trap", [
     ["ler 1984", "ler 1984"],
+    // Entre aspas é literal: não parseia e as aspas saem do título.
+    ['ler "amanhã é outro dia" no sábado', "ler amanhã é outro dia", SAT],
+    ["ensaiar “toda segunda” com a banda", "ensaiar toda segunda com a banda"],
+    ['mandar "reunião às 15h" pro grupo amanhã', "mandar reunião às 15h pro grupo", MON],
     ["assistir Sexta-Feira 13", "assistir Sexta-Feira 13"],
     ["comprar 2 pães", "comprar 2 pães"],
     ["comprar 12 ovos", "comprar 12 ovos"],

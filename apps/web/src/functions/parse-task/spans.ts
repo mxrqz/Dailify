@@ -39,3 +39,20 @@ export const mask = (text: string, spans: Span[]) =>
     .split("")
     .map((char, i) => (spans.some(([s, e]) => i >= s && i < e) ? " " : char))
     .join("");
+
+/**
+ * Leva spans de `before` pra `after` (uma edição só, achada por prefixo e sufixo comuns): o que fica
+ * antes da edição fica, o que fica depois anda junto, e o que ela toca some.
+ */
+export function remapSpans(spans: Span[], before: string, after: string): Span[] {
+  let start = 0;
+  while (start < before.length && before[start] === after[start]) start++;
+  let tail = 0;
+  const room = Math.min(before.length, after.length) - start;
+  while (tail < room && before.at(-1 - tail) === after.at(-1 - tail)) tail++;
+  const end = before.length - tail;
+  const shift = after.length - before.length;
+  return spans.flatMap(([s, e]): Span[] =>
+    e <= start ? [[s, e]] : s >= end ? [[s + shift, e + shift]] : [],
+  );
+}

@@ -27,27 +27,40 @@ import { parseWhen } from "./when";
 
 export { type ParsedDuration, parseDuration } from "./durations";
 export { parseRepeat } from "./repeat";
-export { type Span } from "./spans";
+export { type Span, remapSpans } from "./spans";
 export { cut } from "./title";
 export { type Unsure, type UnsureCode } from "./unsure";
 export { normalize } from "./vocab";
 export { type ParsedWhen, parseWhen } from "./when";
+
+export type Field = "day" | "time" | "duration" | "repeat" | "links";
 
 /** Mesmo formato que a IA devolve (`ParsedTaskWire`), com a data como `Date` e os motivos de dúvida. */
 export interface ParsedTask extends Omit<ParsedTaskWire, "date"> {
   date: Date | null;
   /** Por que a leitura pode estar errada; vazio = confiante. */
   unsure: Unsure[];
+  /** Os trechos do input que deram cada campo; vazio = não veio do texto (IA, calendário, edição). */
+  fields: Record<Field, Span[]>;
 }
 
-/** `keep`: trechos que ficam no título e fora da vista dos detectores. */
-export function parseTaskText(input: string, now: Date = zoned(), keep: Span[] = []): ParsedTask {
+// Entre aspas duplas é literal: nunca parseado, e as aspas saem do título.
+const QUOTED_RE = /"([^"\n]+)"|“([^”\n]+)”/g;
+
+/** `ignore`: trechos que ficam no título como texto e fora da vista dos detectores. */
+export function parseTaskText(
+  input: string,
+  now: Date = zoned(),
+  { ignore = [] }: { ignore?: Span[] } = {},
+): ParsedTask {
+  const keep = [...ignore, ...[...input.matchAll(QUOTED_RE)].map(spanOf)];
   const normalized = normalize(input);
-  const links = parseLinks(input);
+  const open = mask(input, keep);
+  const links = parseLinks(open);
   // "lembrete: pagar luz amanhã": o rótulo de abertura sai do título junto com os links.
-  const label = input.match(/^\s*(?:lembrete|reminder|todo|to\s*do|tarefa|task)\s*:\s*/i);
+  const label = open.match(/^\s*(?:lembrete|reminder|todo|to\s*do|tarefa|task)\s*:\s*/i);
   const fixed = label ? [...links.spans, spanOf(label)] : links.spans;
-  const title = cut(input, fixed);
+  const title = unquote(cut(input, fixed));
   const unsupported: ParsedTask = {
     text: title,
     date: null,
@@ -56,6 +69,7 @@ export function parseTaskText(input: string, now: Date = zoned(), keep: Span[] =
     duration: null,
     links: links.urls,
     repeat: "Off",
+    fields: { day: [], time: [], duration: [], repeat: [], links: links.spans },
     unsure: unsureOf({
       input,
       normalized,
@@ -69,7 +83,7 @@ export function parseTaskText(input: string, now: Date = zoned(), keep: Span[] =
       now,
     }),
   };
-  if (UNSUPPORTED_REPEAT_RE.test(normalized)) return unsupported;
+  if (UNSUPPORTED_REPEAT_RE.test(mask(normalized, keep))) return unsupported;
 
   // "youtu.be/15h30" não pode virar horário nem duração; "Sessão da Tarde" e "Dom Casmurro" também não.
   const forDuration = mask(normalized, [...fixed, ...properNouns(input), ...keep]);
@@ -125,7 +139,7 @@ export function parseTaskText(input: string, now: Date = zoned(), keep: Span[] =
       ).test(forWhen.slice(start, end)),
     );
 
-  const text = cut(input, spans);
+  const text = unquote(cut(input, spans));
   // "seg 8h daily": o advérbio que come o título inteiro é o nome da reunião (a "daily").
   const [repeatStart, repeatEnd] = repeat?.spans[0] ?? [0, 0];
   if (
@@ -133,7 +147,7 @@ export function parseTaskText(input: string, now: Date = zoned(), keep: Span[] =
     repeat &&
     /^(?:daily|weekly|monthly)$/.test(normalized.slice(repeatStart, repeatEnd))
   ) {
-    return parseTaskText(input, now, [...keep, ...repeat.spans]);
+    return parseTaskText(input, now, { ignore: [...ignore, ...repeat.spans] });
   }
 
   const value = repeat?.value ?? "Off";
@@ -145,6 +159,13 @@ export function parseTaskText(input: string, now: Date = zoned(), keep: Span[] =
     duration: duration?.duration ?? null,
     links: links.urls,
     repeat: value,
+    fields: {
+      day: when?.day ?? [],
+      time: when?.time ?? [],
+      duration: duration?.spans ?? [],
+      repeat: repeat?.spans ?? [],
+      links: links.spans,
+    },
     unsure: unsureOf({
       input,
       normalized,
@@ -159,3 +180,5 @@ export function parseTaskText(input: string, now: Date = zoned(), keep: Span[] =
     }),
   };
 }
+
+const unquote = (title: string) => title.replace(QUOTED_RE, (_, plain, curly) => plain ?? curly);

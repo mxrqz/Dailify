@@ -9,6 +9,9 @@ export interface ParsedWhen {
   hasDay: boolean;
   hasTime: boolean;
   spans: Span[];
+  /** Os spans de cada metade, pros chips do composer: `spans` é a união deles. */
+  day: Span[];
+  time: Span[];
 }
 
 // Recorrência lê a hora literal: o "9h" de uma série é 9h, não as 21h que seriam a próxima "9" de hoje.
@@ -57,5 +60,7 @@ export function parseWhen(
     hasDay: day !== null,
     hasTime: time !== null,
     spans: mergeSpans([...(day?.spans ?? []), ...(time?.spans ?? [])]),
+    day: day?.spans ?? [],
+    time: time?.spans ?? [],
   };
 }

@@ -169,6 +169,8 @@ export default [
 
   ...section("en", "trap", [
     ["check out 15 new recipes", "check out 15 new recipes"],
+    ['watch "Tomorrow Never Dies" friday 8pm', "watch Tomorrow Never Dies", FRI, "20:00"],
+    ["practice “every monday” chorus", "practice every monday chorus"],
     ["watch Friday the 13th", "watch Friday the 13th"],
     ["read 1984", "read 1984"],
     ["read Robinson Crusoe and Friday", "read Robinson Crusoe and Friday"],

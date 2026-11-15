@@ -194,3 +194,68 @@ describe("<TaskComposer> Melhorar com a Mew", () => {
     expect(screen.queryByRole("status")).not.toBeInTheDocument();
   });
 });
+
+describe("<TaskComposer> chips", () => {
+  const submitted = (onSubmit: ReturnType<typeof vi.fn>) => onSubmit.mock.calls[0][0].parsed;
+
+  it("tirar um chip devolve as palavras ao título, e digitar em outro lugar não as lê de novo", async () => {
+    const { user, onSubmit } = setup();
+    await user.type(screen.getByRole("textbox"), "pagar luz amanhã");
+    await user.click(screen.getByRole("button", { name: copy.composer.removeDay }));
+
+    expect(screen.getByRole("textbox")).toHaveFocus();
+    expect(screen.getByText(copy.composer.addDay)).toBeInTheDocument();
+    await user.type(screen.getByRole("textbox"), " cedo");
+    expect(screen.queryByRole("button", { name: copy.composer.removeDay })).not.toBeInTheDocument();
+
+    await user.keyboard("{Enter}");
+    expect(submitted(onSubmit)).toMatchObject({ text: "pagar luz amanhã cedo", hasDay: false });
+  });
+
+  it("Backspace no chip tira; editar dentro do trecho volta a ler", async () => {
+    const { user } = setup();
+    await user.type(screen.getByRole("textbox"), "pagar luz amanhã");
+    screen.getByRole("button", { name: /^Editar dia:/ }).focus();
+    await user.keyboard("{Backspace}");
+    expect(screen.queryByRole("button", { name: copy.composer.removeDay })).not.toBeInTheDocument();
+
+    await user.type(screen.getByRole("textbox"), "{Backspace}ã");
+    expect(screen.getByRole("button", { name: copy.composer.removeDay })).toBeInTheDocument();
+  });
+
+  it("tocar no chip edita: o valor escolhido vale e as palavras seguem fora do título", async () => {
+    const { user, onSubmit } = setup();
+    await user.type(screen.getByRole("textbox"), "call de 1h");
+    await user.click(
+      screen.getByRole("button", { name: copy.composer.editDuration.replace("{value}", "1h") }),
+    );
+    await user.click(await screen.findByRole("menuitemradio", { name: "30m" }));
+
+    expect(
+      screen.getByRole("button", { name: copy.composer.editDuration.replace("{value}", "30m") }),
+    ).toBeInTheDocument();
+    screen.getByRole("textbox").focus();
+    await user.keyboard("{Enter}");
+    expect(submitted(onSubmit)).toMatchObject({ text: "call", duration: "30m" });
+  });
+
+  it("entre aspas é literal e as aspas saem do título", async () => {
+    const { user, onSubmit } = setup();
+    await user.type(screen.getByRole("textbox"), 'ler "amanhã é outro dia"');
+    expect(screen.getByText(copy.composer.addDay)).toBeInTheDocument();
+    await user.keyboard("{Enter}");
+    expect(submitted(onSubmit)).toMatchObject({ text: "ler amanhã é outro dia", hasDay: false });
+  });
+
+  it("rascunho da Mew: tirar o chip só zera o campo", async () => {
+    reads({ reply: "", intent: "create", drafts: [draft("Dentista", 15)] });
+    const { user, onSubmit } = setup();
+    await user.type(screen.getByRole("textbox"), "dentista dps do almoço");
+    await user.click(screen.getByRole("button", { name: improveDiscreet }));
+    await user.click(screen.getByRole("button", { name: copy.composer.removeTime }));
+
+    expect(screen.queryByText("15:00")).not.toBeInTheDocument();
+    await user.keyboard("{Enter}");
+    expect(submitted(onSubmit)).toMatchObject({ text: "Dentista", hasTime: false, hasDay: true });
+  });
+});

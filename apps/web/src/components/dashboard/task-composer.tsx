@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState } from "react";
+import { FormEvent, useMemo, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -12,15 +12,31 @@ import {
   MicIcon,
   RepeatIcon,
   SquareIcon,
+  XIcon,
 } from "lucide-react";
+import { motion } from "motion/react";
 
 import { TASK_LIMITS } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { MewStatic } from "@/components/mew/mew-static";
 import { Label } from "@/components/ui/label";
-import { composeTaskInput, fromWire, onDay } from "@/functions/compose-input";
-import { parseTaskText, type ParsedTask } from "@/functions/parse-task";
+import {
+  DEFAULT_DURATION,
+  DEFAULT_HOUR,
+  composeTaskInput,
+  fromWire,
+  onDay,
+  withEdits,
+  type Edits,
+} from "@/functions/compose-input";
+import {
+  parseTaskText,
+  remapSpans,
+  type Field,
+  type ParsedTask,
+  type Span,
+} from "@/functions/parse-task";
 import { useCreateTask } from "@/hooks/useCreateTask";
 import { useMewParse } from "@/hooks/useMewParse";
 import { useOnline } from "@/hooks/useOnline";
@@ -35,10 +51,77 @@ import {
   chipRepeat,
   chipTime,
 } from "@/components/dashboard/styles";
+import {
+  DateTimePopover,
+  DayPopover,
+  DurationMenu,
+  LinksPopover,
+  RepeatMenu,
+} from "@/components/dashboard/task-meta-menus";
 import { useDailify } from "@/components/dailifyContext";
+import { duration, ease } from "@/consts/motion";
 import { formatClock } from "@/functions/functions";
 import { cn } from "@/lib/utils";
 import { zoned } from "@/functions/zone";
+
+/**
+ * Um chip do composer: tocar abre o editor do campo; o × (ou Backspace no chip) tira o campo.
+ * Sem `onRemove` é o fantasma ("+ dia"), que só edita.
+ */
+function Chip({
+  tone,
+  large,
+  editLabel,
+  removeLabel,
+  onRemove,
+  editor,
+  children,
+}: {
+  tone: string;
+  large?: boolean;
+  editLabel?: string;
+  removeLabel: string;
+  onRemove?: () => void;
+  editor: (trigger: JSX.Element) => JSX.Element;
+  children: ReactNode;
+}): JSX.Element {
+  return (
+    <span className={cn(chip, tone, "gap-0 p-0")}>
+      {editor(
+        <button
+          type="button"
+          aria-label={editLabel}
+          onKeyDown={(e) => {
+            if (!onRemove || (e.key !== "Backspace" && e.key !== "Delete")) return;
+            e.preventDefault();
+            onRemove();
+          }}
+          className={cn("rounded-lg px-2", large ? "py-1.5" : "py-0.5", onRemove && "pr-1")}
+        >
+          <motion.span
+            key={String(Boolean(onRemove))}
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ duration: duration.fast, ease: ease.out }}
+            className="inline-flex items-center gap-1"
+          >
+            {children}
+          </motion.span>
+        </button>,
+      )}
+      {onRemove && (
+        <button
+          type="button"
+          aria-label={removeLabel}
+          onClick={onRemove}
+          className="flex items-center rounded-full pr-1.5 pl-0.5 transition-colors hover:text-foreground"
+        >
+          <XIcon className="size-3" aria-hidden="true" />
+        </button>
+      )}
+    </span>
+  );
+}
 
 export interface ComposerValues {
   parsed: ParsedTask;
@@ -69,12 +152,18 @@ export function TaskComposer({
   onCreated,
 }: TaskComposerProps): JSX.Element {
   const [input, setInput] = useState("");
+  // Trechos de chips tirados: voltam pro título como texto. Valem pro texto atual (`remapSpans`).
+  const [ignore, setIgnore] = useState<Span[]>([]);
+  const [edits, setEdits] = useState<Edits>({});
   const { hour12 } = useDailify();
   const online = useOnline();
   const mew = useMewParse();
   const many = useCreateTask();
 
-  const local = useMemo(() => onDay(parseTaskText(input), day), [input, day]);
+  const local = useMemo(
+    () => onDay(parseTaskText(input, zoned(), { ignore }), day),
+    [input, day, ignore],
+  );
   // A leitura da Mew vale pro texto que ela leu: editar chama `mew.reset` e volta pro parser local.
   const drafts = useMemo(
     () => (mew.result?.intent === "create" ? mew.result.drafts.map(fromWire) : []),
@@ -82,10 +171,11 @@ export function TaskComposer({
   );
   const reply = mew.result && !drafts.length ? mew.result.reply : null;
   const multi = drafts.length > 1;
-  const parsed = useMemo(
+  const read = useMemo(
     () => (drafts.length === 1 ? onDay(drafts[0], day) : local),
     [drafts, local, day],
   );
+  const parsed = useMemo(() => withEdits(read, edits, zoned()), [read, edits]);
   const task = useMemo(() => composeTaskInput(parsed, zoned()), [parsed]);
   const voice = useVoiceCreate(onCreated);
   const listening = voice.state === "recording";
@@ -104,8 +194,31 @@ export function TaskComposer({
 
   const clear = () => {
     setInput("");
+    setIgnore([]);
+    setEdits({});
     mew.reset();
   };
+
+  const edit = (next: Edits) => setEdits((current) => ({ ...current, ...next }));
+  // As palavras que deram o campo voltam pro título; sem palavras (Mew, calendário), o campo só zera.
+  const remove = (field: Field) => {
+    const spans = read.fields[field];
+    if (spans.length) setIgnore((current) => [...current, ...spans]);
+    setEdits((current) => {
+      const next = { ...current };
+      if (spans.length) delete next[field];
+      else next[field] = null;
+      return next;
+    });
+    document.getElementById("composer-text")?.focus();
+  };
+
+  // EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
+  const dayLabel = parsed.date && format(parsed.date, "EEEEEE · d MMM", { locale: ptBR });
+  const timeLabel =
+    parsed.hasTime && parsed.date ? formatClock(format(parsed.date, "HH:mm"), hour12) : null;
+  const clock = zoned(parsed.date ?? undefined);
+  if (!timeLabel) clock.setHours(DEFAULT_HOUR, 0, 0, 0);
 
   const submit = (again: boolean) => {
     if (!canSubmit) return;
@@ -162,7 +275,6 @@ export function TaskComposer({
       </button>
     );
 
-  const pill = cn(chip, large && "py-1.5");
   const mic = voiceSupported() && (
     <button
       type="button"
@@ -226,7 +338,9 @@ export function TaskComposer({
           type="text"
           value={input}
           onChange={(e) => {
-            setInput(e.target.value);
+            const next = e.target.value;
+            setIgnore((current) => remapSpans(current, input, next));
+            setInput(next);
             mew.reset();
           }}
           onKeyDown={(e) => {
@@ -274,35 +388,101 @@ export function TaskComposer({
         ) : (
           <>
             {drafts.length === 1 && <MewStatic className="size-4" title={copy.mew.draft} />}
-            <span className={cn(pill, recurring ? chipRepeat : parsed.date ? chipDate : chipGhost)}>
-              {recurring ? (
-                <>
-                  <RepeatIcon className="size-3" aria-hidden="true" />
-                  {repeatLabel(parsed.repeat)}
-                </>
-              ) : parsed.date ? (
-                <>
-                  <CalendarIcon className="size-3" aria-hidden="true" />
-                  {/* EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso. */}
-                  {format(parsed.date, "EEEEEE · d MMM", { locale: ptBR })}
-                </>
-              ) : (
-                copy.composer.addDay
+            {recurring ? (
+              <Chip
+                tone={chipRepeat}
+                large={large}
+                editLabel={copy.composer.editRepeat.replace("{value}", repeatLabel(parsed.repeat))}
+                removeLabel={copy.composer.removeRepeat}
+                onRemove={() => remove("repeat")}
+                editor={(trigger) => (
+                  <RepeatMenu
+                    value={parsed.repeat}
+                    date={(parsed.date ?? zoned()).getTime()}
+                    onChange={(repeat) => edit({ repeat })}
+                  >
+                    {trigger}
+                  </RepeatMenu>
+                )}
+              >
+                <RepeatIcon className="size-3" aria-hidden="true" />
+                {repeatLabel(parsed.repeat)}
+              </Chip>
+            ) : (
+              <Chip
+                tone={dayLabel ? chipDate : chipGhost}
+                large={large}
+                editLabel={
+                  dayLabel ? copy.composer.editDay.replace("{value}", dayLabel) : undefined
+                }
+                removeLabel={copy.composer.removeDay}
+                onRemove={dayLabel && parsed.hasDay ? () => remove("day") : undefined}
+                editor={(trigger) => (
+                  <DayPopover value={parsed.date ?? zoned()} onChange={(day) => edit({ day })}>
+                    {trigger}
+                  </DayPopover>
+                )}
+              >
+                {dayLabel ? (
+                  <>
+                    <CalendarIcon className="size-3" aria-hidden="true" />
+                    {dayLabel}
+                  </>
+                ) : (
+                  copy.composer.addDay
+                )}
+              </Chip>
+            )}
+            <Chip
+              tone={timeLabel ? chipTime : chipGhost}
+              large={large}
+              editLabel={
+                timeLabel ? copy.composer.editTime.replace("{value}", timeLabel) : undefined
+              }
+              removeLabel={copy.composer.removeTime}
+              onRemove={timeLabel ? () => remove("time") : undefined}
+              editor={(trigger) => (
+                <DateTimePopover
+                  timeOnly
+                  value={clock}
+                  onChange={(at) =>
+                    edit({ time: { hour: at.getHours(), minute: at.getMinutes() } })
+                  }
+                >
+                  {trigger}
+                </DateTimePopover>
               )}
-            </span>
-            <span className={cn(pill, parsed.hasTime ? chipTime : chipGhost)}>
-              {parsed.hasTime && parsed.date ? (
+            >
+              {timeLabel ? (
                 <>
                   <ClockIcon className="size-3" aria-hidden="true" />
-                  {formatClock(format(parsed.date, "HH:mm"), hour12)}
+                  {timeLabel}
                 </>
               ) : (
                 copy.composer.addTime
               )}
-            </span>
-            <span className={cn(pill, parsed.duration ? chipGot : chipGhost)}>
+            </Chip>
+            <Chip
+              tone={parsed.duration ? chipGot : chipGhost}
+              large={large}
+              editLabel={
+                parsed.duration
+                  ? copy.composer.editDuration.replace("{value}", parsed.duration)
+                  : undefined
+              }
+              removeLabel={copy.composer.removeDuration}
+              onRemove={parsed.duration ? () => remove("duration") : undefined}
+              editor={(trigger) => (
+                <DurationMenu
+                  value={parsed.duration ?? DEFAULT_DURATION}
+                  onChange={(next) => edit({ duration: next })}
+                >
+                  {trigger}
+                </DurationMenu>
+              )}
+            >
               {parsed.duration ?? copy.composer.addDuration}
-            </span>
+            </Chip>
             <span
               className={cn(
                 chip,
@@ -320,10 +500,22 @@ export function TaskComposer({
               )}
             </span>
             {parsed.links.slice(0, 1).map((url) => (
-              <span key={url} className={cn(pill, chipGot)}>
+              <Chip
+                key={url}
+                tone={chipGot}
+                large={large}
+                editLabel={copy.composer.editLinks.replace("{value}", linkLabel(url))}
+                removeLabel={copy.composer.removeLinks}
+                onRemove={() => remove("links")}
+                editor={(trigger) => (
+                  <LinksPopover value={parsed.links} onChange={(links) => edit({ links })}>
+                    {trigger}
+                  </LinksPopover>
+                )}
+              >
                 <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
                 {linkLabel(url)}
-              </span>
+              </Chip>
             ))}
           </>
         )}

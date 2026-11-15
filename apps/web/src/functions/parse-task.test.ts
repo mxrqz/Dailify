@@ -1,5 +1,13 @@
 import { describe, expect, it } from "vitest";
-import { cut, normalize, parseDuration, parseRepeat, parseTaskText, parseWhen } from "./parse-task";
+import {
+  cut,
+  normalize,
+  parseDuration,
+  parseRepeat,
+  parseTaskText,
+  parseWhen,
+  remapSpans,
+} from "./parse-task";
 
 // Quarta-feira, 12 de agosto de 2026, 09:00.
 const NOW = new Date(2026, 7, 12, 9, 0);
@@ -725,5 +733,71 @@ describe("unsure", () => {
 
   it("frase simples sai confiante", () => {
     expect(parseTaskText("reunião amanhã às 15h", NOW).unsure).toEqual([]);
+  });
+});
+
+// Os chips do composer: cada campo aponta pros seus trechos, e tirar um chip devolve o trecho ao título.
+describe("fields e ignore", () => {
+  const INPUT = "call de 1h amanhã às 16h";
+  const slices = (input: string, spans: [number, number][]) =>
+    spans.map((span) => input.slice(...span));
+
+  it("cada campo aponta pros trechos do input que o deram", () => {
+    const { fields } = parseTaskText(`${INPUT} meet.google.com/abc`, NOW);
+    expect(slices(INPUT, fields.day)).toEqual(["amanhã"]);
+    expect(slices(INPUT, fields.time).join("")).toMatch(/16h/);
+    expect(slices(INPUT, fields.duration).join("")).toMatch(/1h/);
+    expect(fields.links).toHaveLength(1);
+    expect(fields.repeat).toEqual([]);
+  });
+
+  it("ignorar o dia: a data some e as palavras ficam no título", () => {
+    const { fields } = parseTaskText("pagar luz amanhã", NOW);
+    const r = parseTaskText("pagar luz amanhã", NOW, { ignore: fields.day });
+    expect(r.text).toBe("pagar luz amanhã");
+    expect(r.date).toBeNull();
+    expect(r.hasDay).toBe(false);
+    expect(r.fields.day).toEqual([]);
+  });
+
+  it("ignorar um de dois detectores deixa o outro, com spans ainda no input original", () => {
+    const first = parseTaskText(INPUT, NOW);
+    const r = parseTaskText(INPUT, NOW, { ignore: first.fields.duration });
+    expect(r.duration).toBeNull();
+    expect(r.text).toBe("call de 1h");
+    expect(r.date?.getDate()).toBe(13);
+    expect(r.date?.getHours()).toBe(16);
+    expect(r.fields.day).toEqual(first.fields.day);
+    expect(r.fields.time).toEqual(first.fields.time);
+  });
+
+  it("ignorar um link deixa a URL no título", () => {
+    const input = "daily meet.google.com/abc";
+    const r = parseTaskText(input, NOW, { ignore: parseTaskText(input, NOW).fields.links });
+    expect(r.links).toEqual([]);
+    expect(r.text).toBe(input);
+  });
+
+  it.each([
+    ['ler "Amanhã é outro dia" sábado', "ler Amanhã é outro dia"],
+    ["assistir “Sexta-Feira 13” às 21h", "assistir Sexta-Feira 13"],
+  ])("aspas duplas são literais: %s", (input, title) => {
+    const r = parseTaskText(input, NOW);
+    expect(r.text).toBe(title);
+    expect(r.date).not.toBeNull();
+  });
+});
+
+describe("remapSpans", () => {
+  const SPANS: [number, number][] = [[10, 16]];
+  it.each([
+    ["edição depois do span fica", "pagar luz amanhã", "pagar luz amanhã às 9", [[10, 16]]],
+    ["edição antes anda junto", "pagar luz amanhã", "pagar a luz amanhã", [[12, 18]]],
+    ["apagar antes anda junto", "pagar luz amanhã", "paga luz amanhã", [[9, 15]]],
+    ["edição dentro some", "pagar luz amanhã", "pagar luz amanha", []],
+    ["sem mudança fica", "pagar luz amanhã", "pagar luz amanhã", [[10, 16]]],
+    ["apagar tudo some", "pagar luz amanhã", "", []],
+  ])("%s", (_, before, after, expected) => {
+    expect(remapSpans(SPANS, before, after)).toEqual(expected);
   });
 });

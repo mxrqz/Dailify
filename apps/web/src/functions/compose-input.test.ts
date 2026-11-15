@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { composeTaskInput, fromWire, onDay } from "./compose-input";
+import { composeTaskInput, fromWire, onDay, withEdits } from "./compose-input";
 import { parseTaskText } from "./parse-task";
 
 // Quarta-feira, 21 de outubro de 2026, 10:00.
@@ -125,5 +125,33 @@ describe("fromWire", () => {
     expect(parsed.unsure).toEqual([]);
     expect(composeTaskInput(parsed, NOW)).toMatchObject({ title: "reunião", date: at(22, 16) });
     expect(fromWire({ ...wire, date: null }).date).toBeNull();
+  });
+});
+
+describe("withEdits", () => {
+  const parse = (text: string) => parseTaskText(text, NOW);
+
+  it("o dia editado troca o lido e mantém a hora", () => {
+    const r = withEdits(parse("reunião qui 16h"), { day: new Date(2026, 9, 30) }, NOW);
+    expect(r.date?.getTime()).toBe(at(30, 16));
+    expect(r.text).toBe("reunião");
+  });
+
+  it("a hora editada troca a lida; sem dia e já passada, cai amanhã", () => {
+    const r = withEdits(parse("reunião 16h"), { time: { hour: 8, minute: 30 } }, NOW);
+    expect(r.date?.getTime()).toBe(new Date(2026, 9, 22, 8, 30).getTime());
+    expect(r.hasTime).toBe(true);
+  });
+
+  it("tirar: sem dia a hora fica, sem hora o dia fica, e o resto zera", () => {
+    const parsed = parse("academia toda qui 7h por 1h");
+    expect(withEdits(parsed, { time: null }, NOW)).toMatchObject({ hasTime: false, hasDay: true });
+    expect(withEdits(parse("reunião qui 16h"), { day: null }, NOW).date?.getTime()).toBe(
+      at(21, 16),
+    );
+    expect(withEdits(parsed, { duration: null, repeat: null }, NOW)).toMatchObject({
+      duration: null,
+      repeat: "Off",
+    });
   });
 });

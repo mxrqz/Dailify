@@ -75,4 +75,55 @@ export const fromWire = (wire: ParsedTaskWire): ParsedTask => ({
   ...wire,
   date: wire.date === null ? null : zoned(wire.date),
   unsure: [],
+  fields: { day: [], time: [], duration: [], repeat: [], links: [] },
 });
+
+/** O que foi mexido nos chips do composer. `null` = tirado (sem dia, sem hora, "Off", sem link). */
+export type Edits = Partial<{
+  day: Date | null;
+  time: { hour: number; minute: number } | null;
+  duration: string | null;
+  repeat: Repeat | null;
+  links: string[] | null;
+}>;
+
+/**
+ * O editado vale sobre o lido, e as palavras continuam fora do título. Sem dia, a hora cai na
+ * próxima vez que ela acontece (hoje ou amanhã), como no parser.
+ */
+export function withEdits(parsed: ParsedTask, edits: Edits, now: Date): ParsedTask {
+  let { date, hasDay, hasTime } = parsed;
+  const clock = (base: Date, hour: number, minute: number) => {
+    const at = zoned(base);
+    at.setHours(hour, minute, 0, 0);
+    if (!hasDay && at < now) at.setDate(at.getDate() + 1);
+    return at;
+  };
+
+  if (edits.day !== undefined) {
+    hasDay = edits.day !== null;
+    const time = hasTime && date ? date : null;
+    date = edits.day
+      ? clock(edits.day, time?.getHours() ?? 0, time?.getMinutes() ?? 0)
+      : time && clock(now, time.getHours(), time.getMinutes());
+  }
+  if (edits.time !== undefined) {
+    hasTime = edits.time !== null;
+    const base = hasDay && date ? date : now;
+    date = edits.time
+      ? clock(base, edits.time.hour, edits.time.minute)
+      : hasDay
+        ? clock(base, 0, 0)
+        : null;
+  }
+
+  return {
+    ...parsed,
+    date,
+    hasDay,
+    hasTime,
+    duration: edits.duration !== undefined ? edits.duration : parsed.duration,
+    repeat: edits.repeat !== undefined ? (edits.repeat ?? "Off") : parsed.repeat,
+    links: edits.links !== undefined ? (edits.links ?? []) : parsed.links,
+  };
+}

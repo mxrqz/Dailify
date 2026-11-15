@@ -2,7 +2,8 @@ import { useId, useState, type ReactNode } from "react";
 import { normalizeRepeat, weekDays, type Repeat } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
-import { DateTimePicker } from "@/components/dashboard/date-time-picker";
+import { DateTimePicker, TimeWheel } from "@/components/dashboard/date-time-picker";
+import { DayPicker } from "@/components/dashboard/day-picker";
 import { LinksField } from "@/components/dashboard/links-field";
 import { calendarPanel } from "@/components/dashboard/styles";
 import {
@@ -175,14 +176,16 @@ export function LinksPopover({
   );
 }
 
-/** Dia e horário no popover do horário do cartão. Salva no fechar, como o de links. */
+/** Dia e horário no popover do horário do cartão. Salva no fechar, como o de links. `timeOnly`: só a roda. */
 export function DateTimePopover({
   value,
   onChange,
+  timeOnly,
   children,
 }: {
   value: Date;
   onChange: (date: Date) => void;
+  timeOnly?: boolean;
   children: ReactNode;
 }): JSX.Element {
   const [date, setDate] = useState(value);
@@ -196,7 +199,39 @@ export function DateTimePopover({
     >
       <PopoverTrigger asChild>{children}</PopoverTrigger>
       <PopoverContent align="start" className={calendarPanel}>
-        <DateTimePicker value={date} onChange={setDate} />
+        {timeOnly ? (
+          <TimeWheel value={date} onChange={setDate} />
+        ) : (
+          <DateTimePicker value={date} onChange={setDate} />
+        )}
+      </PopoverContent>
+    </Popover>
+  );
+}
+
+/** Só o dia: escolher fecha, não há o que ajustar depois. */
+export function DayPopover({
+  value,
+  onChange,
+  children,
+}: {
+  value: Date;
+  onChange: (day: Date) => void;
+  children: ReactNode;
+}): JSX.Element {
+  const [open, setOpen] = useState(false);
+
+  return (
+    <Popover open={open} onOpenChange={setOpen}>
+      <PopoverTrigger asChild>{children}</PopoverTrigger>
+      <PopoverContent align="start" className={calendarPanel}>
+        <DayPicker
+          value={value}
+          onSelect={(day) => {
+            onChange(day);
+            setOpen(false);
+          }}
+        />
       </PopoverContent>
     </Popover>
   );
