@@ -1,6 +1,16 @@
 import OpenAI from "openai";
 import { DateTime } from "luxon";
+import {
+  DATE_RANGE,
+  TASK_LIMITS,
+  normalizeRepeat,
+  weekDays,
+  type AiIntent,
+  type AiParse,
+  type ParsedTaskWire,
+} from "@dailify/shared";
 import type { Env } from "../index";
+import { sanitizeLinks } from "./task-input";
 
 export const openaiClient = (env: Env) => new OpenAI({ apiKey: env.OPENAI_API_KEY });
 
@@ -14,22 +24,21 @@ export async function transcribe(env: Env, file: File): Promise<string> {
   return r.text;
 }
 
-export interface GPTTask {
+interface GPTTask {
   title: string;
-  duration?: string;
-  priority?: number;
-  repeat?: unknown;
-  date: string;
-  alert?: string;
-  tags?: string[];
+  date: string | null;
+  duration: string | null;
+  repeat: unknown;
+  links: string[];
 }
 
-export interface GPTResponse {
-  response: string;
-  type: "create" | "list" | "invalid";
-  listDate?: string;
-  tasks?: GPTTask[];
+interface GPTResponse {
+  intent: AiIntent;
+  reply: string;
+  tasks: GPTTask[];
 }
+
+const INTENTS: readonly string[] = ["create", "question", "command", "unsupported"];
 
 function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
@@ -39,131 +48,169 @@ function isStringArray(v: unknown): v is string[] {
   return Array.isArray(v) && v.every((x) => typeof x === "string");
 }
 
+const isNullableString = (v: unknown) => v === null || typeof v === "string";
+
 function isGPTTask(v: unknown): v is GPTTask {
-  if (!isRecord(v)) return false;
-  if (typeof v.title !== "string" || typeof v.date !== "string") return false;
-  if (v.duration !== undefined && typeof v.duration !== "string") return false;
-  if (v.priority !== undefined && typeof v.priority !== "number") return false;
-  if (v.alert !== undefined && typeof v.alert !== "string") return false;
-  if (v.tags !== undefined && !isStringArray(v.tags)) return false;
-  return true;
+  return (
+    isRecord(v) &&
+    typeof v.title === "string" &&
+    isNullableString(v.date) &&
+    isNullableString(v.duration) &&
+    isStringArray(v.links)
+  );
+}
+
+function isIntent(v: unknown): v is AiIntent {
+  return typeof v === "string" && INTENTS.includes(v);
 }
 
 // Untrusted: this is parsed straight out of the model's JSON output.
 function isGPTResponse(v: unknown): v is GPTResponse {
-  if (!isRecord(v)) return false;
-  if (typeof v.response !== "string") return false;
-  if (v.type !== "create" && v.type !== "list" && v.type !== "invalid") return false;
-  if (v.listDate !== undefined && typeof v.listDate !== "string") return false;
-  if (v.tasks !== undefined && (!Array.isArray(v.tasks) || !v.tasks.every(isGPTTask))) return false;
-  return true;
+  return (
+    isRecord(v) &&
+    isIntent(v.intent) &&
+    typeof v.reply === "string" &&
+    Array.isArray(v.tasks) &&
+    v.tasks.every(isGPTTask)
+  );
 }
 
-// Based on the legacy server's generateAiResponse prompt (dailify-server/src/functions/openAI.ts), with two
-// deliberate deviations made during this migration (not authorized by any planning doc, decided as a bug fix
-// over the legacy behavior):
-// 1. `now` is naive local time in the user's timezone (no offset), not a bare `new Date()` (Worker's UTC clock).
-// 2. "date"/"alert" are required to come back as naive local ISO (no 'Z', no offset) so the server can
-//    unambiguously reinterpret them as local-to-timezone before converting to UTC — see formatToUTC in
-//    routes/voice.ts. Letting GPT emit its own offset/'Z' would make the server's reinterpretation ambiguous
-//    (double-conversion risk if GPT ever did the offset math itself).
-const PROMPT = (now: string) => `
-            Você é um assistente que interpreta o que o usuário diz para **criar** ou **listar** tarefas.
+// O mesmo contrato em JSON Schema: com `strict` a OpenAI já devolve neste formato, e o guard acima
+// continua sendo a porta — mock, modelo trocado ou schema ignorado não passam dele.
+const SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  required: ["intent", "reply", "tasks"],
+  properties: {
+    intent: { type: "string", enum: INTENTS },
+    reply: { type: "string" },
+    tasks: {
+      type: "array",
+      items: {
+        type: "object",
+        additionalProperties: false,
+        required: ["title", "date", "duration", "repeat", "links"],
+        properties: {
+          title: { type: "string" },
+          date: { type: ["string", "null"] },
+          duration: { type: ["string", "null"] },
+          repeat: {
+            anyOf: [
+              { type: "string", enum: ["Off", "Daily", "Monthly", "Yearly"] },
+              {
+                type: "object",
+                additionalProperties: false,
+                required: ["Weekly"],
+                properties: {
+                  Weekly: {
+                    type: "array",
+                    items: { type: "string", enum: weekDays },
+                  },
+                },
+              },
+            ],
+          },
+          links: { type: "array", items: { type: "string" } },
+        },
+      },
+    },
+  },
+};
 
-            O horário atual é: ${now}, no fuso horário local do usuário (considerar o horário local para expressões como "daqui a 30 minutos", "às 8 da manhã", "15 pras 6"  (que no caso seria 5:45), etc.)
+// `now` vai em hora LOCAL ingênua (sem offset) e as datas voltam assim também: o servidor as
+// reinterpreta no fuso do cliente (`toEpoch`). Deixar a IA fazer a conta do offset abriria a porta
+// pra conversão dupla.
+const PROMPT = (now: string, weekday: string) => `
+Você é a Mewki — "Mew" pros íntimos —, a gatinha assistente do app de tarefas Mewki. Fale sempre no
+feminino ("anotei", "pronto, marquei"), em português do Brasil. Se o usuário escrever em inglês,
+responda em inglês.
 
-            Sua função é analisar o texto enviado e classificar em **uma** das três ações:
+Agora é ${now} (${weekday}), no horário local do usuário. Use isso para "amanhã", "sexta",
+"daqui a 30 minutos", "15 pras 6" (= 05:45 ou 17:45, o que vier primeiro), etc.
 
-            1. "create" → Quando o usuário quiser adicionar/criar uma nova tarefa.
-            2. "list" → Quando o usuário quiser visualizar, listar, ver ou perguntar sobre tarefas existentes.
-            3. "invalid" → Quando a mensagem não for nenhuma das opções acima (ex: piadas, dúvidas gerais, etc).
+Classifique o pedido em "intent":
+- "create": quer anotar uma ou mais tarefas, lembretes ou compromissos.
+- "question": pergunta sobre a agenda ou as tarefas ("o que tenho amanhã?").
+- "command": quer mudar, apagar, concluir ou mover algo que já existe.
+- "unsupported": qualquer outra coisa.
+Você só cria tarefas. Fora de "create", "tasks" é [] e "reply" diz, com carinho, que por enquanto
+você só anota tarefas novas.
 
-            ---
+Cada item de "tasks":
+- "title": curto, na língua do usuário, sem data, hora, duração, recorrência nem link. Mantenha nomes próprios.
+- "date": hora LOCAL, sem 'Z' e sem offset. "YYYY-MM-DDTHH:mm:ss" se o usuário disse a hora;
+  "YYYY-MM-DD" se disse só o dia; null se não disse nem dia nem hora. Nunca invente hora.
+  Hora sem dia: hoje se ainda não passou, senão amanhã. Recorrente: a próxima ocorrência.
+- "duration": só se dita, no formato "15m", "1h", "1h30m" (nunca "min"); senão null.
+- "repeat": só se dita explicitamente — "Off" | "Daily" | "Monthly" | "Yearly" |
+  {"Weekly": ["Monday", ...]} (nomes em inglês); senão "Off".
+- "links": as URLs citadas, exatamente como vieram; [] se nenhuma.
+Várias tarefas no mesmo pedido viram vários itens. Não invente prioridade, alerta nem tags.
 
-            Se a ação for "create", retorne neste formato:
+"reply": uma frase curta na sua voz, sem markdown (ex.: "Anotei! Reunião amanhã às 14h 🐾").
+`;
 
-            {
-                "response": string, // uma mensagem amigável informando que a tarefa esta sendo criada, com emojis e horário legível
-                "type": "create",
-                "tasks": [
-                    {
-                        "title": string,
-                        "completed": [],
-                        "duration": string (ex: "30min", "1h", "1h30min"),
-                        "priority": number (0 a 4, sendo 0 nada importante e 4 mto importante),
-                        "repeat": "Off" | "Daily" | "Monthly" | "Yearly" | { Weekly: string[] | undefined }, o array de strings será os dias da semana que o usuário quer que a task se repita Ex: {"Weekly": ["Monday", "Wednesday", "Friday"]}
-                        "date": string (em formato ISO LOCAL, SEM 'Z' e SEM offset, ex: "2024-06-10T14:15:00"),
-                        "tags": string[],
-                        "alert": string (em formato ISO LOCAL, SEM 'Z' e SEM offset, ex: "2024-06-10T14:00:00"),
-                    }
-                ]
-            }
+const DURATION_RE = /^(?:\d{1,3}h)?(?:\d{1,4}m)?$/;
+const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
-            ⚠️ Gere os campos com base no conteúdo do transcript.
-            ⚠️ Se faltar informação, imagine o mais coerente possível.
-            ⚠️ O campo "repeat" só deve ser incluído se for explicitamente mencionado.
-            ⚠️ O campo "id" será gerado pelo sistema, **não inclua**.
-            ⚠️ O campo "alert" tem seu valor padrão como sendo 15 minutos antes do horário da tarefa, mudar esse valor de acordo com o solicitado pelo usuário, caso não solicitado retornar o padrão.
-            ⚠️ Retorne "date" e "alert" SEMPRE no horário LOCAL do usuário, em ISO SEM 'Z' e SEM offset de fuso (ex: "2024-06-10T14:15:00"). NUNCA faça conversão de fuso; NUNCA adicione 'Z' nem +/-hh:mm.
-            ⚠️ A resposta **deve ser apenas o JSON**. Sem explicações, sem markdown, sem texto fora do objeto.
-            ⚠️ Formate a mensagem de resposta para ser clara, curta e amigável. Use emojis no título e horários/data legíveis.
-            ⚠️ Sempre retorne o campo "tasks" como um **array**, mesmo que o usuário peça apenas **uma única tarefa**.
-            ⚠️ Se o usuário solicitar várias tarefas em um único comando, crie **uma tarefa para cada evento**, dentro do array.
+/** "1h30min" → "1h30m"; o que não couber no formato do `Task.duration` vira `null`. */
+function toDuration(raw: string | null): string | null {
+  const d = raw?.toLowerCase().replace(/\s+/g, "").replace(/min$/, "m");
+  return d && DURATION_RE.test(d) ? d : null;
+}
 
-            ---
+/** Hora-de-parede local → epoch-ms no fuso do cliente; 'Z'/offset que escapar é ignorado. */
+function toEpoch(iso: string, timeZone: string): number | null {
+  const local = iso.replace(/(Z|[+-]\d{2}:?\d{2})$/, "");
+  const ms = DateTime.fromISO(local, { zone: timeZone }).toMillis();
+  return Number.isFinite(ms) && ms >= DATE_RANGE.min && ms <= DATE_RANGE.max ? ms : null;
+}
 
-            Se a ação for "list", use este formato:
+function toDraft(t: GPTTask, timeZone: string): ParsedTaskWire {
+  const date = t.date === null ? null : toEpoch(t.date, timeZone);
+  if (t.date !== null && date === null) throw new Error("AI returned an invalid date");
+  // Link a link: um `javascript:` inventado cai sozinho, sem levar os bons junto.
+  const links = t.links
+    .flatMap((l) => sanitizeLinks([l]) ?? [])
+    .filter((l) => l !== "invalid")
+    .slice(0, TASK_LIMITS.linksMax);
+  return {
+    text: t.title.trim().slice(0, TASK_LIMITS.titleMax),
+    date,
+    hasTime: t.date !== null && !DATE_ONLY_RE.test(t.date),
+    hasDay: date !== null,
+    duration: toDuration(t.duration),
+    links,
+    repeat: normalizeRepeat(t.repeat),
+  };
+}
 
-            {
-                "response": string, // mensagem simpática dizendo que vai listar as tarefas (ex: "Aqui estão suas tarefas do dia! 🗓️"),
-                "type": "list",
-                "listDate": string (em formato ISO ex: "2024-06-10T14:00:00.000Z"), // caso o usuário não informe uma data retorne a data de hoje,
-            }
-
-            ⚠️ Você apenas pode listar tarefas de um dia único, seja dia do mês ou dia de semana. Caso solicite mais de um dia retorne:
-
-            {
-                "response": string, // mensagem amigável dizendo que você só pode listar tarefas de um dia,
-                "type": "invalid"
-            }
-
-            Porém, sempre retorne as tarefas nos casos de "hoje", "amanhã", "depois de amanhã", data completa como "2 de julho de 2025", etc.
-
-            ---
-
-            Se não for nenhum dos dois casos acima, retorne:
-
-            {
-                "response": string, // mensagem amigável dizendo que você só pode criar ou listar tarefas,
-                "type": "invalid"
-            }
-
-            ---
-
-            Exemplos:
-
-            Transcript: "Adiciona uma tarefa pra amanhã às 14h, reunião com o time."
-            → type: "create"
-
-            Transcript: "Quais são minhas tarefas de hoje?"
-            → type: "list"
-
-            Transcript: "Quantos dias faltam pro natal?"
-            → type: "invalid"
-            `;
-
-export async function generateTasks(
-  env: Env,
-  transcript: string,
-  timezone: string,
-): Promise<GPTResponse> {
-  const now =
-    DateTime.now().setZone(timezone).toISO({ includeOffset: false }) ?? new Date().toISOString();
-  const result = await openaiClient(env).responses.create({
-    model: "gpt-4o-mini",
-    instructions: PROMPT(now),
-    input: transcript,
-  });
+/**
+ * Texto → rascunhos. Porta única da IA de criação: `POST /tasks/parse` e a voz (depois da
+ * transcrição) passam por aqui. Lança quando a OpenAI falha ou devolve fora do contrato — e
+ * quem chama só debita crédito depois que isto voltou.
+ */
+export async function interpretText(env: Env, text: string, timezone: string): Promise<AiParse> {
+  const local = DateTime.now().setZone(timezone);
+  const result = await openaiClient(env).responses.create(
+    {
+      model: "gpt-4o-mini",
+      instructions: PROMPT(
+        local.toISO({ includeOffset: false, suppressMilliseconds: true }) ?? "",
+        weekDays[local.weekday % 7],
+      ),
+      input: text,
+      text: {
+        format: {
+          type: "json_schema",
+          name: "mewki_parse",
+          strict: true,
+          schema: SCHEMA,
+        },
+      },
+    },
+    { timeout: 20_000 },
+  );
 
   let parsed: unknown;
   try {
@@ -172,5 +219,10 @@ export async function generateTasks(
     throw new Error("AI returned invalid JSON");
   }
   if (!isGPTResponse(parsed)) throw new Error("AI returned an unexpected response shape");
-  return parsed;
+
+  const drafts =
+    parsed.intent === "create"
+      ? parsed.tasks.map((t) => toDraft(t, timezone)).filter((d) => d.text)
+      : [];
+  return { reply: parsed.reply.trim(), intent: parsed.intent, drafts };
 }

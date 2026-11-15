@@ -62,24 +62,22 @@ describe("POST /tasks/voice", () => {
     });
     openaiMock.responses.create.mockResolvedValue({
       output_text: JSON.stringify({
-        response: "Tarefas criadas! ✅",
-        type: "create",
+        intent: "create",
+        reply: "Anotei as duas!",
         tasks: [
           {
             title: "Reunião com o time",
             duration: "30min",
-            priority: 2,
             repeat: "Off",
-            date: "2026-08-03T14:00:00.000Z",
-            alert: "2026-08-03T13:45:00.000Z",
-            tags: ["work"],
+            date: "2026-08-03T14:00:00",
+            links: [],
           },
           {
             title: "Almoço",
             duration: "1h",
-            priority: 0,
             repeat: "Off",
-            date: "2026-08-03T12:00:00.000Z",
+            date: "2026-08-03T12:00:00",
+            links: [],
           },
         ],
       }),
@@ -93,9 +91,12 @@ describe("POST /tasks/voice", () => {
     const [meeting, lunch] = body.tasks;
     expect(typeof meeting.date).toBe("number");
     expect(meeting.date).toBe(Date.UTC(2026, 7, 3, 14, 0, 0));
-    expect(meeting.alert).toBe(Date.UTC(2026, 7, 3, 13, 45, 0));
+    expect(body.response).toBe("Anotei as duas!");
+    // Sem alerta nem prioridade inventados; duração no formato do Task.
+    expect(meeting).toMatchObject({ priority: 0, duration: "30m" });
+    expect(meeting.alert).toBeUndefined();
     expect(lunch.date).toBe(Date.UTC(2026, 7, 3, 12, 0, 0));
-    expect(lunch.alert).toBeUndefined();
+    expect(await readStoredUsage(env.DB, "vu1", "ai", periodFor("ai", new Date()))).toBe(1);
 
     const saved = await getTask(env.DB, "vu1", meeting.id);
     expect(saved).toMatchObject({ title: "Reunião com o time", date: meeting.date });
@@ -113,17 +114,16 @@ describe("POST /tasks/voice", () => {
     });
     openaiMock.responses.create.mockResolvedValue({
       output_text: JSON.stringify({
-        response: "Tarefa criada! ✅",
-        type: "create",
+        intent: "create",
+        reply: "Marquei!",
+        // Naive local (no 'Z', no offset) — GPT reasons entirely in the user's local time.
         tasks: [
           {
             title: "Reunião",
-            duration: "30min",
-            priority: 2,
+            duration: null,
             repeat: "Off",
-            // Naive local (no 'Z', no offset) — GPT reasons entirely in the user's local time.
             date: "2026-08-03T14:00:00",
-            alert: "2026-08-03T13:45:00",
+            links: [],
           },
         ],
       }),
@@ -137,8 +137,6 @@ describe("POST /tasks/voice", () => {
     // 14:00 BRT (UTC-3, no DST since 2019) === 17:00 UTC. A no-op conversion (interpreting the
     // naive string as literal UTC) would wrongly yield Date.UTC(2026, 7, 3, 14, 0, 0) here.
     expect(body.tasks[0].date).toBe(Date.UTC(2026, 7, 3, 17, 0, 0));
-    // 13:45 BRT === 16:45 UTC
-    expect(body.tasks[0].alert).toBe(Date.UTC(2026, 7, 3, 16, 45, 0));
   });
 
   it("does not insert tasks for a non-create ('invalid') AI response", async () => {
@@ -148,7 +146,7 @@ describe("POST /tasks/voice", () => {
       text: "quantos dias faltam pro natal?",
     });
     openaiMock.responses.create.mockResolvedValue({
-      output_text: JSON.stringify({ response: "Só crio ou listo tarefas.", type: "invalid" }),
+      output_text: JSON.stringify({ intent: "unsupported", reply: "Só anoto tarefas.", tasks: [] }),
     });
 
     const res = await audioRequest();
@@ -210,16 +208,45 @@ describe("POST /tasks/voice — quota e tamanho", () => {
     getUserMock.mockResolvedValue({ id: "vq3", unsafeMetadata: { timezone: "UTC" } });
     openaiMock.audio.transcriptions.create.mockResolvedValue({ text: "quais sao minhas tarefas" });
     openaiMock.responses.create.mockResolvedValue({
-      output_text: JSON.stringify({
-        response: "ok",
-        type: "list",
-        listDate: "2026-08-01T00:00:00",
-      }),
+      output_text: JSON.stringify({ intent: "question", reply: "ok", tasks: [] }),
     });
 
     const res = await audioRequest();
     expect(res.status).toBe(200);
     const period = periodFor("ai", new Date());
     expect(await readStoredUsage(env.DB, "vq3", "ai", period)).toBe(1);
+  });
+
+  it("não gasta crédito quando a transcrição falha", async () => {
+    role = "free";
+    userId = "vq4";
+    getUserMock.mockResolvedValue({ id: "vq4", unsafeMetadata: { timezone: "UTC" } });
+    openaiMock.audio.transcriptions.create.mockRejectedValue(new Error("boom"));
+
+    const res = await audioRequest();
+    expect(res.status).toBe(502);
+    expect(openaiMock.responses.create).not.toHaveBeenCalled();
+    expect(await readStoredUsage(env.DB, "vq4", "ai", periodFor("ai", new Date()))).toBe(0);
+  });
+
+  it("dia sem hora vira Sem data com lembrete às 09:00 locais", async () => {
+    role = "max";
+    userId = "vq5";
+    getUserMock.mockResolvedValue({ id: "vq5", unsafeMetadata: { timezone: "UTC" } });
+    openaiMock.audio.transcriptions.create.mockResolvedValue({ text: "pagar luz dia 3" });
+    openaiMock.responses.create.mockResolvedValue({
+      output_text: JSON.stringify({
+        intent: "create",
+        reply: "Anotei!",
+        tasks: [
+          { title: "Pagar luz", date: "2099-08-03", duration: null, repeat: "Off", links: [] },
+        ],
+      }),
+    });
+
+    const res = await audioRequest();
+    const [task] = (await res.json<{ tasks: Task[] }>()).tasks;
+    const nine = Date.UTC(2099, 7, 3, 9);
+    expect(task).toMatchObject({ undated: true, date: nine, alert: nine, duration: "10m" });
   });
 });

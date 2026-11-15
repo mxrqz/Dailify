@@ -8,14 +8,14 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
 - **`src/index.ts`** — app root: CORS (`ALLOWED_ORIGIN`), `/health` (before auth), `clerkMiddleware`,
   route mounts, and the `app.onError` JSON envelope (`{ error }`, 500). `Env` (the bindings +
   secrets interface) lives here — import `Env` from `../index`, don't redeclare it.
-- **`src/routes/`** — `tasks.ts` (CRUD + month read + `GET /tasks/undated`), `settings.ts` (`GET`/`PUT /settings`, `weekStart`), `voice.ts` (also mounted under `/tasks`),
+- **`src/routes/`** — `tasks.ts` (CRUD + month read + `GET /tasks/undated`), `settings.ts` (`GET`/`PUT /settings`, `weekStart`), `voice.ts` (`POST /tasks/voice` + `POST /tasks/parse`, the AI routes),
   `billing.ts` (checkout, portal, payment details, invoices, `POST /webhooks/stripe`),
   `push.ts` (VAPID key + subscriptions), `clerk-webhook.ts` (`user.deleted` → wipe).
 - **`src/alerts.ts`** — `dispatchAlerts`, the Cron Trigger pass that sends due task alerts.
 - **`src/db/`** — `tasks.ts` (all D1 queries), `settings.ts` (`weekStart` por usuário), `limits.ts` (`enforceCreate` tier gate),
   `push.ts` (subscriptions + due-alert query).
 - **`src/lib/`** — `clerk.ts` (client + `getUserRole` from `privateMetadata.plan`), `stripe.ts`,
-  `openai.ts` (`transcribe` = `gpt-4o-mini-transcribe`), `errors.ts` (`fail`),
+  `openai.ts` (`transcribe` = `gpt-4o-mini-transcribe`; `interpretText` = texto → `AiParse`, o prompt da Mew), `errors.ts` (`fail`),
   `task-input.ts` (validação do body), `push.ts` (Web Push), `svix.ts` (assinatura do webhook Clerk).
 - **`src/middleware/auth.ts`** — `requireAuth` sets `c.get("userId")`; re-exports `clerkMiddleware`.
   **`rate-limit.ts`** — `rateLimit("API_LIMITER" | "VOICE_LIMITER")`, chaveado por usuário.
@@ -57,9 +57,12 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
 - **Web Push é implementado à mão** (`lib/push.ts`, RFC 8291 + VAPID) porque as libs de npm são
   Node-only. `test/push.test.ts` valida contra o vetor da própria RFC — se mexer na derivação de
   chave, esse teste é o que avisa.
-- **Voice**: `voice.ts` caps upload at 5MB and checks `audio/*` **before** calling OpenAI; GPT is
-  prompted in **naive local time**, then dates are reinterpreted with the timezone the client sends
-  (Clerk `unsafeMetadata` é só fallback).
+- **IA**: voz e `POST /tasks/parse` passam pelo mesmo `interpretText`. GPT recebe **hora local
+  ingênua** e as datas voltam reinterpretadas no fuso do cliente (Clerk `unsafeMetadata` é só
+  fallback da voz). `/parse` só devolve rascunhos (`{ reply, intent, drafts }`); a voz cria.
+- **Crédito `ai`: `enforce` antes de chamar a OpenAI, débito só depois de uma resposta dentro do
+  contrato.** Falha, timeout ou JSON fora do shape → 502 sem débito. `question`/`unsupported`
+  válidos debitam (a IA foi usada). Voz = transcrição + leitura = 1 crédito.
 - **Stripe webhook** needs the **raw body** for signature verification — keep it off any body
   parser and verify async (`constructEventAsync`).
 

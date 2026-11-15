@@ -59,7 +59,9 @@ export function normalizeRepeat(value: unknown): Repeat {
   }
   if (value && typeof value === "object" && hasWeekly(value)) {
     const weekly = value.Weekly;
-    if (Array.isArray(weekly)) return { Weekly: weekly };
+    // Só nome válido: um "Segunda" vindo da IA criaria uma série que nunca aparece.
+    const days = Array.isArray(weekly) ? weekDays.filter((d) => weekly.includes(d)) : [];
+    if (days.length) return { Weekly: days };
   }
   return "Off";
 }

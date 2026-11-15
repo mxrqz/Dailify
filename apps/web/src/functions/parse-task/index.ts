@@ -1,4 +1,4 @@
-import type { Repeat } from "@dailify/shared";
+import type { ParsedTaskWire } from "@dailify/shared";
 import { parseLinks } from "../parse-links";
 import { zoned } from "../zone";
 import { parseDuration } from "./durations";
@@ -33,16 +33,9 @@ export { type Unsure, type UnsureCode } from "./unsure";
 export { normalize } from "./vocab";
 export { type ParsedWhen, parseWhen } from "./when";
 
-export interface ParsedTask {
-  text: string;
+/** Mesmo formato que a IA devolve (`ParsedTaskWire`), com a data como `Date` e os motivos de dúvida. */
+export interface ParsedTask extends Omit<ParsedTaskWire, "date"> {
   date: Date | null;
-  /** Falso quando `date` só tem dia (hora ficou 00:00 por padrão) — quem consome decide o default. */
-  hasTime: boolean;
-  /** Dia explícito ("qui", "dia 5") ou recorrência semanal com dias citados ("toda quarta"). */
-  hasDay: boolean;
-  duration: string | null;
-  links: string[];
-  repeat: Repeat;
   /** Por que a leitura pode estar errada; vazio = confiante. */
   unsure: Unsure[];
 }

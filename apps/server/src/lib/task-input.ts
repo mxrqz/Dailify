@@ -26,7 +26,7 @@ function isEpochMs(value: unknown): value is number {
 // `undefined` = campo nao veio (ou veio null); "invalid" = veio e nao presta pra nada.
 // So http(s) passa porque `javascript:`/`data:` num `<a href>` do cliente e XSS; `username`/
 // `password` sao recusados porque "paypal.com@evil.com" se disfarca de dominio confiavel.
-function sanitizeLinks(value: unknown): string[] | undefined | "invalid" {
+export function sanitizeLinks(value: unknown): string[] | undefined | "invalid" {
   if (value === undefined || value === null) return undefined;
   if (!Array.isArray(value) || value.length > MAX_LINKS) return "invalid";
 

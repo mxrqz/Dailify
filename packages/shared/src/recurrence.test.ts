@@ -148,6 +148,11 @@ describe("normalizeRepeat", () => {
     expect(normalizeRepeat(undefined)).toBe("Off");
     expect(normalizeRepeat({ Weekly: "nope" })).toBe("Off");
   });
+
+  test("descarta dia da semana que não é nome válido", () => {
+    expect(normalizeRepeat({ Weekly: ["Segunda", "Friday", 3] })).toEqual({ Weekly: ["Friday"] });
+    expect(normalizeRepeat({ Weekly: ["Segunda"] })).toBe("Off");
+  });
 });
 
 describe("expansão com fuso explícito", () => {

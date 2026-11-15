@@ -1,17 +1,28 @@
-import { Hono } from "hono";
+import { Hono, type Context } from "hono";
 import { nanoid } from "nanoid";
 import { DateTime, IANAZone } from "luxon";
 import type { User } from "@clerk/backend";
-import { limitsFor, normalizeRepeat, type Task } from "@dailify/shared";
+import {
+  TASK_LIMITS,
+  limitsFor,
+  type AiParse,
+  type ParsedTaskWire,
+  type Task,
+} from "@dailify/shared";
 import type { Env } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { clerk, getUserRole } from "../lib/clerk";
-import { transcribe, generateTasks } from "../lib/openai";
+import { interpretText, transcribe } from "../lib/openai";
 import { insertTask } from "../db/tasks";
 import { enforce, enforceCreate } from "../db/limits";
 import { bumpStoredUsage, periodFor } from "../db/usage";
 import { fail } from "../lib/errors";
+
+const DEFAULT_HOUR = 9;
+const DEFAULT_DURATION = "10m"; // os mesmos do composer (apps/web/src/functions/compose-input.ts)
+
+const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
 
 const voice = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 
@@ -25,27 +36,73 @@ function validZone(value: unknown): string | undefined {
   return typeof value === "string" && IANAZone.isValidZone(value) ? value : undefined;
 }
 
-// GPT is prompted to emit naive local ISO strings with no 'Z'/offset (see lib/openai.ts's PROMPT) —
-// it reasons using a "now" already expressed as naive local time in the user's timezone, so its output
-// wall-clock values are meant as local time, not UTC. The regex strip below is belt-and-suspenders in
-// case GPT disobeys and tags a 'Z' or offset anyway. We reinterpret the wall-clock components as local
-// to `timeZone` before converting to a real UTC instant.
-function formatToUTC(iso: string, timeZone: string): number | null {
-  const local = iso.replace(/(Z|[+-]\d{2}:?\d{2})$/, "");
-  const dt = DateTime.fromISO(local, { zone: timeZone });
-  return dt.isValid ? dt.toUTC().toMillis() : null;
+type Ctx = Context<{ Bindings: Env; Variables: { userId: string } }>;
+
+/** Barra antes de qualquer chamada à OpenAI. Bloqueado (limite 0) e esgotado: sem crédito, 403/429. */
+async function aiQuotaError(c: Ctx): Promise<Response | null> {
+  const limits = limitsFor(await getUserRole(c.env, c.get("userId")));
+  const err = await enforce(c.env.DB, c.get("userId"), limits, "ai", new Date());
+  return err ? fail(c, limits.ai === 0 ? 403 : 429, err) : null;
 }
+
+/** Crédito só depois da IA responder dentro do contrato: falha, timeout ou lixo não custam nada. */
+const debitAi = (c: Ctx) =>
+  bumpStoredUsage(c.env.DB, c.get("userId"), "ai", periodFor("ai", new Date()));
+
+/**
+ * A voz cria direto, sem confirmação — então decide aqui o que o composer decide no cliente
+ * (`composeTaskInput`): com hora vai pra agenda; só com dia vira Sem data com lembrete às 09:00
+ * daquele dia; sem nada, Sem data puro.
+ *
+ * ponytail: sem a busca da próxima ocorrência que o cliente faz quando o dia já passou; o
+ * lembrete só some. Mover `composeTaskInput` pro shared (Dailify-1rb.5) unifica os dois.
+ */
+function draftToTask(d: ParsedTaskWire, timezone: string, now: number): Task {
+  const base = {
+    id: nanoid(6),
+    title: d.text,
+    duration: d.duration ?? DEFAULT_DURATION,
+    priority: 0,
+    repeat: d.repeat,
+    links: d.links.length ? d.links.slice(0, 1) : undefined,
+    completed: [],
+  };
+  if (d.date !== null && d.hasTime) return { ...base, date: d.date };
+  const reminder =
+    d.date === null
+      ? null
+      : DateTime.fromMillis(d.date, { zone: timezone }).set({ hour: DEFAULT_HOUR }).toMillis();
+  if (reminder !== null && reminder > now) {
+    return { ...base, date: reminder, alert: reminder, undated: true };
+  }
+  return { ...base, date: now, undated: true };
+}
+
+voice.post("/parse", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
+  const body: unknown = await c.req.json().catch(() => null);
+  const text = isRecord(body) && typeof body.text === "string" ? body.text.trim() : "";
+  if (!text || text.length > TASK_LIMITS.titleMax) return fail(c, 400, "invalid text");
+  const timezone = validZone(isRecord(body) ? body.timezone : undefined);
+  if (!timezone) return fail(c, 400, "invalid timezone");
+
+  const quotaError = await aiQuotaError(c);
+  if (quotaError) return quotaError;
+
+  let result: AiParse;
+  try {
+    result = await interpretText(c.env, text, timezone);
+  } catch (err) {
+    console.error(err);
+    return fail(c, 502, "AI request failed");
+  }
+  await debitAi(c);
+  return c.json(result);
+});
 
 voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const userId = c.get("userId");
-  const limits = limitsFor(await getUserRole(c.env, userId));
-  const now = new Date();
-
-  const quotaError = await enforce(c.env.DB, userId, limits, "ai", now);
-  if (quotaError) {
-    // Bloqueado (limite 0) e esgotado são a mesma resposta: em ambos não há crédito disponível.
-    return fail(c, limits.ai === 0 ? 403 : 429, quotaError);
-  }
+  const quotaError = await aiQuotaError(c);
+  if (quotaError) return quotaError;
 
   const body = await c.req.parseBody();
   const audio = body["audio"];
@@ -63,37 +120,20 @@ voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const timezone = validZone(body["timezone"]) ?? readTimezone(user);
   if (!timezone) return fail(c, 400, "No timezone set");
 
-  const transcript = await transcribe(c.env, audio);
-  // Conta aqui, não no fim: a transcrição é o que custa dinheiro. Se a geração falhar depois, o
-  // comando já foi pago.
-  await bumpStoredUsage(c.env.DB, userId, "ai", periodFor("ai", now));
-  const ai = await generateTasks(c.env, transcript, timezone);
-
-  if (ai.type !== "create" || !ai.tasks) {
-    return c.json({ response: ai.response, tasks: [] });
+  // Transcrição + leitura = um crédito, debitado só quando as duas deram certo.
+  let ai: AiParse;
+  try {
+    ai = await interpretText(c.env, await transcribe(c.env, audio), timezone);
+  } catch (err) {
+    console.error(err);
+    return fail(c, 502, "AI request failed");
   }
+  await debitAi(c);
 
+  const now = Date.now();
   const tasks: Task[] = [];
-  for (const t of ai.tasks) {
-    const date = formatToUTC(t.date, timezone);
-    if (date === null) return fail(c, 502, "AI returned an invalid date");
-    const alert = t.alert === undefined ? undefined : formatToUTC(t.alert, timezone);
-    if (t.alert !== undefined && alert === null) {
-      return fail(c, 502, "AI returned an invalid alert");
-    }
-
-    const task: Task = {
-      id: nanoid(6),
-      title: t.title,
-      date,
-      alert: alert ?? undefined,
-      duration: t.duration ?? "",
-      priority: t.priority ?? 0,
-      repeat: normalizeRepeat(t.repeat),
-      tags: t.tags,
-      completed: [],
-    };
-
+  for (const draft of ai.drafts) {
+    const task = draftToTask(draft, timezone, now);
     const err = await enforceCreate(c.env, userId, task);
     if (err) return fail(c, 429, err);
 
@@ -101,7 +141,7 @@ voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
     tasks.push(task);
   }
 
-  return c.json({ response: ai.response, tasks });
+  return c.json({ response: ai.reply, tasks });
 });
 
 export default voice;

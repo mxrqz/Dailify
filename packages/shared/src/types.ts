@@ -26,6 +26,31 @@ export type TaskInput = Omit<Task, "id" | "completed" | "hash"> & {
   completed?: number[];
 };
 
+/**
+ * Rascunho de tarefa lido de uma frase — o mesmo formato do parser local (`ParsedTask` do web,
+ * sem `unsure`) com a data em epoch-ms, pra resposta da IA caber nas mesmas etiquetas do composer.
+ */
+export interface ParsedTaskWire {
+  text: string;
+  date: number | null; // epoch ms
+  /** Falso quando `date` só tem dia (hora ficou 00:00 por padrão) — quem consome decide o default. */
+  hasTime: boolean;
+  /** Dia explícito ("qui", "dia 5") ou recorrência semanal com dias citados ("toda quarta"). */
+  hasDay: boolean;
+  duration: string | null;
+  links: string[];
+  repeat: Repeat;
+}
+
+export type AiIntent = "create" | "question" | "command" | "unsupported";
+
+/** `POST /tasks/parse`: só rascunhos — quem cria é o cliente, depois de confirmar. */
+export interface AiParse {
+  reply: string;
+  intent: AiIntent;
+  drafts: ParsedTaskWire[];
+}
+
 export type Role = "free" | "pro" | "max" | "admin";
 
 export const PLAN_ID = { free: "free", pro: "pro", max: "max" } as const;
