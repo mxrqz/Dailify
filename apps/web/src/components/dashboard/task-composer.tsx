@@ -208,7 +208,7 @@ export function TaskComposer({
         <span
           className={cn(
             chip,
-            task.alert ? "border-accent-line bg-accent-subtle text-accent-primary" : chipGhost,
+            task.alert ? "border-accent-line bg-accent-subtle text-brand-text" : chipGhost,
           )}
         >
           {task.alert ? (

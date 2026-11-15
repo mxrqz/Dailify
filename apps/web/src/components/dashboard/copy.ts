@@ -152,7 +152,7 @@ export const copy = {
     notificationsOff: "Receba um lembrete na hora do alerta da tarefa.",
     notificationsUnsupported: "Este navegador não suporta notificações.",
     notificationsDenied:
-      "As notificações estão bloqueadas para o Dailify. Libere nas permissões do navegador.",
+      "As notificações estão bloqueadas para a Mewki. Libere nas permissões do navegador.",
     notificationsError: "Não foi possível ativar as notificações",
   },
 

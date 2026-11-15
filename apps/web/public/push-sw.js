@@ -1,4 +1,4 @@
-// Handlers de Web Push do Dailify. NÃO é o service worker registrado: ele é importado pelo
+// Handlers de Web Push da Mewki. NÃO é o service worker registrado: ele é importado pelo
 // `sw.js` que o Workbox gera (`workbox.importScripts` em vite.config.ts), porque dois service
 // workers no mesmo escopo significa um sobrescrevendo o outro — e era isso que aconteceria com
 // dois arquivos chamados `sw.js`.
@@ -20,7 +20,7 @@ self.addEventListener("push", (event) => {
 
   const time = timeLabel(data.at);
   event.waitUntil(
-    self.registration.showNotification(data.title || "Dailify", {
+    self.registration.showNotification(data.title || "Mewki", {
       body: time ? `Sua tarefa é às ${time}` : "Você tem uma tarefa agora",
       icon: "/dailify_logo_2.png",
       badge: "/dailify_logo_2.png",

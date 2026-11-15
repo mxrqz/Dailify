@@ -26,38 +26,94 @@
   --motion-ease-standard: cubic-bezier(0.2, 0, 0, 1);
   /* Saída: acelera e some (estudo §1, ease-in curto). */
   --motion-ease-exit: cubic-bezier(0.3, 0, 1, 1);
+  /* Mola do DS (a mesma da landing): passa ~16% do alvo e assenta. Não usar em UI do app. */
+  --motion-ease-spring: linear(
+    0,
+    0.009,
+    0.035 2.1%,
+    0.141,
+    0.281 6.7%,
+    0.723 12.9%,
+    0.938 16.7%,
+    1.017,
+    1.077,
+    1.121,
+    1.149 24.3%,
+    1.159,
+    1.163,
+    1.161,
+    1.154 29.9%,
+    1.129 32.8%,
+    1.051 39.6%,
+    1.017 43.1%,
+    0.991,
+    0.977 51%,
+    0.974 53.8%,
+    0.975 57.1%,
+    0.997 69.8%,
+    1.003 76.9%,
+    1
+  );
 
-  --background: light-dark(oklch(100% 0 0), oklch(14.7% 0.004 49.3));
-  --foreground: light-dark(oklch(14.1% 0.004 285.8), oklch(96.2% 0 0));
-  --card: light-dark(oklch(100% 0 0), oklch(21.6% 0.006 56));
-  --card-foreground: light-dark(oklch(14.1% 0.004 285.8), oklch(96.2% 0 0));
+  /* Design System Mewki (tokens.json). Dark é o tema principal; os tokens legados abaixo
+     (shadcn, surface-*) apontam pra cá, então telas antigas herdam o visual sem trocar classe. */
+  --canvas: light-dark(oklch(97% 0.002 60), oklch(0% 0 0));
+  --surface: light-dark(oklch(100% 0 0), oklch(19.5% 0.002 30));
+  /* No claro é igual a surface: o que flutua se separa por shadow-raised, não por cor. */
+  --surface-raised: light-dark(oklch(100% 0 0), oklch(23.5% 0.002 30));
+  --fill: light-dark(oklch(94.5% 0.003 60), oklch(27% 0.003 30));
+  --fill-pressed: light-dark(oklch(91% 0.004 60), oklch(31% 0.003 30));
+  --separator: light-dark(oklch(91.5% 0.003 60), oklch(28% 0.003 30));
+  --ink: light-dark(oklch(18% 0.004 40), oklch(97% 0.002 60));
+  --ink-secondary: light-dark(oklch(50% 0.006 40), oklch(72% 0.005 40));
+  /* Só placeholder e desabilitado (isentos no WCAG): não passa 4.5:1. */
+  --ink-tertiary: light-dark(oklch(68% 0.005 40), oklch(52% 0.005 40));
+  --brand: oklch(57% 0.22 20);
+  --brand-pressed: oklch(51% 0.21 20);
+  --on-brand: oklch(100% 0 0);
+  /* Vermelho como texto/ícone e anel de foco: --brand como texto fica em ~4:1 no escuro. */
+  --brand-text: light-dark(oklch(53% 0.21 20), oklch(70% 0.18 18));
+  --brand-soft: light-dark(oklch(95% 0.03 15), oklch(28% 0.07 18));
+  /* Único token translúcido: vai junto de backdrop-blur. */
+  --material-bar: light-dark(oklch(97.7% 0.002 68 / 78%), oklch(15.9% 0 0 / 78%));
+  --scrim: light-dark(oklch(0% 0 0 / 35%), oklch(0% 0 0 / 60%));
+  /* No escuro, o anel de 1px faz o papel que a sombra não faz sobre preto. */
+  --shadow-raised:
+    0 0 0 1px light-dark(oklch(0% 0 0 / 5%), oklch(100% 0 0 / 8%)),
+    0 12px 32px -8px light-dark(oklch(0% 0 0 / 18%), oklch(0% 0 0 / 60%));
+  --shadow-float:
+    0 0 0 1px light-dark(oklch(0% 0 0 / 6%), oklch(100% 0 0 / 10%)),
+    0 40px 80px -24px light-dark(oklch(0% 0 0 / 25%), oklch(0% 0 0));
+
+  --background: var(--canvas);
+  --foreground: var(--ink);
+  --card: var(--surface);
+  --card-foreground: var(--ink);
   --popover: var(--surface-popover); /* o shadcn lê daqui: todo popover cai no mesmo token */
-  --popover-foreground: light-dark(oklch(14.1% 0.004 285.8), oklch(96.2% 0 0));
-  --primary: oklch(58.6% 0.222 17.6);
-  --primary-foreground: oklch(97% 0.015 12.4);
-  --secondary: light-dark(oklch(96.8% 0.001 286.4), oklch(27.4% 0.005 286));
-  --secondary-foreground: light-dark(oklch(21% 0.006 285.9), oklch(98.5% 0 0));
-  --muted: light-dark(oklch(96.8% 0.001 286.4), oklch(27% 0 0));
-  --muted-foreground: light-dark(oklch(55.2% 0.014 285.9), oklch(71.2% 0.013 286.1));
-  --accent: light-dark(oklch(96.8% 0.001 286.4), oklch(26.9% 0.006 34.3));
-  --accent-foreground: light-dark(oklch(21% 0.006 285.9), oklch(98.5% 0 0));
-  --destructive: light-dark(oklch(63.7% 0.208 25.3), oklch(39.6% 0.133 25.7));
-  --destructive-foreground: light-dark(oklch(98.5% 0 0), oklch(97.1% 0.013 17.4));
-  --border: light-dark(oklch(92% 0.004 286.3), oklch(27.4% 0.005 286));
-  --input: light-dark(oklch(92% 0.004 286.3), oklch(27.4% 0.005 286));
-  --ring: oklch(58.6% 0.222 17.6);
-  --radius: 0.5rem;
+  --popover-foreground: var(--ink);
+  --primary: var(--brand);
+  --primary-foreground: var(--on-brand);
+  --secondary: var(--fill);
+  --secondary-foreground: var(--ink);
+  --muted: var(--fill);
+  --muted-foreground: var(--ink-secondary);
+  /* No shadcn, accent é o fundo de hover, não a marca (essa é --brand). */
+  --accent: var(--fill);
+  --accent-foreground: var(--ink);
+  /* DS: erro usa o vermelho da marca como texto; o que diferencia é a palavra. */
+  --destructive: var(--brand-text);
+  --destructive-foreground: var(--on-brand);
+  --border: var(--separator);
+  --input: var(--separator);
+  --ring: var(--brand-text);
   --chart-1: light-dark(oklch(67.7% 0.157 35.2), oklch(52.9% 0.193 262.1));
   --chart-2: light-dark(oklch(63.1% 0.101 183.5), oklch(69.8% 0.134 165.5));
   --chart-3: light-dark(oklch(37.9% 0.044 225.5), oklch(72.3% 0.15 60.6));
   --chart-4: light-dark(oklch(83.4% 0.119 88.1), oklch(61.9% 0.204 312.7));
   --chart-5: light-dark(oklch(78.3% 0.126 58.7), oklch(61.2% 0.209 6.4));
 
-  /* app canvas behind cards (was bg-zinc-100/900) */
-  --canvas: light-dark(oklch(96.7% 0.001 286.4), oklch(21% 0.006 285.9));
-
   /* semantic status */
-  --success: light-dark(oklch(52% 0.15 149.6), oklch(69.6% 0.17 149.6));
+  --success: light-dark(oklch(52% 0.15 150), oklch(72% 0.17 150));
   --success-foreground: light-dark(oklch(98.5% 0 0), oklch(14.7% 0.004 49.3));
   --premium: light-dark(oklch(55.8% 0.24 302.3), oklch(62% 0.23 303));
   --premium-foreground: oklch(98.5% 0 0);
@@ -102,43 +158,26 @@
   --palette-8: #ffc6ff;
   --palette-9: #fffffc;
 
-  /* landing — superfícies dark-first (page mais escura, painéis levantados) */
-  --surface-page: light-dark(oklch(100% 0 0), oklch(14.5% 0 0)); /* dark = #0a0a0a, preto neutro */
-  --surface-card: light-dark(oklch(98% 0 0), oklch(16.8% 0 0)); /* dark = #0f0f0f, neutro sólido */
-  --surface-panel: light-dark(oklch(100% 0 0), oklch(19.5% 0 0)); /* dark = #151515, neutro */
-  /* Fundo de TODO popover e menu (calendário, chips, dropdowns): um só, o mesmo do card. */
-  --surface-popover: var(--surface-card);
-  --surface-raised: light-dark(
-    oklch(98% 0 0),
-    oklch(17.5% 0 0)
-  ); /* dark = #101010, degrau de SEÇÃO; cards em cima usam surface-panel */
-  /* Laje de destaque: o degrau mais alto que uma seção alcança, reservado a UMA seção da página
-     (preços). Chegou substituindo uma inversão pro claro, que ganhava o marco pelo valor e destoava
-     do compromisso dark — aqui o marco vem de um salto grande dentro do escuro (+9.5 L sobre a
-     page, contra os +3 do raised). Segue a mesma regra: o card fica ~2 pontos acima da sua seção. */
-  --surface-slab: light-dark(oklch(96% 0 0), oklch(24% 0 0)); /* dark = #1e1e1e */
-  --surface-slab-card: light-dark(oklch(100% 0 0), oklch(26% 0 0)); /* dark = #212121 */
-  --surface-hover: light-dark(
-    oklch(96.8% 0.001 286.4),
-    oklch(22.5% 0 0)
-  ); /* dark = #1c1c1c, neutro */
-  --surface-header: light-dark(
-    oklch(96.7% 0.001 286),
-    oklch(16.8% 0 0)
-  ); /* dark = #0f0f0f, barra levantada sobre a page */
-  --surface-line: light-dark(
-    oklch(90% 0.004 286.3),
-    oklch(24% 0 0)
-  ); /* hairline sólida, dark = #202020 (substitui os border-*-foreground/10) */
+  /* superfícies legadas (landing/app), re-apontadas pro DS */
+  --surface-page: var(--canvas);
+  --surface-card: var(--surface);
+  --surface-panel: var(--surface-raised);
+  /* Fundo de TODO popover e menu (calendário, chips, dropdowns): um só. */
+  --surface-popover: var(--surface-raised);
+  --surface-slab: var(--surface);
+  --surface-slab-card: var(--surface-raised);
+  --surface-hover: var(--fill);
+  --surface-header: var(--surface);
+  --surface-line: var(--separator);
   /* tinta sempre-escura (CTA/footer): o grain (blend screen) só lê bem sobre superfície escura, então
      NÃO é light-dark — fica dark nos dois temas (como o antigo bloco crimson era crimson nos dois). */
   --surface-ink: oklch(14.5% 0 0); /* #0a0a0a, mesmo preto neutro da page dark */
   --surface-ink-foreground: oklch(96.2% 0 0); /* texto claro sobre a tinta */
   --surface-ink-muted: oklch(70% 0.01 286); /* texto secundário sobre a tinta */
   --surface-ink-line: oklch(100% 0 0 / 10%); /* hairline claro sutil sobre a tinta escura */
-  --text-secondary: light-dark(oklch(38% 0.01 286), oklch(80% 0.01 286));
-  --accent-hover: oklch(54% 0.222 17.6);
-  --accent-subtle: color-mix(in oklch, var(--primary) 10%, transparent);
+  --text-secondary: var(--ink-secondary);
+  --accent-hover: var(--brand-pressed);
+  --accent-subtle: var(--brand-soft);
   --accent-glow: color-mix(in oklch, var(--primary) 20%, transparent);
   /* Borda crimson suave do chip de lembrete: a hairline puxada pro crimson, sem gritar como ação. */
   --accent-line: color-mix(in oklch, var(--primary) 35%, var(--surface-line));
@@ -149,26 +188,23 @@
   --meta-date-subtle: color-mix(in oklch, var(--meta-date) 16%, transparent);
   --meta-time-subtle: color-mix(in oklch, var(--meta-time) 16%, transparent);
   --meta-repeat-subtle: color-mix(in oklch, var(--meta-repeat) 16%, transparent);
-  --border-highlight: light-dark(oklch(90% 0.004 286.3), oklch(30% 0.005 286));
+  --border-highlight: var(--separator);
   /* Borda do ClockCheck: no light a highlight some no branco; 62% dá ~3.6:1 contra
      a page (WCAG 1.4.11). Dark igual à highlight. */
   --control-mark: light-dark(oklch(62% 0.004 286.3), oklch(30% 0.005 286));
-  --radius-panel: 0.75rem;
-  /* Miolo de um painel com p-1: 12px do panel menos os 4px do padding, pra o canto de dentro ficar
+  --radius-panel: 1.375rem; /* = rounded-lg, o card do DS */
+  /* Miolo de um painel com p-1: o panel menos os 4px do padding, pra o canto de dentro ficar
      concêntrico com o de fora. Usado pelo campo do composer e pelos chips do eco. */
-  --radius-field: 0.5rem;
-  /* Fundo do shell do dashboard, um degrau abaixo dos painéis (surface-card) pra eles se
-     destacarem: no dark é preto puro (o Visual aprovado); no light, preto gritaria, então é só um
-     cinza um passo mais escuro que os painéis claros. */
-  --surface-shell: light-dark(oklch(92% 0 0), oklch(0% 0 0));
+  --radius-field: calc(var(--radius-panel) - 0.25rem);
+  /* Fundo do shell do dashboard: o canvas, um degrau abaixo dos painéis (surface-card). */
+  --surface-shell: var(--canvas);
   /* Largura da coluna lateral (hoje vazia, reservada): cabe título + chips de lembrete/histórico sem quebrar. */
   --width-undated: 20rem;
   /* Puxador aberto: centro no gap entre agenda e coluna (largura + p-1 do shell + meio gap-1). */
   --undated-handle-x: calc(50% - var(--width-undated) - 0.375rem);
   /* Folha de criação no desktop: frase + quatro chips numa linha, sem passar da agenda estreita. */
   --width-sheet: 27.5rem;
-  /* Atrás da folha no mobile: escurece a tela o bastante pra folha ser o assunto, sem apagá-la. */
-  --surface-scrim: oklch(0% 0 0 / 45%);
+  --surface-scrim: var(--scrim);
   --layout-content: 1380px; /* teto de largura do conteúdo (mastra-like) */
 }
 
@@ -199,6 +235,7 @@
   --ease-out: var(--motion-ease-out);
   --ease-standard: var(--motion-ease-standard);
   --ease-exit: var(--motion-ease-exit);
+  --ease-spring: var(--motion-ease-spring);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -224,11 +261,31 @@
   --color-chart-3: var(--chart-3);
   --color-chart-4: var(--chart-4);
   --color-chart-5: var(--chart-5);
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
+  /* Raios do DS (concêntricos: o de dentro = o de fora − o padding entre eles). */
+  --radius-xs: 0.375rem;
+  --radius-sm: 0.625rem;
+  --radius-md: 0.875rem;
+  --radius-lg: 1.375rem;
+  --radius-xl: 1.375rem; /* rounded-xl legado (cards) vira o card do DS */
+  --radius-sheet: 2rem;
+
   --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-fill: var(--fill);
+  --color-fill-pressed: var(--fill-pressed);
+  --color-separator: var(--separator);
+  --color-ink: var(--ink);
+  --color-ink-secondary: var(--ink-secondary);
+  --color-ink-tertiary: var(--ink-tertiary);
+  --color-brand: var(--brand);
+  --color-brand-pressed: var(--brand-pressed);
+  --color-on-brand: var(--on-brand);
+  --color-brand-text: var(--brand-text);
+  --color-brand-soft: var(--brand-soft);
+  --color-material-bar: var(--material-bar);
+  --color-scrim: var(--scrim);
+  --shadow-raised: var(--shadow-raised);
+  --shadow-float: var(--shadow-float);
 
   --color-success: var(--success);
   --color-success-foreground: var(--success-foreground);
@@ -304,7 +361,7 @@
   --width-undated: var(--width-undated);
   --width-sheet: var(--width-sheet);
   --color-surface-scrim: var(--surface-scrim);
-  --shadow-panel: 0 24px 60px -20px light-dark(oklch(0% 0 0 / 0.18), oklch(0% 0 0 / 0.55));
+  --shadow-panel: var(--shadow-raised);
   /* Elevação 1 — o degrau mais baixo: o que flutua encostado na superfície (a toolbar do cartão).
      Duas camadas de BOX-shadow, contato + difusa; nunca `drop-shadow`, que é filtro e se empilha
      entre camadas — uma sombra acaba escurecendo a outra onde os elementos se sobrepõem. */

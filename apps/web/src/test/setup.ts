@@ -44,4 +44,21 @@ if (typeof window !== "undefined") {
     removeListener: () => {},
     dispatchEvent: () => false,
   });
+
+  // jsdom também não tem WAAPI; as animações da landing (Mew, balões) chamam `el.animate`.
+  if (!("animate" in Element.prototype)) {
+    Object.defineProperty(Element.prototype, "animate", {
+      configurable: true,
+      value: () => ({
+        finished: Promise.resolve(),
+        onfinish: null,
+        currentTime: 0,
+        cancel() {},
+        finish() {},
+        play() {},
+        pause() {},
+        commitStyles() {},
+      }),
+    });
+  }
 }

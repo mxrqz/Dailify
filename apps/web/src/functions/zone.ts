@@ -12,10 +12,10 @@ export function setAppTimeZone(next: string | null): void {
   zone = next ?? deviceTimeZone();
 }
 
-/** O `new Date()` do Dailify: o instante, lido no fuso do app (date-fns segue o fuso do TZDate). */
+/** O `new Date()` da Mewki: o instante, lido no fuso do app (date-fns segue o fuso do TZDate). */
 export const zoned = (value: number | Date = Date.now()): TZDate => new TZDate(+value, zone);
 
-/** O `new Date(ano, mês, dia, …)` do Dailify, no fuso do app. */
+/** O `new Date(ano, mês, dia, …)` da Mewki, no fuso do app. */
 export const zonedAt = (
   year: number,
   month: number,

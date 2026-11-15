@@ -257,7 +257,7 @@ const TimeChip = forwardRef<
       ref={ref}
       editable={editable}
       label={editable ? copy.task.editTime : value}
-      className={cn("font-mono", upcoming ? "text-accent-primary" : "text-meta-time", className)}
+      className={cn("font-mono", upcoming ? "text-brand-text" : "text-meta-time", className)}
       {...props}
     >
       {value}

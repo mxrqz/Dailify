@@ -32,8 +32,8 @@ export default defineConfig(async ({ mode }) => ({
       // `classic`: o SW importa o push-sw.js por importScripts, que não existe em worker module.
       devOptions: { enabled: !!process.env.PWA_DEV, type: 'classic', suppressWarnings: true },
       manifest: {
-        name: 'Dailify',
-        short_name: 'Dailify',
+        name: 'Mewki',
+        short_name: 'Mewki',
         description: 'Sua agenda do dia, escrita como você fala.',
         lang: 'pt-BR',
         start_url: '/dashboard',

@@ -8,7 +8,7 @@ export default function TermsPage() {
   return (
     <>
       <Helmet>
-        <title>Dailify - Termos de Uso</title>
+        <title>Mewki - Termos de Uso</title>
       </Helmet>
 
       <SiteHeader className="px-[clamp(1rem,5vw,24rem)]" />
@@ -21,15 +21,14 @@ export default function TermsPage() {
           </div>
 
           <p className="text-muted-foreground">
-            Estes Termos regem o uso do Dailify ("serviço"), operado por [Nome da
-            empresa/responsável] ("nós"). Ao criar uma conta ou usar o serviço, você concorda com
-            estes Termos.
+            Estes Termos regem o uso da Mewki ("serviço"), operado por [Nome da empresa/responsável]
+            ("nós"). Ao criar uma conta ou usar o serviço, você concorda com estes Termos.
           </p>
 
           <section className="flex flex-col gap-2">
             <h2 className="text-xl font-semibold">1. O serviço</h2>
             <p className="text-muted-foreground">
-              O Dailify é um app de gerenciamento de tarefas com recursos gratuitos e pagos (planos
+              A Mewki é um app de gerenciamento de tarefas com recursos gratuitos e pagos (planos
               Free, Pro e Pro+AI). Podemos alterar ou descontinuar funcionalidades, com aviso quando
               razoável.
             </p>
@@ -96,7 +95,7 @@ export default function TermsPage() {
             <p className="text-muted-foreground">
               Podemos atualizar estes Termos; mudanças relevantes serão comunicadas. Foro:
               [cidade/UF]. Dúvidas: [e-mail de contato]. Veja também nossa{" "}
-              <Link to="/privacidade" className="text-primary hover:underline">
+              <Link to="/privacidade" className="text-brand-text hover:underline">
                 Política de Privacidade
               </Link>
               .
@@ -104,7 +103,7 @@ export default function TermsPage() {
           </section>
 
           <div className="pt-4">
-            <Link to="/" className="text-primary hover:underline">
+            <Link to="/" className="text-brand-text hover:underline">
               ← Voltar ao início
             </Link>
           </div>

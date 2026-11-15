@@ -90,7 +90,7 @@ export default function PremiumPage(): JSX.Element {
 
         <p className="text-center text-sm text-muted-foreground">
           {copy.page.haveAccount}{" "}
-          <Link to="/login" className="text-accent-primary hover:underline">
+          <Link to="/login" className="text-brand-text hover:underline">
             {copy.page.signIn}
           </Link>
         </p>

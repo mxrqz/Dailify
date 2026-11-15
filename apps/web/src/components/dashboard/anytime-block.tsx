@@ -26,7 +26,7 @@ const hhmm = (date: Date) => format(date, "HH:mm");
 function ReminderChip({ at }: { at: number }): JSX.Element {
   const date = zoned(at);
   return (
-    <span className="inline-flex items-center gap-1 rounded-md border border-accent-line bg-accent-subtle px-1.5 text-accent-primary">
+    <span className="inline-flex items-center gap-1 rounded-md border border-accent-line bg-accent-subtle px-1.5 text-brand-text">
       <Bell className="size-3" role="img" aria-label={copy.undated.reminder} />
       {weekday(date.getDay())} {hhmm(date)}
     </span>

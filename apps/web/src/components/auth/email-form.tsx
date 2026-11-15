@@ -19,7 +19,7 @@ function Offer({ mode }: { mode: "signIn" | "signUp" }): JSX.Element {
       <Link
         to={isSignUp ? "/signup" : "/login"}
         state={location.state}
-        className="text-primary underline-offset-4 hover:underline"
+        className="text-brand-text underline-offset-4 hover:underline"
       >
         {isSignUp ? copy.errors.offerSignUpAction : copy.errors.offerSignInAction}
       </Link>

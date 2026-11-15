@@ -228,7 +228,7 @@ export function WeekStrip({ onCreateOn }: { onCreateOn: (day: Date) => void }): 
                   {...leaf}
                   className={cn(
                     "text-sm font-medium",
-                    current ? "text-accent-primary" : "text-foreground",
+                    current ? "text-brand-text" : "text-foreground",
                   )}
                 >
                   {format(day, "d")}

@@ -46,7 +46,7 @@ export default function App() {
                         element={
                           <ProtectedRoute>
                             <Helmet>
-                              <title>Dailify - Dashboard</title>
+                              <title>Mewki - Dashboard</title>
                             </Helmet>
 
                             <Home />
@@ -59,7 +59,7 @@ export default function App() {
                         element={
                           <ProtectedRoute>
                             <Helmet>
-                              <title>Dailify - Profile</title>
+                              <title>Mewki - Profile</title>
                             </Helmet>
 
                             <ProfilePage />
@@ -72,7 +72,7 @@ export default function App() {
                         element={
                           <ProtectedRoute>
                             <Helmet>
-                              <title>Dailify - Configurações</title>
+                              <title>Mewki - Configurações</title>
                             </Helmet>
 
                             <SettingsPage />
@@ -85,7 +85,7 @@ export default function App() {
                         element={
                           <ProtectedRoute>
                             <Helmet>
-                              <title>Dailify - Segurança</title>
+                              <title>Mewki - Segurança</title>
                             </Helmet>
 
                             <SecurityPage />
@@ -98,7 +98,7 @@ export default function App() {
                         element={
                           <ProtectedRoute>
                             <Helmet>
-                              <title>Dailify - Premium</title>
+                              <title>Mewki - Premium</title>
                             </Helmet>
 
                             <BillingPage />

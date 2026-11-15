@@ -20,7 +20,7 @@ export const copy = {
   },
 
   signIn: {
-    pageTitle: "Dailify — Entrar",
+    pageTitle: "Mewki — Entrar",
     title: "Entrar",
     submit: "Continuar com e-mail",
     crossLinkPrefix: "Novo por aqui?",
@@ -29,7 +29,7 @@ export const copy = {
   },
 
   signUp: {
-    pageTitle: "Dailify — Criar conta",
+    pageTitle: "Mewki — Criar conta",
     title: "Criar conta",
     submit: "Continuar com e-mail",
     crossLinkPrefix: "Já tem conta?",
@@ -49,7 +49,7 @@ export const copy = {
   },
 
   verify: {
-    pageTitle: "Dailify — Verificação",
+    pageTitle: "Mewki — Verificação",
     loading: "Verificando…",
     verified: "Pronto. Pode fechar esta aba.",
     switchTab: "Verificado. Volte para a aba onde você começou.",

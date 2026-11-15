@@ -112,7 +112,7 @@ export function DayPicker({
                   open && !isSameMonth(day, viewMonth)
                     ? "text-muted-foreground"
                     : "text-foreground",
-                  isToday(day) && "text-accent-primary",
+                  isToday(day) && "text-brand-text",
                   selected ? "bg-surface-line" : "hover:bg-surface-hover",
                 )}
               >

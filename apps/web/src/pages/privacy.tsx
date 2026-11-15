@@ -8,7 +8,7 @@ export default function PrivacyPage() {
   return (
     <>
       <Helmet>
-        <title>Dailify - Política de Privacidade</title>
+        <title>Mewki - Política de Privacidade</title>
       </Helmet>
 
       <SiteHeader className="px-[clamp(1rem,5vw,24rem)]" />
@@ -21,7 +21,7 @@ export default function PrivacyPage() {
           </div>
 
           <p className="text-muted-foreground">
-            Esta Política descreve como o Dailify ("nós") coleta, usa e protege seus dados pessoais,
+            Esta Política descreve como a Mewki ("nós") coleta, usa e protege seus dados pessoais,
             em conformidade com a Lei Geral de Proteção de Dados (LGPD, Lei nº 13.709/2018).
             Controlador dos dados: [Nome da empresa/responsável], contato: [e-mail de contato].
           </p>
@@ -103,7 +103,7 @@ export default function PrivacyPage() {
           </section>
 
           <div className="pt-4">
-            <Link to="/" className="text-primary hover:underline">
+            <Link to="/" className="text-brand-text hover:underline">
               ← Voltar ao início
             </Link>
           </div>

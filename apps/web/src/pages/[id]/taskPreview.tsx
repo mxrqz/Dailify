@@ -91,7 +91,7 @@ export default function TaskPreview() {
               <img
                 className="absolute w-full h-full object-contain -scale-x-100"
                 src="../dailify_logo_2.png"
-                alt="Dailify Logo"
+                alt="Mewki"
               />
             </div>
           </div>
@@ -138,7 +138,7 @@ export default function TaskPreview() {
               <img
                 className="absolute w-full h-full object-contain -scale-x-100"
                 src="../dailify_logo_2.png"
-                alt="Dailify Logo"
+                alt="Mewki"
               />
             </div>
           </div>

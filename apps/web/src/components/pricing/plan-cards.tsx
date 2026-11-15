@@ -107,7 +107,7 @@ export function PlanCards({
                   {copy.plans[role].name}
                 </h3>
                 {isCurrent && (
-                  <span className="font-mono text-2xs uppercase tracking-[0.04em] text-accent-primary">
+                  <span className="font-mono text-2xs uppercase tracking-[0.04em] text-brand-text">
                     {copy.billing.currentBadge}
                   </span>
                 )}

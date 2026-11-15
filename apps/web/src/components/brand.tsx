@@ -1,20 +1,20 @@
 import { Link } from "react-router-dom";
 
+import { BrandCat } from "@/components/brand-cat";
 import { cn } from "@/lib/utils";
+
+const NAME = "Mewki";
 
 /**
  * Logo + wordmark, compartilhado pelo SiteHeader e pelo AppHeader. `to` difere: na landing aponta
  * pra "/", no app pro "/dashboard".
  *
- * O `src` é absoluto de propósito — o header antigo usava "./dailify_logo_2.png", que resolve
- * relativo à rota atual e quebra em qualquer path aninhado.
- *
  * `compact` é o header do app, que fica logo acima da sidebar: o `pl-3` e o `gap-3` repetem o
  * `px-3`/`gap-3` do `sidebar-item` de propósito — sem eles a marca cai 10px à esquerda dos
  * ícones da nav e a coluna fica torta.
  *
- * `alt=""`: o logo é decorativo aqui — o wordmark "Dailify" ao lado já anuncia o nome. Um `alt`
- * repetindo o texto faria o leitor de tela dizer "Dailify Dailify". Em `iconOnly` (auth) não há
+ * O gato é `aria-hidden`: decorativo aqui — o wordmark ao lado já anuncia o nome. Um rótulo
+ * repetindo o texto faria o leitor de tela dizer o nome duas vezes. Em `iconOnly` (auth) não há
  * wordmark, então o nome volta como `aria-label` no link, senão ele fica sem nome acessível.
  */
 export function Brand({
@@ -31,17 +31,10 @@ export function Brand({
   return (
     <Link
       to={to}
-      aria-label={iconOnly ? "Dailify" : undefined}
+      aria-label={iconOnly ? NAME : undefined}
       className={cn("inline-flex items-center", compact ? "gap-3 pl-3" : "gap-2", className)}
     >
-      <img
-        src="/dailify_logo_2.png"
-        alt=""
-        className={cn(
-          "shrink-0 object-contain invert dark:invert-0",
-          iconOnly ? "size-10" : compact ? "size-4" : "size-7",
-        )}
-      />
+      <BrandCat className={cn("shrink-0", iconOnly ? "size-10" : compact ? "size-4" : "size-7")} />
       {!iconOnly && (
         <span
           className={cn(
@@ -51,7 +44,7 @@ export function Brand({
             compact ? "text-sm sr-only md:not-sr-only" : "text-lg",
           )}
         >
-          Dailify
+          {NAME}
         </span>
       )}
     </Link>
