@@ -29,7 +29,7 @@ export default function TermsPage() {
             <h2 className="text-xl font-semibold">1. O serviço</h2>
             <p className="text-muted-foreground">
               A Mewki é um app de gerenciamento de tarefas com recursos gratuitos e pagos (planos
-              Free, Pro e Pro+AI). Podemos alterar ou descontinuar funcionalidades, com aviso quando
+              Free, Pro e Max). Podemos alterar ou descontinuar funcionalidades, com aviso quando
               razoável.
             </p>
           </section>

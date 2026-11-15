@@ -85,7 +85,7 @@ export function PlanCards({
           const pricing = role === "free" ? null : PLAN_PRICING[role];
           const isCurrent = role === currentPlan;
           // Não se recomenda a alguém o que ela já assina: ser o plano atual ganha do selo de
-          // recomendado, senão o card do Pro + AI anunciaria "Recomendado" pra quem já o tem.
+          // recomendado, senão o card do Max anunciaria "Recomendado" pra quem já o tem.
           const isRecommended = role === recommended && !isCurrent;
 
           return (

@@ -24,8 +24,8 @@ describe("yearlySavings", () => {
     const { monthly, yearly } = PLAN_PRICING.pro;
     expect(yearlySavings(PLAN_PRICING.pro)).toBe(monthly * 12 - yearly);
   });
-  it("pro+ai: 12 mensalidades menos o anual", () => {
-    const { monthly, yearly } = PLAN_PRICING["pro+ai"];
-    expect(yearlySavings(PLAN_PRICING["pro+ai"])).toBe(monthly * 12 - yearly);
+  it("max: 12 mensalidades menos o anual", () => {
+    const { monthly, yearly } = PLAN_PRICING.max;
+    expect(yearlySavings(PLAN_PRICING.max)).toBe(monthly * 12 - yearly);
   });
 });

@@ -22,7 +22,7 @@ describe("<PricingV2>", () => {
     expect(screen.getByText(price(PLAN_PRICING.pro.monthly))).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("button", { name: new RegExp(copy.billing.yearly) }));
-    expect(screen.getByText(price(PLAN_PRICING["pro+ai"].yearly))).toBeInTheDocument();
+    expect(screen.getByText(price(PLAN_PRICING.max.yearly))).toBeInTheDocument();
     expect(screen.getByText(copy.save.replace("{price}", price(1980)))).toBeInTheDocument();
     expect(screen.getByRole("link", { name: copy.plans.free.cta })).toHaveAttribute(
       "href",

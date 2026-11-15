@@ -17,7 +17,7 @@ ALLOWED_ORIGIN = "https://dailify.mxrqz.com,https://mewki.mxrqz.com"
 crons = ["*/5 * * * *"]
 
 # Limites por usuario (ver middleware/rate-limit.ts). O da voz e ordens de grandeza menor porque
-# cada chamada gasta Whisper + GPT: sem ele, um Pro+AI em loop queima dinheiro real.
+# cada chamada gasta Whisper + GPT: sem ele, um Max em loop queima dinheiro real.
 [[ratelimits]]
 name = "API_LIMITER"
 namespace_id = "1001"

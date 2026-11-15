@@ -16,7 +16,7 @@ import { copy } from "@/components/pricing/copy";
 import { checkout } from "@/functions/api";
 import { toText } from "@/lib/utils";
 
-const PAID_ROLES: readonly PlanRole[] = [PLAN_ID.pro, PLAN_ID.proAi];
+const PAID_ROLES: readonly PlanRole[] = [PLAN_ID.pro, PLAN_ID.max];
 
 /**
  * Escolher plano — pública, fica fora do `ProtectedRoute` de propósito (é a página de venda). Os
@@ -55,7 +55,7 @@ export default function PremiumPage(): JSX.Element {
 
       <PlanCards
         roles={PAID_ROLES}
-        recommended={PLAN_ID.proAi}
+        recommended={PLAN_ID.max}
         currentPlan={currentPlan}
         renderCta={(role, cycle) =>
           role === currentPlan ? (
@@ -65,7 +65,7 @@ export default function PremiumPage(): JSX.Element {
           ) : (
             <Button
               className="w-full"
-              variant={role === PLAN_ID.proAi ? "default" : "outline"}
+              variant={role === PLAN_ID.max ? "default" : "outline"}
               onClick={() => handleSelectPlan(role, cycle)}
             >
               {copy.page.choosePlan}

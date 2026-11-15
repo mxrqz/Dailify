@@ -15,8 +15,8 @@ import { PLAN_PRICING, PRICING_CURRENCY, yearlySavings } from "@dailify/shared";
 const PRICES = [
   { role: "pro", cycle: "monthly", binding: env.LIVE_PRICE_PRO, interval: "month" },
   { role: "pro", cycle: "yearly", binding: env.LIVE_PRICE_PRO_YEAR, interval: "year" },
-  { role: "pro+ai", cycle: "monthly", binding: env.LIVE_PRICE_PROAI, interval: "month" },
-  { role: "pro+ai", cycle: "yearly", binding: env.LIVE_PRICE_PROAI_YEAR, interval: "year" },
+  { role: "max", cycle: "monthly", binding: env.LIVE_PRICE_MAX, interval: "month" },
+  { role: "max", cycle: "yearly", binding: env.LIVE_PRICE_MAX_YEAR, interval: "year" },
 ] as const;
 
 interface StripePrice {
@@ -52,11 +52,11 @@ describe.skipIf(!env.LIVE_STRIPE_SECRET_KEY)("preço anunciado x preço cobrado"
 describe("coerência interna do preço", () => {
   it("o anual custa menos que 12x o mensal nos dois planos pagos", () => {
     expect(yearlySavings(PLAN_PRICING.pro)).toBeGreaterThan(0);
-    expect(yearlySavings(PLAN_PRICING["pro+ai"])).toBeGreaterThan(0);
+    expect(yearlySavings(PLAN_PRICING.max)).toBeGreaterThan(0);
   });
 
   it("a economia é de dois meses, que é o que a landing promete", () => {
-    for (const role of ["pro", "pro+ai"] as const) {
+    for (const role of ["pro", "max"] as const) {
       expect(yearlySavings(PLAN_PRICING[role])).toBe(PLAN_PRICING[role].monthly * 2);
     }
   });

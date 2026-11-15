@@ -108,7 +108,7 @@ describe("GET /billing/invoices", () => {
       ],
     });
     stripeMock.subscriptions.retrieve.mockResolvedValue({
-      items: { data: [{ price: { id: "price_proai_year" } }] },
+      items: { data: [{ price: { id: "price_max_year" } }] },
       default_payment_method: {
         type: "card",
         card: { brand: "mastercard", last4: "1111", exp_month: 3, exp_year: 2031, wallet: { type: "apple_pay" } },

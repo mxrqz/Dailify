@@ -119,7 +119,7 @@ describe("POST /webhooks/stripe", () => {
         object: {
           customer: "cus_1",
           metadata: { clerkUserId: "u1" },
-          items: { data: [{ price: { id: "price_proai_year" } }] },
+          items: { data: [{ price: { id: "price_max_year" } }] },
         },
       },
     });
@@ -128,7 +128,7 @@ describe("POST /webhooks/stripe", () => {
     expect(res.status).toBe(200);
     expect(updateUserRoleMock).toHaveBeenCalledWith(expect.anything(), {
       clerkUserId: "u1",
-      role: "pro+ai",
+      role: "max",
       stripeCustomerId: "cus_1",
     });
   });

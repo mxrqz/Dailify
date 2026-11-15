@@ -24,7 +24,7 @@ const task = (over: Partial<Task> = {}): Task => ({
 
 describe("enforce", () => {
   it("deixa passar quando o limite é ilimitado, sem consultar o banco", async () => {
-    const err = await enforce(env.DB, "le1", limitsFor("pro+ai"), "tasks", new Date(2026, 5, 1));
+    const err = await enforce(env.DB, "le1", limitsFor("max"), "tasks", new Date(2026, 5, 1));
     expect(err).toBeNull();
   });
 

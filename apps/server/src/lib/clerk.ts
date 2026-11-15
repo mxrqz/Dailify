@@ -13,7 +13,7 @@ export async function getUserRole(env: Env, userId: string): Promise<Role> {
   // Direct lookup — fixes the old server's getUserList().find() bug that broke past 10 users.
   const user = await clerk(env).users.getUser(userId);
   const plan = user.privateMetadata?.plan;
-  return plan === "pro" || plan === "pro+ai" || plan === "admin" ? plan : "free";
+  return plan === "pro" || plan === "max" || plan === "admin" ? plan : "free";
 }
 
 export function userEmail(user: User): string | undefined {

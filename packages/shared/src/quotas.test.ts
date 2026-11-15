@@ -3,9 +3,9 @@ import { QUOTAS, QUOTA_KEYS, limitsFor, quotaState, computeQuotas } from "./quot
 
 describe("QUOTAS", () => {
   it("declara as três quotas com os limites da tabela", () => {
-    expect(QUOTAS.tasks.limits).toEqual({ free: -1, pro: -1, "pro+ai": -1, admin: -1 });
-    expect(QUOTAS.recurring.limits).toEqual({ free: 30, pro: -1, "pro+ai": -1, admin: -1 });
-    expect(QUOTAS.voice.limits).toEqual({ free: 5, pro: 30, "pro+ai": 300, admin: -1 });
+    expect(QUOTAS.tasks.limits).toEqual({ free: -1, pro: -1, max: -1, admin: -1 });
+    expect(QUOTAS.recurring.limits).toEqual({ free: 30, pro: -1, max: -1, admin: -1 });
+    expect(QUOTAS.voice.limits).toEqual({ free: 5, pro: 30, max: 300, admin: -1 });
   });
 
   it("declara o escopo de cada quota", () => {
@@ -26,8 +26,8 @@ describe("limitsFor", () => {
   it("pro", () => {
     expect(limitsFor("pro")).toEqual({ tasks: -1, recurring: -1, voice: 30 });
   });
-  it("pro+ai", () => {
-    expect(limitsFor("pro+ai")).toEqual({ tasks: -1, recurring: -1, voice: 300 });
+  it("max", () => {
+    expect(limitsFor("max")).toEqual({ tasks: -1, recurring: -1, voice: 300 });
   });
   it("admin é ilimitado em tudo", () => {
     expect(limitsFor("admin")).toEqual({ tasks: -1, recurring: -1, voice: -1 });

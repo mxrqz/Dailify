@@ -10,9 +10,9 @@ export type QuotaScope = "month" | "lifetime";
  * cada mês-calendário, `lifetime` nunca reinicia.
  */
 export const QUOTAS = {
-  tasks: { scope: "month", limits: { free: -1, pro: -1, "pro+ai": -1, admin: -1 } },
-  recurring: { scope: "lifetime", limits: { free: 30, pro: -1, "pro+ai": -1, admin: -1 } },
-  voice: { scope: "month", limits: { free: 5, pro: 30, "pro+ai": 300, admin: -1 } },
+  tasks: { scope: "month", limits: { free: -1, pro: -1, max: -1, admin: -1 } },
+  recurring: { scope: "lifetime", limits: { free: 30, pro: -1, max: -1, admin: -1 } },
+  voice: { scope: "month", limits: { free: 5, pro: 30, max: 300, admin: -1 } },
 } as const satisfies Record<string, { scope: QuotaScope; limits: Record<Role, number> }>;
 
 export type QuotaKey = keyof typeof QUOTAS;

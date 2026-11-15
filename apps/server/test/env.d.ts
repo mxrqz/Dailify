@@ -9,8 +9,8 @@ declare global {
       LIVE_STRIPE_SECRET_KEY?: string;
       LIVE_PRICE_PRO?: string;
       LIVE_PRICE_PRO_YEAR?: string;
-      LIVE_PRICE_PROAI?: string;
-      LIVE_PRICE_PROAI_YEAR?: string;
+      LIVE_PRICE_MAX?: string;
+      LIVE_PRICE_MAX_YEAR?: string;
     }
   }
 }

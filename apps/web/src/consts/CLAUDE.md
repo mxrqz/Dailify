@@ -10,7 +10,8 @@
   mesmos ids; duas listas iguais só ficam iguais até alguém mexer numa). **`planMap`** mapeia id →
   rótulo e fica no web, porque o servidor nunca mostra plano pra ninguém. Sempre use `PLAN_ID.*` nos
   ids de checkout — string crua com typo quebra o checkout em silêncio (já aconteceu: `"pro-ai"` vs
-  `"pro+ai"`). `conts.test.ts` garante que todo `PLAN_ID` é chave de `planMap`; mantenha verde.
+  `"pro+ai"`, o id antigo do Max). `conts.test.ts` garante que todo `PLAN_ID` é chave de
+  `planMap`; mantenha verde.
 - **`pricing.ts`** é reexport de `@dailify/shared`: o preço vive lá, em **centavos** (`PLAN_PRICING`),
   com `formatPrice`/`yearlySavings`. Ficar no shared é o que permite ao servidor comparar o
   anunciado com o cobrado (`apps/server/test/pricing-stripe.test.ts`).

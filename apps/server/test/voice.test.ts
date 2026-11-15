@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 
-let role: "free" | "pro" | "pro+ai" = "free";
+let role: "free" | "pro" | "max" = "free";
 let userId = "vu1";
 
 const { openaiMock, getUserMock } = vi.hoisted(() => {
@@ -55,8 +55,8 @@ function audioRequest() {
 }
 
 describe("POST /tasks/voice", () => {
-  it("transcribes, creates tasks, and returns epoch-ms dates for a pro+ai role", async () => {
-    role = "pro+ai";
+  it("transcribes, creates tasks, and returns epoch-ms dates for a max role", async () => {
+    role = "max";
     openaiMock.audio.transcriptions.create.mockResolvedValue({
       text: "Adiciona reunião com o time amanhã às 14h e almoço às 12h",
     });
@@ -102,7 +102,7 @@ describe("POST /tasks/voice", () => {
   });
 
   it("reinterprets GPT's naive-local dates using the user's non-UTC timezone (America/Sao_Paulo, UTC-3)", async () => {
-    role = "pro+ai";
+    role = "max";
     userId = "vu3";
     getUserMock.mockResolvedValue({
       id: "vu3",
@@ -142,7 +142,7 @@ describe("POST /tasks/voice", () => {
   });
 
   it("does not insert tasks for a non-create ('invalid') AI response", async () => {
-    role = "pro+ai";
+    role = "max";
     userId = "vu2";
     openaiMock.audio.transcriptions.create.mockResolvedValue({
       text: "quantos dias faltam pro natal?",
@@ -163,7 +163,7 @@ describe("POST /tasks/voice", () => {
   });
 
   it("413s an oversized audio upload before calling OpenAI", async () => {
-    role = "pro+ai";
+    role = "max";
     userId = "vu4";
     const form = new FormData();
     form.append(
@@ -178,7 +178,7 @@ describe("POST /tasks/voice", () => {
 
 describe("POST /tasks/voice — quota e tamanho", () => {
   it("recusa áudio acima de 512 KB sem chamar a OpenAI", async () => {
-    role = "pro+ai";
+    role = "max";
     userId = "vq1";
     const form = new FormData();
     form.append(

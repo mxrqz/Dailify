@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeAll } from "vitest";
 
-let role: "free" | "pro" | "pro+ai" = "free";
+let role: "free" | "pro" | "max" = "free";
 
 vi.mock("@clerk/hono", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@clerk/hono")>();

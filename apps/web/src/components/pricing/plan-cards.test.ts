@@ -13,16 +13,16 @@ describe("planFeatures", () => {
   it("anuncia voz em todos os planos", () => {
     expect(planFeatures("free")).toContain("5 comandos de voz/mês");
     expect(planFeatures("pro")).toContain("30 comandos de voz/mês");
-    expect(planFeatures("pro+ai")).toContain("300 comandos de voz/mês");
+    expect(planFeatures("max")).toContain("300 comandos de voz/mês");
   });
 
   it("ilimitado usa a frase de ilimitado, não um número", () => {
-    expect(planFeatures("pro+ai")).toContain("Tarefas ilimitadas");
-    expect(planFeatures("pro+ai")).toContain("Recorrência ilimitada");
+    expect(planFeatures("max")).toContain("Tarefas ilimitadas");
+    expect(planFeatures("max")).toContain("Recorrência ilimitada");
   });
 
   it("cada plano lista uma linha por quota", () => {
     expect(planFeatures("free")).toHaveLength(3);
-    expect(planFeatures("pro+ai")).toHaveLength(3);
+    expect(planFeatures("max")).toHaveLength(3);
   });
 });

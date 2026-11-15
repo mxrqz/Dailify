@@ -77,7 +77,7 @@ vestigial Tauri shell. Auth = Clerk. All reads and writes go through the in-mono
 (`apps/server`, Hono on Cloudflare Workers + D1) via a thin fetch client
 (`apps/web/src/functions/api.ts`) carrying a Clerk bearer token — no client-direct Firestore
 access. Stripe billing and OpenAI voice task creation also run in `apps/server`. Dates are
-epoch-ms numbers end to end. Plans: Free / Pro / Pro+AI.
+epoch-ms numbers end to end. Plans: Free / Pro / Max.
 
 **Stack:** React 18 + Vite + TypeScript (web) · Hono + D1 + Clerk + Stripe + OpenAI (server,
 Cloudflare Workers) · Tailwind v4 + shadcn/ui · react-router · sonner · framer-motion. Package

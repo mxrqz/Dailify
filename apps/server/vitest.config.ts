@@ -31,8 +31,8 @@ function liveStripeBindings(): Record<string, string> {
   const ids = {
     LIVE_PRICE_PRO: env.STRIPE_PRICE_PRO,
     LIVE_PRICE_PRO_YEAR: env.STRIPE_PRICE_PRO_YEAR,
-    LIVE_PRICE_PROAI: env.STRIPE_PRICE_PROAI,
-    LIVE_PRICE_PROAI_YEAR: env.STRIPE_PRICE_PROAI_YEAR,
+    LIVE_PRICE_MAX: env.STRIPE_PRICE_MAX,
+    LIVE_PRICE_MAX_YEAR: env.STRIPE_PRICE_MAX_YEAR,
   };
   if (!key?.startsWith("sk_") || Object.values(ids).some((id) => !id)) return {};
 
@@ -73,8 +73,8 @@ export default defineConfig({
             STRIPE_WEBHOOK_SECRET: "whsec_test",
             STRIPE_PRICE_PRO: "price_pro_month",
             STRIPE_PRICE_PRO_YEAR: "price_pro_year",
-            STRIPE_PRICE_PROAI: "price_proai_month",
-            STRIPE_PRICE_PROAI_YEAR: "price_proai_year",
+            STRIPE_PRICE_MAX: "price_max_month",
+            STRIPE_PRICE_MAX_YEAR: "price_max_year",
             // Credenciais REAIS, quando existirem no ambiente (bun carrega o .env daqui), em
             // bindings separadas: `pricing-stripe.test.ts` compara o preço anunciado com o cobrado,
             // e os testes mockados continuam vendo os fixtures acima. Sem elas, aquele teste pula.

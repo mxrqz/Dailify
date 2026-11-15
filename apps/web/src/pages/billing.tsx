@@ -27,7 +27,7 @@ import { useQuotas } from "@/hooks/useQuotas";
 import { toText } from "@/lib/utils";
 import { zoned } from "@/functions/zone";
 
-const PAID_ROLES: readonly PlanRole[] = [PLAN_ID.pro, PLAN_ID.proAi];
+const PAID_ROLES: readonly PlanRole[] = [PLAN_ID.pro, PLAN_ID.max];
 
 export default function BillingPage(): JSX.Element {
   const { user } = useUser();
@@ -168,7 +168,7 @@ export default function BillingPage(): JSX.Element {
 
         <PlanCards
           roles={PAID_ROLES}
-          recommended={PLAN_ID.proAi}
+          recommended={PLAN_ID.max}
           currentPlan={currentPlan}
           renderCta={(role, cycle) =>
             role === currentPlan ? (
@@ -178,7 +178,7 @@ export default function BillingPage(): JSX.Element {
             ) : (
               <Button
                 className="w-full"
-                variant={role === PLAN_ID.proAi ? "default" : "outline"}
+                variant={role === PLAN_ID.max ? "default" : "outline"}
                 onClick={() => startCheckout(role, cycle)}
               >
                 {pricingCopy.page.choosePlan}

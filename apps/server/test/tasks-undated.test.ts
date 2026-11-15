@@ -7,7 +7,7 @@ vi.mock("@clerk/hono", async (importOriginal) => {
 
 vi.mock("../src/lib/clerk", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../src/lib/clerk")>();
-  return { ...actual, getUserRole: vi.fn(async () => "pro+ai") };
+  return { ...actual, getUserRole: vi.fn(async () => "max") };
 });
 
 import { env, applyD1Migrations } from "cloudflare:test";

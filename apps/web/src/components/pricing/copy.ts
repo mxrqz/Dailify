@@ -18,8 +18,8 @@ export const copy = {
       name: "Pro",
       description: "Recorrência sem teto e voz pra criar falando no dia a dia.",
     },
-    "pro+ai": {
-      name: "Pro+AI",
+    max: {
+      name: "Max",
       description: "Tudo do Pro, com voz de sobra pra quem cria tudo falando.",
     },
   },

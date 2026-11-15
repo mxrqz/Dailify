@@ -77,10 +77,10 @@ export const weekDays = [
 export { PLAN_ID } from "@dailify/shared";
 
 /** Rótulo de exibição do plano. Fica no web porque é UI: o servidor nunca mostra plano pra ninguém. */
-export const planMap: Record<string, "Free" | "Pro" | "Pro + AI"> = {
+export const planMap: Record<string, "Free" | "Pro" | "Max"> = {
   [SHARED_PLAN_ID.free]: "Free",
   [SHARED_PLAN_ID.pro]: "Pro",
-  [SHARED_PLAN_ID.proAi]: "Pro + AI",
+  [SHARED_PLAN_ID.max]: "Max",
 };
 
 // Dev usa o proxy do vite.config (dev server é HTTPS, worker é HTTP = mixed content). bd Dailify-6aq

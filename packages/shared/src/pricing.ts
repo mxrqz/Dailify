@@ -1,5 +1,5 @@
 /** Os planos que aparecem numa tabela de preço. `admin` é papel interno, não é vendido. */
-export type PlanRole = "free" | "pro" | "pro+ai";
+export type PlanRole = "free" | "pro" | "max";
 
 /**
  * Preço dos planos pagos, em CENTAVOS — a mesma unidade do Stripe, que é quem cobra de verdade.
@@ -13,8 +13,8 @@ export type PlanRole = "free" | "pro" | "pro+ai";
  */
 export const PLAN_PRICING = {
   pro: { monthly: 990, yearly: 9900 },
-  "pro+ai": { monthly: 1990, yearly: 19900 },
-} as const satisfies Record<"pro" | "pro+ai", { monthly: number; yearly: number }>;
+  max: { monthly: 1990, yearly: 19900 },
+} as const satisfies Record<"pro" | "max", { monthly: number; yearly: number }>;
 
 export const PRICING_CURRENCY = "brl";
 

@@ -109,7 +109,7 @@ describe("POST /billing/checkout", () => {
     stripeMock.subscriptions.list.mockResolvedValue({ data: [{ id: "sub_1" }] });
     stripeMock.billingPortal.sessions.create.mockResolvedValue({ url: "https://billing.stripe.com/p" });
 
-    const res = await post({ productName: "pro+ai-year" });
+    const res = await post({ productName: "max-year" });
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ url: "https://billing.stripe.com/p" });
     expect(stripeMock.checkout.sessions.create).not.toHaveBeenCalled();

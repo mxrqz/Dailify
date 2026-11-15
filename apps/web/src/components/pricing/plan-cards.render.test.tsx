@@ -13,7 +13,7 @@ const price = (cents: number) => formatPrice(cents).replace(/\u00a0/g, " ");
 const renderCards = () =>
   render(
     <PlanCards
-      roles={["free", "pro", "pro+ai"]}
+      roles={["free", "pro", "max"]}
       recommended="pro"
       renderCta={(role) => <button>assinar {role}</button>}
     />,
@@ -23,7 +23,7 @@ describe("<PlanCards>", () => {
   it("abre no mensal e mostra o preço mensal de cada plano pago", () => {
     renderCards();
     expect(screen.getByText(price(PLAN_PRICING.pro.monthly))).toBeInTheDocument();
-    expect(screen.getByText(price(PLAN_PRICING["pro+ai"].monthly))).toBeInTheDocument();
+    expect(screen.getByText(price(PLAN_PRICING.max.monthly))).toBeInTheDocument();
     expect(screen.queryByText(price(PLAN_PRICING.pro.yearly))).not.toBeInTheDocument();
   });
 
@@ -32,7 +32,7 @@ describe("<PlanCards>", () => {
     await userEvent.click(screen.getByRole("button", { name: new RegExp(copy.billing.yearly) }));
 
     expect(screen.getByText(price(PLAN_PRICING.pro.yearly))).toBeInTheDocument();
-    expect(screen.getByText(price(PLAN_PRICING["pro+ai"].yearly))).toBeInTheDocument();
+    expect(screen.getByText(price(PLAN_PRICING.max.yearly))).toBeInTheDocument();
     expect(screen.queryByText(price(PLAN_PRICING.pro.monthly))).not.toBeInTheDocument();
   });
 
@@ -49,15 +49,15 @@ describe("<PlanCards>", () => {
   });
 
   /**
-   * O caso que motivou isto: um assinante do Pro + AI abria /premium e via o proprio plano
+   * O caso que motivou isto: um assinante do Max abria /premium e via o proprio plano
    * anunciado como "Recomendado", com um botao de comprar o que ja tinha.
    */
   it("marca o plano atual e cala o selo de recomendado nele", () => {
     render(
       <PlanCards
-        roles={["pro", "pro+ai"]}
-        recommended="pro+ai"
-        currentPlan="pro+ai"
+        roles={["pro", "max"]}
+        recommended="max"
+        currentPlan="max"
         renderCta={(role) => <button>assinar {role}</button>}
       />,
     );
@@ -70,8 +70,8 @@ describe("<PlanCards>", () => {
   it("ignora um plano desconhecido em vez de quebrar", () => {
     render(
       <PlanCards
-        roles={["pro", "pro+ai"]}
-        recommended="pro+ai"
+        roles={["pro", "max"]}
+        recommended="max"
         currentPlan="enterprise-2027"
         renderCta={(role) => <button>assinar {role}</button>}
       />,

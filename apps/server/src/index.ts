@@ -29,8 +29,8 @@ export interface Env {
   VAPID_SUBJECT: string; // "mailto:..." — quem o push service contata se algo der errado
   STRIPE_PRICE_PRO: string;
   STRIPE_PRICE_PRO_YEAR: string;
-  STRIPE_PRICE_PROAI: string;
-  STRIPE_PRICE_PROAI_YEAR: string;
+  STRIPE_PRICE_MAX: string;
+  STRIPE_PRICE_MAX_YEAR: string;
 }
 
 const app = new Hono<{ Bindings: Env; Variables: { userId: string } }>();

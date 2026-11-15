@@ -19,7 +19,7 @@ import { copy } from "@/components/dashboard/copy";
 const NO_USAGE: QuotaUsage = { tasks: 0, recurring: 0, voice: 0 };
 
 const FREE = { limits: limitsFor("free"), usage: NO_USAGE };
-const PRO_AI = { limits: limitsFor("pro+ai"), usage: NO_USAGE };
+const MAX = { limits: limitsFor("max"), usage: NO_USAGE };
 
 /** Só o que a página lê do contexto — o resto do provider não participa da renderização. */
 function context(over: Record<string, unknown> = {}) {
@@ -48,12 +48,12 @@ const renderPage = () =>
 
 /**
  * O cartão do plano atual. Escopo importa: a tabela de planos logo abaixo também diz "Tarefas
- * ilimitadas" (é o bullet do Pro+AI), e um assert na página inteira leria o anúncio como se fosse
+ * ilimitadas" (é o bullet do Max), e um assert na página inteira leria o anúncio como se fosse
  * o estado da conta.
  */
 function currentPlanCard(): HTMLElement {
-  // `/^Plano (Free|Pro)/` e não `/^Plano/`: o título do card é "Plano e assinatura" e casaria também.
-  const heading = screen.getByRole("heading", { name: /^Plano (Free|Pro)/ });
+  // `/^Plano (Free|Pro|Max)/` e não `/^Plano/`: o título do card é "Plano e assinatura" e casaria também.
+  const heading = screen.getByRole("heading", { name: /^Plano (Free|Pro|Max)/ });
   const card = heading.closest("section");
   if (!card) throw new Error("cartão do plano atual não encontrado");
   return card instanceof HTMLElement ? card : screen.getByRole("main");
@@ -104,10 +104,10 @@ describe("<BillingPage>", () => {
   });
 
   it("assinante vê o plano, a próxima cobrança e o botão de gerenciar", () => {
-    useUser.mockReturnValue({ user: { publicMetadata: { plan: "pro+ai" } } });
+    useUser.mockReturnValue({ user: { publicMetadata: { plan: "max" } } });
     dailify.mockReturnValue(
       context({
-        quotas: PRO_AI,
+        quotas: MAX,
         paymentDetails: {
           amount: 1990,
           currency: "brl",
@@ -118,13 +118,13 @@ describe("<BillingPage>", () => {
     );
     renderPage();
 
-    expect(screen.getByRole("heading", { name: "Plano Pro + AI" })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Plano Max" })).toBeInTheDocument();
     expect(screen.getByText(copy.profile.billingManage)).toBeInTheDocument();
 
     const card = within(currentPlanCard());
-    // tarefas e recorrentes são ilimitadas no Pro+AI; a voz TEM teto mesmo no plano de cima.
+    // tarefas e recorrentes são ilimitadas no Max; a voz TEM teto mesmo no plano de cima.
     expect(card.getAllByText(`0 / ${copy.quota.unlimited}`)).toHaveLength(2);
-    expect(card.getByText(`0 / ${limitsFor("pro+ai").voice}`)).toBeInTheDocument();
+    expect(card.getByText(`0 / ${limitsFor("max").voice}`)).toBeInTheDocument();
   });
 
   /**

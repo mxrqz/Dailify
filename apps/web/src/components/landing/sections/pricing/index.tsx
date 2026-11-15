@@ -16,11 +16,10 @@ type Plan = {
   featured?: boolean;
 };
 
-// Max ainda se chama "pro+ai" no backend (bd Dailify-437)
 const PLANS: Plan[] = [
   { key: "free", to: "/signup" },
   { key: "pro", to: "/premium", pricing: PLAN_PRICING.pro, featured: true },
-  { key: "max", to: "/premium", pricing: PLAN_PRICING["pro+ai"] },
+  { key: "max", to: "/premium", pricing: PLAN_PRICING.max },
 ];
 
 const [noteBefore, noteAfter] = copy.note.split("{credits}");

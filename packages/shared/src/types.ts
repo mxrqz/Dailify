@@ -26,9 +26,9 @@ export type TaskInput = Omit<Task, "id" | "completed" | "hash"> & {
   completed?: number[];
 };
 
-export type Role = "free" | "pro" | "pro+ai" | "admin";
+export type Role = "free" | "pro" | "max" | "admin";
 
-export const PLAN_ID = { free: "free", pro: "pro", proAi: "pro+ai" } as const;
+export const PLAN_ID = { free: "free", pro: "pro", max: "max" } as const;
 
 export interface PaymentDetails {
   amount: number;
