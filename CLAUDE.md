@@ -106,7 +106,7 @@ Area-specific guidance lives in nested `CLAUDE.md` files (auto-loaded when you w
 ## Conventions & Patterns
 
 - **No `as` type assertions.** Use type guards or proper types. `as const` is fine. Enforced as
-  an ESLint *warning* while the ~50 existing ones are cleaned up gradually (bd issue `aqa`).
+  an ESLint *error* (bd issue `aqa`).
 - **Formatting: Prettier** (`.prettierrc`, `printWidth: 100`). Run `bun --filter '@dailify/web'
   format` before committing; `bun run check` is the full gate (format + lint + typecheck + test).
 - **Design tokens — no arbitrary values, ever.** This covers colors AND radii, and any other design

@@ -16,8 +16,8 @@ export default tseslint.config(
     rules: {
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "warn",
-      // No `as` type assertions — use type guards / proper types. Warn while the 75 existing ones are cleaned up gradually.
-      "@typescript-eslint/consistent-type-assertions": ["warn", { assertionStyle: "never" }],
+      // No `as` type assertions — use type guards / proper types. `as const` is still allowed.
+      "@typescript-eslint/consistent-type-assertions": ["error", { assertionStyle: "never" }],
     },
   },
 );
