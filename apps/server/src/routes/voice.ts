@@ -1,10 +1,11 @@
 import { Hono, type Context } from "hono";
 import { nanoid } from "nanoid";
-import { DateTime, IANAZone } from "luxon";
+import { IANAZone } from "luxon";
 import { TZDate } from "@date-fns/tz";
 import type { User } from "@clerk/backend";
 import {
   TASK_LIMITS,
+  composeTaskInput,
   limitsFor,
   parseTaskText,
   type AiParse,
@@ -20,9 +21,6 @@ import { insertTask } from "../db/tasks";
 import { enforce, enforceCreate } from "../db/limits";
 import { bumpStoredUsage, periodFor } from "../db/usage";
 import { fail } from "../lib/errors";
-
-const DEFAULT_HOUR = 9;
-const DEFAULT_DURATION = "10m"; // os mesmos do composer (apps/web/src/functions/compose-input.ts)
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
 
@@ -51,34 +49,11 @@ async function aiQuotaError(c: Ctx): Promise<Response | null> {
 const debitAi = (c: Ctx) =>
   bumpStoredUsage(c.env.DB, c.get("userId"), "ai", periodFor("ai", new Date()));
 
-/**
- * A voz cria direto, sem confirmação — então decide aqui o que o composer decide no cliente
- * (`composeTaskInput`): com hora vai pra agenda; só com dia vira Sem data com lembrete às 09:00
- * daquele dia; sem nada, Sem data puro.
- *
- * ponytail: sem a busca da próxima ocorrência que o cliente faz quando o dia já passou; o
- * lembrete só some. Mover `composeTaskInput` pro shared (Dailify-py6) unifica os dois.
- */
+/** A voz cria direto, sem confirmação: mesma regra do composer do web (`composeTaskInput`). */
 function draftToTask(d: ParsedTaskWire, timezone: string, now: number): Task {
-  const base = {
-    id: nanoid(6),
-    title: d.text,
-    duration: d.duration ?? DEFAULT_DURATION,
-    priority: 0,
-    repeat: d.repeat,
-    repeatEvery: d.repeatEvery,
-    links: d.links.length ? d.links.slice(0, 1) : undefined,
-    completed: [],
-  };
-  if (d.date !== null && d.hasTime) return { ...base, date: d.date };
-  const reminder =
-    d.date === null
-      ? null
-      : DateTime.fromMillis(d.date, { zone: timezone }).set({ hour: DEFAULT_HOUR }).toMillis();
-  if (reminder !== null && reminder > now) {
-    return { ...base, date: reminder, alert: reminder, undated: true };
-  }
-  return { ...base, date: now, undated: true };
+  const date = d.date === null ? null : new TZDate(d.date, timezone);
+  const input = composeTaskInput({ ...d, date }, new TZDate(now, timezone));
+  return { ...input, id: nanoid(6), completed: [] };
 }
 
 /** Frase clara (sem `unsure`) o parser lê sozinho; o GPT só entra na dúvida. */

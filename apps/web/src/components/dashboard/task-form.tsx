@@ -14,7 +14,7 @@ import {
   XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { dayMap, weekDays, type Repeat } from "@dailify/shared";
+import { DEFAULT_HOUR, dayMap, undatedReminder, weekDays, type Repeat } from "@dailify/shared";
 
 import { TASK_LIMITS } from "@dailify/shared";
 
@@ -34,7 +34,6 @@ import {
 } from "@/components/dashboard/styles";
 import { priorityText } from "@/consts/conts";
 import { useDailify } from "@/components/dailifyContext";
-import { DEFAULT_HOUR, undatedReminder } from "@/functions/compose-input";
 import { formatClock } from "@/functions/functions";
 import { linkLabel } from "@/functions/link-label";
 import { everyLabel, everyOptions } from "@/functions/repeat-label";

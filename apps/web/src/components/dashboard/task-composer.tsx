@@ -17,7 +17,10 @@ import {
 import { motion, useReducedMotion } from "motion/react";
 
 import {
+  DEFAULT_DURATION,
+  DEFAULT_HOUR,
   TASK_LIMITS,
+  composeTaskInput,
   parseTaskText,
   remapSpans,
   type Field,
@@ -28,15 +31,7 @@ import {
 import { copy } from "@/components/dashboard/copy";
 import { MewStatic } from "@/components/mew/mew-static";
 import { Label } from "@/components/ui/label";
-import {
-  DEFAULT_DURATION,
-  DEFAULT_HOUR,
-  composeTaskInput,
-  fromWire,
-  onDay,
-  withEdits,
-  type Edits,
-} from "@/functions/compose-input";
+import { fromWire, onDay, withEdits, type Edits } from "@/functions/compose-input";
 import { useCreateTask } from "@/hooks/useCreateTask";
 import { useMewParse } from "@/hooks/useMewParse";
 import { useOnline } from "@/hooks/useOnline";
