@@ -96,7 +96,12 @@ export function parseTaskText(
   if (UNSUPPORTED_REPEAT_RE.test(mask(normalized, [...keep, ...intervalSpans]))) return unsupported;
 
   // "youtu.be/15h30" não pode virar horário nem duração; "Sessão da Tarde" e "Dom Casmurro" também não.
-  const forDuration = mask(normalized, [...fixed, ...properNouns(input), ...keep, ...intervalSpans]);
+  const forDuration = mask(normalized, [
+    ...fixed,
+    ...properNouns(input),
+    ...keep,
+    ...intervalSpans,
+  ]);
   let duration = parseDuration(forDuration, input);
 
   // A duração também sai da vista do parseWhen: o "1h" de "call de 1h hoje às 16h" casa como hora
@@ -110,7 +115,9 @@ export function parseTaskText(
   // "todo dia 10 a cada 2 meses" idem: o "todo" é da mesma série.
   const days = interval && parseRepeat(forWhen, now, input);
   const sameKind =
-    days && typeof days.value === typeof interval.value && (typeof days.value === "object" || days.value === interval.value);
+    days &&
+    typeof days.value === typeof interval.value &&
+    (typeof days.value === "object" || days.value === interval.value);
   const repeat =
     interval && days && sameKind
       ? { ...days, every: interval.every, spans: [...interval.spans, ...days.spans] }
@@ -160,7 +167,6 @@ export function parseTaskText(
   const date = repeat
     ? nextOccurrence(repeat.value, when?.date ?? startOfDay(now), hasTime, now)
     : (when?.date ?? null);
-
 
   const text = unquote(cut(input, spans));
   // "seg 8h daily": o advérbio que come o título inteiro é o nome da reunião (a "daily").

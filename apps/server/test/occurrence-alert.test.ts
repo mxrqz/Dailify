@@ -84,7 +84,9 @@ describe("dueOccurrenceAlert", () => {
   });
 
   it("tarefa sem alerta não gera nada", () => {
-    expect(dueOccurrenceAlert({ ...daily, alert: undefined }, null, SP, Date.now(), GRACE)).toBeNull();
+    expect(
+      dueOccurrenceAlert({ ...daily, alert: undefined }, null, SP, Date.now(), GRACE),
+    ).toBeNull();
   });
 });
 
@@ -96,6 +98,8 @@ describe("dueOccurrenceAlert com repeatEvery", () => {
     expect(dueOccurrenceAlert(everyOther, null, SP, Date.UTC(2026, 4, 21, 11, 52), GRACE)).toBe(
       Date.UTC(2026, 4, 21, 11, 50),
     );
-    expect(dueOccurrenceAlert(everyOther, null, SP, Date.UTC(2026, 4, 20, 11, 52), GRACE)).toBeNull();
+    expect(
+      dueOccurrenceAlert(everyOther, null, SP, Date.UTC(2026, 4, 20, 11, 52), GRACE),
+    ).toBeNull();
   });
 });

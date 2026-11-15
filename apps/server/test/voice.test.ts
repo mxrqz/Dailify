@@ -147,21 +147,31 @@ describe("POST /tasks/voice", () => {
   it.each([
     ["vl1", "America/Sao_Paulo"],
     ["vl2", "Asia/Tokyo"],
-  ])("frase clara: o parser local lê no fuso do cliente, sem GPT, e cobra 1 crédito (%s)", async (id, tz) => {
-    role = "max";
-    userId = id;
-    openaiMock.audio.transcriptions.create.mockResolvedValue({ text: "dentista amanhã às 15h" });
+  ])(
+    "frase clara: o parser local lê no fuso do cliente, sem GPT, e cobra 1 crédito (%s)",
+    async (id, tz) => {
+      role = "max";
+      userId = id;
+      openaiMock.audio.transcriptions.create.mockResolvedValue({ text: "dentista amanhã às 15h" });
 
-    const res = await audioRequest(tz);
-    expect(res.status).toBe(200);
-    const body = await res.json<{ response: string; tasks: Task[] }>();
-    const tomorrow15 = DateTime.now().setZone(tz).plus({ days: 1 }).set({ hour: 15, minute: 0, second: 0, millisecond: 0 });
-    expect(body.tasks).toHaveLength(1);
-    expect(body.tasks[0]).toMatchObject({ title: "dentista", date: tomorrow15.toMillis(), duration: "10m" });
-    expect(body.tasks[0].undated).toBeUndefined();
-    expect(openaiMock.responses.create).not.toHaveBeenCalled();
-    expect(await readStoredUsage(env.DB, id, "ai", periodFor("ai", new Date()))).toBe(1);
-  });
+      const res = await audioRequest(tz);
+      expect(res.status).toBe(200);
+      const body = await res.json<{ response: string; tasks: Task[] }>();
+      const tomorrow15 = DateTime.now()
+        .setZone(tz)
+        .plus({ days: 1 })
+        .set({ hour: 15, minute: 0, second: 0, millisecond: 0 });
+      expect(body.tasks).toHaveLength(1);
+      expect(body.tasks[0]).toMatchObject({
+        title: "dentista",
+        date: tomorrow15.toMillis(),
+        duration: "10m",
+      });
+      expect(body.tasks[0].undated).toBeUndefined();
+      expect(openaiMock.responses.create).not.toHaveBeenCalled();
+      expect(await readStoredUsage(env.DB, id, "ai", periodFor("ai", new Date()))).toBe(1);
+    },
+  );
 
   it("does not insert tasks for a non-create ('invalid') AI response", async () => {
     role = "max";

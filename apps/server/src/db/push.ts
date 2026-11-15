@@ -191,9 +191,7 @@ export async function markOccurrenceAlerted(
 export async function markAlertsSent(db: D1Database, ids: string[], at: number): Promise<void> {
   if (!ids.length) return;
   await db
-    .prepare(
-      `UPDATE tasks SET alert_sent=? WHERE id IN (${ids.map(() => "?").join(",")})`,
-    )
+    .prepare(`UPDATE tasks SET alert_sent=? WHERE id IN (${ids.map(() => "?").join(",")})`)
     .bind(at, ...ids)
     .run();
 }

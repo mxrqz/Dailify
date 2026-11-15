@@ -73,7 +73,13 @@ function paymentMethodOf(
 
 /** Narrows Stripe's forward-compatible `Invoice.Status` (which allows unknown future strings) to the DTO's closed set. */
 type KnownInvoiceStatus = "draft" | "open" | "paid" | "uncollectible" | "void";
-const KNOWN_INVOICE_STATUSES: readonly string[] = ["draft", "open", "paid", "uncollectible", "void"];
+const KNOWN_INVOICE_STATUSES: readonly string[] = [
+  "draft",
+  "open",
+  "paid",
+  "uncollectible",
+  "void",
+];
 
 function isKnownInvoiceStatus(status: string): status is KnownInvoiceStatus {
   return KNOWN_INVOICE_STATUSES.includes(status);
@@ -125,15 +131,14 @@ export async function handleInvoicePaid(
  * `privateMetadata` foi embora com ele, e a metadata da própria assinatura (gravada no checkout)
  * é a única trilha que sobra. Devolve quantas cancelou.
  */
-export async function cancelSubscriptionsOf(
-  stripe: Stripe,
-  clerkUserId: string,
-): Promise<number> {
+export async function cancelSubscriptionsOf(stripe: Stripe, clerkUserId: string): Promise<number> {
   const found = await stripe.subscriptions.search({
     query: `metadata['clerkUserId']:'${clerkUserId}'`,
     limit: 20,
   });
-  const active = found.data.filter((s) => s.status !== "canceled" && s.status !== "incomplete_expired");
+  const active = found.data.filter(
+    (s) => s.status !== "canceled" && s.status !== "incomplete_expired",
+  );
 
   for (const subscription of active) await stripe.subscriptions.cancel(subscription.id);
   return active.length;

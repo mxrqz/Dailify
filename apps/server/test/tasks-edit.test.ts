@@ -218,7 +218,11 @@ describe("PATCH /tasks/:id?occurrence — editar só esta ocorrência", () => {
   const patchOccurrence = (id: string, at: number, body: Record<string, unknown>) =>
     app.request(
       `/tasks/${id}?occurrence=${at}`,
-      { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      },
       env,
     );
 
@@ -310,7 +314,11 @@ describe("PATCH /tasks/:id — repeatEvery", () => {
     const occurrence = new Date(2026, 8, 3, 9).getTime();
     const res = await app.request(
       `/tasks/every2?occurrence=${occurrence}`,
-      { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: "Regar só hoje" }) },
+      {
+        method: "PATCH",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({ title: "Regar só hoje" }),
+      },
       env,
     );
     const { task, series } = await res.json<{ task: Task; series: Task }>();

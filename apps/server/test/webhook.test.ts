@@ -93,7 +93,12 @@ describe("POST /webhooks/stripe", () => {
     expect(updateUserBillingDetailsMock).toHaveBeenCalledWith(
       expect.anything(),
       "u1",
-      expect.objectContaining({ cardBrand: "visa", cardLast4: "4242", recurring: "month", currency: "usd" }),
+      expect.objectContaining({
+        cardBrand: "visa",
+        cardLast4: "4242",
+        recurring: "month",
+        currency: "usd",
+      }),
     );
   });
 

@@ -104,7 +104,11 @@ describe("/push/subscription", () => {
   const post = (body: unknown) =>
     app.request(
       "/push/subscription",
-      { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
+      {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(body),
+      },
       env,
     );
 

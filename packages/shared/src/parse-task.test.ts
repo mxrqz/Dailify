@@ -620,13 +620,7 @@ describe("recorrência no texto", () => {
   const WEEKDAYS_MON_FRI = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
   it.each([
-    [
-      "reunião toda quarta 16h",
-      { Weekly: ["Wednesday"] },
-      "reunião",
-      sp(2026, 9, 21, 16),
-      true,
-    ],
+    ["reunião toda quarta 16h", { Weekly: ["Wednesday"] }, "reunião", sp(2026, 9, 21, 16), true],
     [
       "academia todas as segundas e sextas",
       { Weekly: ["Monday", "Friday"] },
@@ -634,13 +628,7 @@ describe("recorrência no texto", () => {
       sp(2026, 9, 23),
       false,
     ],
-    [
-      "stand-up dias úteis 9h",
-      { Weekly: WEEKDAYS_MON_FRI },
-      "stand-up",
-      sp(2026, 9, 22, 9),
-      true,
-    ],
+    ["stand-up dias úteis 9h", { Weekly: WEEKDAYS_MON_FRI }, "stand-up", sp(2026, 9, 22, 9), true],
     ["remédio todo dia 22h", "Daily", "remédio", sp(2026, 9, 21, 22), true],
     ["remédio todos os dias 22h", "Daily", "remédio", sp(2026, 9, 21, 22), true],
     ["remédio diariamente 22h", "Daily", "remédio", sp(2026, 9, 21, 22), true],
@@ -662,20 +650,8 @@ describe("recorrência no texto", () => {
       false,
     ],
     ["reunião de quarta 16h", "Off", "reunião", sp(2026, 9, 21, 16), true],
-    [
-      "academia toda segunda 7h",
-      { Weekly: ["Monday"] },
-      "academia",
-      sp(2026, 9, 26, 7),
-      true,
-    ],
-    [
-      "academia toda segunda às 7",
-      { Weekly: ["Monday"] },
-      "academia",
-      sp(2026, 9, 26, 7),
-      true,
-    ],
+    ["academia toda segunda 7h", { Weekly: ["Monday"] }, "academia", sp(2026, 9, 26, 7), true],
+    ["academia toda segunda às 7", { Weekly: ["Monday"] }, "academia", sp(2026, 9, 26, 7), true],
   ])("%s", (input, repeat, text, date, hasTime) => {
     const parsed = parseTaskText(input, WED);
     expect(parsed.repeat).toEqual(repeat);

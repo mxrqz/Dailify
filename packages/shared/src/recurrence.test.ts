@@ -247,7 +247,9 @@ describe("repeatEvery", () => {
 
   it("a cada 3 meses no dia 31 corta pro último dia sem arrastar a âncora", () => {
     const t = makeTask({ repeat: "Monthly", repeatEvery: 3, date: at9(0, 31) });
-    const months = [1, 2, 3, 6, 9].map((m) => local(expandRecurringTask(t, new Date(2026, m, 1), ny)));
+    const months = [1, 2, 3, 6, 9].map((m) =>
+      local(expandRecurringTask(t, new Date(2026, m, 1), ny)),
+    );
     expect(months).toEqual([[], [], ["4/30 9h"], ["7/31 9h"], ["10/31 9h"]]);
   });
 

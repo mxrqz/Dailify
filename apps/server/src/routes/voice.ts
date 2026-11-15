@@ -61,7 +61,16 @@ function readLocally(text: string, timezone: string): AiParse | null {
   const parsed = parseTaskText(text, new TZDate(Date.now(), timezone));
   if (parsed.unsure.length || !parsed.text) return null;
   const { date, hasTime, hasDay, duration, links, repeat, repeatEvery } = parsed;
-  const draft = { text: parsed.text, date: date?.getTime() ?? null, hasTime, hasDay, duration, links, repeat, repeatEvery };
+  const draft = {
+    text: parsed.text,
+    date: date?.getTime() ?? null,
+    hasTime,
+    hasDay,
+    duration,
+    links,
+    repeat,
+    repeatEvery,
+  };
   return { reply: "Anotei!", intent: "create", drafts: [draft] };
 }
 
