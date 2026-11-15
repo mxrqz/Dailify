@@ -1,6 +1,7 @@
 import { motion, useReducedMotion } from "motion/react";
 import { type ComponentType, type SVGProps, useEffect, useRef, useState } from "react";
 
+import { GoogleCalendarLogo } from "@/components/logos";
 import { useInView } from "@/components/landing/kit/use-in-view";
 import { Mew } from "@/components/mew/mew";
 import { cn } from "@/lib/utils";
@@ -9,7 +10,6 @@ import { copy } from "./copy";
 import {
   GitHubLogo,
   GmailLogo,
-  GoogleCalendarLogo,
   GoogleDriveLogo,
   MicrosoftTeamsLogo,
   NotionLogo,

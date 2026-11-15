@@ -1,0 +1,75 @@
+/** @vitest-environment jsdom */
+import { StrictMode } from "react";
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
+import { MISSING_SCOPE_ERROR } from "@dailify/shared";
+
+const { useAuth, completeIntegration, toast } = vi.hoisted(() => ({
+  useAuth: vi.fn(),
+  completeIntegration: vi.fn(),
+  toast: { error: vi.fn(), success: vi.fn() },
+}));
+vi.mock("@clerk/clerk-react", () => ({ useAuth }));
+vi.mock("@/functions/api", () => ({ completeIntegration }));
+vi.mock("sonner", () => ({ toast }));
+
+import IntegrationCallback from "./integration-callback";
+import { copy } from "@/components/dashboard/copy";
+
+const t = copy.integrations;
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  useAuth.mockReturnValue({ getToken: async () => "t" });
+});
+
+const renderAt = (query: string) =>
+  render(
+    <StrictMode>
+      <MemoryRouter initialEntries={[`/integrations/google-calendar/callback?${query}`]}>
+        <Routes>
+          <Route path="/integrations/:provider/callback" element={<IntegrationCallback />} />
+          <Route path="/settings" element={<p>settings</p>} />
+        </Routes>
+      </MemoryRouter>
+    </StrictMode>,
+  );
+
+describe("<IntegrationCallback>", () => {
+  it("sucesso: um POST só (mesmo no StrictMode) e volta pra /settings", async () => {
+    completeIntegration.mockResolvedValue({ integration: {} });
+    renderAt("code=c&state=s");
+
+    expect(await screen.findByText("settings")).toBeInTheDocument();
+    expect(completeIntegration).toHaveBeenCalledTimes(1);
+    expect(completeIntegration).toHaveBeenCalledWith("t", "google-calendar", "c", "s");
+    expect(toast.success).toHaveBeenCalledWith("Google Agenda conectado");
+  });
+
+  it("access_denied não chama o servidor", async () => {
+    renderAt("error=access_denied&state=s");
+
+    expect(await screen.findByText("settings")).toBeInTheDocument();
+    expect(completeIntegration).not.toHaveBeenCalled();
+    expect(toast.error).toHaveBeenCalledWith("Conexão com Google Agenda cancelada");
+  });
+
+  it("escopo desmarcado vira o recado específico", async () => {
+    completeIntegration.mockResolvedValue({
+      error: { message: MISSING_SCOPE_ERROR, offline: false, status: 400 },
+    });
+    renderAt("code=c&state=s");
+
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(t.missingScope.replace("{name}", "Google Agenda")),
+    );
+    expect(screen.getByText("settings")).toBeInTheDocument();
+  });
+
+  it("403 avisa que o pedido é de outra conta", async () => {
+    completeIntegration.mockResolvedValue({ error: { message: "x", offline: false, status: 403 } });
+    renderAt("code=c&state=s");
+    await waitFor(() => expect(toast.error).toHaveBeenCalledWith(t.wrongUser));
+  });
+});

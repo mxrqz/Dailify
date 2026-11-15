@@ -238,6 +238,30 @@ export const copy = {
     deleteAccountError: "Não foi possível excluir a conta",
   },
 
+  integrations: {
+    group: "Integrações",
+    connect: "Conectar",
+    reconnect: "Reconectar",
+    disconnect: "Desconectar",
+    soon: "Em breve",
+    pro: "Pro",
+    lockedHint: "Disponível no plano Pro",
+    revokedHint: "O acesso foi revogado. Reconecte para voltar a usar.",
+    offlineHint: "Sem conexão",
+    disconnectTitle: "Desconectar {name}?",
+    disconnectDescription:
+      "A Mewki perde o acesso a esta conta. Você pode conectar de novo quando quiser.",
+    connecting: "Conectando {name}…",
+    connected: "{name} conectado",
+    disconnected: "{name} desconectado",
+    connectError: "Não foi possível conectar {name}",
+    disconnectError: "Não foi possível desconectar {name}",
+    denied: "Conexão com {name} cancelada",
+    missingScope: "Faltou permissão: marque a permissão do {name} na tela do Google",
+    wrongUser: "Este pedido de conexão é de outra conta",
+    failed: "Não deu pra concluir a conexão; tente de novo",
+  },
+
   composer: {
     text: "Tarefa",
     textPlaceholder: "Reunião com o time hoje às 16:30",

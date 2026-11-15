@@ -2,6 +2,7 @@ import { Hono, type Context } from "hono";
 import {
   canUseIntegration,
   isProviderId,
+  MISSING_SCOPE_ERROR,
   PROVIDER_IDS,
   type IntegrationStatus,
   type ProviderId,
@@ -122,7 +123,7 @@ integrations.post("/integrations/:provider/callback", async (c) => {
   }
   if (!hasScopes(provider.oauth, tokens.scope)) {
     await revoke(provider.oauth, tokens).catch(() => {}); // grant inútil não fica na conta da pessoa
-    return fail(c, 400, "Faltou permissão: marque o acesso à agenda na tela do Google");
+    return fail(c, 400, MISSING_SCOPE_ERROR);
   }
 
   const account = await provider.identify(makeCtx(c.env, userId, provider, tokens));

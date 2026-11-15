@@ -26,6 +26,7 @@ const PremiumPage = lazy(() => import("./pages/premium"));
 const ProfilePage = lazy(() => import("./pages/profile"));
 const SecurityPage = lazy(() => import("./pages/security"));
 const SettingsPage = lazy(() => import("./pages/settings"));
+const IntegrationCallback = lazy(() => import("./pages/integration-callback"));
 const TaskPreview = lazy(() => import("./pages/[id]/taskPreview"));
 const PrivacyPage = lazy(() => import("./pages/privacy"));
 const TermsPage = lazy(() => import("./pages/terms"));
@@ -108,6 +109,16 @@ export default function App() {
                               </Helmet>
 
                               <BillingPage />
+                            </ProtectedRoute>
+                          }
+                        />
+
+                        {/* redirect_uri do OAuth: o servidor só aceita o code com o bearer de quem pediu. */}
+                        <Route
+                          path="/integrations/:provider/callback"
+                          element={
+                            <ProtectedRoute>
+                              <IntegrationCallback />
                             </ProtectedRoute>
                           }
                         />

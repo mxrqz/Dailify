@@ -1,4 +1,5 @@
 import { copy } from "@/components/dashboard/copy";
+import { IntegrationsGroup } from "@/components/integrations";
 import { HourFormatSelect } from "@/components/hour-format-select";
 import { ThemeSelect } from "@/components/mode-toggle";
 import { PushToggle } from "@/components/dashboard/push-toggle";
@@ -35,6 +36,8 @@ export default function SettingsPage(): JSX.Element {
           <PushToggle />
         </SettingsRow>
       </SettingsGroup>
+
+      <IntegrationsGroup />
     </main>
   );
 }

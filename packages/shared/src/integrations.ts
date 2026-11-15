@@ -17,6 +17,9 @@ export const PROVIDER_IDS: readonly ProviderId[] = Object.keys(INTEGRATIONS).fil
 export const canUseIntegration = (role: Role, id: ProviderId): boolean =>
   role === "admin" || INTEGRATIONS[id].roles.includes(role);
 
+/** O 400 do callback quando a pessoa desmarcou o escopo: o SPA compara pra trocar pelo recado certo. */
+export const MISSING_SCOPE_ERROR = "Faltou permissão: marque o acesso à agenda na tela do Google";
+
 export interface IntegrationStatus {
   provider: ProviderId;
   allowed: boolean;

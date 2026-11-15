@@ -7,6 +7,8 @@ import type {
   PaymentDetails,
   Invoice,
   WeekStart,
+  IntegrationStatus,
+  ProviderId,
 } from "@dailify/shared";
 import { apiURL } from "@/consts/conts";
 import { appTimeZone, zoned } from "./zone";
@@ -304,4 +306,47 @@ export async function checkout(
 export async function billingPortal(token: string): Promise<{ url: string | null }> {
   const { data } = await request<{ url: string | null }>("/billing/portal", token);
   return { url: data?.url ?? null };
+}
+
+export async function getIntegrations(
+  token: string,
+): Promise<{ integrations?: IntegrationStatus[]; error?: ApiError }> {
+  const { data, error } = await request<IntegrationStatus[]>("/integrations", token);
+  return { integrations: data, error };
+}
+
+/** Devolve a URL de consentimento do provedor; 403 = plano não inclui, 503 = não configurada. */
+export async function connectIntegration(
+  token: string,
+  provider: ProviderId,
+): Promise<{ url?: string; error?: ApiError }> {
+  const { data, error } = await request<{ url?: string }>(
+    `/integrations/${provider}/connect`,
+    token,
+    { method: "POST" },
+  );
+  return { url: data?.url, error };
+}
+
+/** O `state` é de uso único no servidor: um segundo POST com ele volta 400. */
+export async function completeIntegration(
+  token: string,
+  provider: ProviderId,
+  code: string,
+  state: string,
+): Promise<{ integration?: IntegrationStatus; error?: ApiError }> {
+  const { data, error } = await request<IntegrationStatus>(
+    `/integrations/${provider}/callback`,
+    token,
+    { method: "POST", body: JSON.stringify({ code, state }) },
+  );
+  return { integration: data, error };
+}
+
+export async function disconnectIntegration(
+  token: string,
+  provider: ProviderId,
+): Promise<{ error?: ApiError }> {
+  const { error } = await request<never>(`/integrations/${provider}`, token, { method: "DELETE" });
+  return { error };
 }
