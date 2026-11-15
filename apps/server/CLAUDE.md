@@ -63,6 +63,10 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
 - **Crédito `ai`: `enforce` antes de chamar a OpenAI, débito só depois de uma resposta dentro do
   contrato.** Falha, timeout ou JSON fora do shape → 502 sem débito. `question`/`unsupported`
   válidos debitam (a IA foi usada). Voz = transcrição + leitura = 1 crédito.
+- **Voz tenta o parser local antes do GPT.** O transcrito passa por `parseTaskText` (`@dailify/shared`)
+  no fuso do cliente; sem `unsure` e com título, vira o rascunho direto e o GPT nem é chamado. Senão,
+  `interpretText`. Os dois caminhos passam por `draftToTask` e custam o mesmo 1 crédito (a transcrição
+  é IA); falha na transcrição não debita.
 - **Stripe webhook** needs the **raw body** for signature verification — keep it off any body
   parser and verify async (`constructEventAsync`).
 

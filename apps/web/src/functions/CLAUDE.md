@@ -32,6 +32,12 @@ but a raw epoch passed to date-fns (`startOfMonth(task.date)`) falls back to the
 it: `startOfMonth(zoned(task.date))`. `setAppTimeZone` is called by `dailifyContext`'s `setTimeZone`,
 which also refetches the loaded months (their boundaries move with the zone).
 
+## Parser — owned by `@dailify/shared`
+
+`parseTaskText`/`parseLinks` (e o corpus golden, `bun run parser:failures`) moram em
+`packages/shared` — importe de `@dailify/shared`. O fuso é explícito: passe `zoned()` (um `TZDate`
+no fuso do app) como `now`; o parser não lê `appTimeZone()`.
+
 ## Recurrence — owned by `@dailify/shared`
 
 `expandRecurringTask`/`normalizeRepeat` live in `@dailify/shared` now (used by `apps/server`'s

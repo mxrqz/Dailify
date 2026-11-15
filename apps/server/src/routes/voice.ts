@@ -1,10 +1,12 @@
 import { Hono, type Context } from "hono";
 import { nanoid } from "nanoid";
 import { DateTime, IANAZone } from "luxon";
+import { TZDate } from "@date-fns/tz";
 import type { User } from "@clerk/backend";
 import {
   TASK_LIMITS,
   limitsFor,
+  parseTaskText,
   type AiParse,
   type ParsedTaskWire,
   type Task,
@@ -78,6 +80,15 @@ function draftToTask(d: ParsedTaskWire, timezone: string, now: number): Task {
   return { ...base, date: now, undated: true };
 }
 
+/** Frase clara (sem `unsure`) o parser lê sozinho; o GPT só entra na dúvida. */
+function readLocally(text: string, timezone: string): AiParse | null {
+  const parsed = parseTaskText(text, new TZDate(Date.now(), timezone));
+  if (parsed.unsure.length || !parsed.text) return null;
+  const { date, hasTime, hasDay, duration, links, repeat } = parsed;
+  const draft = { text: parsed.text, date: date?.getTime() ?? null, hasTime, hasDay, duration, links, repeat };
+  return { reply: "Anotei!", intent: "create", drafts: [draft] };
+}
+
 voice.post("/parse", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const body: unknown = await c.req.json().catch(() => null);
   const text = isRecord(body) && typeof body.text === "string" ? body.text.trim() : "";
@@ -120,10 +131,12 @@ voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const timezone = validZone(body["timezone"]) ?? readTimezone(user);
   if (!timezone) return fail(c, 400, "No timezone set");
 
-  // Transcrição + leitura = um crédito, debitado só quando as duas deram certo.
+  // Transcrição (+ leitura do GPT, se o parser local ficou em dúvida) = um crédito, debitado só
+  // quando tudo deu certo.
   let ai: AiParse;
   try {
-    ai = await interpretText(c.env, await transcribe(c.env, audio), timezone);
+    const transcript = await transcribe(c.env, audio);
+    ai = readLocally(transcript, timezone) ?? (await interpretText(c.env, transcript, timezone));
   } catch (err) {
     console.error(err);
     return fail(c, 502, "AI request failed");

@@ -32,6 +32,7 @@ vi.mock("../src/lib/clerk", async (importOriginal) => {
   };
 });
 
+import { DateTime } from "luxon";
 import { env } from "cloudflare:test";
 import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
@@ -48,9 +49,10 @@ beforeEach(() => {
   getUserMock.mockResolvedValue({ id: "vu1", unsafeMetadata: { timezone: "UTC" } });
 });
 
-function audioRequest() {
+function audioRequest(timezone?: string) {
   const form = new FormData();
   form.append("audio", new File([new Uint8Array([1, 2, 3])], "audio.ogg", { type: "audio/ogg" }));
+  if (timezone) form.append("timezone", timezone);
   return app.request("/tasks/voice", { method: "POST", body: form }, env);
 }
 
@@ -109,8 +111,9 @@ describe("POST /tasks/voice", () => {
       id: "vu3",
       unsafeMetadata: { timezone: "America/Sao_Paulo" },
     });
+    // Duas tarefas numa frase: o parser local fica em dúvida e o GPT lê.
     openaiMock.audio.transcriptions.create.mockResolvedValue({
-      text: "Adiciona reunião às 14h",
+      text: "reunião às 14h e almoço às 12h",
     });
     openaiMock.responses.create.mockResolvedValue({
       output_text: JSON.stringify({
@@ -137,6 +140,27 @@ describe("POST /tasks/voice", () => {
     // 14:00 BRT (UTC-3, no DST since 2019) === 17:00 UTC. A no-op conversion (interpreting the
     // naive string as literal UTC) would wrongly yield Date.UTC(2026, 7, 3, 14, 0, 0) here.
     expect(body.tasks[0].date).toBe(Date.UTC(2026, 7, 3, 17, 0, 0));
+    expect(openaiMock.responses.create).toHaveBeenCalledOnce();
+    expect(await readStoredUsage(env.DB, "vu3", "ai", periodFor("ai", new Date()))).toBe(1);
+  });
+
+  it.each([
+    ["vl1", "America/Sao_Paulo"],
+    ["vl2", "Asia/Tokyo"],
+  ])("frase clara: o parser local lê no fuso do cliente, sem GPT, e cobra 1 crédito (%s)", async (id, tz) => {
+    role = "max";
+    userId = id;
+    openaiMock.audio.transcriptions.create.mockResolvedValue({ text: "dentista amanhã às 15h" });
+
+    const res = await audioRequest(tz);
+    expect(res.status).toBe(200);
+    const body = await res.json<{ response: string; tasks: Task[] }>();
+    const tomorrow15 = DateTime.now().setZone(tz).plus({ days: 1 }).set({ hour: 15, minute: 0, second: 0, millisecond: 0 });
+    expect(body.tasks).toHaveLength(1);
+    expect(body.tasks[0]).toMatchObject({ title: "dentista", date: tomorrow15.toMillis(), duration: "10m" });
+    expect(body.tasks[0].undated).toBeUndefined();
+    expect(openaiMock.responses.create).not.toHaveBeenCalled();
+    expect(await readStoredUsage(env.DB, id, "ai", periodFor("ai", new Date()))).toBe(1);
   });
 
   it("does not insert tasks for a non-create ('invalid') AI response", async () => {
@@ -233,7 +257,7 @@ describe("POST /tasks/voice — quota e tamanho", () => {
     role = "max";
     userId = "vq5";
     getUserMock.mockResolvedValue({ id: "vq5", unsafeMetadata: { timezone: "UTC" } });
-    openaiMock.audio.transcriptions.create.mockResolvedValue({ text: "pagar luz dia 3" });
+    openaiMock.audio.transcriptions.create.mockResolvedValue({ text: "pagar luz dia 3 ou dia 4" });
     openaiMock.responses.create.mockResolvedValue({
       output_text: JSON.stringify({
         intent: "create",
