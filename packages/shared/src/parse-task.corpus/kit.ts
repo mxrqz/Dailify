@@ -45,6 +45,8 @@ export interface Expect {
   time: string | null;
   duration: string | null;
   repeat: Repeat;
+  /** `repeatEvery`; 1 = ausente. */
+  every: number;
   links: string[];
 }
 
@@ -64,7 +66,7 @@ export interface CorpusEntry {
   holdout?: boolean;
 }
 
-type More = Partial<Pick<Expect, "duration" | "repeat" | "links">> &
+type More = Partial<Pick<Expect, "duration" | "repeat" | "every" | "links">> &
   Pick<CorpusEntry, "now" | "alt" | "outOfScope" | "unsure" | "note">;
 export type Row = [
   input: string,
@@ -76,10 +78,10 @@ export type Row = [
 
 export function section(lang: Lang, category: Category, rows: Row[]): CorpusEntry[] {
   return rows.map(([input, title, day = null, time = null, more = {}]) => {
-    const { duration = null, repeat = "Off", links = [], ...rest } = more;
+    const { duration = null, repeat = "Off", every = 1, links = [], ...rest } = more;
     return {
       input,
-      expect: { title, day, time, duration, repeat, links },
+      expect: { title, day, time, duration, repeat, every, links },
       tags: { category, lang },
       ...rest,
     };
@@ -148,6 +150,7 @@ export function actualOf(entry: CorpusEntry): Actual {
     time: date && parsed.hasTime ? format(date, "HH:mm") : null,
     duration: parsed.duration,
     repeat: parsed.repeat,
+    every: parsed.repeatEvery ?? 1,
     links: parsed.links,
     unsure: parsed.unsure.map(({ code }) => code),
   };
@@ -156,7 +159,7 @@ export function actualOf(entry: CorpusEntry): Actual {
 export const expectedUnsure = (entry: CorpusEntry): UnsureCode[] =>
   entry.unsure ?? (entry.outOfScope ? [OUT_OF_SCOPE_CODE[entry.outOfScope]] : []);
 
-const FIELDS = ["title", "day", "time", "duration", "repeat", "links"] as const;
+const FIELDS = ["title", "day", "time", "duration", "repeat", "every", "links"] as const;
 
 function mismatches(expect: Expect, actual: Expect): (keyof Expect)[] {
   const ok: Record<keyof Expect, boolean> = {
@@ -165,6 +168,7 @@ function mismatches(expect: Expect, actual: Expect): (keyof Expect)[] {
     time: expect.time === actual.time,
     duration: expect.duration === actual.duration,
     repeat: sameRepeat(expect.repeat, actual.repeat),
+    every: expect.every === actual.every,
     links: JSON.stringify(expect.links) === JSON.stringify(actual.links),
   };
   return FIELDS.filter((field) => !ok[field]);

@@ -4,6 +4,7 @@ import type { Repeat } from "../types";
 import { MONTH_FIRST_RE } from "./dates";
 import { type Span, hit, spanOf } from "./spans";
 import {
+  HOUR_WORDS,
   HOUR_WORD_RE,
   MONTH_RE,
   PERIOD_HOURS,
@@ -138,7 +139,7 @@ export function parseRepeat(
   text: string,
   now: TZDate,
   original = text,
-): { value: Exclude<Repeat, "Off">; spans: Span[]; hour?: number } | null {
+): RepeatHit | null {
   const dashed = text.match(new RegExp(`\\b(${WEEKDAY_RE}) (${WEEKDAY_RE})\\b`));
   if (dashed && /[-–—]/.test(original[(dashed.index ?? 0) + dashed[1].length])) {
     const [from, to] = [WEEKDAYS[dashed[1]], WEEKDAYS[dashed[2]]];
@@ -189,6 +190,97 @@ export function parseRepeat(
     if (period) extra.push([tail, tail + period[0].length]);
     if (tail > end) extra.push([end, tail]);
     return { ...hit(match, value, extra), hour: period ? periodWordHour(period[1]) : undefined };
+  }
+  return null;
+}
+
+export type RepeatHit = {
+  value: Exclude<Repeat, "Off">;
+  spans: Span[];
+  hour?: number;
+  /** `Task.repeatEvery`: ausente = 1. */
+  every?: number;
+};
+
+const INTERVAL_UNIT = String.raw`(dias?|days?|semanas?|weeks?|mes|meses|months?|anos?|years?)\b(?!\s+(?:uteis|util)\b)`;
+const EVERY_PREFIX = String.raw`(?:tod[ao]s?\s+(?:[ao]s\s+)?)?`;
+const DAYS_TAIL_RE = new RegExp(
+  `^\\s*,?\\s+(?:(?:on|n[ao]s?|[ao]s|aos)\\s+)?${WEEKDAY_ITEM}(?:${LIST_SEP}${WEEKDAY_ITEM})*`,
+);
+
+function unitRepeat(unit: string, now: Date): Exclude<Repeat, "Off"> {
+  if (/^(?:dia|day)/.test(unit)) return "Daily";
+  if (/^(?:semana|week)/.test(unit)) return weekly([now.getDay()]);
+  return /^(?:mes|month)/.test(unit) ? "Monthly" : "Yearly";
+}
+
+const count = (raw: string) => (raw === "other" ? 2 : (HOUR_WORDS[raw] ?? Number(raw)));
+
+// "toda semana" com N: a cada 2 semanas · de 15 em 15 dias · dia sim, dia não · quinzenal ·
+// every other monday. Hora (de 8 em 8 horas) e "a cada 2 dias úteis" ficam pro UNSUPPORTED_REPEAT_RE.
+const INTERVALS: [RegExp, (match: RegExpMatchArray, now: Date) => [Exclude<Repeat, "Off">, number]][] = [
+  [
+    new RegExp(String.raw`\b(?:de|a\s+cada)\s+(\d{1,3})\s+em\s+\1\s+${INTERVAL_UNIT}`),
+    (m, now) => [unitRepeat(m[2], now), Number(m[1])],
+  ],
+  [
+    new RegExp(
+      String.raw`\b(?:(?:de|of)\s+)?(?:(?:a\s+)?cada|every|each)\s+(\d{1,3}|other|${HOUR_WORD_RE})\s*${INTERVAL_UNIT}`,
+    ),
+    (m, now) => [unitRepeat(m[2], now), count(m[1])],
+  ],
+  [
+    new RegExp(`\\bevery\\s+other\\s+${WEEKDAY_ITEM}(?:${LIST_SEP}${WEEKDAY_ITEM})*`),
+    (m) => [weekly(weekdaysIn(m[0])), 2],
+  ],
+  [
+    new RegExp(
+      `\\b${EVERY_PREFIX}(${WEEKDAY_RE})(?:\\s*feiras?)?\\s+sim,?\\s+(?:${WEEKDAY_RE})(?:\\s*feiras?)?\\s+nao\\b`,
+    ),
+    (m) => [weekly([WEEKDAYS[m[1]]]), 2],
+  ],
+  [
+    new RegExp(
+      String.raw`\b${EVERY_PREFIX}semanas?\s+sim,?\s+semanas?\s+nao\b|\b(?:(?:de|em)\s+)?semanas\s+alternadas\b|\balternate\s+weeks\b|\b(?:quinzenal(?:mente)?|${EVERY_PREFIX}quinzenas?|(?:a\s+)?cada\s+quinzena|bi\s*weekly|fortnightly|every\s+fortnight)\b`,
+    ),
+    (_, now) => [weekly([now.getDay()]), 2],
+  ],
+  [
+    new RegExp(
+      String.raw`\b${EVERY_PREFIX}dias?\s+sim,?\s+dias?\s+nao\b|\b(?:em\s+)?dias\s+alternados\b|\b(?:on\s+)?alternate\s+days\b`,
+    ),
+    () => ["Daily", 2],
+  ],
+  [new RegExp(String.raw`\b${EVERY_PREFIX}mes\s+sim,?\s+mes\s+nao\b|\bbimestralmente\b`), () => ["Monthly", 2]],
+  [
+    /\btrimestralmente\b|(?<=\S\s+)\bquarterly\b(?=\s*$|\s*[,.;!]|\s+(?:at|as|on|@|\d))|\bevery\s+quarter\b/,
+    () => ["Monthly", 3],
+  ],
+  [/\bsemestralmente\b/, () => ["Monthly", 6]],
+];
+
+const ORDINAL_OF_EVERY_RE =
+  /\b(?:first|second|third|fourth|last|primeir[ao]|segund[ao]|terceir[ao]|quart[ao]|(?:pen)?ultim[ao])\s+(?:\S+\s+)?(?:of|d[aoe])\s+(?:(?:a\s+)?cada|every|each)\b/;
+
+/** Série com intervalo; `null` quando não há, ou quando o N não cabe em `repeatEvery` (1..365). */
+export function parseInterval(text: string, now: Date): RepeatHit | null {
+  for (const [re, read] of INTERVALS) {
+    const match = text.match(re);
+    if (!match) continue;
+    // "the first of every other month", "última sexta de cada 2 meses": dia ordinal por extenso
+    // não cabe no `Repeat`, e o UNSUPPORTED_REPEAT_RE ainda vê o intervalo.
+    if (ORDINAL_OF_EVERY_RE.test(text)) return null;
+    let [value, every] = read(match, now);
+    if (!Number.isInteger(every) || every < 1 || every > 365) return null;
+    const extra: Span[] = [];
+    // "a cada 2 semanas na segunda e quarta": os dias colados são os da série.
+    const end = spanOf(match)[1];
+    const days = typeof value === "object" && text.slice(end).match(DAYS_TAIL_RE);
+    if (days) {
+      value = weekly(weekdaysIn(`${match[0]} ${days[0]}`));
+      extra.push([end, end + days[0].length]);
+    }
+    return { ...hit(match, value, extra), every: every > 1 ? every : undefined };
   }
   return null;
 }

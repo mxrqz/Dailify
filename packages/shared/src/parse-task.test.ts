@@ -692,6 +692,17 @@ describe("recorrência no texto", () => {
     expect(parseRepeat(normalize(input), WED)?.value).toEqual(repeat);
   });
 
+  it.each([
+    ["reunião toda segunda e quinta de semanas alternadas", { Weekly: ["Monday", "Thursday"] }, 2],
+    ["dia sim, dia não", "Daily", 2],
+    ["a cada 1 semana", { Weekly: ["Wednesday"] }, undefined],
+    ["every 3 months", "Monthly", 3],
+  ])("%s → repeatEvery", (input, repeat, every) => {
+    const parsed = parseTaskText(input, WED);
+    expect(parsed.repeat).toEqual(repeat);
+    expect(parsed.repeatEvery).toBe(every);
+  });
+
   // O corpus não pontua outOfScope: aqui a garantia de que série que o `Repeat` não guarda não vira
   // dado confiante e errado — fica tudo no título.
   it.each([
@@ -700,7 +711,7 @@ describe("recorrência no texto", () => {
     "toda segunda semana do mês plantão",
     "first monday of every month board meeting",
     "last friday of the month happy hour",
-    "reunião toda segunda e quinta de semanas alternadas",
+    "relatório a cada 2 dias úteis",
     "meds every day for 7 days",
     "toda terça exceto dia 10",
   ])("%s fica intocada", (input) => {

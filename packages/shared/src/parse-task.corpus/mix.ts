@@ -107,8 +107,8 @@ export default [
     ["pagar o rent todo dia 5", "pagar o rent", "2026-12-05", null, { repeat: "Monthly" }],
     ["backup every month", "backup", TODAY, null, { repeat: "Monthly" }],
     ["review mensal monthly", "review mensal", TODAY, null, { repeat: "Monthly" }],
-    ["retro every other friday", "retro", FRI, null, { outOfScope: "recurrence" }],
-    ["one-on-one a cada 2 weeks", "one-on-one", TODAY, null, { outOfScope: "recurrence" }],
+    ["retro every other friday", "retro", FRI, null, { repeat: W("Friday"), every: 2 }],
+    ["one-on-one a cada 2 weeks", "one-on-one", TODAY, null, { repeat: W("Sunday"), every: 2 }],
   ]),
 
   ...section("mix", "deadline", [

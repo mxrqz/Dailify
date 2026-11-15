@@ -159,6 +159,39 @@ const inScope: CorpusEntry[] = [
     ["spanish lesson 50 minutes thursday 6pm", "spanish lesson", THU, "18:00", { duration: "50m" }],
   ]),
   ...section("en", "recurrence", [
+    // a cada N (repeatEvery, bd Dailify-1rb.6)
+    [
+      "take out recycling every other day",
+      "take out recycling",
+      TODAY,
+      null,
+      { repeat: "Daily", every: 2 },
+    ],
+    ["haircut every 2 weeks", "haircut", TODAY, null, { repeat: W("Sunday"), every: 2 }],
+    [
+      "biweekly 1:1 with manager tue 10am",
+      "1:1 with manager",
+      TUE,
+      "10:00",
+      { repeat: W("Tuesday"), every: 2 },
+    ],
+    [
+      "change ac filter every 3 months",
+      "change ac filter",
+      TODAY,
+      null,
+      { repeat: "Monthly", every: 3 },
+    ],
+    [
+      "dentist cleaning every six months",
+      "dentist cleaning",
+      TODAY,
+      null,
+      { repeat: "Monthly", every: 6 },
+    ],
+    ["every other quinta futebol", "futebol", THU, null, { repeat: W("Thursday"), every: 2 }],
+    ["gym de 15 em 15 days", "gym", TODAY, null, { repeat: "Daily", every: 15 }],
+    ["standup biweekly às 9h", "standup", SUN2, "09:00", { repeat: W("Sunday"), every: 2 }],
     [
       "take vitamins every day",
       "take vitamins",
@@ -589,23 +622,6 @@ const en: O[] = [
   ],
   // unstorable recurrence
   [
-    "take out recycling every other day",
-    "take out recycling",
-    null,
-    null,
-    "recurrence",
-    ["repeat-unsupported"],
-  ],
-  ["haircut every 2 weeks", "haircut", null, null, "recurrence", ["repeat-unsupported"]],
-  [
-    "biweekly 1:1 with manager tue 10am",
-    "1:1 with manager",
-    TUE,
-    "10:00",
-    "recurrence",
-    ["repeat-unsupported"],
-  ],
-  [
     "book club first monday of every month",
     "book club",
     null,
@@ -631,14 +647,6 @@ const en: O[] = [
     "recurrence",
     ["repeat-unsupported"],
   ],
-  [
-    "change ac filter every 3 months",
-    "change ac filter",
-    null,
-    null,
-    "recurrence",
-    ["repeat-unsupported"],
-  ],
   ["meds every 8h", "meds", null, null, "recurrence", ["repeat-unsupported"]],
   [
     "call grandpa every second sunday",
@@ -649,14 +657,6 @@ const en: O[] = [
     ["repeat-unsupported"],
   ],
   ["quarterly taxes", "quarterly taxes", null, null, "recurrence", ["repeat-unsupported"]],
-  [
-    "dentist cleaning every six months",
-    "dentist cleaning",
-    null,
-    null,
-    "recurrence",
-    ["repeat-unsupported"],
-  ],
   ["yoga 3 times a week", "yoga", null, null, "recurrence", ["repeat-unsupported"]],
   // reminders / alerts
   ["dentist friday 3pm remind me 15 min before", "dentist", FRI, "15:00", "alert", ["alert"]],
@@ -728,7 +728,6 @@ const en: O[] = [
 const mix: O[] = [
   ["me lembra 10 min before the call", "call", null, null, "alert", ["alert"]],
   ["cancela meu 3pm", "cancela meu", MON, "15:00", "command", ["command"]],
-  ["every other quinta futebol", "futebol", null, null, "recurrence", ["repeat-unsupported"]],
   ["o que tenho tomorrow", "o que tenho", MON, null, "question", ["question"]],
   [
     "meeting com o cliente friday 3pm me avisa 1h antes",
@@ -738,10 +737,8 @@ const mix: O[] = [
     "alert",
     ["alert"],
   ],
-  ["gym de 15 em 15 days", "gym", null, null, "recurrence", ["repeat-unsupported"]],
   ["call o Pedro quando I get home", "call o Pedro", null, null, "vague", ["vague"]],
   ["deleta o task do mercado", "mercado", null, null, "command", ["command"]],
-  ["standup biweekly às 9h", "standup", null, "09:00", "recurrence", ["repeat-unsupported"]],
   ["lavar o carro sometime semana que vem", "lavar o carro", null, null, "vague", ["vague"]],
   ["tenho algo friday", "tenho algo", FRI, null, "question", ["question"]],
   ["pagar rent e call mom amanhã", "pagar rent", MON, null, "multi-task", ["multi"]],

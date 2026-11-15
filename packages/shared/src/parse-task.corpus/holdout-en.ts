@@ -583,10 +583,10 @@ const en: CorpusEntry[] = [
     ["delete the gym task", "delete the gym task", null, null, { outOfScope: "command" }],
     ["reschedule standup to 10", "reschedule standup to", null, null, { outOfScope: "command" }],
     ["remind me 15 min before the meeting", "meeting", null, null, { outOfScope: "alert" }],
-    ["every other day run", "run", null, null, { outOfScope: "recurrence" }],
-    ["biweekly payroll", "payroll", null, null, { outOfScope: "recurrence" }],
-    ["every 2 weeks clean fridge", "clean fridge", null, null, { outOfScope: "recurrence" }],
-    ["every 3 months oil change", "oil change", null, null, { outOfScope: "recurrence" }],
+    ["every other day run", "run", TODAY, null, { repeat: "Daily", every: 2 }],
+    ["biweekly payroll", "payroll", TODAY, null, { repeat: W("Sunday"), every: 2 }],
+    ["every 2 weeks clean fridge", "clean fridge", TODAY, null, { repeat: W("Sunday"), every: 2 }],
+    ["every 3 months oil change", "oil change", TODAY, null, { repeat: "Monthly", every: 3 }],
     [
       "first monday of every month board meeting",
       "board meeting",
@@ -752,7 +752,7 @@ const mix: CorpusEntry[] = [
     ["move a daily pra 10am", "move a daily pra", null, null, { outOfScope: "command" }],
     ["cancela o meeting de sexta", "cancela o meeting", FRI, null, { outOfScope: "command" }],
     ["what time é o standup?", "what time é o standup?", null, null, { outOfScope: "question" }],
-    ["1:1 a cada two weeks", "1:1", null, null, { outOfScope: "recurrence" }],
+    ["1:1 a cada two weeks", "1:1", TODAY, null, { repeat: W("Sunday"), every: 2 }],
   ]),
 ];
 

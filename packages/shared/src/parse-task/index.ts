@@ -2,7 +2,14 @@ import type { TZDate } from "@date-fns/tz";
 import { parseLinks } from "../parse-links";
 import type { ParsedTaskWire } from "../types";
 import { parseDuration } from "./durations";
-import { BOUNDED_REPEAT_RE, UNSUPPORTED_REPEAT_RE, nextOccurrence, parseRepeat } from "./repeat";
+import {
+  BOUNDED_REPEAT_RE,
+  UNSUPPORTED_REPEAT_RE,
+  nextOccurrence,
+  parseInterval,
+  parseRepeat,
+  weekly,
+} from "./repeat";
 import { type Span, mask, mergeSpans, spanOf } from "./spans";
 import { cut, properNouns } from "./title";
 import { type Unsure, unsureOf } from "./unsure";
@@ -26,7 +33,7 @@ import { parseWhen } from "./when";
  */
 
 export { type ParsedDuration, parseDuration } from "./durations";
-export { parseRepeat } from "./repeat";
+export { parseInterval, parseRepeat } from "./repeat";
 export { type Span, remapSpans } from "./spans";
 export { cut } from "./title";
 export { type Unsure, type UnsureCode } from "./unsure";
@@ -83,10 +90,13 @@ export function parseTaskText(
       now,
     }),
   };
-  if (UNSUPPORTED_REPEAT_RE.test(mask(normalized, keep))) return unsupported;
+  // "a cada 2 semanas" cabe (`repeatEvery`); o que sobra de "a cada N" depois dela é que não cabe.
+  const interval = parseInterval(mask(normalized, [...fixed, ...keep]), now);
+  const intervalSpans = interval?.spans ?? [];
+  if (UNSUPPORTED_REPEAT_RE.test(mask(normalized, [...keep, ...intervalSpans]))) return unsupported;
 
   // "youtu.be/15h30" não pode virar horário nem duração; "Sessão da Tarde" e "Dom Casmurro" também não.
-  const forDuration = mask(normalized, [...fixed, ...properNouns(input), ...keep]);
+  const forDuration = mask(normalized, [...fixed, ...properNouns(input), ...keep, ...intervalSpans]);
   let duration = parseDuration(forDuration, input);
 
   // A duração também sai da vista do parseWhen: o "1h" de "call de 1h hoje às 16h" casa como hora
@@ -96,7 +106,15 @@ export function parseTaskText(
   // "toda quarta" sai da vista do parseWhen, que leria "quarta" como dia; "dia 5"/"3 de março"
   // ficam fora do span da recorrência e ele ainda lê. O intervalo manda no horário: "das 15 às 16"
   // começa 15:00, e o parseWhen só põe o dia (ou rola pra amanhã se já passou).
-  const repeat = parseRepeat(forWhen, now, input);
+  // "toda segunda e quinta de semanas alternadas": os dias vêm da série comum; o N, do intervalo.
+  // "todo dia 10 a cada 2 meses" idem: o "todo" é da mesma série.
+  const days = interval && parseRepeat(forWhen, now, input);
+  const sameKind =
+    days && typeof days.value === typeof interval.value && (typeof days.value === "object" || days.value === interval.value);
+  const repeat =
+    interval && days && sameKind
+      ? { ...days, every: interval.every, spans: [...interval.spans, ...days.spans] }
+      : (interval ?? parseRepeat(forWhen, now, input));
   const forDay = mask(forWhen, repeat?.spans ?? []);
   if (repeat && BOUNDED_REPEAT_RE.test(forDay)) return unsupported;
 
@@ -125,19 +143,24 @@ export function parseTaskText(
     ...(when?.spans ?? []),
   ]);
 
-  const hasTime = when?.hasTime ?? false;
-  const date = repeat
-    ? nextOccurrence(repeat.value, when?.date ?? startOfDay(now), hasTime, now)
-    : (when?.date ?? null);
-
   // "toda quarta" cita dias; "dias úteis" também (seg–sex); "toda semana" não.
   const citesWeekday =
     typeof repeat?.value === "object" &&
     repeat.spans.some(([start, end]) =>
       new RegExp(
         `\\b(?:${WEEKDAY_RE})s?\\b|\\b(?:dias?\\s+uteis?|weekdays?|weekends?|(?:fim|fins|final|finais)\\s+de|durante)\\b`,
-      ).test(forWhen.slice(start, end)),
+      ).test((interval ? normalized : forWhen).slice(start, end)),
     );
+  // "biweekly 1:1 tue 10am": a cada N semanas sem dia na série fica no dia da frase, não no de hoje.
+  if (interval && typeof repeat?.value === "object" && !citesWeekday && when?.hasDay && when.date) {
+    repeat.value = weekly([when.date.getDay()]);
+  }
+
+  const hasTime = when?.hasTime ?? false;
+  const date = repeat
+    ? nextOccurrence(repeat.value, when?.date ?? startOfDay(now), hasTime, now)
+    : (when?.date ?? null);
+
 
   const text = unquote(cut(input, spans));
   // "seg 8h daily": o advérbio que come o título inteiro é o nome da reunião (a "daily").
@@ -159,6 +182,7 @@ export function parseTaskText(
     duration: duration?.duration ?? null,
     links: links.urls,
     repeat: value,
+    repeatEvery: repeat?.every,
     fields: {
       day: when?.day ?? [],
       time: when?.time ?? [],

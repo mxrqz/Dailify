@@ -1,6 +1,6 @@
 // Fase 4 (bd Dailify-1rb.4): frases pra medir os motivos de dúvida. Fora de escopo só cobra os
 // motivos (os campos não contam); as armadilhas são tarefas comuns que não podem levantar dúvida.
-import { MON, SAT, FRI, TODAY, section, type OutOfScope, type Row } from "./kit";
+import { TUE, W, MON, SAT, FRI, TODAY, section, type OutOfScope, type Row } from "./kit";
 import type { UnsureCode } from "../parse-task";
 
 const oos = (outOfScope: OutOfScope, input: string, unsure?: UnsureCode[]): Row => [
@@ -40,10 +40,22 @@ export default [
     oos("multi-task", "estudar inglês e fazer a janta hoje à noite"),
     oos("multi-task", "buscar as crianças 17h e ir no mercado 19h"),
     oos("multi-task", "ler 30 páginas e fazer resumo amanhã"),
-    oos("recurrence", "regar as plantas a cada 3 dias"),
+    [
+      "regar as plantas a cada 3 dias",
+      "regar as plantas",
+      TODAY,
+      null,
+      { repeat: "Daily", every: 3 },
+    ],
     oos("recurrence", "pagar o condomínio todo quinto dia útil"),
-    oos("recurrence", "faxina semana sim, semana não"),
-    oos("recurrence", "trocar lençol quinzenalmente"),
+    ["faxina semana sim, semana não", "faxina", TODAY, null, { repeat: W("Sunday"), every: 2 }],
+    [
+      "trocar lençol quinzenalmente",
+      "trocar lençol",
+      TODAY,
+      null,
+      { repeat: W("Sunday"), every: 2 },
+    ],
     oos("recurrence", "tomar vitamina 3x ao dia"),
     oos("recurrence", "remédio 8h, 14h e 20h", ["list-values"]),
     oos("recurrence", "pagar cartão dia 5 e dia 20", ["list-values"]),
@@ -85,11 +97,11 @@ export default [
     oos("multi-task", "pick up dry cleaning; call the bank"),
     oos("multi-task", "water the plants and feed the cat tonight"),
     oos("multi-task", "pay rent friday and renew passport next week"),
-    oos("recurrence", "every other tuesday book club"),
-    oos("recurrence", "call grandma every 2 weeks"),
-    oos("recurrence", "backup every 3 days"),
+    ["every other tuesday book club", "book club", TUE, null, { repeat: W("Tuesday"), every: 2 }],
+    ["call grandma every 2 weeks", "call grandma", TODAY, null, { repeat: W("Sunday"), every: 2 }],
+    ["backup every 3 days", "backup", TODAY, null, { repeat: "Daily", every: 3 }],
     oos("recurrence", "dentist twice a year"),
-    oos("recurrence", "pay taxes quarterly"),
+    ["pay taxes quarterly", "pay taxes", TODAY, null, { repeat: "Monthly", every: 3 }],
     oos("recurrence", "standup at 9am and 4pm", ["list-values"]),
     oos("alert", "remind me 2 hours before the flight"),
     oos("alert", "call mom at 6pm, alert me 10 minutes before"),
@@ -159,7 +171,7 @@ export default [
     oos("command", "undo the last task"),
     oos("multi-task", "laundry at 9, groceries at 11"),
     oos("multi-task", "call the bank and pay the credit card bill tomorrow"),
-    oos("recurrence", "water plants every three days"),
+    ["water plants every three days", "water plants", TODAY, null, { repeat: "Daily", every: 3 }],
     oos("recurrence", "pay rent on the first of every other month"),
     oos("alert", "flight friday 8am, remind me the night before"),
     oos("vague", "dinner with Sam whenever he is free"),
