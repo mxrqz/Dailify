@@ -2,11 +2,11 @@ import { HEAD_D } from "@/components/mew/head-path";
 import { cn } from "@/lib/utils";
 
 // cx, cy, rx, ry no viewBox, medidos no PNG original (1280²)
-const EYES = [
+export const EYES = [
   [463, 803, 152, 139],
   [1004, 752, 128, 138],
 ] as const;
-const PUPILS = [
+export const PUPILS = [
   [463, 806, 42, 92],
   [1004, 752, 43, 92],
 ] as const;

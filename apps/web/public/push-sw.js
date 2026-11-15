@@ -22,8 +22,8 @@ self.addEventListener("push", (event) => {
   event.waitUntil(
     self.registration.showNotification(data.title || "Mewki", {
       body: time ? `Sua tarefa é às ${time}` : "Você tem uma tarefa agora",
-      icon: "/dailify_logo_2.png",
-      badge: "/dailify_logo_2.png",
+      icon: "/icons/icon-192.png",
+      badge: "/icons/badge-96.png",
       // tag = id da tarefa: reenvio do mesmo alerta substitui a notificação em vez de empilhar
       tag: data.taskId || "dailify-alert",
       data: { taskId: data.taskId },

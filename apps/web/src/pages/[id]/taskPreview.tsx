@@ -4,6 +4,7 @@ import { useSearchParams } from "react-router-dom";
 import { toPng } from "html-to-image";
 import { BellIcon } from "lucide-react";
 import { zoned } from "@/functions/zone";
+import { MewStatic } from "@/components/mew/mew-static";
 
 export default function TaskPreview() {
   const [searchParams] = useSearchParams();
@@ -87,13 +88,7 @@ export default function TaskPreview() {
               </div>
             </div>
 
-            <div className="relative w-36 aspect-square">
-              <img
-                className="absolute w-full h-full object-contain -scale-x-100"
-                src="../dailify_logo_2.png"
-                alt="Mewki"
-              />
-            </div>
+            <MewStatic tone="onBrand" title="Mewki" className="relative w-36 -scale-x-100" />
           </div>
 
           <img src={createImage} id="create" alt="" />
@@ -134,13 +129,7 @@ export default function TaskPreview() {
               </div>
             </div>
 
-            <div className="relative w-36 aspect-square">
-              <img
-                className="absolute w-full h-full object-contain -scale-x-100"
-                src="../dailify_logo_2.png"
-                alt="Mewki"
-              />
-            </div>
+            <MewStatic tone="onBrand" title="Mewki" className="relative w-36 -scale-x-100" />
           </div>
 
           <img src={alertImage} id="alert" alt="" />

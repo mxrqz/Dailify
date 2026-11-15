@@ -26,7 +26,7 @@ export default defineConfig(async ({ mode }) => ({
     // diário e um "recarregue" na cara do usuário é pedágio.
     VitePWA({
       registerType: 'autoUpdate',
-      includeAssets: ['dailify_logo_2.png', 'push-sw.js'],
+      includeAssets: ['favicon.svg', 'icons/*.png', 'push-sw.js'],
       // SW em dev só com `PWA_DEV=1 bun run dev` (pra testar push): ligado sempre, o Firefox
       // quebrava os módulos do Vite interceptados (NS_ERROR) e a tela ficava branca.
       // `classic`: o SW importa o push-sw.js por importScripts, que não existe em worker module.
@@ -38,10 +38,13 @@ export default defineConfig(async ({ mode }) => ({
         lang: 'pt-BR',
         start_url: '/dashboard',
         display: 'standalone',
-        background_color: '#0a0a0a',
-        theme_color: '#0a0a0a',
+        // --canvas escuro (global.css): dark é o tema principal. Ícones: `bun scripts/icons.ts`.
+        background_color: '#000000',
+        theme_color: '#000000',
         icons: [
-          { src: '/dailify_logo_2.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+          { src: '/icons/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+          { src: '/icons/maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
