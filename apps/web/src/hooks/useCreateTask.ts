@@ -94,7 +94,7 @@ export function useCreateTask() {
     };
     const undated = input.undated === true;
     const previous = (undated ? undatedTasks : tasks) ?? [];
-    const optimistic = { ...input, completed: [] };
+    const optimistic = { ...input, repeatEvery: input.repeatEvery ?? undefined, completed: [] };
     const apply = (list: Task[], task: Task) =>
       undated
         ? setUndatedTasks(upsertUndated(list, task))

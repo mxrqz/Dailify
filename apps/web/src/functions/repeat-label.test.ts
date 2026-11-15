@@ -17,6 +17,15 @@ describe("repeatLabel", () => {
     expect(repeatLabel({ Weekly: ["Wednesday", "Monday"] })).toBe("Seg, Qua");
   });
 
+  it("põe o intervalo na frente", () => {
+    expect(repeatLabel("Daily", 2)).toBe("Dia sim, dia não");
+    expect(repeatLabel("Daily", 3)).toBe("A cada 3 dias");
+    expect(repeatLabel({ Weekly: ["Wednesday", "Monday"] }, 2)).toBe("A cada 2 semanas (seg, qua)");
+    expect(repeatLabel({ Weekly: [] }, 2)).toBe("A cada 2 semanas");
+    expect(repeatLabel("Monthly", 3)).toBe("A cada 3 meses");
+    expect(repeatLabel("Yearly", 1)).toBe("Anual");
+  });
+
   it("cai no rótulo genérico quando a semanal não tem dia válido", () => {
     expect(repeatLabel({ Weekly: [] })).toBe("Semanal");
     expect(repeatLabel({ Weekly: ["Sextou"] })).toBe("Semanal");

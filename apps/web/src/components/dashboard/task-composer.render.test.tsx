@@ -239,6 +239,25 @@ describe("<TaskComposer> chips", () => {
     expect(submitted(onSubmit)).toMatchObject({ text: "call", duration: "30m" });
   });
 
+  it("intervalo: o chip diz a cada quanto, e o menu troca o N", async () => {
+    const { user, onSubmit } = setup();
+    await user.type(screen.getByRole("textbox"), "faxina a cada 2 semanas na segunda");
+    const label = (value: string) => copy.composer.editRepeat.replace("{value}", value);
+    await user.click(screen.getByRole("button", { name: label("A cada 2 semanas (seg)") }));
+    await user.click(await screen.findByRole("menuitemradio", { name: "A cada 3 semanas" }));
+
+    expect(
+      screen.getByRole("button", { name: label("A cada 3 semanas (seg)") }),
+    ).toBeInTheDocument();
+    screen.getByRole("textbox").focus();
+    await user.keyboard("{Enter}");
+    expect(submitted(onSubmit)).toMatchObject({
+      text: "faxina",
+      repeat: { Weekly: ["Monday"] },
+      repeatEvery: 3,
+    });
+  });
+
   it("entre aspas é literal e as aspas saem do título", async () => {
     const { user, onSubmit } = setup();
     await user.type(screen.getByRole("textbox"), 'ler "amanhã é outro dia"');

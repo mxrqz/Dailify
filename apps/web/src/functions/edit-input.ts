@@ -15,6 +15,8 @@ export function editTaskInput(values: TaskFormValues, now: Date): Partial<TaskIn
     priority: values.priority,
     tags: values.tags,
     repeat: values.repeat,
+    // `null` e não ausente: o PATCH manteria o intervalo antigo.
+    repeatEvery: values.repeat !== "Off" && values.repeatEvery > 1 ? values.repeatEvery : null,
     links: values.links,
   };
 

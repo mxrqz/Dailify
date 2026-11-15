@@ -117,6 +117,15 @@ export const copy = {
     repeatWeekly: "Semanal",
     repeatMonthly: "Mensal",
     repeatYearly: "Anual",
+    repeatEvery: "Intervalo",
+    repeatEveryOther: "Dia sim, dia não",
+    // "{n}" = `repeatEvery`, na unidade do `Repeat`.
+    repeatEveryUnit: {
+      Daily: "A cada {n} dias",
+      Weekly: "A cada {n} semanas",
+      Monthly: "A cada {n} meses",
+      Yearly: "A cada {n} anos",
+    },
     // Ordem de `weekDays` do shared (domingo primeiro) — o índice vem do `dayMap`.
     repeatDays: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
     back: "Voltar",

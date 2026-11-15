@@ -213,13 +213,15 @@ export function useTaskActions(
     const at = Date.now();
     const previous = tasks ?? [];
     const stamped = { ...patch, updatedAt: at };
+    // `repeatEvery: null` é "volta a 1" no fio; na tarefa da tela é ausência.
+    const repeatEvery =
+      patch.repeatEvery === undefined ? task.repeatEvery : (patch.repeatEvery ?? undefined);
+    const local = { ...stamped, repeatEvery };
     // Só esta ocorrência: mexe só na instância da tela; a série inteira fica como está.
     setTasks(
       occurrence === undefined
-        ? upsertTaskWithRecurrence(previous, { ...task, ...stamped }, loadedMonths)
-        : previous.map((t) =>
-            t.id === task.id && t.date === occurrence ? { ...t, ...stamped } : t,
-          ),
+        ? upsertTaskWithRecurrence(previous, { ...task, ...local }, loadedMonths)
+        : previous.map((t) => (t.id === task.id && t.date === occurrence ? { ...t, ...local } : t)),
     );
 
     const mutation: Mutation = { op: "patch", taskId: task.id, patch: stamped, at, occurrence };

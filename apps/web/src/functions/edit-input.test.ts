@@ -10,6 +10,7 @@ const values: TaskFormValues = {
   duration: "10m",
   priority: 0,
   repeat: "Off",
+  repeatEvery: 1,
   undated: false,
 };
 

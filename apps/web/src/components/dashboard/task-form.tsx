@@ -37,6 +37,7 @@ import { useDailify } from "@/components/dailifyContext";
 import { DEFAULT_HOUR, undatedReminder } from "@/functions/compose-input";
 import { formatClock } from "@/functions/functions";
 import { linkLabel } from "@/functions/link-label";
+import { everyLabel, everyOptions } from "@/functions/repeat-label";
 import { cn } from "@/lib/utils";
 import type { TaskProps } from "@/types/types";
 import { fromDateInput, zoned, zonedAt } from "@/functions/zone";
@@ -48,6 +49,8 @@ export interface TaskFormValues {
   priority: number;
   tags?: string[];
   repeat: Repeat;
+  /** 1 = sem intervalo. */
+  repeatEvery: number;
   links?: string[];
   /** Sem horário: vai para Sem data, e `date` é ignorada. */
   undated: boolean;
@@ -150,6 +153,7 @@ export function TaskForm({
   const [duration, setDuration] = useState(task?.duration ?? "10m");
   const [priority, setPriority] = useState(task?.priority ?? 0);
   const [repeat, setRepeat] = useState<Repeat>(task?.repeat ?? "Off");
+  const [every, setEvery] = useState(task?.repeatEvery ?? 1);
   const [tags, setTags] = useState<string[]>(task?.tags ?? []);
   // undefined (nao []) enquanto intocado, pra casar com task.links undefined: [] explicito so
   // depois que o usuario mexe, e o servidor so limpa o campo quando recebe a chave "links".
@@ -179,6 +183,7 @@ export function TaskForm({
     duration,
     priority,
     repeat,
+    every,
     tags,
     links,
   ]);
@@ -217,6 +222,7 @@ export function TaskForm({
       priority,
       tags,
       repeat,
+      repeatEvery: repeat === "Off" ? 1 : every,
       links,
       undated,
       reminder: undated ? reminder : undefined,
@@ -341,6 +347,28 @@ export function TaskForm({
                 ))}
               </select>
             </FieldChip>
+
+            {repeatMode !== "Off" && (
+              <FieldChip
+                icon={<RepeatIcon className={icon} />}
+                filled={every > 1}
+                tone={chipRepeat}
+              >
+                {every > 1 ? everyLabel(repeat, every) : copy.form.repeatEvery}
+                <select
+                  aria-label={copy.form.repeatEvery}
+                  value={String(every)}
+                  onChange={(e) => setEvery(Number(e.target.value))}
+                  className={nativeControlClass}
+                >
+                  {everyOptions(every).map((n) => (
+                    <option key={n} value={String(n)}>
+                      {everyLabel(repeat, n)}
+                    </option>
+                  ))}
+                </select>
+              </FieldChip>
+            )}
 
             <FieldChip icon={<SunIcon className={icon} />} filled={undated}>
               {copy.form.undatedChip}

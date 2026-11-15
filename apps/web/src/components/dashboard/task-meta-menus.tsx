@@ -9,14 +9,17 @@ import { calendarPanel } from "@/components/dashboard/styles";
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuLabel,
   DropdownMenuRadioGroup,
   DropdownMenuRadioItem,
+  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { priorityText, priorityTextColor } from "@/consts/conts";
 import { cn } from "@/lib/utils";
 import { Flag } from "lucide-react";
+import { everyLabel, everyOptions } from "@/functions/repeat-label";
 import { zoned } from "@/functions/zone";
 
 /**
@@ -102,13 +105,16 @@ const REPEATS = [
  */
 export function RepeatMenu({
   value,
+  every = 1,
   date,
   onChange,
   children,
 }: {
   value: Repeat;
+  /** `repeatEvery`; o menu sempre devolve um número (1 = sem intervalo). */
+  every?: number;
   date: number;
-  onChange: (repeat: Repeat) => void;
+  onChange: (repeat: Repeat, every: number) => void;
   children: ReactNode;
 }): JSX.Element {
   const current = typeof value === "string" ? value : "Weekly";
@@ -126,6 +132,7 @@ export function RepeatMenu({
               next === "Weekly"
                 ? { Weekly: [weekDays[zoned(date).getDay()]] }
                 : normalizeRepeat(next),
+              next === "Off" ? 1 : every,
             );
           }}
         >
@@ -135,6 +142,22 @@ export function RepeatMenu({
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>
+        {current !== "Off" && (
+          <>
+            <DropdownMenuSeparator />
+            <DropdownMenuLabel>{copy.form.repeatEvery}</DropdownMenuLabel>
+            <DropdownMenuRadioGroup
+              value={String(every)}
+              onValueChange={(next) => onChange(value, Number(next))}
+            >
+              {everyOptions(every).map((n) => (
+                <DropdownMenuRadioItem key={n} value={String(n)}>
+                  {everyLabel(value, n)}
+                </DropdownMenuRadioItem>
+              ))}
+            </DropdownMenuRadioGroup>
+          </>
+        )}
       </DropdownMenuContent>
     </DropdownMenu>
   );

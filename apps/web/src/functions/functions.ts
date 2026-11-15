@@ -154,6 +154,7 @@ export function isTaskModified(task: TaskProps, updated: TaskProps): boolean {
 
   const isRepeatChanged = JSON.stringify(task.repeat) !== JSON.stringify(updated.repeat);
   if (isRepeatChanged) return true;
+  if ((task.repeatEvery ?? 1) !== (updated.repeatEvery ?? 1)) return true;
 
   return false;
 }
@@ -206,7 +207,7 @@ export function taskToCardData(
     priority: task.priority,
     completed: getCompletionDate(task, day) === true,
     links: task.links ?? [],
-    repeat: repeatLabel(task.repeat),
+    repeat: repeatLabel(task.repeat, task.repeatEvery),
   };
 }
 

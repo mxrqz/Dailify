@@ -148,7 +148,13 @@ export function EditTaskContent({
       values.undated && !input.alert && wasUndated ? task.date : (input.date ?? task.date);
     // Agenda: o alerta acompanha a tarefa; o lembrete das 09:00 de Sem data não vale lá.
     const alert = values.undated ? input.alert : wasUndated ? date : (task.alert ?? date);
-    const taskData = { ...task, ...input, date, alert };
+    const taskData = {
+      ...task,
+      ...input,
+      repeatEvery: input.repeatEvery ?? undefined,
+      date,
+      alert,
+    };
 
     // Salvar sem mexer em nada ainda é "terminei aqui": a folha fecha do mesmo jeito.
     // `isTaskModified` compara `alert ?? date`: em Sem data limpar o lembrete (date === alert)

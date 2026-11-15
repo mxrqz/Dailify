@@ -26,6 +26,7 @@ export function composeTaskInput(
     duration: parsed.duration ?? DEFAULT_DURATION,
     priority: 0,
     repeat: parsed.repeat,
+    repeatEvery: parsed.repeatEvery,
     // Um link por tarefa: a frase pode trazer vários, fica o primeiro.
     links: parsed.links.length ? parsed.links.slice(0, 1) : undefined,
   };
@@ -89,6 +90,8 @@ export type Edits = Partial<{
   time: { hour: number; minute: number } | null;
   duration: string | null;
   repeat: Repeat | null;
+  /** Vale junto com `repeat`: o menu da recorrência sempre manda os dois. */
+  repeatEvery: number;
   links: string[] | null;
 }>;
 
@@ -129,6 +132,12 @@ export function withEdits(parsed: ParsedTask, edits: Edits, now: Date): ParsedTa
     hasTime,
     duration: edits.duration !== undefined ? edits.duration : parsed.duration,
     repeat: edits.repeat !== undefined ? (edits.repeat ?? "Off") : parsed.repeat,
+    repeatEvery:
+      edits.repeat !== undefined
+        ? edits.repeat && edits.repeatEvery && edits.repeatEvery > 1
+          ? edits.repeatEvery
+          : undefined
+        : parsed.repeatEvery,
     links: edits.links !== undefined ? (edits.links ?? []) : parsed.links,
   };
 }

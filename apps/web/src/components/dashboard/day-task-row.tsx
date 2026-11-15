@@ -93,8 +93,11 @@ export function DayTaskRow({
         repeat: (chip: JSX.Element) => (
           <RepeatMenu
             value={task.repeat}
+            every={task.repeatEvery}
             date={task.date}
-            onChange={(repeat) => void onPatch({ repeat })}
+            onChange={(repeat, every) =>
+              void onPatch({ repeat, repeatEvery: every > 1 ? every : null })
+            }
           >
             {chip}
           </RepeatMenu>

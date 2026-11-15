@@ -17,10 +17,13 @@ export function periodStarts(
   weekStart: WeekStart,
   timeZone: string,
   limit: number,
+  /** `repeatEvery` e a `date` da tarefa, que dá a fase dos períodos de N unidades. */
+  every = 1,
+  anchor = origin,
 ): number[] {
-  const starts = [periodStart(repeat, now, weekStart, timeZone)];
-  while (starts.length < limit && starts[0] > origin)
-    starts.unshift(periodStart(repeat, starts[0] - 1, weekStart, timeZone));
+  const start = (at: number) => periodStart(repeat, at, weekStart, timeZone, every, anchor);
+  const starts = [start(now)];
+  while (starts.length < limit && starts[0] > origin) starts.unshift(start(starts[0] - 1));
   return starts;
 }
 
@@ -41,7 +44,16 @@ export function CheckHistory({
 
   const now = Date.now();
   const origin = Math.min(task.date, ...task.completed);
-  const starts = periodStarts(task.repeat, origin, now, weekStart, appTimeZone(), periods);
+  const starts = periodStarts(
+    task.repeat,
+    origin,
+    now,
+    weekStart,
+    appTimeZone(),
+    periods,
+    task.repeatEvery,
+    task.date,
+  );
   const filled = starts.map((start, i) => {
     const end = starts[i + 1] ?? Infinity;
     return task.completed.some((c) => c >= start && c < end);

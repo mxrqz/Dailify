@@ -392,21 +392,25 @@ export function TaskComposer({
               <Chip
                 tone={chipRepeat}
                 large={large}
-                editLabel={copy.composer.editRepeat.replace("{value}", repeatLabel(parsed.repeat))}
+                editLabel={copy.composer.editRepeat.replace(
+                  "{value}",
+                  repeatLabel(parsed.repeat, parsed.repeatEvery),
+                )}
                 removeLabel={copy.composer.removeRepeat}
                 onRemove={() => remove("repeat")}
                 editor={(trigger) => (
                   <RepeatMenu
                     value={parsed.repeat}
+                    every={parsed.repeatEvery}
                     date={(parsed.date ?? zoned()).getTime()}
-                    onChange={(repeat) => edit({ repeat })}
+                    onChange={(repeat, repeatEvery) => edit({ repeat, repeatEvery })}
                   >
                     {trigger}
                   </RepeatMenu>
                 )}
               >
                 <RepeatIcon className="size-3" aria-hidden="true" />
-                {repeatLabel(parsed.repeat)}
+                {repeatLabel(parsed.repeat, parsed.repeatEvery)}
               </Chip>
             ) : (
               <Chip

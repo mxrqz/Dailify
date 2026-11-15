@@ -47,7 +47,7 @@ function AnytimeRow({ task, swipe }: { task: Task; swipe: boolean }): JSX.Elemen
       recurring && (
         <span className="inline-flex items-center gap-1 text-meta-repeat">
           <RepeatIcon className="size-3" aria-hidden />
-          {repeatLabel(task.repeat)}
+          {repeatLabel(task.repeat, task.repeatEvery)}
         </span>
       )
     );

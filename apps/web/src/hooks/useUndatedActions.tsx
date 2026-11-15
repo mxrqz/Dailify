@@ -60,7 +60,16 @@ export function useUndatedActions(task: Task) {
   const reopen = async (list: Task[], current: Task) => {
     const at = Date.now();
     const from =
-      current.repeat === "Off" ? 0 : periodStart(current.repeat, at, weekStart, appTimeZone());
+      current.repeat === "Off"
+        ? 0
+        : periodStart(
+            current.repeat,
+            at,
+            weekStart,
+            appTimeZone(),
+            current.repeatEvery,
+            current.date,
+          );
     setUndatedTasks(
       upsertUndated(list, {
         ...current,
