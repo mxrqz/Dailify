@@ -5,7 +5,7 @@
 ## Endpoints & plans
 
 - **`apiURL`** (`import.meta.env.VITE_API_URL`) = `apps/server` (Hono/Workers, same repo) — every
-  read and write goes there via `@/functions/api`. **`dailifyURL`** = prod site.
+  read and write goes there via `@/functions/api`.
 - **`PLAN_ID`** vem de `@dailify/shared` e é só **reexportado** aqui (havia duas declarações com os
   mesmos ids; duas listas iguais só ficam iguais até alguém mexer numa). **`planMap`** mapeia id →
   rótulo e fica no web, porque o servidor nunca mostra plano pra ninguém. Sempre use `PLAN_ID.*` nos

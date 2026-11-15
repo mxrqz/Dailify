@@ -85,4 +85,3 @@ export const planMap: Record<string, "Free" | "Pro" | "Pro + AI"> = {
 
 // Dev usa o proxy do vite.config (dev server é HTTPS, worker é HTTP = mixed content). bd Dailify-6aq
 export const apiURL = import.meta.env.DEV ? "/api" : import.meta.env.VITE_API_URL;
-export const dailifyURL = "https://dailify.mxrqz.com/";

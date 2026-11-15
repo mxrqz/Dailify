@@ -53,6 +53,8 @@ export default defineConfig({
           bindings: {
             // Test-only binding so tests can apply migrations themselves (see beforeAll in tests).
             TEST_MIGRATIONS: migrations,
+            // Fixo: senão o .env local (localhost) vaza pros testes de CORS/redirect do Stripe.
+            ALLOWED_ORIGIN: "https://dailify.mxrqz.com,https://mewki.mxrqz.com",
             // Dummy, syntactically-valid Clerk keys so clerkMiddleware() initializes in tests.
             // No token is ever sent in this phase's tests, so no real Clerk network call happens.
             CLERK_SECRET_KEY: "sk_test_00000000000000000000000000000000000000000000",

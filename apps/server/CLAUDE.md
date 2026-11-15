@@ -1,7 +1,7 @@
 # `apps/server` — Hono backend (Cloudflare Workers + D1)
 
 The only writer of app data. The web app never touches D1/Stripe/OpenAI directly — everything goes
-through here with a Clerk bearer token. Deployed as the `dailify-server` Worker (api.dailify.mxrqz.com).
+through here with a Clerk bearer token. Deployed as the `dailify-server` Worker (api.mewki.mxrqz.com; api.dailify.mxrqz.com still routes).
 
 ## Layout
 
@@ -68,7 +68,7 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
 `Env` fields beyond `DB`/`ALLOWED_ORIGIN`/limiters are secrets (`wrangler secret put`, or `.env`
 locally — see `.env.example`). O par VAPID sai de `bun run vapid`; o `CLERK_WEBHOOK_SECRET` sai do
 endpoint de webhook criado no dashboard do Clerk (evento `user.deleted`, URL `/webhooks/clerk`). `wrangler.toml` holds the D1 `database_id` and
-`[vars] ALLOWED_ORIGIN` — which is the **prod** origin, so `.env` must override it locally
+`[vars] ALLOWED_ORIGIN` — the **prod** origins, comma-separated (`lib/origin.ts`: CORS accepts any of them, Stripe redirects return to the caller's), so `.env` must override it locally
 (`https://localhost:1420`; vite uses mkcert + `strictPort`). Wrangler doesn't hot-reload `.env`.
 `bun run dev` applies pending D1 migrations locally (`CI=1` skips the prompt) before `wrangler dev`. Clerk + Stripe keys are **paired per instance**: a `pk_live` front end
 must match an `sk_live` worker or all auth 401s.

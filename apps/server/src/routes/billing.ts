@@ -17,6 +17,7 @@ import {
   stripeClient,
 } from "../lib/stripe";
 import { fail } from "../lib/errors";
+import { appOrigin } from "../lib/origin";
 
 const billing = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 
@@ -61,7 +62,7 @@ billing.post("/billing/checkout", requireAuth, rateLimit("API_LIMITER"), async (
     if (subscriptions.data.length) {
       const portal = await stripe.billingPortal.sessions.create({
         customer: stripeCustomerId,
-        return_url: `${c.env.ALLOWED_ORIGIN}/billing`,
+        return_url: `${appOrigin(c.env, c.req.header("Origin"))}/billing`,
       });
       return c.json({ url: portal.url });
     }
@@ -71,8 +72,8 @@ billing.post("/billing/checkout", requireAuth, rateLimit("API_LIMITER"), async (
     mode: "subscription",
     payment_method_types: ["card"],
     line_items: [{ price: priceMap(c.env)[productName], quantity: 1 }],
-    success_url: `${c.env.ALLOWED_ORIGIN}/billing?checkout=success`,
-    cancel_url: `${c.env.ALLOWED_ORIGIN}/billing?checkout=cancel`,
+    success_url: `${appOrigin(c.env, c.req.header("Origin"))}/billing?checkout=success`,
+    cancel_url: `${appOrigin(c.env, c.req.header("Origin"))}/billing?checkout=cancel`,
     customer_email: userEmail(user),
     subscription_data: { metadata: { clerkUserId: userId } },
     expires_at: Math.floor(Date.now() / 1000) + 30 * 60,
@@ -88,7 +89,7 @@ billing.get("/billing/portal", requireAuth, async (c) => {
 
   const portal = await stripeClient(c.env).billingPortal.sessions.create({
     customer: stripeCustomerId,
-    return_url: `${c.env.ALLOWED_ORIGIN}/billing`,
+    return_url: `${appOrigin(c.env, c.req.header("Origin"))}/billing`,
   });
   return c.json({ url: portal.url });
 });

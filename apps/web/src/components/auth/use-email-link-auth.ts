@@ -16,8 +16,8 @@ import {
  * Liga o Clerk ao reducer de `auth-state.ts`. Nada de lógica mora aqui — se você for escrever um
  * `if` que não seja sobre a API do Clerk, ele pertence ao reducer, onde dá pra testar.
  *
- * O `redirectUrl` sai de `window.location.origin` e NÃO do `dailifyURL` de consts: aquele é a URL
- * de produção hardcoded, e usá-la fazia o link do e-mail em dev apontar pra prod.
+ * O `redirectUrl` sai de `window.location.origin`: uma URL de produção fixa fazia o link do e-mail
+ * em dev apontar pra prod.
  */
 export function useEmailLinkAuth(mode: AuthMode) {
   const { signIn, setActive, isLoaded } = useSignIn();

@@ -37,10 +37,14 @@ vi.mock("../src/lib/clerk", async (importOriginal) => {
 import { env } from "cloudflare:test";
 import app from "../src/index";
 
-const post = (body: unknown) =>
+const post = (body: unknown, headers: Record<string, string> = {}) =>
   app.request(
     "/billing/checkout",
-    { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(body) },
+    {
+      method: "POST",
+      headers: { "content-type": "application/json", ...headers },
+      body: JSON.stringify(body),
+    },
     env,
   );
 
@@ -71,10 +75,28 @@ describe("POST /billing/checkout", () => {
         line_items: [{ price: "price_pro_month", quantity: 1 }],
         customer_email: "a@b.com",
         // rotas que existem em apps/web/src/App.tsx — /sucesso e /cancel não existiam
-        success_url: `${env.ALLOWED_ORIGIN}/billing?checkout=success`,
-        cancel_url: `${env.ALLOWED_ORIGIN}/billing?checkout=cancel`,
+        success_url: "https://dailify.mxrqz.com/billing?checkout=success",
+        cancel_url: "https://dailify.mxrqz.com/billing?checkout=cancel",
       }),
     );
+  });
+
+  it("sends the user back to the allowed origin they came from, else the first one", async () => {
+    getUserMock.mockResolvedValue({
+      id: "u1",
+      privateMetadata: {},
+      emailAddresses: [],
+      primaryEmailAddressId: null,
+    });
+    stripeMock.checkout.sessions.create.mockResolvedValue({ url: "https://checkout.stripe.com/xyz" });
+
+    await post({ productName: "pro" }, { Origin: "https://mewki.mxrqz.com" });
+    await post({ productName: "pro" }, { Origin: "https://evil.example" });
+    const urls = stripeMock.checkout.sessions.create.mock.calls.map(([arg]) => arg.success_url);
+    expect(urls).toEqual([
+      "https://mewki.mxrqz.com/billing?checkout=success",
+      "https://dailify.mxrqz.com/billing?checkout=success",
+    ]);
   });
 
   it("returns a billing-portal url instead when the user already has an active subscription", async () => {
@@ -121,5 +143,21 @@ describe("GET /billing/portal", () => {
     const res = await app.request("/billing/portal", {}, env);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ url: "https://billing.stripe.com/p" });
+  });
+});
+
+describe("CORS", () => {
+  const preflight = (origin: string) =>
+    app.request(
+      "/health",
+      { method: "OPTIONS", headers: { Origin: origin, "Access-Control-Request-Method": "GET" } },
+      env,
+    );
+
+  it("allows every listed origin and rejects others", async () => {
+    for (const o of ["https://dailify.mxrqz.com", "https://mewki.mxrqz.com"]) {
+      expect((await preflight(o)).headers.get("access-control-allow-origin")).toBe(o);
+    }
+    expect((await preflight("https://evil.example")).headers.get("access-control-allow-origin")).toBeNull();
   });
 });

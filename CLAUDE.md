@@ -72,7 +72,7 @@ root. Web deploy root (e.g. Cloudflare Pages) is now `apps/web`, build output `a
 
 ## Architecture Overview
 
-See `bd memories architecture`. In short: web app on Cloudflare (dailify.mxrqz.com) inside a
+See `bd memories architecture`. In short: web app on Cloudflare (mewki.mxrqz.com; dailify.mxrqz.com still served) inside a
 vestigial Tauri shell. Auth = Clerk. All reads and writes go through the in-monorepo server
 (`apps/server`, Hono on Cloudflare Workers + D1) via a thin fetch client
 (`apps/web/src/functions/api.ts`) carrying a Clerk bearer token — no client-direct Firestore

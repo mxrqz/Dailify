@@ -9,13 +9,14 @@ import clerkWebhook from "./routes/clerk-webhook";
 import push from "./routes/push";
 import { dispatchAlerts } from "./alerts";
 import { fail } from "./lib/errors";
+import { allowedOrigins } from "./lib/origin";
 
 export interface Env {
   DB: D1Database;
   // Opcionais: em teste/dev local o binding de rate limit nao existe (ver middleware/rate-limit.ts).
   API_LIMITER?: RateLimit;
   VOICE_LIMITER?: RateLimit;
-  ALLOWED_ORIGIN: string;
+  ALLOWED_ORIGIN: string; // lista separada por vírgula (lib/origin.ts)
   CLERK_SECRET_KEY: string;
   CLERK_PUBLISHABLE_KEY: string;
   CLERK_WEBHOOK_SECRET: string;
@@ -35,7 +36,7 @@ export interface Env {
 const app = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 app.use("*", (c, next) =>
   cors({
-    origin: c.env.ALLOWED_ORIGIN,
+    origin: (origin) => (allowedOrigins(c.env).includes(origin) ? origin : null),
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
   })(c, next),
 );
