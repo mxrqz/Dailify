@@ -16,7 +16,14 @@ import {
 } from "lucide-react";
 import { motion } from "motion/react";
 
-import { TASK_LIMITS } from "@dailify/shared";
+import {
+  TASK_LIMITS,
+  parseTaskText,
+  remapSpans,
+  type Field,
+  type ParsedTask,
+  type Span,
+} from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { MewStatic } from "@/components/mew/mew-static";
@@ -30,13 +37,6 @@ import {
   withEdits,
   type Edits,
 } from "@/functions/compose-input";
-import {
-  parseTaskText,
-  remapSpans,
-  type Field,
-  type ParsedTask,
-  type Span,
-} from "@/functions/parse-task";
 import { useCreateTask } from "@/hooks/useCreateTask";
 import { useMewParse } from "@/hooks/useMewParse";
 import { useOnline } from "@/hooks/useOnline";

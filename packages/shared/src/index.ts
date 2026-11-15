@@ -7,3 +7,5 @@ export * from "./recurrence";
 export * from "./dates";
 export * from "./timezone";
 export * from "./period";
+export * from "./parse-task";
+export * from "./parse-links";

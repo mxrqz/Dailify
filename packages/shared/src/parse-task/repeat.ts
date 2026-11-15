@@ -1,5 +1,6 @@
-import { weekDays, type Repeat } from "@dailify/shared";
-import { zoned, zonedAt } from "../zone";
+import type { TZDate } from "@date-fns/tz";
+import { weekDays } from "../recurrence";
+import type { Repeat } from "../types";
 import { MONTH_FIRST_RE } from "./dates";
 import { type Span, hit, spanOf } from "./spans";
 import {
@@ -9,6 +10,7 @@ import {
   WEEKDAYS,
   WEEKDAY_RE,
   alternation,
+  dateIn,
   startOfDay,
 } from "./vocab";
 
@@ -134,7 +136,7 @@ function periodWordHour(word: string): number {
  * antes do normalize) só serve pro traço de "mon-fri". */
 export function parseRepeat(
   text: string,
-  now: Date = zoned(),
+  now: TZDate,
   original = text,
 ): { value: Exclude<Repeat, "Off">; spans: Span[]; hour?: number } | null {
   const dashed = text.match(new RegExp(`\\b(${WEEKDAY_RE}) (${WEEKDAY_RE})\\b`));
@@ -200,7 +202,8 @@ export function nextOccurrence(
 ) {
   const passed = (d: Date) => (hasTime ? d < now : d < startOfDay(now));
   const shift = (days: number, months = 0, years = 0) =>
-    zonedAt(
+    dateIn(
+      date,
       date.getFullYear() + years,
       date.getMonth() + months,
       date.getDate() + days,

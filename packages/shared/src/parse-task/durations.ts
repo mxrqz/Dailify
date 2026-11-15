@@ -1,4 +1,4 @@
-import { zoned } from "../zone";
+import { TZDate } from "@date-fns/tz";
 import { type Span, mask, spanOf } from "./spans";
 import { parseTime } from "./times";
 import {
@@ -13,6 +13,9 @@ import {
   amountOf,
   suffixMinutes,
 } from "./vocab";
+
+// Só importa se o resto tem hora, não qual: o instante e o fuso não mudam a resposta.
+const ANY_NOW = new TZDate(0, "UTC");
 
 export interface ParsedDuration {
   duration: string;
@@ -201,7 +204,7 @@ export function parseDuration(
         text.slice((hours.index ?? 0) + whole.length),
       );
     const otherTime = () =>
-      parseTime(mask(text, [spanOf(hours)]), zoned(), "other", false, false) !== null;
+      parseTime(mask(text, [spanOf(hours)]), ANY_NOW, "other", false, false) !== null;
     if (prefix || spelled || (implausible && atEnd) || otherTime()) {
       const extra = andHalf ? 30 : suffixMinutes(rawMinutes);
       const result = found(hours, Math.round(amount * 60) + extra);

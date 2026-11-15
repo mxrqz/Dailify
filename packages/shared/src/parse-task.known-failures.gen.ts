@@ -1,12 +1,9 @@
 // Reescreve parse-task.known-failures.ts a partir da saída real do parser: `bun run parser:failures`
-// (em apps/web). `--dump` imprime o got ≠ want de cada falha. Avisa quem regrediu (falha fora da lista velha).
+// (em packages/shared). `--dump` imprime o got ≠ want de cada falha. Avisa quem regrediu (falha fora da lista velha).
 import { writeFileSync } from "node:fs";
 import { corpus } from "./parse-task.corpus";
 import { evaluate, expectedUnsure } from "./parse-task.corpus/kit";
 import { knownFailures } from "./parse-task.known-failures";
-import { setAppTimeZone } from "./zone";
-
-setAppTimeZone("America/Sao_Paulo");
 
 const fails = corpus.map((entry) => ({ entry, ...evaluate(entry) })).filter((r) => r.failed.length);
 

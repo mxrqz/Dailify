@@ -14,7 +14,6 @@
     "check": "prettier --check src && eslint src && tsc --noEmit && vitest run",
     "test": "vitest run",
     "test:watch": "vitest",
-    "parser:failures": "bun src/functions/parse-task.known-failures.gen.ts",
     "tauri": "tauri"
   },
   "dependencies": {

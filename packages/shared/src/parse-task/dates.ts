@@ -1,4 +1,3 @@
-import { zonedAt } from "../zone";
 import { type Hit, type Span, hit, spanOf } from "./spans";
 import {
   AMOUNT_RE,
@@ -13,6 +12,7 @@ import {
   addMonths,
   alternation,
   amountOf,
+  dateIn,
   nextWeekday,
   startOfDay,
 } from "./vocab";
@@ -21,7 +21,7 @@ import {
  * ("10 de fevereiro" em novembro é o do ano que vem; 29/02 espera o bissexto), 1 pra "dia 31". */
 function upcoming(now: Date, month: number, day: number, step: 1 | 12): Date | null {
   for (let i = 0; i < 12; i++) {
-    const date = zonedAt(now.getFullYear(), month + i * step, day);
+    const date = dateIn(now, now.getFullYear(), month + i * step, day);
     if (date.getDate() === day && date >= startOfDay(now)) return date;
   }
   return null;
@@ -32,7 +32,7 @@ export function dated(now: Date, month: number, day: number, rawYear?: string): 
   if (month < 0 || month > 11) return null;
   if (!rawYear) return upcoming(now, month, day, 12);
   const year = Number(rawYear) < 100 ? 2000 + Number(rawYear) : Number(rawYear);
-  const date = zonedAt(year, month, day);
+  const date = dateIn(now, year, month, day);
   return date.getDate() === day && date.getMonth() === month ? date : null;
 }
 
@@ -151,7 +151,7 @@ export function parseDay(text: string, now: Date): (Hit<Date> & { weekday?: bool
   const monthEnd = text.match(
     /\b(?:(?:n?o|at\s+the|by)\s+)?(?:(?:fim|final)\s+d[oe]\s+mes|end\s+of\s+(?:the\s+)?month|eom)\b/,
   );
-  if (monthEnd) return hit(monthEnd, zonedAt(now.getFullYear(), now.getMonth() + 1, 0));
+  if (monthEnd) return hit(monthEnd, dateIn(now, now.getFullYear(), now.getMonth() + 1, 0));
   const weekEnd = text.match(
     /\b(?:(?:n?o|at\s+the|by)\s+)?(?:(?:fim|final)\s+da\s+semana|end\s+of\s+(?:the\s+)?week|eow)\b/,
   );
@@ -161,7 +161,7 @@ export function parseDay(text: string, now: Date): (Hit<Date> & { weekday?: bool
   );
   if (monthStart) {
     const first =
-      now.getDate() === 1 ? startOfDay(now) : zonedAt(now.getFullYear(), now.getMonth() + 1, 1);
+      now.getDate() === 1 ? startOfDay(now) : dateIn(now, now.getFullYear(), now.getMonth() + 1, 1);
     return hit(monthStart, first);
   }
 

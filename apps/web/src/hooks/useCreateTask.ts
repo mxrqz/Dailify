@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import type { Task } from "@dailify/shared";
+import type { ParsedTask, Task } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
@@ -10,7 +10,6 @@ import { createTask, deleteTask } from "@/functions/api";
 import { composeTaskInput } from "@/functions/compose-input";
 import { upsertTaskWithRecurrence } from "@/functions/functions";
 import { enqueue, newTaskId } from "@/functions/offline";
-import type { ParsedTask } from "@/functions/parse-task";
 import { upsertUndated } from "@/functions/undated";
 import { useQuotas } from "@/hooks/useQuotas";
 import { zoned } from "@/functions/zone";

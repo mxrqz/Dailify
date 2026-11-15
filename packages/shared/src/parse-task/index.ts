@@ -1,6 +1,6 @@
-import type { ParsedTaskWire } from "@dailify/shared";
+import type { TZDate } from "@date-fns/tz";
 import { parseLinks } from "../parse-links";
-import { zoned } from "../zone";
+import type { ParsedTaskWire } from "../types";
 import { parseDuration } from "./durations";
 import { BOUNDED_REPEAT_RE, UNSUPPORTED_REPEAT_RE, nextOccurrence, parseRepeat } from "./repeat";
 import { type Span, mask, mergeSpans, spanOf } from "./spans";
@@ -50,7 +50,7 @@ const QUOTED_RE = /"([^"\n]+)"|“([^”\n]+)”/g;
 /** `ignore`: trechos que ficam no título como texto e fora da vista dos detectores. */
 export function parseTaskText(
   input: string,
-  now: Date = zoned(),
+  now: TZDate,
   { ignore = [] }: { ignore?: Span[] } = {},
 ): ParsedTask {
   const keep = [...ignore, ...[...input.matchAll(QUOTED_RE)].map(spanOf)];

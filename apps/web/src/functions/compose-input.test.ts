@@ -1,10 +1,11 @@
 import { describe, expect, it } from "vitest";
 
 import { composeTaskInput, fromWire, onDay, withEdits } from "./compose-input";
-import { parseTaskText } from "./parse-task";
+import { parseTaskText } from "@dailify/shared";
+import { zonedAt } from "./zone";
 
 // Quarta-feira, 21 de outubro de 2026, 10:00.
-const NOW = new Date(2026, 9, 21, 10, 0);
+const NOW = zonedAt(2026, 9, 21, 10, 0);
 const at = (day: number, hour: number, month = 9) => new Date(2026, month, day, hour).getTime();
 
 const compose = (text: string, undatedOnly?: boolean) =>

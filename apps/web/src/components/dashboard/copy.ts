@@ -1,6 +1,4 @@
-import type { QuotaKey } from "@dailify/shared";
-
-import type { UnsureCode } from "@/functions/parse-task";
+import type { QuotaKey, UnsureCode } from "@dailify/shared";
 
 /**
  * Dicionário de copy pt-BR do dashboard.

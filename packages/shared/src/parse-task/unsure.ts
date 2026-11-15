@@ -1,4 +1,5 @@
-import type { Repeat } from "@dailify/shared";
+import type { TZDate } from "@date-fns/tz";
+import type { Repeat } from "../types";
 import { parseDuration } from "./durations";
 import { parseRepeat } from "./repeat";
 import { type Span, spanOf } from "./spans";
@@ -45,7 +46,7 @@ export interface UnsureInput {
   date: Date | null;
   hasTime: boolean;
   repeat: Repeat;
-  now: Date;
+  now: TZDate;
 }
 
 const EN_MARKER_RE =
@@ -310,7 +311,7 @@ function readStarts(visible: string, rest: string): number[] {
  * "pagar luz amanhã e água sexta", "gym 7am, dentist 2pm": mais de uma oração com tempo e palavras
  * próprias. Só corta nos separadores que sobraram — o "e" de "três e meia" foi consumido.
  */
-function twoTimedClauses(visible: string, rest: string, input: string, now: Date): boolean {
+function twoTimedClauses(visible: string, rest: string, input: string, now: TZDate): boolean {
   const cuts = [...rest.matchAll(/,|\s(?:e|and|mas|but)\s/g)].map((hit) => hit.index ?? 0);
   const bounds = [0, ...cuts, visible.length];
   let timed = 0;
@@ -375,7 +376,7 @@ function ambiguousWord(visible: string, rest: string): Span | null {
 
 const NAMED_DAY_RE = /\b(?:black\s+friday|cyber\s+monday)\b/g;
 
-function leftoverIn(seen: string, input: string, now: Date): Span | null {
+function leftoverIn(seen: string, input: string, now: TZDate): Span | null {
   const rest = seen.replace(NAMED_DAY_RE, (name) => " ".repeat(name.length));
   const again =
     parseWhen(rest, now)?.spans[0] ??

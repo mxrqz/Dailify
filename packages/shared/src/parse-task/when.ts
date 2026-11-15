@@ -1,8 +1,8 @@
-import { zoned, zonedAt } from "../zone";
+import type { TZDate } from "@date-fns/tz";
 import { parseDay } from "./dates";
 import { type Span, mergeSpans } from "./spans";
 import { type Base, type Time, parseTime } from "./times";
-import { normalize, startOfDay } from "./vocab";
+import { dateIn, normalize, startOfDay } from "./vocab";
 
 export interface ParsedWhen {
   date: Date;
@@ -18,7 +18,7 @@ export interface ParsedWhen {
 // `start` é o início de um intervalo, que o `parseDuration` já resolveu e tirou da vista daqui.
 export function parseWhen(
   input: string,
-  now: Date = zoned(),
+  now: TZDate,
   literalTime = false,
   start: Time | null = null,
 ): ParsedWhen | null {
@@ -40,7 +40,8 @@ export function parseWhen(
   if (!day && !time) return null;
   const baseDay = day?.value ?? startOfDay(now);
   const at = (days: number) =>
-    zonedAt(
+    dateIn(
+      baseDay,
       baseDay.getFullYear(),
       baseDay.getMonth(),
       baseDay.getDate() + (time?.value.days ?? 0) + days,

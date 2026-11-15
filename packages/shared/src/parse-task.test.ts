@@ -1,3 +1,4 @@
+import { TZDate } from "@date-fns/tz";
 import { describe, expect, it } from "vitest";
 import {
   cut,
@@ -9,8 +10,12 @@ import {
   remapSpans,
 } from "./parse-task";
 
+// Fuso explícito: o resultado não depende do fuso da máquina.
+const sp = (year: number, month: number, day: number, hours = 0, minutes = 0) =>
+  new TZDate(year, month, day, hours, minutes, 0, 0, "America/Sao_Paulo");
+
 // Quarta-feira, 12 de agosto de 2026, 09:00.
-const NOW = new Date(2026, 7, 12, 9, 0);
+const NOW = sp(2026, 7, 12, 9, 0);
 
 const at = (input: string) => {
   const parsed = parseWhen(input, NOW);
@@ -151,8 +156,8 @@ describe("misturas pt/en na mesma frase", () => {
 
 // A regra do período: entre H e H+12 vale a próxima ocorrência — mas só quando o dia é hoje.
 describe("período pela próxima ocorrência", () => {
-  const twoPM = new Date(2026, 7, 12, 14, 0);
-  const hhmm = (input: string, now: Date) => {
+  const twoPM = sp(2026, 7, 12, 14, 0);
+  const hhmm = (input: string, now: TZDate) => {
     const parsed = parseWhen(input, now);
     return parsed && [parsed.date.getDate(), parsed.date.getHours(), parsed.date.getMinutes()];
   };
@@ -175,15 +180,15 @@ describe("período pela próxima ocorrência", () => {
   });
 
   it("às 11h, 'hoje às 2' é 14h", () => {
-    expect(hhmm("hoje às 2", new Date(2026, 7, 12, 11, 0))).toEqual([12, 14, 0]);
+    expect(hhmm("hoje às 2", sp(2026, 7, 12, 11, 0))).toEqual([12, 14, 0]);
   });
 
   it("à 1h da manhã, 'às duas' é 2h — a próxima ocorrência", () => {
-    expect(hhmm("às duas", new Date(2026, 7, 12, 1, 0))).toEqual([12, 2, 0]);
+    expect(hhmm("às duas", sp(2026, 7, 12, 1, 0))).toEqual([12, 2, 0]);
   });
 
   it("às 23h30, com as duas leituras no passado, fica a mais recente", () => {
-    expect(hhmm("hoje às 11", new Date(2026, 7, 12, 23, 30))).toEqual([12, 23, 0]);
+    expect(hhmm("hoje às 11", sp(2026, 7, 12, 23, 30))).toEqual([12, 23, 0]);
   });
 
   // Relógio é literal; hora sem dia que já passou é a de amanhã; "hoje" fica hoje.
@@ -202,16 +207,16 @@ describe("período pela próxima ocorrência", () => {
     ["às 7", [13, 19, 0]],
     ["hoje às 8", [12, 20, 0]],
   ])("às 21h30: %s", (input, expected) => {
-    expect(hhmm(input, new Date(2026, 7, 12, 21, 30))).toEqual(expected);
+    expect(hhmm(input, sp(2026, 7, 12, 21, 30))).toEqual(expected);
   });
 });
 
 describe("data sem ano e dia que não existe no mês", () => {
-  const ymd = (input: string, now: Date) => {
+  const ymd = (input: string, now: TZDate) => {
     const parsed = parseWhen(input, now);
     return parsed && [parsed.date.getFullYear(), parsed.date.getMonth() + 1, parsed.date.getDate()];
   };
-  const nov15 = new Date(2026, 10, 15, 14, 0);
+  const nov15 = sp(2026, 10, 15, 14, 0);
 
   it.each([
     ["10 de fevereiro", [2027, 2, 10]],
@@ -611,7 +616,7 @@ describe("preposição órfã na fronteira do corte", () => {
 
 describe("recorrência no texto", () => {
   // Quarta-feira, 21 de outubro de 2026, 10:00.
-  const WED = new Date(2026, 9, 21, 10, 0);
+  const WED = sp(2026, 9, 21, 10, 0);
   const WEEKDAYS_MON_FRI = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday"];
 
   it.each([
@@ -619,56 +624,56 @@ describe("recorrência no texto", () => {
       "reunião toda quarta 16h",
       { Weekly: ["Wednesday"] },
       "reunião",
-      new Date(2026, 9, 21, 16),
+      sp(2026, 9, 21, 16),
       true,
     ],
     [
       "academia todas as segundas e sextas",
       { Weekly: ["Monday", "Friday"] },
       "academia",
-      new Date(2026, 9, 23),
+      sp(2026, 9, 23),
       false,
     ],
     [
       "stand-up dias úteis 9h",
       { Weekly: WEEKDAYS_MON_FRI },
       "stand-up",
-      new Date(2026, 9, 22, 9),
+      sp(2026, 9, 22, 9),
       true,
     ],
-    ["remédio todo dia 22h", "Daily", "remédio", new Date(2026, 9, 21, 22), true],
-    ["remédio todos os dias 22h", "Daily", "remédio", new Date(2026, 9, 21, 22), true],
-    ["remédio diariamente 22h", "Daily", "remédio", new Date(2026, 9, 21, 22), true],
-    ["remédio every day 22h", "Daily", "remédio", new Date(2026, 9, 21, 22), true],
+    ["remédio todo dia 22h", "Daily", "remédio", sp(2026, 9, 21, 22), true],
+    ["remédio todos os dias 22h", "Daily", "remédio", sp(2026, 9, 21, 22), true],
+    ["remédio diariamente 22h", "Daily", "remédio", sp(2026, 9, 21, 22), true],
+    ["remédio every day 22h", "Daily", "remédio", sp(2026, 9, 21, 22), true],
     [
       "regar plantas toda quarta-feira",
       { Weekly: ["Wednesday"] },
       "regar plantas",
-      new Date(2026, 9, 21),
+      sp(2026, 9, 21),
       false,
     ],
-    ["aluguel todo mês dia 5", "Monthly", "aluguel", new Date(2026, 10, 5), false],
-    ["pagar boleto todo dia 5", "Monthly", "pagar boleto", new Date(2026, 10, 5), false],
+    ["aluguel todo mês dia 5", "Monthly", "aluguel", sp(2026, 10, 5), false],
+    ["pagar boleto todo dia 5", "Monthly", "pagar boleto", sp(2026, 10, 5), false],
     [
       "aniversário da Ana todo ano 3 de março",
       "Yearly",
       "aniversário da Ana",
-      new Date(2027, 2, 3),
+      sp(2027, 2, 3),
       false,
     ],
-    ["reunião de quarta 16h", "Off", "reunião", new Date(2026, 9, 21, 16), true],
+    ["reunião de quarta 16h", "Off", "reunião", sp(2026, 9, 21, 16), true],
     [
       "academia toda segunda 7h",
       { Weekly: ["Monday"] },
       "academia",
-      new Date(2026, 9, 26, 7),
+      sp(2026, 9, 26, 7),
       true,
     ],
     [
       "academia toda segunda às 7",
       { Weekly: ["Monday"] },
       "academia",
-      new Date(2026, 9, 26, 7),
+      sp(2026, 9, 26, 7),
       true,
     ],
   ])("%s", (input, repeat, text, date, hasTime) => {

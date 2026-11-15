@@ -2,7 +2,7 @@ import { afterEach, describe, expect, it } from "vitest";
 import { format } from "date-fns";
 
 import { getTasksForDay } from "./functions";
-import { parseTaskText } from "./parse-task";
+import { parseTaskText } from "@dailify/shared";
 import { appTimeZone, deviceTimeZone, setAppTimeZone, zoned, zonedAt } from "./zone";
 
 // Tóquio: longe de qualquer fuso em que os testes rodem, então "funcionou por acaso" não passa.

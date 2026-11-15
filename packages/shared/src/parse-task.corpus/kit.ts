@@ -1,7 +1,8 @@
-import { weekDays, type Repeat } from "@dailify/shared";
+import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
 import { normalize, parseTaskText, type UnsureCode } from "../parse-task";
-import { zoned, zonedAt } from "../zone";
+import { weekDays } from "../recurrence";
+import type { Repeat } from "../types";
 
 /**
  * O corpus golden do parser: o que uma pessoa cuidadosa quer, não o que o parser faz hoje. Campo
@@ -86,6 +87,8 @@ export function section(lang: Lang, category: Category, rows: Row[]): CorpusEntr
 }
 
 export const DEFAULT_NOW = "2026-11-15 14:00";
+// Fuso fixo, explícito no `now`: o resultado não depende do fuso da máquina (TZ=UTC ou Tóquio).
+export const CORPUS_ZONE = "America/Sao_Paulo";
 
 /** "AAAA-MM-DD" `n` dias depois de `from` (domingo 15/11/2026 por padrão). */
 export function plus(n: number, from = "2026-11-15"): string {
@@ -127,18 +130,18 @@ const sameRepeat = (a: Repeat, b: Repeat) => {
   return key(a) === key(b);
 };
 
-function nowOf(entry: CorpusEntry): Date {
+function nowOf(entry: CorpusEntry): TZDate {
   const [date, clock] = (entry.now ?? DEFAULT_NOW).split(" ");
   const [y, m, d] = date.split("-").map(Number);
   const [h, min] = clock.split(":").map(Number);
-  return zonedAt(y, m - 1, d, h, min);
+  return new TZDate(y, m - 1, d, h, min, 0, 0, CORPUS_ZONE);
 }
 
 export type Actual = Expect & { unsure: UnsureCode[] };
 
 export function actualOf(entry: CorpusEntry): Actual {
   const parsed = parseTaskText(entry.input, nowOf(entry));
-  const date = parsed.date ? zoned(parsed.date) : null;
+  const date = parsed.date ? new TZDate(+parsed.date, CORPUS_ZONE) : null;
   return {
     title: parsed.text,
     day: date ? format(date, "yyyy-MM-dd") : null,

@@ -8,5 +8,6 @@
     "skipLibCheck": true,
     "noEmit": true,
     "verbatimModuleSyntax": true
-  }
+  },
+  "exclude": ["src/*.gen.ts"]
 }

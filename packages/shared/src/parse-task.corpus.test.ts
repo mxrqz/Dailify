@@ -2,10 +2,6 @@ import { afterAll, expect, it } from "vitest";
 import { corpus } from "./parse-task.corpus";
 import { evaluate, expectedUnsure, type Actual, type CorpusEntry } from "./parse-task.corpus/kit";
 import { knownFailures } from "./parse-task.known-failures";
-import { setAppTimeZone } from "./zone";
-
-// Fuso fixo: o NOW de cada frase é lido em São Paulo, seja qual for o fuso da máquina.
-setAppTimeZone("America/Sao_Paulo");
 
 const scored = corpus.map((entry) => ({ entry, ...evaluate(entry) }));
 const known = new Set(knownFailures);

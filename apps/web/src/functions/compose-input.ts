@@ -1,6 +1,11 @@
-import { weekDays, type ParsedTaskWire, type Repeat, type TaskInput } from "@dailify/shared";
+import {
+  weekDays,
+  type ParsedTask,
+  type ParsedTaskWire,
+  type Repeat,
+  type TaskInput,
+} from "@dailify/shared";
 
-import type { ParsedTask } from "./parse-task";
 import { zoned, zonedAt } from "./zone";
 
 export const DEFAULT_HOUR = 9; // dia sem hora ("amanhã" puro) cai no começo do dia útil, não em 00:00

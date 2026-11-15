@@ -1,4 +1,4 @@
-import { zoned } from "../zone";
+import { TZDate } from "@date-fns/tz";
 import { type Hit, type Span, hit, spanOf } from "./spans";
 import {
   AMOUNT_RE,
@@ -19,6 +19,7 @@ import {
   shortMeridiem,
   startOfDay,
   suffixMinutes,
+  zoneOf,
 } from "./vocab";
 
 export interface Time {
@@ -177,7 +178,7 @@ export function parseTime(
         ? amountOf(rawAmount)
         : amountOf(rawAmount) * 60 +
           (andHalf ? 30 : clockMinutes ? Number(clockMinutes) : suffixMinutes(rawMinutes));
-    const target = zoned(now.getTime() + minutes * 60_000);
+    const target = new TZDate(now.getTime() + minutes * 60_000, zoneOf(now));
     const days = Math.round(
       (startOfDay(target).getTime() - startOfDay(now).getTime()) / 86_400_000,
     );

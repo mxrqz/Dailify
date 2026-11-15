@@ -101,7 +101,11 @@
     },
     "packages/shared": {
       "name": "@dailify/shared",
+      "dependencies": {
+        "@date-fns/tz": "^1.5.0",
+      },
       "devDependencies": {
+        "date-fns": "^4.1.0",
         "typescript": "^5.0.0",
         "vitest": "^4.1.10",
       },

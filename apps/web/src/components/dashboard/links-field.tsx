@@ -1,12 +1,11 @@
 import { useState } from "react";
 import { LinkIcon, XIcon } from "lucide-react";
 
-import { TASK_LIMITS } from "@dailify/shared";
+import { TASK_LIMITS, parseLinks } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { fieldClass } from "@/components/dashboard/styles";
 import { Input } from "@/components/ui/input";
-import { parseLinks } from "@/functions/parse-links";
 import { cn } from "@/lib/utils";
 
 // A régua é uma só (`@dailify/shared`): estes dois números eram cópia do servidor, com o

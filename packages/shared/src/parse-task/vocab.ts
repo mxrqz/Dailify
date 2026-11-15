@@ -1,4 +1,4 @@
-import { zonedAt } from "../zone";
+import { TZDate } from "@date-fns/tz";
 
 /** Horas assumidas quando o texto dá só o período ("amanhã de manhã", "tonight"). */
 export const PERIOD_HOURS = { morning: 9, afternoon: 14, evening: 20, dawn: 6 } as const;
@@ -183,15 +183,27 @@ export function normalize(input: string): string {
     .join("");
 }
 
-export const startOfDay = (d: Date) => zonedAt(d.getFullYear(), d.getMonth(), d.getDate());
+/** O fuso da data: toda data do parser descende do `now`, um `TZDate`. Sem fuso, o runtime (no
+ * Worker, UTC; no browser, o do aparelho) decidiria em silêncio — melhor quebrar. */
+export function zoneOf(date: Date): string {
+  if ("timeZone" in date && typeof date.timeZone === "string") return date.timeZone;
+  throw new Error("parse-task: data sem fuso, passe um TZDate");
+}
+
+/** O `new Date(ano, mês, …)` no fuso de `ref`. */
+export const dateIn = (ref: Date, year: number, month: number, day = 1, hours = 0, minutes = 0) =>
+  new TZDate(year, month, day, hours, minutes, 0, 0, zoneOf(ref));
+
+export const startOfDay = (d: Date) => dateIn(d, d.getFullYear(), d.getMonth(), d.getDate());
 export const addDays = (d: Date, n: number) =>
-  zonedAt(d.getFullYear(), d.getMonth(), d.getDate() + n);
+  dateIn(d, d.getFullYear(), d.getMonth(), d.getDate() + n);
 /** "31/01 + 1 mês" é 28/02, não 03/03. */
 export const addMonths = (d: Date, n: number) =>
-  zonedAt(
+  dateIn(
+    d,
     d.getFullYear(),
     d.getMonth() + n,
-    Math.min(d.getDate(), zonedAt(d.getFullYear(), d.getMonth() + n + 1, 0).getDate()),
+    Math.min(d.getDate(), dateIn(d, d.getFullYear(), d.getMonth() + n + 1, 0).getDate()),
   );
 /** A próxima ocorrência do dia da semana `target`, hoje incluso. */
 export const nextWeekday = (now: Date, target: number) =>
