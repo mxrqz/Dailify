@@ -24,8 +24,9 @@ vi.mock("@/functions/api", () => api);
 
 import { copy } from "./copy";
 import { CheckHistory } from "./check-history";
-import { AnytimeBlock } from "./anytime-block";
+import { AnytimeBlock, DRAG_TYPE } from "./anytime-block";
 import { DayList } from "./day-list";
+import { DaySection, dayAnchorId } from "./day-section";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
 import { readQueue } from "@/functions/offline";
 
@@ -354,5 +355,93 @@ describe("useUndatedActions", () => {
     const { result } = renderHook(() => useUndatedActions(series));
     await act(() => result.current.toggle());
     expect(success).not.toHaveBeenCalled();
+  });
+});
+
+describe("arrastar da Sem data pra um dia", () => {
+  const SATURDAY = new Date(2026, 9, 24);
+  const pagar = task({ id: "a", title: "Pagar boleto" });
+  const drag = (types = [DRAG_TYPE]) => ({ dataTransfer: { types, getData: () => "a" } });
+
+  const dropOn = (day: Date) => {
+    const setUndatedTasks = context([pagar]);
+    render(
+      <MemoryRouter>
+        <DaySection day={day} />
+      </MemoryRouter>,
+    );
+    const section = document.getElementById(dayAnchorId(day));
+    if (!section) throw new Error("sem seção");
+    fireEvent.dragOver(section, drag());
+    expect(section).toHaveAttribute("data-drop-over");
+    fireEvent.drop(section, drag());
+    expect(section).not.toHaveAttribute("data-drop-over");
+    return { setUndatedTasks, picker: within(screen.getByRole("dialog", { name: /Horário em/ })) };
+  };
+
+  it("soltar abre a roda no dia, às 09:00", () => {
+    const { picker } = dropOn(SATURDAY);
+    expect(picker.getByText("Pagar boleto")).toBeInTheDocument();
+    const hour = picker.getByRole("listbox", { name: copy.form.hour });
+    expect(within(hour).getByRole("option", { name: "09" })).toHaveAttribute(
+      "aria-selected",
+      "true",
+    );
+  });
+
+  it("escolher o horário agenda: patch com o epoch-ms, sai da Sem data", async () => {
+    Element.prototype.scrollTo = () => {};
+    api.updateTask.mockResolvedValue({ task: { ...pagar, undated: false } });
+    // Hoje, sexta 12:00: as 09:00 já foram, a roda abre na próxima hora cheia.
+    const { setUndatedTasks, picker } = dropOn(new Date(FRIDAY));
+    const hour = within(picker.getByRole("listbox", { name: copy.form.hour }));
+    expect(hour.getByRole("option", { name: "13" })).toHaveAttribute("aria-selected", "true");
+
+    fireEvent.click(hour.getByRole("option", { name: "14" }));
+    await act(async () => picker.getByRole("button", { name: copy.undated.schedule }).click());
+
+    const at = new Date(2026, 9, 23, 14).getTime();
+    expect(api.updateTask).toHaveBeenCalledWith("token", "a", {
+      date: at,
+      alert: at,
+      undated: false,
+      updatedAt: FRIDAY,
+    });
+    expect(setUndatedTasks).toHaveBeenCalledWith([]);
+    expect(dailify().setTasks.mock.calls[0][0]).toContainEqual(
+      expect.objectContaining({ id: "a", date: at, undated: false }),
+    );
+    expect(screen.queryByRole("dialog", { name: /Horário em/ })).not.toBeInTheDocument();
+  });
+
+  it("cancelar não mexe em nada", () => {
+    const { setUndatedTasks, picker } = dropOn(SATURDAY);
+    fireEvent.click(picker.getByRole("button", { name: copy.form.cancel }));
+
+    expect(screen.queryByRole("dialog", { name: /Horário em/ })).not.toBeInTheDocument();
+    expect(api.updateTask).not.toHaveBeenCalled();
+    expect(setUndatedTasks).not.toHaveBeenCalled();
+  });
+
+  it("arrasto de fora (arquivo, texto) não acende nem abre", () => {
+    context([pagar]);
+    render(<DaySection day={SATURDAY} />);
+    const section = document.getElementById(dayAnchorId(SATURDAY));
+    if (!section) throw new Error("sem seção");
+    fireEvent.dragOver(section, drag(["Files"]));
+    fireEvent.drop(section, drag(["Files"]));
+    expect(section).not.toHaveAttribute("data-drop-over");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("recusa do servidor devolve pra Sem data e tira da agenda", async () => {
+    const setUndatedTasks = context([pagar]);
+    api.updateTask.mockResolvedValue({ error: { message: "nope", offline: false } });
+
+    const { result } = renderHook(() => useUndatedActions(pagar));
+    await act(() => result.current.schedule(SATURDAY.getTime()));
+
+    expect(setUndatedTasks).toHaveBeenLastCalledWith([pagar]);
+    expect(dailify().setTasks).toHaveBeenLastCalledWith([]);
   });
 });
