@@ -57,7 +57,7 @@ const debitAi = (c: Ctx) =>
  * daquele dia; sem nada, Sem data puro.
  *
  * ponytail: sem a busca da próxima ocorrência que o cliente faz quando o dia já passou; o
- * lembrete só some. Mover `composeTaskInput` pro shared (Dailify-1rb.5) unifica os dois.
+ * lembrete só some. Mover `composeTaskInput` pro shared (Dailify-py6) unifica os dois.
  */
 function draftToTask(d: ParsedTaskWire, timezone: string, now: number): Task {
   const base = {
