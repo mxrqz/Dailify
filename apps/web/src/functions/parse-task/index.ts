@@ -1,0 +1,134 @@
+import type { Repeat } from "@dailify/shared";
+import { parseLinks } from "../parse-links";
+import { zoned } from "../zone";
+import { parseDuration } from "./durations";
+import { BOUNDED_REPEAT_RE, UNSUPPORTED_REPEAT_RE, nextOccurrence, parseRepeat } from "./repeat";
+import { type Span, mask, mergeSpans } from "./spans";
+import { cut, properNouns } from "./title";
+import { WEEKDAY_RE, normalize, startOfDay } from "./vocab";
+import { parseWhen } from "./when";
+
+/**
+ * `parseTaskText` é a porta de entrada: recebe a frase inteira do composer ("reunião com o time
+ * das 15 às 16 meet.google.com/abc") e devolve título, data, duração e links — sem LLM:
+ * normalização + tabelas + regex. Cada detector (link, duração, dia, hora) procura o seu pedaço
+ * independentemente dos outros, então pt-BR e inglês podem vir misturados na mesma frase, e o que
+ * cada um consumiu é recortado do título pelos spans que devolve.
+ *
+ * `parseWhen`/`parseDuration` são os detectores por baixo, exportados pro teste. `parseWhen`
+ * devolve `null` quando não reconhece nada e `hasTime: false` quando só achou o dia, pra quem
+ * chama decidir o horário padrão.
+ *
+ * Um módulo por detector: `times` (hora), `dates` (dia), `when` (os dois juntos), `durations`
+ * (duração e intervalo), `repeat` (série), `title` (recorte e nomes próprios); `vocab` e `spans`
+ * são as tabelas e o encanamento que todos dividem.
+ */
+
+export { type ParsedDuration, parseDuration } from "./durations";
+export { parseRepeat } from "./repeat";
+export { type Span } from "./spans";
+export { cut } from "./title";
+export { normalize } from "./vocab";
+export { type ParsedWhen, parseWhen } from "./when";
+
+export interface ParsedTask {
+  text: string;
+  date: Date | null;
+  /** Falso quando `date` só tem dia (hora ficou 00:00 por padrão) — quem consome decide o default. */
+  hasTime: boolean;
+  /** Dia explícito ("qui", "dia 5") ou recorrência semanal com dias citados ("toda quarta"). */
+  hasDay: boolean;
+  duration: string | null;
+  links: string[];
+  repeat: Repeat;
+}
+
+/** `keep`: trechos que ficam no título e fora da vista dos detectores. */
+export function parseTaskText(input: string, now: Date = zoned(), keep: Span[] = []): ParsedTask {
+  const normalized = normalize(input);
+  const links = parseLinks(input);
+  const unsupported = {
+    text: cut(input, links.spans),
+    date: null,
+    hasTime: false,
+    hasDay: false,
+    duration: null,
+    links: links.urls,
+    repeat: "Off",
+  } satisfies ParsedTask;
+  if (UNSUPPORTED_REPEAT_RE.test(normalized)) return unsupported;
+
+  // "youtu.be/15h30" não pode virar horário nem duração; "Sessão da Tarde" e "Dom Casmurro" também não.
+  const forDuration = mask(normalized, [...links.spans, ...properNouns(input), ...keep]);
+  let duration = parseDuration(forDuration, input);
+
+  // A duração também sai da vista do parseWhen: o "1h" de "call de 1h hoje às 16h" casa como hora
+  // e, por ter o span maior, ganhava do horário de verdade.
+  const forWhen = mask(forDuration, duration?.spans ?? []);
+
+  // "toda quarta" sai da vista do parseWhen, que leria "quarta" como dia; "dia 5"/"3 de março"
+  // ficam fora do span da recorrência e ele ainda lê. O intervalo manda no horário: "das 15 às 16"
+  // começa 15:00, e o parseWhen só põe o dia (ou rola pra amanhã se já passou).
+  const repeat = parseRepeat(forWhen, now, input);
+  const forDay = mask(forWhen, repeat?.spans ?? []);
+  if (repeat && BOUNDED_REPEAT_RE.test(forDay)) return unsupported;
+
+  let when = parseWhen(forDay, now, repeat !== null, duration?.start ?? null);
+  if (repeat?.hour !== undefined && !when?.hasTime) {
+    when = parseWhen(forDay, now, true, { hour: repeat.hour, minute: 0 });
+  }
+  // "practice 7 minute workout", "The 4-Hour Workweek": sem data nem hora, o adjetivo "N minute X" é
+  // nome; "30 minute call tomorrow at 9am" continua duração.
+  const [durationStart, durationEnd] = duration?.spans[0] ?? [0, 0];
+  if (
+    !when &&
+    !repeat &&
+    /^\d{1,3}\s+(?:minute|hour)$/.test(normalized.slice(durationStart, durationEnd)) &&
+    /^\s+[a-z]/.test(normalized.slice(durationEnd))
+  ) {
+    duration = null;
+  }
+
+  const spans = mergeSpans([
+    ...links.spans,
+    ...(duration?.spans ?? []),
+    ...(repeat?.spans ?? []),
+    ...(when?.spans ?? []),
+  ]);
+
+  const hasTime = when?.hasTime ?? false;
+  const date = repeat
+    ? nextOccurrence(repeat.value, when?.date ?? startOfDay(now), hasTime, now)
+    : (when?.date ?? null);
+
+  // "toda quarta" cita dias; "dias úteis" também (seg–sex); "toda semana" não.
+  const citesWeekday =
+    typeof repeat?.value === "object" &&
+    repeat.spans.some(([start, end]) =>
+      new RegExp(
+        `\\b(?:${WEEKDAY_RE})s?\\b|\\b(?:dias?\\s+uteis?|weekdays?|weekends?|(?:fim|fins|final|finais)\\s+de|durante)\\b`,
+      ).test(forWhen.slice(start, end)),
+    );
+
+  const text = cut(input, spans);
+  // "seg 8h daily": o advérbio que come o título inteiro é o nome da reunião (a "daily").
+  const [repeatStart, repeatEnd] = repeat?.spans[0] ?? [0, 0];
+  if (
+    !text &&
+    repeat &&
+    /^(?:daily|weekly|monthly)$/.test(normalized.slice(repeatStart, repeatEnd))
+  ) {
+    return parseTaskText(input, now, [...keep, ...repeat.spans]);
+  }
+
+  return {
+    text,
+    date,
+
+    hasTime,
+    hasDay: Boolean(when?.hasDay) || citesWeekday,
+    duration: duration?.duration ?? null,
+    links: links.urls,
+    repeat: repeat?.value ?? "Off",
+  };
+}
