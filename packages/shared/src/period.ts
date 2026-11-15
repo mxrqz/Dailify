@@ -19,12 +19,17 @@ export function isWeekStart(value: unknown): value is WeekStart {
 }
 
 
-/** Início (às 6h, no fuso) do período de recorrência que contém `now`. */
+/**
+ * Início (às 6h, no fuso) do período de recorrência que contém `now`. Com `every` > 1 o período
+ * é de N unidades, contadas a partir do período que contém `anchor` (a `date` da tarefa).
+ */
 export function periodStart(
   repeat: Exclude<Repeat, "Off">,
   now: number,
   weekStart: WeekStart,
   timeZone: string,
+  every = 1,
+  anchor = now,
 ): number {
   const parts = zonedParts(now, timeZone);
   // Antes das 6h o período ainda é o de ontem; recuar o dia civil (não 6h) respeita DST.
@@ -48,6 +53,29 @@ export function periodStart(
       day: d.getUTCDate(),
     };
   }
+  if (every > 1) {
+    const a = zonedParts(periodStart(repeat, anchor, weekStart, timeZone), timeZone);
+    const days =
+      (Date.UTC(start.year, start.month, start.day) - Date.UTC(a.year, a.month, a.day)) /
+      86_400_000;
+    const units =
+      repeat === "Monthly"
+        ? (start.year - a.year) * 12 + start.month - a.month
+        : repeat === "Yearly"
+          ? start.year - a.year
+          : typeof repeat === "object"
+            ? Math.round(days / 7)
+            : days;
+    const back = ((units % every) + every) % every;
+    const d = new Date(
+      repeat === "Monthly"
+        ? Date.UTC(start.year, start.month - back, 1)
+        : repeat === "Yearly"
+          ? Date.UTC(start.year - back, 0, 1)
+          : Date.UTC(start.year, start.month, start.day - back * (typeof repeat === "object" ? 7 : 1)),
+    );
+    start = { year: d.getUTCFullYear(), month: d.getUTCMonth(), day: d.getUTCDate() };
+  }
   return zonedEpoch(
     { ...start, hour: PERIOD_ROLLOVER_HOUR, minute: 0, second: 0 },
     timeZone,
@@ -56,12 +84,12 @@ export function periodStart(
 
 /** Alguma conclusão cai no período corrente? `false` para tarefa sem repetição. */
 export function doneThisPeriod(
-  task: Pick<Task, "repeat" | "completed">,
+  task: Pick<Task, "repeat" | "completed"> & Partial<Pick<Task, "repeatEvery" | "date">>,
   now: number,
   weekStart: WeekStart,
   timeZone: string,
 ): boolean {
   if (task.repeat === "Off") return false;
-  const start = periodStart(task.repeat, now, weekStart, timeZone);
+  const start = periodStart(task.repeat, now, weekStart, timeZone, task.repeatEvery, task.date);
   return task.completed.some((c) => c >= start);
 }

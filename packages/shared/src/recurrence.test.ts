@@ -194,3 +194,74 @@ describe("expansão com fuso explícito", () => {
     expect(out.length).toBeGreaterThan(0);
   });
 });
+
+describe("repeatEvery", () => {
+  const ny = "America/New_York";
+  // Dia e hora local de cada instância, no fuso da série.
+  const local = (out: Task[]) =>
+    out.map((t) => {
+      const p = zonedParts(t.date, ny);
+      return `${p.month + 1}/${p.day} ${p.hour}h`;
+    });
+  // 09:00 em Nova York (EST, UTC-5).
+  const at9 = (m: number, d: number) => Date.UTC(2026, m, d, 14);
+
+  it("diária a cada 2 atravessa a virada do mês sem perder a fase", () => {
+    const t = makeTask({ repeat: "Daily", repeatEvery: 2, date: at9(0, 28) });
+    expect(local(expandRecurringTask(t, new Date(2026, 0, 1), ny))).toEqual(["1/30 9h"]);
+    expect(local(expandRecurringTask(t, new Date(2026, 1, 1), ny)).slice(0, 3)).toEqual([
+      "2/1 9h",
+      "2/3 9h",
+      "2/5 9h",
+    ]);
+  });
+
+  it("mantém a hora de parede no DST (8/3 em Nova York)", () => {
+    const t = makeTask({ repeat: "Daily", repeatEvery: 3, date: at9(2, 2) });
+    expect(local(expandRecurringTask(t, new Date(2026, 2, 1), ny)).slice(0, 3)).toEqual([
+      "3/5 9h",
+      "3/8 9h",
+      "3/11 9h",
+    ]);
+  });
+
+  it("a cada 2 semanas na seg e qua, em blocos de 7 dias a partir da data", () => {
+    // seg 05/01/2026: semanas de 05/01, 19/01, 02/02…
+    const t = makeTask({
+      repeat: { Weekly: ["Monday", "Wednesday"] },
+      repeatEvery: 2,
+      date: at9(0, 5),
+    });
+    expect(local(expandRecurringTask(t, new Date(2026, 0, 1), ny))).toEqual([
+      "1/7 9h",
+      "1/19 9h",
+      "1/21 9h",
+    ]);
+    expect(local(expandRecurringTask(t, new Date(2026, 1, 1), ny))).toEqual([
+      "2/2 9h",
+      "2/4 9h",
+      "2/16 9h",
+      "2/18 9h",
+    ]);
+  });
+
+  it("a cada 3 meses no dia 31 corta pro último dia sem arrastar a âncora", () => {
+    const t = makeTask({ repeat: "Monthly", repeatEvery: 3, date: at9(0, 31) });
+    const months = [1, 2, 3, 6, 9].map((m) => local(expandRecurringTask(t, new Date(2026, m, 1), ny)));
+    expect(months).toEqual([[], [], ["4/30 9h"], ["7/31 9h"], ["10/31 9h"]]);
+  });
+
+  it("anual a cada 2", () => {
+    const t = makeTask({ repeat: "Yearly", repeatEvery: 2, date: at9(4, 10) });
+    expect(expandRecurringTask(t, new Date(2027, 4, 1), ny)).toEqual([]);
+    expect(local(expandRecurringTask(t, new Date(2028, 4, 1), ny))).toEqual(["5/10 10h"]); // EDT
+  });
+
+  it("ainda pula o exdates", () => {
+    const t = makeTask({ repeat: "Daily", repeatEvery: 2, date: at9(0, 1), exdates: [at9(0, 5)] });
+    expect(local(expandRecurringTask(t, new Date(2026, 0, 1), ny)).slice(0, 2)).toEqual([
+      "1/3 9h",
+      "1/7 9h",
+    ]);
+  });
+});

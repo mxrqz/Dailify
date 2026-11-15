@@ -76,6 +76,11 @@ export function normalizeRepeat(value: unknown): Repeat {
  * `timeZone` decide em que fuso a hora-de-parede é reconstruída. Sem ele vale o fuso do runtime —
  * certo no browser (é o do usuário), errado no Worker (é sempre UTC), então o servidor SEMPRE passa
  * o fuso do cliente. Sem isso a mesma série rendia horas diferentes nos dois lados.
+ *
+ * `repeatEvery` (N) conta da `date` da tarefa, em dias/meses/anos civis (não em ms, então DST não
+ * mexe na fase). Semanal a cada N = blocos de 7 dias a partir da `date`, valendo um a cada N — a
+ * semana começa no dia da tarefa, não no `weekStart`, pra fase não depender da configuração. Mensal
+ * no dia 31 corta pro último dia do mês curto sem arrastar: a âncora segue sendo o 31.
  */
 export function expandRecurringTask(task: Task, month: Date, timeZone?: string): Task[] {
   const detached = new Set(task.exdates ?? []);
@@ -109,6 +114,10 @@ function expandAll(task: Task, month: Date, timeZone?: string): Task[] {
       timeZone,
     );
   const instance = (date: number): Task => ({ ...task, date });
+  const every = task.repeatEvery && task.repeatEvery > 1 ? task.repeatEvery : 1;
+  const onPhase = (units: number) => units >= 0 && units % every === 0;
+  const daysFromStart = (day: number) =>
+    (Date.UTC(year, mon, day) - Date.UTC(original.year, original.month, original.day)) / 86_400_000;
 
   const repeat = task.repeat;
 
@@ -117,16 +126,18 @@ function expandAll(task: Task, month: Date, timeZone?: string): Task[] {
       case "Daily": {
         const out: Task[] = [];
         for (let d = inCreationMonth ? original.day + 1 : 1; d <= days; d++) {
-          out.push(instance(at(d)));
+          if (onPhase(daysFromStart(d))) out.push(instance(at(d)));
         }
         return out;
       }
       case "Monthly": {
-        if (inCreationMonth) return [];
+        if (inCreationMonth || !onPhase((year - original.year) * 12 + mon - original.month))
+          return [];
         return [instance(at(Math.min(original.day, days)))];
       }
       case "Yearly": {
-        if (original.month !== mon || original.year === year) return [];
+        if (original.month !== mon || original.year === year || !onPhase(year - original.year))
+          return [];
         return [instance(at(Math.min(original.day, days)))];
       }
       default:
@@ -141,6 +152,7 @@ function expandAll(task: Task, month: Date, timeZone?: string): Task[] {
   const out: Task[] = [];
   for (let d = 1; d <= days; d++) {
     if (inCreationMonth && d === original.day) continue; // stored doc covers this day
+    if (every > 1 && !onPhase(Math.floor(daysFromStart(d) / 7))) continue;
     const ts = at(d);
     if (repeatDays.includes(weekDays[weekdayIndex(ts, timeZone)])) out.push(instance(ts));
   }

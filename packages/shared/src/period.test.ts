@@ -92,3 +92,24 @@ describe("isWeekStart", () => {
     expect([7, -1, 1.5, "1"].some(isWeekStart)).toBe(false);
   });
 });
+
+describe("periodStart com every", () => {
+  const anchor = sp(2026, 10, 5, 10); // seg 05/10
+
+  it("Weekly a cada 2: blocos de 2 semanas a partir da semana da âncora", () => {
+    expect(periodStart(weekly, sp(2026, 10, 14, 10), 1, tz, 2, anchor)).toBe(sp(2026, 10, 5, 6));
+    expect(periodStart(weekly, sp(2026, 10, 21, 10), 1, tz, 2, anchor)).toBe(sp(2026, 10, 19, 6));
+  });
+
+  it("Daily a cada 3 e Monthly a cada 3", () => {
+    expect(periodStart("Daily", sp(2026, 10, 9, 10), 1, tz, 3, anchor)).toBe(sp(2026, 10, 8, 6));
+    expect(periodStart("Monthly", sp(2026, 12, 20), 1, tz, 3, anchor)).toBe(sp(2026, 10, 1, 6));
+    expect(periodStart("Monthly", sp(2027, 1, 2, 10), 1, tz, 3, anchor)).toBe(sp(2027, 1, 1, 6));
+  });
+
+  it("doneThisPeriod usa a date da tarefa como âncora", () => {
+    const task = { repeat: weekly, repeatEvery: 2, date: anchor, completed: [sp(2026, 10, 6, 8)] };
+    expect(doneThisPeriod(task, sp(2026, 10, 15), 1, tz)).toBe(true);
+    expect(doneThisPeriod(task, sp(2026, 10, 19, 7), 1, tz)).toBe(false);
+  });
+});

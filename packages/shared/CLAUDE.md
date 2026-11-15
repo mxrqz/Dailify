@@ -34,6 +34,9 @@ parser. Consumed as TS source (`exports` → `./src/index.ts`, no build step); k
   descende dele (`dateIn`/`zoneOf` em `vocab.ts`); data sem fuso lança. Um fuso global seria
   sobrescrito por requisições concorrentes no Worker. Web passa `zoned()`, servidor
   `new TZDate(Date.now(), tz)`.
+- **`repeatEvery` (N) conta da `date` da tarefa** em dias/meses/anos civis: semanal a cada N =
+  blocos de 7 dias a partir da `date` (não do `weekStart`); mensal no 31 corta pro fim do mês sem
+  arrastar a âncora. `taskHash` só inclui o campo quando não é 1 — hash antigo não muda.
 - **Recurrence is owned here.** The server expands instances in `GET /tasks`; the web renders what
   it receives. Feed untrusted `repeat` through `normalizeRepeat`.
 

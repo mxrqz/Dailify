@@ -8,6 +8,8 @@ export interface Task {
   duration: string; // "10m", "1h30m"
   priority: number; // 0-4
   repeat: Repeat;
+  /** A cada N períodos do `repeat` (inteiro 2..365), com a fase na `date`; ausente = 1. */
+  repeatEvery?: number;
   tags?: string[];
   links?: string[]; // URLs absolutas http(s), validadas na rota
   completed: number[]; // epoch ms
@@ -21,9 +23,11 @@ export interface Task {
   undated?: boolean;
 }
 
-export type TaskInput = Omit<Task, "id" | "completed" | "hash"> & {
+export type TaskInput = Omit<Task, "id" | "completed" | "hash" | "repeatEvery"> & {
   id?: string;
   completed?: number[];
+  /** `null` volta a 1 — `undefined` some no JSON, e o PATCH (e a fila offline) manteria o antigo. */
+  repeatEvery?: number | null;
 };
 
 /**
@@ -40,6 +44,7 @@ export interface ParsedTaskWire {
   duration: string | null;
   links: string[];
   repeat: Repeat;
+  repeatEvery?: number;
 }
 
 export type AiIntent = "create" | "question" | "command" | "unsupported";

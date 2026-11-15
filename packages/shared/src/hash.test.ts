@@ -62,3 +62,24 @@ describe("stampUpdatedAt", () => {
     expect(stampUpdatedAt(now + CLOCK_SKEW_MS - 1, now)).toBe(now + CLOCK_SKEW_MS - 1);
   });
 });
+
+describe("taskHash com repeatEvery", () => {
+  // O mesmo valor de antes do campo existir: mudar isto reescreveria toda tarefa no próximo sync.
+  const old = {
+    title: "Dentista",
+    date: Date.UTC(2026, 7, 30, 18),
+    duration: "1h",
+    priority: 0,
+    repeat: { Weekly: ["Monday"] },
+    completed: [],
+  };
+
+  it("tarefa antiga (e a de intervalo 1) mantém o hash", () => {
+    expect(taskHash(old)).toBe("eda548eb");
+    expect(taskHash({ ...old, repeatEvery: 1 })).toBe("eda548eb");
+  });
+
+  it("intervalo diferente de 1 muda o hash", () => {
+    expect(taskHash({ ...old, repeatEvery: 2 })).not.toBe(taskHash(old));
+  });
+});
