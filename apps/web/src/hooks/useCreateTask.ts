@@ -86,7 +86,6 @@ export function useCreateTask() {
 
       apply(previous, task);
       bumpUsage("tasks");
-      if (task.repeat !== "Off") bumpUsage("recurring");
       toast.message(undated ? copy.form.createdUndated : copy.form.created, {
         description: task.title,
       });

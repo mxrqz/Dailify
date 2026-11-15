@@ -190,21 +190,21 @@ describe("POST /tasks/voice — quota e tamanho", () => {
     expect(openaiMock.audio.transcriptions.create).not.toHaveBeenCalled();
   });
 
-  it("429s quando a quota mensal de voz acabou", async () => {
+  it("429s quando os créditos de IA do mês acabaram", async () => {
     role = "free";
     userId = "vq2";
     getUserMock.mockResolvedValue({ id: "vq2", unsafeMetadata: { timezone: "UTC" } });
-    for (let i = 0; i < limitsFor("free").voice; i++) {
-      await bumpStoredUsage(env.DB, "vq2", "voice", periodFor("voice", new Date()));
+    for (let i = 0; i < limitsFor("free").ai; i++) {
+      await bumpStoredUsage(env.DB, "vq2", "ai", periodFor("ai", new Date()));
     }
     const res = await audioRequest();
     expect(res.status).toBe(429);
     const body = await res.json<{ error: string }>();
-    expect(body.error).toBe("Voice Limit Reached");
+    expect(body.error).toBe("AI Credits Limit Reached");
     expect(openaiMock.audio.transcriptions.create).not.toHaveBeenCalled();
   });
 
-  it("conta o comando mesmo quando a geração não cria tarefa", async () => {
+  it("gasta o crédito mesmo quando a geração não cria tarefa", async () => {
     role = "free";
     userId = "vq3";
     getUserMock.mockResolvedValue({ id: "vq3", unsafeMetadata: { timezone: "UTC" } });
@@ -219,7 +219,7 @@ describe("POST /tasks/voice — quota e tamanho", () => {
 
     const res = await audioRequest();
     expect(res.status).toBe(200);
-    const period = periodFor("voice", new Date());
-    expect(await readStoredUsage(env.DB, "vq3", "voice", period)).toBe(1);
+    const period = periodFor("ai", new Date());
+    expect(await readStoredUsage(env.DB, "vq3", "ai", period)).toBe(1);
   });
 });

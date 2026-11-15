@@ -16,7 +16,7 @@ vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
 import BillingPage from "./billing";
 import { copy } from "@/components/dashboard/copy";
 
-const NO_USAGE: QuotaUsage = { tasks: 0, recurring: 0, voice: 0 };
+const NO_USAGE: QuotaUsage = { tasks: 0, ai: 0 };
 
 const FREE = { limits: limitsFor("free"), usage: NO_USAGE };
 const MAX = { limits: limitsFor("max"), usage: NO_USAGE };
@@ -78,19 +78,18 @@ describe("<BillingPage>", () => {
 
     const card = within(currentPlanCard());
     expect(card.getByText(copy.quota.names.tasks)).toBeInTheDocument();
-    expect(card.getByText(`0 / ${limitsFor("free").recurring}`)).toBeInTheDocument();
-    expect(card.getByText(`0 / ${limitsFor("free").voice}`)).toBeInTheDocument();
+    expect(card.getByText(`0 / ${limitsFor("free").ai}`)).toBeInTheDocument();
     // só tarefas é ilimitada no Free
     expect(card.getAllByText(`0 / ${copy.quota.unlimited}`)).toHaveLength(1);
   });
 
-  it("as três quotas aparecem, não só tarefas", () => {
+  it("os créditos de IA aparecem, não só tarefas — e recorrência não é medida", () => {
     dailify.mockReturnValue(context({ quotas: FREE }));
     renderPage();
 
     const card = within(currentPlanCard());
-    expect(card.getByText(copy.quota.names.recurring)).toBeInTheDocument();
-    expect(card.getByText(copy.quota.names.voice)).toBeInTheDocument();
+    expect(card.getByText(copy.quota.names.ai)).toBeInTheDocument();
+    expect(card.queryByText("Recorrentes")).not.toBeInTheDocument();
   });
 
   it("com quotas ainda carregando, não mostra número nenhum", () => {
@@ -122,9 +121,9 @@ describe("<BillingPage>", () => {
     expect(screen.getByText(copy.profile.billingManage)).toBeInTheDocument();
 
     const card = within(currentPlanCard());
-    // tarefas e recorrentes são ilimitadas no Max; a voz TEM teto mesmo no plano de cima.
-    expect(card.getAllByText(`0 / ${copy.quota.unlimited}`)).toHaveLength(2);
-    expect(card.getByText(`0 / ${limitsFor("max").voice}`)).toBeInTheDocument();
+    // tarefas são ilimitadas no Max; os créditos de IA TÊM teto mesmo no plano de cima.
+    expect(card.getAllByText(`0 / ${copy.quota.unlimited}`)).toHaveLength(1);
+    expect(card.getByText(`0 / ${limitsFor("max").ai}`)).toBeInTheDocument();
   });
 
   /**
@@ -138,7 +137,7 @@ describe("<BillingPage>", () => {
       // Limites fixos: o teste é do ARIA, não da tabela de planos.
       context({
         quotas: {
-          limits: { tasks: 30, recurring: 15, voice: 5 },
+          limits: { tasks: 30, ai: 5 },
           usage: { ...NO_USAGE, tasks: 15 },
         },
       }),

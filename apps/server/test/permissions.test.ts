@@ -33,7 +33,7 @@ describe("GET /permissions", () => {
     expect(res.status).toBe(200);
     const body = await res.json<{ limits: unknown; usage: unknown }>();
     expect(body.limits).toEqual(limitsFor("free"));
-    expect(body.usage).toEqual({ tasks: 0, recurring: 0, voice: 0 });
+    expect(body.usage).toEqual({ tasks: 0, ai: 0 });
   });
 
   it("conta o uso do mês pedido", async () => {

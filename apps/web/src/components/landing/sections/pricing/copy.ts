@@ -11,6 +11,7 @@ export const copy = {
   per: { monthly: "/mês", yearly: "/ano" },
   // {price} = economia do anual contra 12× o mensal
   save: "Economize {price}",
+  // {n} nas features = créditos de IA do plano, lidos de QUOTAS
   plans: {
     free: {
       name: "Free",
@@ -20,7 +21,7 @@ export const copy = {
       cta: "Começar grátis",
       features: [
         "Tarefas, recorrência e agenda ilimitadas",
-        "30 créditos de IA por mês",
+        "{n} créditos de IA por mês",
         "Integração com Google Agenda",
       ],
     },
@@ -30,7 +31,7 @@ export const copy = {
       cta: "Assinar Pro",
       features: [
         "Tudo do Free",
-        "300 créditos de IA por mês",
+        "{n} créditos de IA por mês",
         "Agenda, Notion, GitHub, Slack e envio pelo Gmail",
       ],
     },
@@ -38,7 +39,7 @@ export const copy = {
       name: "Max",
       desc: "Para quem resolve tudo falando com a Mewki.",
       cta: "Assinar Max",
-      features: ["Tudo do Pro", "1.000 créditos de IA por mês", "Novas integrações primeiro"],
+      features: ["Tudo do Pro", "{n} créditos de IA por mês", "Novas integrações primeiro"],
     },
   },
   // {credits} vira `noteCredits` em negrito

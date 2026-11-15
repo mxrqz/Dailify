@@ -1,4 +1,4 @@
-import { PLAN_PRICING, formatPrice, yearlySavings } from "@dailify/shared";
+import { PLAN_PRICING, QUOTAS, formatPrice, yearlySavings } from "@dailify/shared";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
@@ -46,6 +46,7 @@ function PlanCard({ plan, cycle }: { plan: Plan; cycle: Cycle }) {
   const per = p ? copy.per[cycle] : copy.plans.free.per;
   const save =
     p && cycle === "yearly" ? copy.save.replace("{price}", formatPrice(yearlySavings(p))) : "";
+  const credits = QUOTAS.ai.limits[plan.key].toLocaleString("pt-BR");
 
   return (
     <article
@@ -117,7 +118,7 @@ function PlanCard({ plan, cycle }: { plan: Plan; cycle: Cycle }) {
             >
               <path d="M20 6 9 17l-5-5" />
             </svg>
-            <span>{f}</span>
+            <span>{f.replace("{n}", credits)}</span>
           </li>
         ))}
       </ul>

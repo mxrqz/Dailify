@@ -30,13 +30,12 @@ export const copy = {
   quota: {
     names: {
       tasks: "Tarefas",
-      recurring: "Recorrentes",
-      voice: "Voz",
+      ai: "Créditos de IA",
     } satisfies Record<QuotaKey, string>,
     summary: "{used} de {limit} {name}",
     /**
      * Sem teto a frase muda de forma, não só de palavra: "0 de ilimitado Tarefas" é agramatical, e
-     * era o que a pilha anunciava justamente pra quem paga mais. Sem gênero no texto, que os três
+     * era o que a pilha anunciava justamente pra quem paga mais. Sem gênero no texto, que os
      * nomes de quota não compartilham.
      */
     summaryUnlimited: "{used} {name} · ilimitado",
@@ -118,9 +117,6 @@ export const copy = {
     repeatWeekly: "Semanal",
     repeatMonthly: "Mensal",
     repeatYearly: "Anual",
-    // Sufixo dos modos de repetição sem vaga. Não é upsell: Pro tem 30 recorrentes e também
-    // esgota — dizer "(Pro)" aqui manda o assinante comprar o plano que ele já tem.
-    repeatLimit: " (limite atingido)",
     // Ordem de `weekDays` do shared (domingo primeiro) — o índice vem do `dayMap`.
     repeatDays: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
     back: "Voltar",
@@ -294,8 +290,8 @@ export const copy = {
     error: "Não foi possível criar pela voz",
     micDenied: "Sem acesso ao microfone",
     micDeniedHint: "Libere o microfone nas permissões do navegador.",
-    limitReached: "Limite de voz atingido",
-    limitReachedHint: "Você usou os comandos de voz do seu plano neste mês.",
+    limitReached: "Créditos de IA esgotados",
+    limitReachedHint: "Você usou os créditos de IA do seu plano neste mês.",
   },
 
   task: {

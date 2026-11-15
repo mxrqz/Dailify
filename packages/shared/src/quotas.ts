@@ -1,18 +1,19 @@
 import type { Role } from "./types";
 
-export type QuotaScope = "month" | "lifetime";
+// ponytail: só mensal desde que recorrência deixou de ser quota. Uma quota vitalícia volta como
+// `"lifetime"` aqui e um período fixo ('all') em `periodFor` (apps/server/src/db/usage.ts).
+export type QuotaScope = "month";
 
 /**
  * A declaração única de toda quota do produto. Servidor, cliente, página de preços e medidor do
  * header leem daqui — antes cada um tinha a sua cópia, e a de venda já mentia.
  *
  * `-1` = ilimitado, `0` = bloqueado. `scope` diz contra o quê o uso é contado: `month` reinicia a
- * cada mês-calendário, `lifetime` nunca reinicia.
+ * cada mês-calendário.
  */
 export const QUOTAS = {
   tasks: { scope: "month", limits: { free: -1, pro: -1, max: -1, admin: -1 } },
-  recurring: { scope: "lifetime", limits: { free: 30, pro: -1, max: -1, admin: -1 } },
-  voice: { scope: "month", limits: { free: 5, pro: 30, max: 300, admin: -1 } },
+  ai: { scope: "month", limits: { free: 30, pro: 300, max: 1000, admin: -1 } },
 } as const satisfies Record<string, { scope: QuotaScope; limits: Record<Role, number> }>;
 
 export type QuotaKey = keyof typeof QUOTAS;

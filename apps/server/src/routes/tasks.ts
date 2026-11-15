@@ -7,7 +7,6 @@ import { rateLimit } from "../middleware/rate-limit";
 import {
   getMonthTasks,
   getRecurringTasks,
-  getTask,
   getUndatedTasks,
   insertTask,
   updateTask,
@@ -17,7 +16,7 @@ import {
   detachOccurrence,
   excludeOccurrence,
 } from "../db/tasks";
-import { enforceCreate, enforceRepeat } from "../db/limits";
+import { enforceCreate } from "../db/limits";
 import { expandRecurringTask, type Task } from "@dailify/shared";
 import { parseClientId, parseNewTask, parseTaskFields } from "../lib/task-input";
 import { fail } from "../lib/errors";
@@ -103,15 +102,6 @@ tasks.patch("/:id", async (c) => {
     const detached = await detachOccurrence(c.env.DB, userId, id, at, parsed.fields, nanoid(6));
     if (!detached) return fail(c, 404, "Recurring task not found");
     return c.json(detached); // { task, series }
-  }
-
-  // Off → Daily ocupa vaga; Daily → Weekly não (a série já contava).
-  if (parsed.fields.repeat && parsed.fields.repeat !== "Off") {
-    const current = await getTask(c.env.DB, userId, id);
-    if (current?.repeat === "Off") {
-      const err = await enforceRepeat(c.env, userId);
-      if (err) return fail(c, 429, err);
-    }
   }
 
   const updated = await updateTask(c.env.DB, userId, id, parsed.fields);

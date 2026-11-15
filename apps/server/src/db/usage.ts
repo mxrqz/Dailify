@@ -1,8 +1,7 @@
-import { QUOTAS, type QuotaKey } from "@dailify/shared";
+import type { QuotaKey } from "@dailify/shared";
 
-/** Chave de período da quota: o mês-calendário local, ou 'all' pra quem nunca reinicia. */
-export function periodFor(key: QuotaKey, at: Date): string {
-  if (QUOTAS[key].scope === "lifetime") return "all";
+/** Chave de período da quota: o mês-calendário local (toda quota é mensal, ver `QuotaScope`). */
+export function periodFor(_key: QuotaKey, at: Date): string {
   return `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}`;
 }
 

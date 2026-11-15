@@ -25,7 +25,7 @@ export function useTaskActions(
   day: Date = zoned(),
   { onDeleted }: { onDeleted?: () => void } = {},
 ) {
-  const { tasks, setTasks, loadedMonths, bumpUsage } = useDailify();
+  const { tasks, setTasks, loadedMonths } = useDailify();
   const { getToken, userId } = useAuth();
   const [scopeOpen, setScopeOpen] = useState(false);
 
@@ -228,9 +228,6 @@ export function useTaskActions(
 
     const { task: updated, series, error } = await updateTask(token, task.id, stamped, occurrence);
     if (!settle(error, previous, mutation, copy.task.patchError)) return false;
-    // Avulsa que virou recorrente ocupou uma vaga: o gate do menu precisa saber já.
-    if (occurrence === undefined && task.repeat === "Off" && patch.repeat && patch.repeat !== "Off")
-      bumpUsage("recurring");
     if (!updated) return true; // foi pra fila: o que está na tela já é o estado bom
 
     // A resposta do servidor ainda entra: ela traz o que o patch não mandou (recorrência expandida).

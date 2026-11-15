@@ -34,43 +34,33 @@ describe("enforce", () => {
     expect(err).toBeNull();
   });
 
-  it("barra no limite exato", async () => {
-    for (let i = 0; i < limitsFor("free").recurring; i++) {
-      await insertTask(env.DB, "le3", task({ id: `le3-${i}`, repeat: "Daily" }));
+  it("conta créditos de IA do período corrente do servidor, seja qual for a data recebida", async () => {
+    for (let i = 0; i < limitsFor("free").ai; i++) {
+      await bumpStoredUsage(env.DB, "le4", "ai", periodFor("ai", new Date()));
     }
-    const err = await enforce(env.DB, "le3", limitsFor("free"), "recurring", new Date(2026, 5, 1));
-    expect(err).toBe("Recurring Tasks Limit Reached");
-  });
-
-  it("conta voz do período corrente do servidor, seja qual for a data recebida", async () => {
-    for (let i = 0; i < limitsFor("free").voice; i++) {
-      await bumpStoredUsage(env.DB, "le4", "voice", periodFor("voice", new Date()));
-    }
-    // Voz é ancorada em AGORA: o mês que o cliente pede não muda o período lido, senão navegar pro
-    // mês que vem "devolveria" comandos que o servidor vai recusar.
+    // Crédito é ancorado em AGORA: o mês que o cliente pede não muda o período lido, senão navegar
+    // pro mês que vem "devolveria" créditos que o servidor vai recusar.
     for (const at of [new Date(2026, 5, 20), new Date(2026, 6, 1), new Date(2030, 0, 1)]) {
-      expect(await enforce(env.DB, "le4", limitsFor("free"), "voice", at)).toBe(
-        "Voice Limit Reached",
+      expect(await enforce(env.DB, "le4", limitsFor("free"), "ai", at)).toBe(
+        "AI Credits Limit Reached",
       );
     }
   });
 
-  it("uso de voz gravado em outro período não conta no corrente", async () => {
-    for (let i = 0; i < 3; i++) await bumpStoredUsage(env.DB, "le6", "voice", "2000-01");
-    expect(
-      await enforce(env.DB, "le6", limitsFor("free"), "voice", new Date(2000, 0, 15)),
-    ).toBeNull();
+  it("crédito gravado em outro período não conta no corrente", async () => {
+    for (let i = 0; i < 3; i++) await bumpStoredUsage(env.DB, "le6", "ai", "2000-01");
+    expect(await enforce(env.DB, "le6", limitsFor("free"), "ai", new Date(2000, 0, 15))).toBeNull();
   });
 });
 
 describe("readAllUsage", () => {
-  it("devolve as três chaves", async () => {
+  it("devolve todas as chaves", async () => {
     await insertTask(env.DB, "le5", task({ id: "le5-a" }));
     await insertTask(env.DB, "le5", task({ id: "le5-b", repeat: "Daily" }));
-    await bumpStoredUsage(env.DB, "le5", "voice", periodFor("voice", new Date()));
+    await bumpStoredUsage(env.DB, "le5", "ai", periodFor("ai", new Date()));
 
-    // O `at` é o mês pedido pelo cliente: vale pra `tasks`, mas voz lê sempre o mês do servidor.
+    // O `at` é o mês pedido pelo cliente: vale pra `tasks`, mas crédito lê sempre o mês do servidor.
     const usage = await readAllUsage(env.DB, "le5", new Date(2026, 5, 15));
-    expect(usage).toEqual({ tasks: 2, recurring: 1, voice: 1 });
+    expect(usage).toEqual({ tasks: 2, ai: 1 });
   });
 });

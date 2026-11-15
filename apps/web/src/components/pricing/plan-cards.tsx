@@ -17,7 +17,7 @@ export function planFeatures(role: PlanRole): string[] {
   return QUOTA_KEYS.filter((key) => limits[key] !== 0).map((key) =>
     limits[key] < 0
       ? copy.features.unlimited[key]
-      : copy.features.finite[key].replace("{n}", String(limits[key])),
+      : copy.features.finite[key].replace("{n}", limits[key].toLocaleString("pt-BR")),
   );
 }
 

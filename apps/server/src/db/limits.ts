@@ -8,7 +8,7 @@ import {
 } from "@dailify/shared";
 import type { Env } from "../index";
 import { getUserRole } from "../lib/clerk";
-import { countMonthlyTasks, countRecurringTasks } from "./tasks";
+import { countMonthlyTasks } from "./tasks";
 import { periodFor, readStoredUsage } from "./usage";
 
 type Counter = (db: D1Database, userId: string, at: Date) => Promise<number>;
@@ -16,18 +16,16 @@ type Counter = (db: D1Database, userId: string, at: Date) => Promise<number>;
 /** Uma entrada por quota do registro — quota nova sem contador não compila. */
 const COUNTERS: Record<QuotaKey, Counter> = {
   tasks: (db, userId, at) => countMonthlyTasks(db, userId, at),
-  recurring: (db, userId) => countRecurringTasks(db, userId),
-  // `at` é a âncora do que se CONTA: pra `tasks` é a data da tarefa, que varia de propósito. Voz é
-  // ancorada em AGORA — "o mês em que o comando foi dado" —, então ignora o `at` e lê o mês do
-  // servidor; senão o cliente navegando pro mês que vem via o medidor de voz zerar sozinho.
-  voice: (db, userId) => readStoredUsage(db, userId, "voice", periodFor("voice", new Date())),
+  // `at` é a âncora do que se CONTA: pra `tasks` é a data da tarefa, que varia de propósito. Crédito
+  // de IA é ancorado em AGORA — "o mês em que o pedido foi feito" —, então ignora o `at` e lê o mês
+  // do servidor; senão o cliente navegando pro mês que vem via o medidor de créditos zerar sozinho.
+  ai: (db, userId) => readStoredUsage(db, userId, "ai", periodFor("ai", new Date())),
 };
 
 /** Strings de contrato: `tasks-create.test.ts` e o toast do cliente batem nelas. */
 const QUOTA_ERRORS: Record<QuotaKey, string> = {
   tasks: "Monthly Tasks Limit Reached",
-  recurring: "Recurring Tasks Limit Reached",
-  voice: "Voice Limit Reached",
+  ai: "AI Credits Limit Reached",
 };
 
 export async function enforce(
@@ -47,30 +45,14 @@ export async function readAllUsage(db: D1Database, userId: string, at: Date): Pr
   const entries = await Promise.all(
     QUOTA_KEYS.map(async (key) => [key, await COUNTERS[key](db, userId, at)] as const),
   );
-  // Literal com as três chaves, não Record<string, number>: sem "as", uma quota nova sem entrada
+  // Literal com todas as chaves, não Record<string, number>: sem "as", uma quota nova sem entrada
   // aqui não compila — o mesmo raciocínio do COUNTERS acima.
-  const usage: QuotaUsage = { tasks: 0, recurring: 0, voice: 0 };
+  const usage: QuotaUsage = { tasks: 0, ai: 0 };
   for (const [key, used] of entries) usage[key] = used;
   return usage;
 }
 
-/** Editar uma tarefa avulsa pra repetir ocupa uma vaga de recorrente, como criar uma. */
-export async function enforceRepeat(env: Env, userId: string): Promise<string | null> {
-  const limits = limitsFor(await getUserRole(env, userId));
-  return enforce(env.DB, userId, limits, "recurring", new Date());
-}
-
-/**
- * Uma leitura de papel só: `getUserRole` bate no Clerk pela rede, e criar uma tarefa recorrente
- * consulta duas quotas.
- */
 export async function enforceCreate(env: Env, userId: string, task: Task): Promise<string | null> {
   const limits = limitsFor(await getUserRole(env, userId));
-  const at = new Date(task.date);
-
-  if (task.repeat !== "Off") {
-    const err = await enforce(env.DB, userId, limits, "recurring", at);
-    if (err) return err;
-  }
-  return enforce(env.DB, userId, limits, "tasks", at);
+  return enforce(env.DB, userId, limits, "tasks", new Date(task.date));
 }

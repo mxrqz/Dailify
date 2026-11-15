@@ -53,7 +53,7 @@ export function useVoiceCreate(onCreated?: () => void) {
         toast.error(copy.voice.error, { description: error.message });
         return;
       }
-      bumpUsage("voice");
+      bumpUsage("ai");
       if (!created.length) {
         toast.message(response || copy.voice.nothing);
         return;
@@ -65,10 +65,7 @@ export function useVoiceCreate(onCreated?: () => void) {
           latest.current ?? [],
         ),
       );
-      for (const task of created) {
-        bumpUsage("tasks");
-        if (task.repeat !== "Off") bumpUsage("recurring");
-      }
+      created.forEach(() => bumpUsage("tasks"));
       onCreated?.();
       toast.success(
         created.length === 1
@@ -91,7 +88,7 @@ export function useVoiceCreate(onCreated?: () => void) {
   };
 
   const start = async () => {
-    if (quotas.states.voice.exhausted) {
+    if (quotas.states.ai.exhausted) {
       toast(copy.voice.limitReached, {
         description: copy.voice.limitReachedHint,
         action: { label: copy.form.upgrade, onClick: () => navigate("/premium") },

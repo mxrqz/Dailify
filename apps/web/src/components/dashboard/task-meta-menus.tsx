@@ -14,7 +14,6 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { priorityText, priorityTextColor } from "@/consts/conts";
-import { useQuotas } from "@/hooks/useQuotas";
 import { cn } from "@/lib/utils";
 import { Flag } from "lucide-react";
 import { zoned } from "@/functions/zone";
@@ -111,9 +110,6 @@ export function RepeatMenu({
   onChange: (repeat: Repeat) => void;
   children: ReactNode;
 }): JSX.Element {
-  // `exhausted`, não `blocked`: nenhum plano tem limite 0, então `blocked` nunca é true e o gate
-  // seria morto. Aqui é sempre edição de tarefa que existe: se ela já repete, a vaga já é dela.
-  const recurrence = !useQuotas().states.recurring.exhausted || value !== "Off";
   const current = typeof value === "string" ? value : "Weekly";
 
   return (
@@ -133,13 +129,8 @@ export function RepeatMenu({
           }}
         >
           {REPEATS.map(({ value: option, label }) => (
-            <DropdownMenuRadioItem
-              key={option}
-              value={option}
-              disabled={option !== "Off" && !recurrence}
-            >
+            <DropdownMenuRadioItem key={option} value={option}>
               {label}
-              {option !== "Off" && !recurrence && copy.form.repeatLimit}
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>

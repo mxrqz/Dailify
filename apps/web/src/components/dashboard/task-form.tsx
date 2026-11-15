@@ -34,7 +34,6 @@ import {
 } from "@/components/dashboard/styles";
 import { priorityText } from "@/consts/conts";
 import { useDailify } from "@/components/dailifyContext";
-import { useQuotas } from "@/hooks/useQuotas";
 import { DEFAULT_HOUR, undatedReminder } from "@/functions/compose-input";
 import { formatClock } from "@/functions/functions";
 import { linkLabel } from "@/functions/link-label";
@@ -134,10 +133,6 @@ export function TaskForm({
   onDirtyChange,
 }: TaskFormProps) {
   const { tasks, hour12 } = useDailify();
-  // `exhausted`, não `blocked`: nenhum plano tem limite 0, então `blocked` nunca é true e o gate
-  // seria morto. Tarefa que JÁ repete ocupa a vaga dela — mudar a cadência não cria linha nova.
-  const recurrence = !useQuotas().states.recurring.exhausted || (task?.repeat ?? "Off") !== "Off";
-
   const [title, setTitle] = useState(task?.title ?? "");
   const [undated, setUndated] = useState(task?.undated === true);
   const [reminder, setReminder] = useState<Date | undefined>(() =>
@@ -340,8 +335,8 @@ export function TaskForm({
                 className={nativeControlClass}
               >
                 {REPEAT_MODES.map(({ value, label }) => (
-                  <option key={value} value={value} disabled={value !== "Off" && !recurrence}>
-                    {label + (value !== "Off" && !recurrence ? copy.form.repeatLimit : "")}
+                  <option key={value} value={value}>
+                    {label}
                   </option>
                 ))}
               </select>

@@ -1,13 +1,7 @@
 import { env } from "cloudflare:test";
 import { beforeAll, describe, it, expect } from "vitest";
 import { applyD1Migrations } from "cloudflare:test";
-import {
-  insertTask,
-  getMonthTasks,
-  countRecurringTasks,
-  getTask,
-  updateTask,
-} from "../src/db/tasks";
+import { insertTask, getMonthTasks, getTask, updateTask } from "../src/db/tasks";
 import type { Task } from "@dailify/shared";
 
 beforeAll(async () => {
@@ -36,7 +30,7 @@ describe("db/tasks", () => {
 
   it("stores Weekly repeat as kind+days", async () => {
     await insertTask(env.DB, "u2", t({ id: "a2", repeat: { Weekly: ["Monday"] } }));
-    expect(await countRecurringTasks(env.DB, "u2")).toBe(1);
+    expect((await getTask(env.DB, "u2", "a2"))?.repeat).toEqual({ Weekly: ["Monday"] });
   });
 
   it("updateTask never touches completion history", async () => {

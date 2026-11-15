@@ -19,7 +19,7 @@ no build step); keep it isomorphic (no Node, no DOM, no `fetch`).
 - **`Task` dates are epoch-ms `number`s** (`date`, `alert?`, `completed: number[]`) — never
   `Date`/`Timestamp`. Stripe shapes (`Invoice`/`PaymentDetails`) keep Stripe's native **Unix
   seconds** — different unit, `*1000` before formatting.
-- **Quota é declarada uma vez, em `QUOTAS`.** `limitsFor(role)` → `{ tasks, recurring, voice }`;
+- **Quota é declarada uma vez, em `QUOTAS`.** `limitsFor(role)` → `{ tasks, ai }`;
   **`-1` = ilimitado, `0` = bloqueado**. Servidor e web iteram `QUOTA_KEYS` — nunca nomeiam quota a
   quota, e nunca decidem pela string do plano. Quota nova sem contador (servidor) ou sem rótulo
   (web) é erro de compilação.

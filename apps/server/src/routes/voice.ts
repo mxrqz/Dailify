@@ -41,10 +41,10 @@ voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const limits = limitsFor(await getUserRole(c.env, userId));
   const now = new Date();
 
-  const quotaError = await enforce(c.env.DB, userId, limits, "voice", now);
+  const quotaError = await enforce(c.env.DB, userId, limits, "ai", now);
   if (quotaError) {
-    // Bloqueado (limite 0) e esgotado são a mesma resposta: em ambos não há comando disponível.
-    return fail(c, limits.voice === 0 ? 403 : 429, quotaError);
+    // Bloqueado (limite 0) e esgotado são a mesma resposta: em ambos não há crédito disponível.
+    return fail(c, limits.ai === 0 ? 403 : 429, quotaError);
   }
 
   const body = await c.req.parseBody();
@@ -66,7 +66,7 @@ voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const transcript = await transcribe(c.env, audio);
   // Conta aqui, não no fim: a transcrição é o que custa dinheiro. Se a geração falhar depois, o
   // comando já foi pago.
-  await bumpStoredUsage(c.env.DB, userId, "voice", periodFor("voice", now));
+  await bumpStoredUsage(c.env.DB, userId, "ai", periodFor("ai", now));
   const ai = await generateTasks(c.env, transcript, timezone);
 
   if (ai.type !== "create" || !ai.tasks) {

@@ -24,6 +24,8 @@ describe("<PricingV2>", () => {
     await userEvent.click(screen.getByRole("button", { name: new RegExp(copy.billing.yearly) }));
     expect(screen.getByText(price(PLAN_PRICING.max.yearly))).toBeInTheDocument();
     expect(screen.getByText(copy.save.replace("{price}", price(1980)))).toBeInTheDocument();
+    // créditos vêm de QUOTAS, não de número digitado no copy
+    expect(screen.getByText("1.000 créditos de IA por mês")).toBeInTheDocument();
     expect(screen.getByRole("link", { name: copy.plans.free.cta })).toHaveAttribute(
       "href",
       "/signup",

@@ -15,7 +15,6 @@ vi.mock("../src/lib/clerk", async (importOriginal) => {
 import { env } from "cloudflare:test";
 import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
-import { limitsFor } from "@dailify/shared";
 import { insertTask, getTask } from "../src/db/tasks";
 import type { Task, TaskInput } from "@dailify/shared";
 
@@ -51,9 +50,10 @@ describe("POST /tasks", () => {
     expect(saved).toMatchObject({ title: "Under limit" });
   });
 
-  it("429s a free user past the recurring quota", async () => {
+  // Recorrência não tem teto em plano nenhum: 30 séries já gravadas não barram a 31ª.
+  it("free cria recorrente sem limite", async () => {
     role = "free";
-    for (let i = 0; i < limitsFor("free").recurring; i++) {
+    for (let i = 0; i < 30; i++) {
       await insertTask(env.DB, "u2", {
         id: `rec-${i}`,
         title: `R${i}`,
@@ -73,9 +73,7 @@ describe("POST /tasks", () => {
       },
       env,
     );
-    expect(res.status).toBe(429);
-    const body = await res.json<{ error: string }>();
-    expect(body.error).toBe("Recurring Tasks Limit Reached");
+    expect(res.status).toBe(200);
   });
 
   it("free não tem teto de tarefas no mês", async () => {

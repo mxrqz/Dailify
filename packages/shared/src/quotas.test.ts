@@ -2,16 +2,18 @@ import { describe, it, expect } from "vitest";
 import { QUOTAS, QUOTA_KEYS, limitsFor, quotaState, computeQuotas } from "./quotas";
 
 describe("QUOTAS", () => {
-  it("declara as três quotas com os limites da tabela", () => {
+  it("declara as quotas com os limites da tabela", () => {
     expect(QUOTAS.tasks.limits).toEqual({ free: -1, pro: -1, max: -1, admin: -1 });
-    expect(QUOTAS.recurring.limits).toEqual({ free: 30, pro: -1, max: -1, admin: -1 });
-    expect(QUOTAS.voice.limits).toEqual({ free: 5, pro: 30, max: 300, admin: -1 });
+    expect(QUOTAS.ai.limits).toEqual({ free: 30, pro: 300, max: 1000, admin: -1 });
+  });
+
+  it("recorrência não é quota: ilimitada em todo plano", () => {
+    expect(QUOTA_KEYS).not.toContain("recurring");
   });
 
   it("declara o escopo de cada quota", () => {
     expect(QUOTAS.tasks.scope).toBe("month");
-    expect(QUOTAS.voice.scope).toBe("month");
-    expect(QUOTAS.recurring.scope).toBe("lifetime");
+    expect(QUOTAS.ai.scope).toBe("month");
   });
 
   it("QUOTA_KEYS cobre todas as chaves do registro", () => {
@@ -21,16 +23,16 @@ describe("QUOTAS", () => {
 
 describe("limitsFor", () => {
   it("free", () => {
-    expect(limitsFor("free")).toEqual({ tasks: -1, recurring: 30, voice: 5 });
+    expect(limitsFor("free")).toEqual({ tasks: -1, ai: 30 });
   });
   it("pro", () => {
-    expect(limitsFor("pro")).toEqual({ tasks: -1, recurring: -1, voice: 30 });
+    expect(limitsFor("pro")).toEqual({ tasks: -1, ai: 300 });
   });
   it("max", () => {
-    expect(limitsFor("max")).toEqual({ tasks: -1, recurring: -1, voice: 300 });
+    expect(limitsFor("max")).toEqual({ tasks: -1, ai: 1000 });
   });
   it("admin é ilimitado em tudo", () => {
-    expect(limitsFor("admin")).toEqual({ tasks: -1, recurring: -1, voice: -1 });
+    expect(limitsFor("admin")).toEqual({ tasks: -1, ai: -1 });
   });
 });
 
@@ -88,14 +90,11 @@ describe("quotaState", () => {
 
 describe("computeQuotas", () => {
   it("combina limites e uso por chave", () => {
-    const q = computeQuotas(
-      { tasks: 30, recurring: 3, voice: 3 },
-      { tasks: 12, recurring: 1, voice: 0 },
-    );
+    const q = computeQuotas({ tasks: 30, ai: 3 }, { tasks: 12, ai: 1 });
     expect(q.loading).toBe(false);
     expect(q.states.tasks.remaining).toBe(18);
-    expect(q.states.recurring.remaining).toBe(2);
-    expect(q.states.voice.used).toBe(0);
+    expect(q.states.ai.remaining).toBe(2);
+    expect(q.states.ai.used).toBe(1);
   });
 
   it("sem limites = carregando, e nada aparece bloqueado", () => {
@@ -108,6 +107,6 @@ describe("computeQuotas", () => {
   });
 
   it("limites sem uso ainda é carregando", () => {
-    expect(computeQuotas({ tasks: 30, recurring: 3, voice: 3 }, undefined).loading).toBe(true);
+    expect(computeQuotas({ tasks: 30, ai: 3 }, undefined).loading).toBe(true);
   });
 });

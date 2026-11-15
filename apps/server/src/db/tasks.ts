@@ -156,14 +156,6 @@ export async function countMonthlyTasks(
   return row?.n ?? 0;
 }
 
-export async function countRecurringTasks(db: D1Database, userId: string): Promise<number> {
-  const row = await db
-    .prepare(`SELECT COUNT(*) as n FROM tasks WHERE user_id=? AND repeat_kind!='Off'`)
-    .bind(userId)
-    .first<{ n: number }>();
-  return row?.n ?? 0;
-}
-
 export async function getTask(db: D1Database, userId: string, id: string): Promise<Task | null> {
   const r = await db
     .prepare(`SELECT * FROM tasks WHERE user_id=? AND id=?`)

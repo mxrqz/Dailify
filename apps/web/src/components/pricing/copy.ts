@@ -16,11 +16,11 @@ export const copy = {
     },
     pro: {
       name: "Pro",
-      description: "Recorrência sem teto e voz pra criar falando no dia a dia.",
+      description: "Mais créditos de IA pra criar falando no dia a dia.",
     },
     max: {
       name: "Max",
-      description: "Tudo do Pro, com voz de sobra pra quem cria tudo falando.",
+      description: "Tudo do Pro, com créditos de IA de sobra pra quem cria tudo falando.",
     },
   },
 
@@ -28,13 +28,11 @@ export const copy = {
   features: {
     finite: {
       tasks: "{n} tarefas/mês",
-      recurring: "{n} tarefas recorrentes",
-      voice: "{n} comandos de voz/mês",
+      ai: "{n} créditos de IA/mês",
     } satisfies Record<QuotaKey, string>,
     unlimited: {
       tasks: "Tarefas ilimitadas",
-      recurring: "Recorrência ilimitada",
-      voice: "Comandos de voz ilimitados",
+      ai: "Créditos de IA ilimitados",
     } satisfies Record<QuotaKey, string>,
   },
 
