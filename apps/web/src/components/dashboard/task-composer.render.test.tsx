@@ -47,7 +47,7 @@ const QUESTION = "o que tenho amanhã?";
 const improveDiscreet = `${copy.mew.improve} · 25 restantes`;
 
 const setup = () => {
-  const onSubmit = vi.fn();
+  const onSubmit = vi.fn().mockResolvedValue(true);
   render(
     <MemoryRouter>
       <TaskComposer onSubmit={onSubmit} />
@@ -88,6 +88,16 @@ describe("<TaskComposer> voz", () => {
     expect(screen.getByRole("button", { name: copy.composer.submit })).toBeDisabled();
     await user.click(screen.getByRole("button", { name: copy.voice.stop }));
     expect(voice.stop).toHaveBeenCalled();
+  });
+});
+
+describe("<TaskComposer> criação recusada", () => {
+  it("limpa na hora e devolve o texto quando o create falha", async () => {
+    const { user, onSubmit } = setup();
+    onSubmit.mockResolvedValue(false);
+    await user.type(screen.getByRole("textbox"), "pagar luz amanhã{Enter}");
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(await screen.findByDisplayValue("pagar luz amanhã")).toBeInTheDocument();
   });
 });
 

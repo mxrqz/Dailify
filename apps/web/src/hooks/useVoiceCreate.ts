@@ -1,4 +1,4 @@
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -18,7 +18,10 @@ const MIME_TYPES = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp
 export const voiceSupported = (): boolean =>
   typeof MediaRecorder !== "undefined" && Boolean(navigator.mediaDevices?.getUserMedia);
 
-/** Grava, manda pro servidor (que transcreve e cria) e põe as tarefas na tela, com Desfazer. */
+/**
+ * Grava, manda pro servidor (que transcreve e cria) e põe as tarefas na tela, com Desfazer.
+ * `analyser` alimenta a onda ao vivo; `cancel` solta o microfone sem enviar.
+ */
 export function useVoiceCreate(onCreated?: () => void) {
   const { getToken } = useAuth();
   const { bumpUsage } = useDailify();
@@ -28,6 +31,10 @@ export function useVoiceCreate(onCreated?: () => void) {
   const [state, setState] = useState<"idle" | "recording" | "sending">("idle");
   const recorder = useRef<MediaRecorder | null>(null);
   const cap = useRef<ReturnType<typeof setTimeout>>();
+  // O pedido de permissão leva segundos; um segundo toque abriria outro microfone, que ninguém solta.
+  const starting = useRef(false);
+  const discard = useRef(false);
+  const [analyser, setAnalyser] = useState<AnalyserNode | null>(null);
 
   const send = async (audio: Blob) => {
     setState("sending");
@@ -66,7 +73,16 @@ export function useVoiceCreate(onCreated?: () => void) {
     recorder.current = null;
   };
 
+  const cancel = () => {
+    discard.current = true;
+    stop();
+  };
+
+  // A folha fechou (Esc, toque fora) no meio da gravação: descarta, não cria nada às cegas.
+  useEffect(() => cancel, []);
+
   const start = async () => {
+    if (starting.current || recorder.current) return;
     if (quotas.states.ai.exhausted) {
       toast(copy.voice.limitReached, {
         description: copy.voice.limitReachedHint,
@@ -76,11 +92,26 @@ export function useVoiceCreate(onCreated?: () => void) {
     }
 
     let stream: MediaStream;
+    starting.current = true;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
       toast.error(copy.voice.micDenied, { description: copy.voice.micDeniedHint });
       return;
+    } finally {
+      starting.current = false;
+    }
+
+    // A onda é enfeite: sem Web Audio a gravação segue igual, só sem ela.
+    let audio: AudioContext | undefined;
+    try {
+      audio = new AudioContext();
+      const node = audio.createAnalyser();
+      node.fftSize = 256;
+      audio.createMediaStreamSource(stream).connect(node);
+      setAnalyser(node);
+    } catch {
+      audio = undefined;
     }
 
     const mimeType = MIME_TYPES.find((t) => MediaRecorder.isTypeSupported(t));
@@ -90,8 +121,12 @@ export function useVoiceCreate(onCreated?: () => void) {
     rec.onstop = () => {
       // Solta o microfone: sem isso o indicador de gravação do navegador fica aceso.
       for (const track of stream.getTracks()) track.stop();
-      void send(new Blob(chunks, { type: rec.mimeType }));
+      void audio?.close();
+      setAnalyser(null);
+      if (discard.current) setState("idle");
+      else void send(new Blob(chunks, { type: rec.mimeType }));
     };
+    discard.current = false;
     rec.start();
     recorder.current = rec;
     setState("recording");
@@ -101,5 +136,5 @@ export function useVoiceCreate(onCreated?: () => void) {
     }, MAX_RECORDING_MS);
   };
 
-  return { state, start, stop };
+  return { state, start, stop, cancel, analyser };
 }

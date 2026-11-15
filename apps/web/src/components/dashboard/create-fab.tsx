@@ -24,7 +24,8 @@ const iconButton =
   "flex size-7 cursor-pointer items-center justify-center rounded-md border border-highlight bg-surface-panel text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground";
 
 interface CreateFabProps {
-  onSubmit: (values: ComposerValues) => void;
+  /** `false`: não criou — a folha reabre com o texto. */
+  onSubmit: (values: ComposerValues) => Promise<boolean>;
   submitting?: boolean;
   /** Dia vindo do calendário: abre a criação já nele. */
   day?: Date | null;
@@ -41,6 +42,8 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
   const [docked, setDocked] = useStoredFlag(DOCKED_KEY);
   // Desfixou: a folha fica aberta e some quando o mouse sai dela.
   const [closeOnLeave, setCloseOnLeave] = useState(false);
+  // A folha fecha no ⏎ (a tarefa já entrou otimista); se o servidor recusar, reabre com o texto.
+  const [retry, setRetry] = useState<string>();
   const desktop = useMediaQuery("(min-width: 768px)");
   const reduce = useReducedMotion();
   const fabRef = useRef<HTMLButtonElement>(null);
@@ -97,6 +100,7 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
   const changeOpen = (next: boolean) => {
     setOpen(next);
     if (!next) {
+      setRetry(undefined);
       setCloseOnLeave(false);
       onDayDone?.();
     }
@@ -119,8 +123,8 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
                 onCreated={onDayDone}
                 submitting={submitting}
                 onSubmit={(values) => {
-                  onSubmit(values);
                   onDayDone?.();
+                  return onSubmit(values);
                 }}
               />
             </motion.div>
@@ -206,12 +210,21 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
                 <motion.div {...content}>
                   <TaskComposer
                     large={!desktop}
+                    initialText={retry}
                     day={day}
                     onCreated={() => changeOpen(false)}
                     submitting={submitting}
                     onSubmit={(values, again) => {
-                      onSubmit(values);
-                      if (!again) changeOpen(false);
+                      const created = onSubmit(values);
+                      if (!again) {
+                        changeOpen(false);
+                        void created.then((ok) => {
+                          if (ok) return;
+                          setRetry(values.text);
+                          setOpen(true);
+                        });
+                      }
+                      return created;
                     }}
                   />
                 </motion.div>

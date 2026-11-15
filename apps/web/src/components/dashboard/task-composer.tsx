@@ -1,4 +1,4 @@
-import { FormEvent, useMemo, useState, type ReactNode } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
@@ -14,7 +14,7 @@ import {
   SquareIcon,
   XIcon,
 } from "lucide-react";
-import { motion } from "motion/react";
+import { motion, useReducedMotion } from "motion/react";
 
 import {
   TASK_LIMITS,
@@ -123,16 +123,72 @@ function Chip({
   );
 }
 
+const WAVE_BARS = 24;
+
+/**
+ * A onda ao vivo da gravação: o volume de cada quadro entra pela direita. Escreve direto no DOM —
+ * um render por quadro refaria o composer inteiro. Com movimento reduzido, fica parada.
+ */
+function VoiceWave({ analyser }: { analyser: AnalyserNode | null }): JSX.Element {
+  const bars = useRef<(HTMLSpanElement | null)[]>([]);
+  const reduce = useReducedMotion();
+
+  useEffect(() => {
+    if (!analyser || reduce) return;
+    const samples = new Uint8Array(analyser.fftSize);
+    const levels = new Array<number>(WAVE_BARS).fill(0);
+    let frame = requestAnimationFrame(function draw() {
+      analyser.getByteTimeDomainData(samples);
+      let sum = 0;
+      for (const sample of samples) sum += ((sample - 128) / 128) ** 2;
+      levels.shift();
+      // Fala normal fica perto de 0,1–0,25 de RMS; ×4 leva ela pro alto da barra.
+      levels.push(Math.min(1, Math.sqrt(sum / samples.length) * 4));
+      levels.forEach((level, i) => bars.current[i]?.style.setProperty("scale", `1 ${level}`));
+      frame = requestAnimationFrame(draw);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [analyser, reduce]);
+
+  return (
+    <motion.span
+      role="img"
+      aria-label={copy.voice.wave}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      transition={{ duration: duration.fast, ease: ease.out }}
+      className="flex h-6 shrink-0 items-center gap-0.5"
+    >
+      {Array.from({ length: WAVE_BARS }, (_, i) => (
+        <span
+          key={i}
+          ref={(el) => {
+            bars.current[i] = el;
+          }}
+          className="h-full min-h-1 w-0.5 scale-y-15 rounded-full bg-accent-primary"
+        />
+      ))}
+    </motion.span>
+  );
+}
+
 export interface ComposerValues {
   parsed: ParsedTask;
+  /** A frase como foi digitada, pra devolver ao campo se a criação falhar. */
+  text: string;
 }
 
 interface TaskComposerProps {
   submitting?: boolean;
-  /** `again`: ⇧⏎, criar e continuar — quem abriu a folha a mantém aberta. */
-  onSubmit: (values: ComposerValues, again: boolean) => void;
+  /**
+   * `again`: ⇧⏎, criar e continuar — quem abriu a folha a mantém aberta. O campo limpa na hora
+   * (a tarefa já entrou otimista); `false` devolve o texto, se o campo ainda estiver vazio.
+   */
+  onSubmit: (values: ComposerValues, again: boolean) => Promise<boolean>;
   /** Folha do mobile: título grande sem moldura, chips maiores e o enviar na linha deles. */
   large?: boolean;
+  /** Texto que volta ao campo quando a folha reabre depois de uma criação recusada. */
+  initialText?: string;
   /** Dia escolhido no calendário: vale quando a frase não cita um dia. */
   day?: Date | null;
   /** A voz ou a Mew criaram tarefas (direto no servidor): quem abriu a folha pode fechá-la. */
@@ -148,10 +204,11 @@ export function TaskComposer({
   submitting,
   onSubmit,
   large,
+  initialText = "",
   day,
   onCreated,
 }: TaskComposerProps): JSX.Element {
-  const [input, setInput] = useState("");
+  const [input, setInput] = useState(initialText);
   // Trechos de chips tirados: voltam pro título como texto. Valem pro texto atual (`remapSpans`).
   const [ignore, setIgnore] = useState<Span[]>([]);
   const [edits, setEdits] = useState<Edits>({});
@@ -230,7 +287,10 @@ export function TaskComposer({
       });
       return;
     }
-    onSubmit({ parsed }, again);
+    const text = input;
+    void onSubmit({ parsed, text }, again).then((ok) => {
+      if (!ok) setInput((current) => current || text);
+    });
     clear();
   };
 
@@ -275,7 +335,7 @@ export function TaskComposer({
       </button>
     );
 
-  const mic = voiceSupported() && (
+  const mic = online && voiceSupported() && (
     <button
       type="button"
       aria-label={listening ? copy.voice.stop : copy.voice.record}
@@ -283,7 +343,7 @@ export function TaskComposer({
       disabled={voice.state === "sending"}
       onClick={() => (listening ? voice.stop() : void voice.start())}
       className={cn(
-        "relative flex size-8.5 hit-target shrink-0 items-center justify-center rounded-xl transition-colors",
+        "relative flex size-8.5 hit-target shrink-0 items-center justify-center rounded-sm transition-colors",
         listening
           ? "bg-accent-primary text-primary-foreground hover:bg-accent-hover"
           : "text-muted-foreground hover:bg-surface-hover hover:text-foreground",
@@ -304,7 +364,7 @@ export function TaskComposer({
       type="submit"
       aria-label={copy.composer.submit}
       disabled={!canSubmit}
-      className="relative flex size-8.5 hit-target shrink-0 items-center justify-center rounded-xl bg-accent-primary text-primary-foreground transition-colors hover:bg-accent-hover disabled:bg-surface-hover disabled:text-muted-foreground"
+      className="relative flex size-8.5 hit-target shrink-0 items-center justify-center rounded-sm bg-accent-primary text-primary-foreground transition-colors hover:bg-accent-hover disabled:bg-surface-hover disabled:text-muted-foreground"
     >
       {submitting ? (
         <Loader2Icon className="size-4 animate-spin" />
@@ -323,7 +383,7 @@ export function TaskComposer({
     >
       <div
         className={cn(
-          "transition-colors",
+          "flex items-center gap-2 transition-colors",
           large
             ? "px-2 pt-2 pb-1"
             : "rounded-field border border-surface-line bg-surface-page px-3.5 py-3 focus-within:border-accent-primary",
@@ -354,10 +414,23 @@ export function TaskComposer({
           placeholder={listening ? copy.voice.listening : copy.composer.textPlaceholder}
           autoComplete="off"
           className={cn(
-            "w-full bg-transparent text-foreground placeholder:text-muted-foreground outline-none",
+            "min-w-0 flex-1 bg-transparent text-foreground placeholder:text-muted-foreground outline-none",
             large ? "text-2xl font-medium" : "text-base",
           )}
         />
+        {listening && (
+          <>
+            <VoiceWave analyser={voice.analyser} />
+            <button
+              type="button"
+              aria-label={copy.voice.cancel}
+              onClick={voice.cancel}
+              className="relative flex size-7 hit-target shrink-0 items-center justify-center rounded-xs text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
+            >
+              <XIcon className="size-4" aria-hidden="true" />
+            </button>
+          </>
+        )}
       </div>
 
       {/* Slots sempre montados, na mesma ordem: chip que some e aparece mexe o layout a cada tecla. */}

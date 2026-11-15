@@ -26,7 +26,7 @@ vi.mock("@/hooks/useCreateTask", () => ({
 import { CreateFab } from "./create-fab";
 
 const setup = () => {
-  const onSubmit = vi.fn();
+  const onSubmit = vi.fn().mockResolvedValue(true);
   render(<CreateFab onSubmit={onSubmit} />);
   // Radix modal põe pointer-events:none no body; sem isso o user-event recusa o unhover.
   return { onSubmit, user: userEvent.setup({ pointerEventsCheck: 0 }) };
@@ -156,6 +156,17 @@ describe("<CreateFab>", () => {
       expect.objectContaining({ parsed: expect.objectContaining({ text: "Comprar pão" }) }),
     );
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("⏎ que falha reabre a folha com o texto", async () => {
+    const { user, onSubmit } = setup();
+    onSubmit.mockResolvedValue(false);
+
+    await user.click(screen.getByRole("button", { name: "Nova tarefa" }));
+    await user.keyboard("Comprar pão amanhã{Enter}");
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("textbox")).toHaveValue("Comprar pão amanhã");
   });
 
   it("⇧⏎ cria, limpa o campo e mantém a folha aberta", async () => {
