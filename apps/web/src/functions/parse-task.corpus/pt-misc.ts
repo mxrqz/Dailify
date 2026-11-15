@@ -404,7 +404,7 @@ export default [
       null,
       { duration: "2h", note: "2h como duração; 02:00 não faz sentido" },
     ],
-    ["treino 6", "treino 6"],
+    ["treino 6", "treino 6", null, null, { unsure: ["ambiguous-number"] }],
     [
       "aniversário da Ana dia 3",
       "aniversário da Ana",

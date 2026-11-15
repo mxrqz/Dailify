@@ -52,6 +52,9 @@ function toAbsolute(candidate: string): string | null {
     const tld = host.split(".").pop() ?? "";
     if (!known && !TLDS.includes(tld)) return null;
     if (AMBIGUOUS_FILE_TLDS.includes(tld) && pathname === "/" && !search) return null;
+    // "update Monday.com board", "Booking.com": domínio nu com maiúscula é nome de produto
+    // escrito à mão — link colado vem em minúscula ou com caminho.
+    if (/^\p{Lu}/u.test(candidate) && pathname === "/" && !search) return null;
   }
 
   return withScheme;

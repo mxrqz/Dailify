@@ -64,7 +64,7 @@ const MEETING_RE =
   /\b(?:reuniao|meeting|call|aula|consulta|entrevista|plantao|turno|expediente|shift)\b/;
 
 const RANGE_RE = new RegExp(
-  String.raw`(?<![/:.,])\b(?:(das|da|do|de|from|between|entre)\s+)?(${CLOCK})(\s+(?:(as|a|ate|to|until|till|e|and)\s+)?)(${CLOCK})(?![\d/:])`,
+  String.raw`(?<![/:.,])\b(?:(das|da|do|de|from|between|entre)\s+)?(${CLOCK})(\s+(?:(as|ao|a|ate|to|until|till|e|and)\s+)?)(${CLOCK})(?![\d/:])`,
   "g",
 );
 
@@ -90,7 +90,6 @@ function parseRange(text: string, original: string): (ParsedDuration & { spans: 
         /[-–—]/.test(original.slice(sepStart, sepStart + sep.length)) &&
         !/\d\s*[-–—/]\s*$/.test(original.slice(0, index)) &&
         !/^\s*[-–—/]\s*\d/.test(original.slice(index + whole.length)) &&
-        !new RegExp(`\\b(?:${MONTH_RE})\\.?\\s*$`).test(text.slice(0, index)) &&
         (!bare || (a.hour <= 12 && b.hour <= 12));
     } else if (word === "e" || word === "and") {
       ok = prefix === "entre" || prefix === "between";
@@ -106,12 +105,13 @@ function parseRange(text: string, original: string): (ParsedDuration & { spans: 
       // Sem marca, "ate" e "de N a M" são contagem ("das 5 até 10", "páginas de 15 a 20").
       ok =
         !bare ||
-        ["as", "to", "until", "till"].includes(word) ||
+        ["as", "ao", "to", "until", "till"].includes(word) ||
         (word === "a" && (prefix !== "de" || MEETING_RE.test(text)));
     }
-    // "de 13 a 15 de dezembro" é intervalo de dias, não de horas.
+    // "de 13 a 15 de dezembro" é intervalo de dias, não de horas; "dec 3 às 10h" é dia e hora.
     if (
       !ok ||
+      new RegExp(`\\b(?:${MONTH_RE})\\.?\\s*$`).test(text.slice(0, index)) ||
       new RegExp(`^\\s+(?:de\\s+)?(?:${MONTH_RE})\\b`).test(text.slice(index + whole.length))
     ) {
       continue;
@@ -192,9 +192,16 @@ export function parseDuration(
     const spelled = !/^\d/.test(rawAmount) && (amount < 13 || amount > 23);
 
     const implausible = (amount >= 1 && amount <= 4) || amount >= 24;
+    // "estudar 1h hoje", "1h30 review on wed": o dia logo depois, ou os minutos colados, também fecham.
     const atEnd =
-      !/^hs?$/.test(unit) || /^[\s,.;!?]*$/.test(text.slice((hours.index ?? 0) + whole.length));
-    const otherTime = () => parseTime(mask(text, [spanOf(hours)]), zoned(), "other") !== null;
+      !/^hs?$/.test(unit) ||
+      andHalf !== undefined ||
+      rawMinutes !== undefined ||
+      new RegExp(`^(?:[\\s,.;!?]*$|\\s+(?:${DAY_WORD_RE}|on|every)\\b)`).test(
+        text.slice((hours.index ?? 0) + whole.length),
+      );
+    const otherTime = () =>
+      parseTime(mask(text, [spanOf(hours)]), zoned(), "other", false, false) !== null;
     if (prefix || spelled || (implausible && atEnd) || otherTime()) {
       const extra = andHalf ? 30 : suffixMinutes(rawMinutes);
       const result = found(hours, Math.round(amount * 60) + extra);
@@ -205,11 +212,12 @@ export function parseDuration(
   // 10 min · 30 minutos · quarenta minutos · 90 minutes
   const minutes = text.match(
     new RegExp(
-      `${NOT_DURATION}(?<!\\b(?:horas?|hours?)\\s+(?:e|and)\\s+)\\b${LASTS}(\\d{1,3}|${MINUTE_WORD_RE})\\s*${MINUTE_UNIT}\\b${NOT_FROM_NOW}`,
+      `${NOT_DURATION}(?<!\\b(?:horas?|hours?)\\s+(?:e|and)\\s+)\\b${LASTS}(?:(\\d{1,3}|${MINUTE_WORD_RE})\\s*${MINUTE_UNIT}|(?<!\\b(?:de|of)\\s+)(\\d{1,3})m(?!\\s+(?:de|of)\\b))\\b${NOT_FROM_NOW}`,
     ),
   );
   if (minutes) {
-    const raw = minutes[2].replace(/\s+/g, " ");
+    // "nap 20m": o "m" colado no número também é minuto — "cabo de 2m" e "5m de cabo" são metro.
+    const raw = (minutes[2] ?? minutes[3]).replace(/\s+/g, " ");
     return found(minutes, /^\d+$/.test(raw) ? Number(raw) : (MINUTE_WORDS[raw] ?? 0));
   }
 

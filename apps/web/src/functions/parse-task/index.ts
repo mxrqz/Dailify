@@ -3,7 +3,7 @@ import { parseLinks } from "../parse-links";
 import { zoned } from "../zone";
 import { parseDuration } from "./durations";
 import { BOUNDED_REPEAT_RE, UNSUPPORTED_REPEAT_RE, nextOccurrence, parseRepeat } from "./repeat";
-import { type Span, mask, mergeSpans } from "./spans";
+import { type Span, mask, mergeSpans, spanOf } from "./spans";
 import { cut, properNouns } from "./title";
 import { type Unsure, unsureOf } from "./unsure";
 import { WEEKDAY_RE, normalize, startOfDay } from "./vocab";
@@ -51,7 +51,10 @@ export interface ParsedTask {
 export function parseTaskText(input: string, now: Date = zoned(), keep: Span[] = []): ParsedTask {
   const normalized = normalize(input);
   const links = parseLinks(input);
-  const title = cut(input, links.spans);
+  // "lembrete: pagar luz amanhã": o rótulo de abertura sai do título junto com os links.
+  const label = input.match(/^\s*(?:lembrete|reminder|todo|to\s*do|tarefa|task)\s*:\s*/i);
+  const fixed = label ? [...links.spans, spanOf(label)] : links.spans;
+  const title = cut(input, fixed);
   const unsupported: ParsedTask = {
     text: title,
     date: null,
@@ -76,7 +79,7 @@ export function parseTaskText(input: string, now: Date = zoned(), keep: Span[] =
   if (UNSUPPORTED_REPEAT_RE.test(normalized)) return unsupported;
 
   // "youtu.be/15h30" não pode virar horário nem duração; "Sessão da Tarde" e "Dom Casmurro" também não.
-  const forDuration = mask(normalized, [...links.spans, ...properNouns(input), ...keep]);
+  const forDuration = mask(normalized, [...fixed, ...properNouns(input), ...keep]);
   let duration = parseDuration(forDuration, input);
 
   // A duração também sai da vista do parseWhen: o "1h" de "call de 1h hoje às 16h" casa como hora
@@ -109,7 +112,7 @@ export function parseTaskText(input: string, now: Date = zoned(), keep: Span[] =
   }
 
   const spans = mergeSpans([
-    ...links.spans,
+    ...fixed,
     ...(duration?.spans ?? []),
     ...(repeat?.spans ?? []),
     ...(when?.spans ?? []),

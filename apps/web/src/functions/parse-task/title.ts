@@ -9,7 +9,7 @@ const ORPHAN_PUNCT = /[,;:.!?]/;
 // ela aponta pro nada — perde o referente no fim ou no meio da frase, não importa o que vem depois.
 // Vale pro conector do tempo também: "até [sexta]", "essa [sexta]", "consulta dia [23/11]", "on [monday]".
 const ORPHAN_PREP =
-  /(?:^|\s)(no|na|nos|nas|em|pelo|pela|pelos|pelas|via|pro|pra|com|de|do|da|ate|até|essa|esse|esta|este|nesta|neste|nessa|nesse|dia|ao|à|a|o|the|on|by|this|at|in|until|before|antes|due)$/i;
+  /(?:^|\s)(no\s+m[aá]ximo|tipo\s+umas?|tipo|umas|no|na|nos|nas|em|pelo|pela|pelos|pelas|via|pro|pra|com|de|do|da|ate|até|essa|esse|esta|este|nesta|neste|nessa|nesse|dia|ao|à|a|o|the|on|by|this|at|in|until|before|antes|due)$/i;
 
 /**
  * Reconcilia só o que ficou colado nas duas pontas de UM corte — nunca varre o título inteiro.
@@ -27,6 +27,11 @@ function joinAcrossCut(left: string, right: string, isLast: boolean): string {
   // nada sobrou a esquerda: pontuacao orfa no comeco da frase nao tem o que separar
   if (!leftTrimmed && rightFirst && ORPHAN_PUNCT.test(rightFirst)) {
     return joinAcrossCut("", rightTrimmed.slice(1), isLast);
+  }
+
+  // "cancel [tomorrow]'s standup": o possessivo era do trecho cortado
+  if (leftTrimmed && /^['’]s\b/.test(rightTrimmed)) {
+    return joinAcrossCut(leftTrimmed, rightTrimmed.slice(2), isLast);
   }
 
   // "[meia hora] de caminhada": sem nada antes, o "de" ligava o corte ao resto
@@ -90,7 +95,7 @@ const CAPITALIZED_NAME_WORDS = new Set([
   ...["dom", "seg", "ter", "qua", "qui", "sex", "sab"],
   ...["janeiro", "fevereiro", "marco", "abril", "maio", "junho", "julho", "agosto"],
   ...["setembro", "outubro", "novembro", "dezembro"],
-  ...["manha", "tarde", "noite", "madrugada", "meio", "meia", "hoje", "amanha"],
+  ...["manha", "tarde", "noite", "madrugada", "meio", "meia", "hoje", "amanha", "horas", "hora"],
   ...[
     "morning",
     "afternoon",
@@ -124,8 +129,16 @@ export function properNouns(input: string): Span[] {
       capital: /^\p{Lu}/u.test(match[0]),
     };
   });
-  // Endereço com cara de data ou hora: "rua 7 de Setembro", "1600 Pennsylvania Ave".
+  // Endereço com cara de data ou hora: "rua 7 de Setembro", "1600 Pennsylvania Ave". Citação é
+  // texto literal: "mandar 'tudo certo pra amanhã?' pro João" não marca amanhã; "Monday.com" também
+  // (o `parseLinks` não lê domínio nu com maiúscula). "friday's offsite"
+  // e "black friday" são nome em qualquer caixa.
   const spans = [
+    ...input.matchAll(/(?<![\p{L}\p{N}])(['"“‘])[^'"”’\n]+['"”’](?![\p{L}\p{N}])/gu),
+    ...input.matchAll(/(?<![\p{L}\p{N}./])\p{Lu}[\p{L}\p{N}-]*\.[a-z]{2,}\b(?![./])/gu),
+    ...input.matchAll(
+      /\b(?:sunday|monday|tuesday|wednesday|thursday|friday|saturday)['’]s\b|\b(?:black\s+friday|cyber\s+monday|sunday\s+school)\b/giu,
+    ),
     ...input.matchAll(
       /\bfriday the 13th\b|\bcaf[eé] da manh[aã](?!\p{L})|\b(?:rua|r\.|av\.?|avenida|pra[cç]a|travessa|alameda|largo|estrada|rodovia)\s+\d{1,2}\s+de\s+\p{L}+/giu,
     ),

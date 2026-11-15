@@ -103,6 +103,14 @@ export const WEEKDAYS: Record<string, number> = {
   fri: 5,
   sat: 6,
   qta: 4,
+  // Abreviação pelas consoantes ("sxt", "qrta"); "tera" (de "tera feira") também é "terá".
+  sxt: 5,
+  sxta: 5,
+  qrt: 3,
+  qrta: 3,
+  qnt: 4,
+  qnta: 4,
+  tera: 2,
   sabdo: 6,
   segnda: 1,
   wensday: 3,
@@ -228,7 +236,8 @@ export function suffixMinutes(raw: string | undefined): number {
   return minutes !== undefined && minutes < 60 ? minutes : 0;
 }
 
-export const NOT_FROM_NOW = String.raw`(?!\s+from\s+now\b)`;
+// "uma hora dessas" é "algum dia", não 1 hora.
+export const NOT_FROM_NOW = String.raw`(?!\s+(?:from\s+now|dessas)\b)`;
 export const HOUR_UNIT = String.raw`(h|hs|hrs?|horas?|hours?)`;
 export const MINUTE_UNIT = String.raw`(?:min|mins|minutos?|minutes?)`;
 

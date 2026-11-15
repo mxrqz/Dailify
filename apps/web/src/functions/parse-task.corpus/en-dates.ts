@@ -93,7 +93,7 @@ export default [
     ["call mom tomorrow about the trip", "call mom about the trip", MON],
     ["plan trip next week", "plan trip", MON2, null, { alt: [{ day: SUN2 }] }],
     ["renew passport in 3 days", "renew passport", WED],
-    ["yesterday forgot to pay rent", "forgot to pay rent", YESTERDAY],
+    ["yesterday forgot to pay rent", "forgot to pay rent", YESTERDAY, null, { unsure: ["past"] }],
     ["clean the garage on the weekend", "clean the garage", SAT],
     [
       "submit report by end of week",
@@ -156,7 +156,7 @@ export default [
     ["pay bill on the 15th", "pay bill", TODAY],
     ["church sunday", "church", SUN2, null, { now: "2026-11-15 21:30" }],
     ["pay rent today", "pay rent", TODAY, null, { now: "2026-11-15 21:30" }],
-    ["return the book last friday", "return the book", "2026-11-13"],
+    ["return the book last friday", "return the book", "2026-11-13", null, { unsure: ["past"] }],
     ["gym at 8", "gym", MON, "08:00", { now: "2026-11-15 21:30" }],
     ["call John at 9", "call John", MON, "09:00", { now: "2026-11-15 21:30" }],
     ["meeting today at 9am", "meeting", TODAY, "09:00", { note: "today explícito + hora passada" }],

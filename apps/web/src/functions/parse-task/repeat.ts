@@ -12,7 +12,7 @@ import {
   startOfDay,
 } from "./vocab";
 
-const WEEKDAY_ITEM = `(?:${WEEKDAY_RE})s?(?:\\s*feiras?)?\\b`;
+const WEEKDAY_ITEM = `(?:${WEEKDAY_RE})s?(?:(?<!sabados?|domingos?)\\s*feiras?)?\\b`;
 // Plural só dos nomes inteiros: "tues"/"thurs" já terminam em s.
 const PLURAL_WEEKDAY = `(?:${alternation(
   Object.keys(WEEKDAYS).filter((key) => key.length > 3 && !["thur", "thurs", "tues"].includes(key)),
@@ -109,8 +109,9 @@ const RECURRENCES: [RegExp, (match: RegExpMatchArray, now: Date) => Exclude<Repe
 
 // "take meds daily", e não "daily standup"/"weekly report": o advérbio inglês só vale no fim da
 // frase ou antes da hora.
+// "daily journaling" abre com o hábito (gerúndio), que não é nome de reunião como "daily meeting".
 const ADVERB_RE =
-  /(?<=\S\s+)\b(daily|weekly|monthly|yearly|annually)\b(?=\s*$|\s*[,.;!]|\s+(?:at|as|on|@|\d))/;
+  /(?<=\S\s+)\b(daily|weekly|monthly|yearly|annually)\b(?=\s*$|\s*[,.;!]|\s+(?:at|as|on|@|\d))|^\s*(daily|weekly|monthly)\b(?=\s+[a-z]+ing\b)(?!\s+(?:meeting|briefing|evening|morning|building|wedding)\b)/;
 
 // todas as manhãs · toda noite · every morning: diária com a hora do período
 const DAILY_PERIOD_RE =
@@ -147,7 +148,7 @@ export function parseRepeat(
 
   const adverb = text.match(ADVERB_RE);
   if (adverb) {
-    const word = adverb[1];
+    const word = adverb[1] ?? adverb[2];
     return hit(
       adverb,
       word === "daily"
@@ -230,7 +231,7 @@ const UNIT = String.raw`(?:h|hrs?|horas?|hours?|min|minutos?|minutes?|dias?|days
 export const UNSUPPORTED_REPEAT_RE = new RegExp(
   [
     String.raw`\b(?:de|a\s+cada)\s+\d{1,3}\s+em\s+\d{1,3}\s+${UNIT}\b`,
-    String.raw`\b(?:a\s+)?cada\s+${COUNT}\s+${UNIT}\b|\bevery\s+${COUNT}\s+${UNIT}\b|\bevery\s+other\s+(?:${WEEKDAY_RE})\b`,
+    String.raw`\b(?:a\s+)?cada\s+${COUNT}\s*${UNIT}\b|\bevery\s+${COUNT}\s*${UNIT}\b|\bevery\s+(?:other|second|third)\s+(?:${WEEKDAY_RE})\b`,
     String.raw`\b(?:quinzenal(?:mente)?|bi\s*(?:weekly|monthly)|fortnightly|(?:bi|tri)mestralmente|semestralmente)\b`,
     String.raw`\bdia\s+sim,?\s+dia\s+nao\b|\bdias\s+alternados\b|\b(?:nos\s+)?dias\s+(?:pares|impares)\b|\b(?:on\s+)?(?:even|odd)\s+days\b`,
     String.raw`\b(?:\d|${HOUR_WORD_RE})\s*(?:x|vezes)\s+(?:por|ao|na)\s+(?:dia|semana|mes|ano)\b|\b(?:twice|\w+\s+times|\d\s*x)\s+(?:a|per)\s+(?:day|week|month|year)\b`,

@@ -48,21 +48,21 @@ export const MONTH_FIRST_RE = alternation(
 );
 
 const WEEKDAY_MATCH_RE = new RegExp(
-  `\\b(${WEEKDAY_RE})(?:\\s*feira)?\\b\\.?(?!\\s+(?:via|chamada|vez|opcao|mao)\\b)`,
+  `\\b(${WEEKDAY_RE})(?:(?<!sabado|domingo)\\s*feira)?\\b\\.?(?!\\s+(?:via|chamada|vez|opcao|mao)\\b)`,
   "g",
 );
 // Abreviação que também é palavra ("ter aula", "sex education", "sun cream", "buy wed dress") só
 // conta perto de uma preposição, de uma hora ou no fim da frase.
-const AMBIGUOUS_WEEKDAYS = ["ter", "sex", "dom", "sab", "qua", "seg", "sun", "wed", "sat"];
+const AMBIGUOUS_WEEKDAYS = ["ter", "tera", "sex", "dom", "seg", "sun", "wed", "sat"];
 const DAY_BEFORE_RE =
   /\b(?:na|no|nesta|neste|nessa|nesse|essa|esse|esta|este|ate|proxim[ao]|prox|toda|todo|on|by|this|next|every|each|until|before)\s+$/;
 export const DAY_AFTER_RE =
-  /^(?:\s*feira|\s*$|\s*[,.]|\s+\d|\s+(?:as|at|am|pm|que\s+vem|de\s+(?:manha|tarde|noite)|morning|afternoon|evening|night|noon|meio\s*dia)\b)/;
+  /^(?:\s*feira|\s*$|\s*[,.]|\s+\d|\s+(?:as|at|am|pm|(?:que|q)\s+vem|de\s+(?:manha|tarde|noite)|morning|afternoon|evening|night|noon|meio\s*dia)\b)/;
 // "ter levar o dog", "sex entregar relatório": abrindo a frase antes de um verbo no infinitivo.
 const DAY_THEN_VERB_RE = /^\s+[a-z]{2,}(?:ar|er|ir)\b/;
 
 function weekdayInContext(text: string, match: RegExpMatchArray): boolean {
-  if (!AMBIGUOUS_WEEKDAYS.includes(match[1])) return true;
+  if (!AMBIGUOUS_WEEKDAYS.includes(match[1]) || /feira/.test(match[0])) return true;
   const [start, end] = spanOf(match);
   const after = text.slice(end);
   return (
@@ -88,7 +88,7 @@ function withWeekday(text: string, match: RegExpMatchArray, date: Date): Hit<Dat
 /** `weekday`: veio de um dia da semana, que pula uma semana se hoje já passou da hora. */
 export function parseDay(text: string, now: Date): (Hit<Date> & { weekday?: boolean }) | null {
   const today = text.match(
-    /\b(?:ainda\s+|later\s+)?(?<!\bfrom\s+)(?:hoje|hj|today|2day)(?:\s+mesmo)?\b|\b(?:daqui\s+a\s+pouco|in\s+a\s+bit)\b/,
+    /\b(?:ainda\s+|later\s+)?(?<!\bfrom\s+)(?:hoje|hj|today|2day)(?:\s+(?:mesmo|ainda))?\b|\b(?:daqui\s+a\s+pouco|in\s+a\s+bit)\b/,
   );
   if (today) return hit(today, startOfDay(now));
 
@@ -281,6 +281,8 @@ export function parseDay(text: string, now: Date): (Hit<Date> & { weekday?: bool
     const weekFrom = before(/\b(?:a|one)\s+week\s+from\s+$/);
     after(/^\s+(?:da|dessa|desta|nesta|nessa)\s+(?:proxima\s+)?semana(?:\s+(?:que|q)\s+vem)?\b/);
     before(/\b(?:no\s+maximo\s+ate|no\s+later\s+than)\s+$/);
+    // "semana que vem na segunda": a semana vem antes do dia.
+    before(/\b(?:(?:n?a\s+)?semana\s+(?:que|q)\s+vem|next\s+week)\s+(?:n[ao]\s+|on\s+)?$/);
     // "próxima terça" pula pra semana seguinte; "terça" seca é a mais próxima — mas o span
     // sempre inclui a pista de "próxima"/"que vem" quando ela apareceu, senão sobra no título.
     const next = text.match(NEXT_RE);

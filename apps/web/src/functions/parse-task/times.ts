@@ -118,7 +118,10 @@ function periodHour(text: string): Hit<number> | null {
     // "amanhã cedo" — "dormir cedo" é título.
     [/\bcedinho\b|\bearly(?=\s+tomorrow\b)/, 7],
     [/(?<=\b(?:amanha|hoje)\s+)cedo\b/, 8],
-    [new RegExp(`(?<=\\b(?:tomorrow|today|${WEEKDAY_RE})\\s+)night\\b`), PERIOD_HOURS.evening],
+    [
+      new RegExp(`(?<=\\b(?:tomorrow|today|${WEEKDAY_RE})\\s+)(?:night|nite)\\b`),
+      PERIOD_HOURS.evening,
+    ],
     // "Sat am", "tmrw pm": sem número, o am/pm colado no dia é o período.
     [new RegExp(`(?<=\\b(?:${DAY_WORD_RE})\\s+)am\\b`), PERIOD_HOURS.morning],
     [new RegExp(`(?<=\\b(?:${DAY_WORD_RE})\\s+)pm\\b`), PERIOD_HOURS.afternoon],
@@ -149,6 +152,8 @@ export function parseTime(
   now: Date,
   base: Base,
   literalTime = false,
+  /** Falso: só relógio — "à noite" sozinho não conta como outra hora. */
+  periods = true,
 ): Hit<Time> | null {
   // daqui a 2 horas · in 90 minutes · em meia hora · daqui a 1h30 · in an hour and a half — `days`
   // porque "em 24 horas" cai amanhã na mesma hora
@@ -328,6 +333,7 @@ export function parseTime(
   }
 
   // "amanhã de manhã": o período é a única pista de horário
+  if (!periods) return null;
   const period = periodHour(text);
   return period === null ? null : { value: { hour: period.value, minute: 0 }, spans: period.spans };
 }
