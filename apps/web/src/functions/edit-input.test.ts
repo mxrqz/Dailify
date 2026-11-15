@@ -2,8 +2,9 @@ import { describe, expect, it } from "vitest";
 
 import type { TaskFormValues } from "@/components/dashboard/task-form";
 import { editTaskInput } from "./edit-input";
+import { zonedAt } from "./zone";
 
-const now = new Date(2026, 9, 21, 14, 0); // qua 21/out 14:00
+const now = zonedAt(2026, 9, 21, 14, 0); // qua 21/out 14:00
 const values: TaskFormValues = {
   title: "Pagar boleto",
   date: new Date(2026, 9, 22, 15, 30),

@@ -9,3 +9,4 @@ export * from "./timezone";
 export * from "./period";
 export * from "./parse-task";
 export * from "./parse-links";
+export * from "./compose-input";

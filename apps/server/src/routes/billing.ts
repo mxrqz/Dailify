@@ -46,7 +46,8 @@ billing.get("/permissions", requireAuth, async (c) => {
 billing.post("/billing/checkout", requireAuth, rateLimit("API_LIMITER"), async (c) => {
   if (!c.env.STRIPE_SECRET_KEY) return fail(c, 503, "Billing não configurado");
   const { productName } = await c.req.json<{ productName?: string }>();
-  if (!productName || !isProductName(c.env, productName)) return fail(c, 400, "Unknown productName");
+  if (!productName || !isProductName(c.env, productName))
+    return fail(c, 400, "Unknown productName");
 
   const userId = c.get("userId");
   const user = await clerk(c.env).users.getUser(userId);
@@ -133,7 +134,11 @@ billing.post("/webhooks/stripe", async (c) => {
     const sub = event.data.object;
     const clerkUserId = sub.metadata.clerkUserId;
     if (typeof clerkUserId === "string") {
-      await updateUserRole(c.env, { clerkUserId, role: "free", stripeCustomerId: customerId(sub.customer) });
+      await updateUserRole(c.env, {
+        clerkUserId,
+        role: "free",
+        stripeCustomerId: customerId(sub.customer),
+      });
     }
   } else if (event.type === "customer.subscription.updated") {
     const sub = event.data.object;

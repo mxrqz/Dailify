@@ -65,7 +65,9 @@ describe("POST /billing/checkout", () => {
       emailAddresses: [{ id: "e1", emailAddress: "a@b.com" }],
       primaryEmailAddressId: "e1",
     });
-    stripeMock.checkout.sessions.create.mockResolvedValue({ url: "https://checkout.stripe.com/xyz" });
+    stripeMock.checkout.sessions.create.mockResolvedValue({
+      url: "https://checkout.stripe.com/xyz",
+    });
 
     const res = await post({ productName: "pro" });
     expect(res.status).toBe(200);
@@ -88,7 +90,9 @@ describe("POST /billing/checkout", () => {
       emailAddresses: [],
       primaryEmailAddressId: null,
     });
-    stripeMock.checkout.sessions.create.mockResolvedValue({ url: "https://checkout.stripe.com/xyz" });
+    stripeMock.checkout.sessions.create.mockResolvedValue({
+      url: "https://checkout.stripe.com/xyz",
+    });
 
     await post({ productName: "pro" }, { Origin: "https://mewki.mxrqz.com" });
     await post({ productName: "pro" }, { Origin: "https://evil.example" });
@@ -107,7 +111,9 @@ describe("POST /billing/checkout", () => {
       primaryEmailAddressId: null,
     });
     stripeMock.subscriptions.list.mockResolvedValue({ data: [{ id: "sub_1" }] });
-    stripeMock.billingPortal.sessions.create.mockResolvedValue({ url: "https://billing.stripe.com/p" });
+    stripeMock.billingPortal.sessions.create.mockResolvedValue({
+      url: "https://billing.stripe.com/p",
+    });
 
     const res = await post({ productName: "max-year" });
     expect(res.status).toBe(200);
@@ -139,7 +145,9 @@ describe("GET /billing/portal", () => {
       emailAddresses: [],
       primaryEmailAddressId: null,
     });
-    stripeMock.billingPortal.sessions.create.mockResolvedValue({ url: "https://billing.stripe.com/p" });
+    stripeMock.billingPortal.sessions.create.mockResolvedValue({
+      url: "https://billing.stripe.com/p",
+    });
     const res = await app.request("/billing/portal", {}, env);
     expect(res.status).toBe(200);
     expect(await res.json()).toEqual({ url: "https://billing.stripe.com/p" });
@@ -158,6 +166,8 @@ describe("CORS", () => {
     for (const o of ["https://dailify.mxrqz.com", "https://mewki.mxrqz.com"]) {
       expect((await preflight(o)).headers.get("access-control-allow-origin")).toBe(o);
     }
-    expect((await preflight("https://evil.example")).headers.get("access-control-allow-origin")).toBeNull();
+    expect(
+      (await preflight("https://evil.example")).headers.get("access-control-allow-origin"),
+    ).toBeNull();
   });
 });

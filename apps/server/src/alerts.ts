@@ -36,9 +36,7 @@ export async function dispatchAlerts(env: Env, now: number = Date.now()): Promis
   const outgoing = [...single.map(toOutgoing), ...recurring.map((r) => r.outgoing)];
   if (!outgoing.length) return 0;
 
-  const subscriptions = await subscriptionsFor(env.DB, [
-    ...new Set(outgoing.map((o) => o.userId)),
-  ]);
+  const subscriptions = await subscriptionsFor(env.DB, [...new Set(outgoing.map((o) => o.userId))]);
   let sent = 0;
 
   for (const alert of outgoing) {

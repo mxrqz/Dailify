@@ -111,7 +111,13 @@ describe("GET /billing/invoices", () => {
       items: { data: [{ price: { id: "price_max_year" } }] },
       default_payment_method: {
         type: "card",
-        card: { brand: "mastercard", last4: "1111", exp_month: 3, exp_year: 2031, wallet: { type: "apple_pay" } },
+        card: {
+          brand: "mastercard",
+          last4: "1111",
+          exp_month: 3,
+          exp_year: 2031,
+          wallet: { type: "apple_pay" },
+        },
       },
     });
 

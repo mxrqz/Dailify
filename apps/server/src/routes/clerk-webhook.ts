@@ -14,7 +14,10 @@ function eventOf(body: string): { type?: string; userId?: string } {
     const type = Reflect.get(parsed, "type");
     const data = Reflect.get(parsed, "data");
     const id = typeof data === "object" && data !== null ? Reflect.get(data, "id") : undefined;
-    return { type: typeof type === "string" ? type : undefined, userId: typeof id === "string" ? id : undefined };
+    return {
+      type: typeof type === "string" ? type : undefined,
+      userId: typeof id === "string" ? id : undefined,
+    };
   } catch {
     return {};
   }
@@ -28,11 +31,15 @@ clerkWebhook.post("/webhooks/clerk", async (c) => {
   if (!c.env.CLERK_WEBHOOK_SECRET) return fail(c, 503, "Webhook não configurado");
 
   const body = await c.req.text();
-  const valid = await verifySvix(c.env.CLERK_WEBHOOK_SECRET, {
-    id: c.req.header("svix-id"),
-    timestamp: c.req.header("svix-timestamp"),
-    signature: c.req.header("svix-signature"),
-  }, body);
+  const valid = await verifySvix(
+    c.env.CLERK_WEBHOOK_SECRET,
+    {
+      id: c.req.header("svix-id"),
+      timestamp: c.req.header("svix-timestamp"),
+      signature: c.req.header("svix-signature"),
+    },
+    body,
+  );
   if (!valid) return fail(c, 400, "Invalid signature");
 
   const { type, userId } = eventOf(body);

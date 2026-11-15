@@ -17,7 +17,9 @@ function field(o: object, k: string): unknown {
 
 /** A chave pública VAPID não é segredo — o browser precisa dela para se inscrever. */
 push.get("/push/key", (c) =>
-  c.env.VAPID_PUBLIC_KEY ? c.json({ key: c.env.VAPID_PUBLIC_KEY }) : fail(c, 503, "Push não configurado"),
+  c.env.VAPID_PUBLIC_KEY
+    ? c.json({ key: c.env.VAPID_PUBLIC_KEY })
+    : fail(c, 503, "Push não configurado"),
 );
 
 push.get("/push/subscription", requireAuth, async (c) =>

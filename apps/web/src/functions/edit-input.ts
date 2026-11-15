@@ -1,14 +1,14 @@
-import type { TaskInput } from "@dailify/shared";
+import type { TZDate } from "@date-fns/tz";
+import { undatedReminder, type TaskInput } from "@dailify/shared";
 
 import type { TaskFormValues } from "@/components/dashboard/task-form";
-import { undatedReminder } from "./compose-input";
 
 /**
  * O que o formulário de edição grava. Sem horário vai para Sem data: com lembrete às 09:00 do dia
  * escolhido, ou sem lembrete (`date` = agora, só ordena a lista). O alerta da agenda fica com quem
  * chama, que conhece a tarefa original.
  */
-export function editTaskInput(values: TaskFormValues, now: Date): Partial<TaskInput> {
+export function editTaskInput(values: TaskFormValues, now: TZDate): Partial<TaskInput> {
   const base = {
     title: values.title,
     duration: values.duration,

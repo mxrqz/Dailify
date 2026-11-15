@@ -10,14 +10,8 @@ export const DEFAULT_WEEK_START: WeekStart = 1;
 export const PERIOD_ROLLOVER_HOUR = 6;
 
 export function isWeekStart(value: unknown): value is WeekStart {
-  return (
-    typeof value === "number" &&
-    Number.isInteger(value) &&
-    value >= 0 &&
-    value <= 6
-  );
+  return typeof value === "number" && Number.isInteger(value) && value >= 0 && value <= 6;
 }
-
 
 /**
  * Início (às 6h, no fuso) do período de recorrência que contém `now`. Com `every` > 1 o período
@@ -44,9 +38,7 @@ export function periodStart(
   else if (typeof repeat === "object") {
     const weekday = new Date(Date.UTC(year, month, day)).getUTCDay();
     // Date.UTC normaliza dia <= 0 para o mês anterior.
-    const d = new Date(
-      Date.UTC(year, month, day - ((weekday - weekStart + 7) % 7)),
-    );
+    const d = new Date(Date.UTC(year, month, day - ((weekday - weekStart + 7) % 7)));
     start = {
       year: d.getUTCFullYear(),
       month: d.getUTCMonth(),
@@ -72,14 +64,15 @@ export function periodStart(
         ? Date.UTC(start.year, start.month - back, 1)
         : repeat === "Yearly"
           ? Date.UTC(start.year - back, 0, 1)
-          : Date.UTC(start.year, start.month, start.day - back * (typeof repeat === "object" ? 7 : 1)),
+          : Date.UTC(
+              start.year,
+              start.month,
+              start.day - back * (typeof repeat === "object" ? 7 : 1),
+            ),
     );
     start = { year: d.getUTCFullYear(), month: d.getUTCMonth(), day: d.getUTCDate() };
   }
-  return zonedEpoch(
-    { ...start, hour: PERIOD_ROLLOVER_HOUR, minute: 0, second: 0 },
-    timeZone,
-  );
+  return zonedEpoch({ ...start, hour: PERIOD_ROLLOVER_HOUR, minute: 0, second: 0 }, timeZone);
 }
 
 /** Alguma conclusão cai no período corrente? `false` para tarefa sem repetição. */

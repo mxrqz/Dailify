@@ -135,11 +135,7 @@ function periodWordHour(word: string): number {
 /** Recorrência no texto já normalizado; sem gatilho ("toda", "every", "diariamente"…) é `null`.
  * `hour` vem de "todas as manhãs": a série diz a hora quando o texto não diz. `original` (o input
  * antes do normalize) só serve pro traço de "mon-fri". */
-export function parseRepeat(
-  text: string,
-  now: TZDate,
-  original = text,
-): RepeatHit | null {
+export function parseRepeat(text: string, now: TZDate, original = text): RepeatHit | null {
   const dashed = text.match(new RegExp(`\\b(${WEEKDAY_RE}) (${WEEKDAY_RE})\\b`));
   if (dashed && /[-–—]/.test(original[(dashed.index ?? 0) + dashed[1].length])) {
     const [from, to] = [WEEKDAYS[dashed[1]], WEEKDAYS[dashed[2]]];
@@ -218,7 +214,10 @@ const count = (raw: string) => (raw === "other" ? 2 : (HOUR_WORDS[raw] ?? Number
 
 // "toda semana" com N: a cada 2 semanas · de 15 em 15 dias · dia sim, dia não · quinzenal ·
 // every other monday. Hora (de 8 em 8 horas) e "a cada 2 dias úteis" ficam pro UNSUPPORTED_REPEAT_RE.
-const INTERVALS: [RegExp, (match: RegExpMatchArray, now: Date) => [Exclude<Repeat, "Off">, number]][] = [
+const INTERVALS: [
+  RegExp,
+  (match: RegExpMatchArray, now: Date) => [Exclude<Repeat, "Off">, number],
+][] = [
   [
     new RegExp(String.raw`\b(?:de|a\s+cada)\s+(\d{1,3})\s+em\s+\1\s+${INTERVAL_UNIT}`),
     (m, now) => [unitRepeat(m[2], now), Number(m[1])],
@@ -251,7 +250,10 @@ const INTERVALS: [RegExp, (match: RegExpMatchArray, now: Date) => [Exclude<Repea
     ),
     () => ["Daily", 2],
   ],
-  [new RegExp(String.raw`\b${EVERY_PREFIX}mes\s+sim,?\s+mes\s+nao\b|\bbimestralmente\b`), () => ["Monthly", 2]],
+  [
+    new RegExp(String.raw`\b${EVERY_PREFIX}mes\s+sim,?\s+mes\s+nao\b|\bbimestralmente\b`),
+    () => ["Monthly", 2],
+  ],
   [
     /\btrimestralmente\b|(?<=\S\s+)\bquarterly\b(?=\s*$|\s*[,.;!]|\s+(?:at|as|on|@|\d))|\bevery\s+quarter\b/,
     () => ["Monthly", 3],
@@ -270,7 +272,8 @@ export function parseInterval(text: string, now: Date): RepeatHit | null {
     // "the first of every other month", "última sexta de cada 2 meses": dia ordinal por extenso
     // não cabe no `Repeat`, e o UNSUPPORTED_REPEAT_RE ainda vê o intervalo.
     if (ORDINAL_OF_EVERY_RE.test(text)) return null;
-    let [value, every] = read(match, now);
+    const [parsed, every] = read(match, now);
+    let value = parsed;
     if (!Number.isInteger(every) || every < 1 || every > 365) return null;
     const extra: Span[] = [];
     // "a cada 2 semanas na segunda e quarta": os dias colados são os da série.

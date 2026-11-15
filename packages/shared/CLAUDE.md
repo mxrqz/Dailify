@@ -17,6 +17,9 @@ parser. Consumed as TS source (`exports` → `./src/index.ts`, no build step); k
 - **`parse-task/`** + **`parse-links.ts`** — o parser local de frases (`parseTaskText(input, now,
   { ignore })`), usado pelo composer do web e pela voz do servidor. `globals.d.ts` declara o pouco
   de host que ele usa (`URL`, `console`) sem puxar o lib DOM.
+- **`compose-input.ts`** — `composeTaskInput` (frase lida → `Task` sem id) e `undatedReminder`: hora
+  vai pra agenda, dia sem hora vira Sem data com lembrete às 09:00, nada vira Sem data. Composer do
+  web e voz do servidor (`draftToTask`) usam a mesma; o fuso é o do `now` (`TZDate`).
 
 ## Invariants that bite if ignored
 

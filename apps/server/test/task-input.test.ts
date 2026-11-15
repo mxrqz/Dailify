@@ -109,6 +109,8 @@ describe("repeatEvery", () => {
 
   it("recusa 1, 366, fração e string", () => {
     for (const repeatEvery of [1, 0, 366, 2.5, "2"])
-      expect(errorOf(parseTaskFields({ repeatEvery }, { partial: true }))).toBe("invalid repeatEvery");
+      expect(errorOf(parseTaskFields({ repeatEvery }, { partial: true }))).toBe(
+        "invalid repeatEvery",
+      );
   });
 });

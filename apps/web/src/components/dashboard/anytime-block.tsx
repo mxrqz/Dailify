@@ -1,6 +1,6 @@
 import { useState, type DragEvent, type FormEvent, type ReactNode } from "react";
 import { Bell, Plus, RepeatIcon } from "lucide-react";
-import { PERIOD_ROLLOVER_HOUR, parseTaskText, type Task } from "@dailify/shared";
+import { DEFAULT_HOUR, PERIOD_ROLLOVER_HOUR, parseTaskText, type Task } from "@dailify/shared";
 
 import { ClockCheck } from "@/components/clock-check";
 import { useDailify } from "@/components/dailifyContext";
@@ -13,7 +13,6 @@ import { SwipeActions } from "@/components/dashboard/swipe-actions";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
-import { DEFAULT_HOUR } from "@/functions/compose-input";
 import { repeatLabel } from "@/functions/repeat-label";
 import { pendingUndated, splitUndated } from "@/functions/undated";
 import { useCreateTask } from "@/hooks/useCreateTask";

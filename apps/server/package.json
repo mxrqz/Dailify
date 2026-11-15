@@ -7,7 +7,10 @@
     "deploy": "CI=1 wrangler d1 migrations apply dailify --remote && wrangler deploy",
     "vapid": "bun run scripts/vapid.ts",
     "test": "vitest run",
-    "check": "tsc --noEmit && vitest run"
+    "lint": "eslint src test",
+    "format": "prettier --write src test",
+    "format:check": "prettier --check src test",
+    "check": "prettier --check src test && eslint src test && tsc --noEmit && vitest run"
   },
   "dependencies": {
     "@clerk/backend": "^3.15.0",

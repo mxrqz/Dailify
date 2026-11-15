@@ -58,9 +58,9 @@ bun install
 bun run dev           # vite dev server
 bun run build         # tsc + vite build
 bun run test          # vitest (run once)
-bun --filter '@dailify/web' lint     # eslint
-bun --filter '@dailify/web' format   # prettier --write src
-bun run check         # format:check + lint + typecheck + test (full gate)
+bun run lint          # eslint, every package
+bun run format        # prettier --write, every package
+bun run check         # format:check + lint + typecheck + test, every package (full gate)
 ```
 
 ## Monorepo
@@ -107,8 +107,11 @@ Area-specific guidance lives in nested `CLAUDE.md` files (auto-loaded when you w
 
 - **No `as` type assertions.** Use type guards or proper types. `as const` is fine. Enforced as
   an ESLint *error* (bd issue `aqa`).
-- **Formatting: Prettier** (`.prettierrc`, `printWidth: 100`). Run `bun --filter '@dailify/web'
-  format` before committing; `bun run check` is the full gate (format + lint + typecheck + test).
+- **Formatting: Prettier** (root `.prettierrc.json`, `printWidth: 100`, shared by every package).
+  Run `bun run format` before committing; `bun run check` is the full gate (format + lint +
+  typecheck + test). ESLint: `apps/web/eslint.config.js` for the web, root `eslint.config.js` for
+  `packages/shared` and `apps/server` (its deps live in the root because `apps/server` is on TS 7,
+  which `typescript-eslint` can't load).
 - **Design tokens — no arbitrary values, ever.** This covers colors AND radii, and any other design
   value with a token. `rounded-[17px]`, `bg-[#151515]`, `border-[#242424]` are all defects: if a
   token fits, use it; if none fits, **add one**. Everything lives in `apps/web/src/global.css`:
