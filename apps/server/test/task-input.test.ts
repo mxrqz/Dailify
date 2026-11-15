@@ -98,3 +98,17 @@ describe("parseTaskFields — undated", () => {
     if ("fields" in r) expect("undated" in r.fields).toBe(false);
   });
 });
+
+describe("repeatEvery", () => {
+  it("aceita inteiro 2..365 e null (volta a 1)", () => {
+    const r = parseTaskFields({ repeatEvery: 2 }, { partial: true });
+    if ("fields" in r) expect(r.fields.repeatEvery).toBe(2);
+    const cleared = parseTaskFields({ repeatEvery: null }, { partial: true });
+    expect("fields" in cleared && "repeatEvery" in cleared.fields).toBe(true);
+  });
+
+  it("recusa 1, 366, fração e string", () => {
+    for (const repeatEvery of [1, 0, 366, 2.5, "2"])
+      expect(errorOf(parseTaskFields({ repeatEvery }, { partial: true }))).toBe("invalid repeatEvery");
+  });
+});

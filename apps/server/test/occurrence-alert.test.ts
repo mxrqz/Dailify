@@ -87,3 +87,15 @@ describe("dueOccurrenceAlert", () => {
     expect(dueOccurrenceAlert({ ...daily, alert: undefined }, null, SP, Date.now(), GRACE)).toBeNull();
   });
 });
+
+describe("dueOccurrenceAlert com repeatEvery", () => {
+  const everyOther: Task = { ...daily, id: "s2", repeatEvery: 2 };
+
+  it("dispara no dia da fase e cala no dia de folga", () => {
+    // 01/05 + 2k: o dia 21 é da série, o 20 não.
+    expect(dueOccurrenceAlert(everyOther, null, SP, Date.UTC(2026, 4, 21, 11, 52), GRACE)).toBe(
+      Date.UTC(2026, 4, 21, 11, 50),
+    );
+    expect(dueOccurrenceAlert(everyOther, null, SP, Date.UTC(2026, 4, 20, 11, 52), GRACE)).toBeNull();
+  });
+});

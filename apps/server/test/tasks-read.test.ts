@@ -75,3 +75,27 @@ describe("GET /tasks?tz — fuso do cliente", () => {
     expect(res.status).toBe(200);
   });
 });
+
+describe("GET /tasks — repeatEvery", () => {
+  it("expande a cada 2 semanas e devolve o campo", async () => {
+    await insertTask(env.DB, "u1", {
+      id: "biweekly",
+      title: "Faxina",
+      date: Date.UTC(2026, 1, 2, 12), // seg 02/02 09:00 em São Paulo
+      duration: "1h",
+      priority: 0,
+      repeat: { Weekly: ["Monday"] },
+      repeatEvery: 2,
+      completed: [],
+    });
+
+    const res = await app.request("/tasks?month=2026-02&tz=America%2FSao_Paulo", {}, env);
+    const { tasks } = await res.json<{ tasks: Task[] }>();
+    const days = tasks
+      .filter((t) => t.id === "biweekly")
+      .map((t) => new Date(t.date).getUTCDate())
+      .sort((a, b) => a - b);
+    expect(days).toEqual([2, 16]);
+    expect(tasks.find((t) => t.id === "biweekly")?.repeatEvery).toBe(2);
+  });
+});

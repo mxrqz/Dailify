@@ -275,3 +275,48 @@ describe("PATCH /tasks/:id?occurrence — editar só esta ocorrência", () => {
     expect((await getTask(env.DB, "u3", "rec-off"))?.repeat).toBe("Daily");
   });
 });
+
+describe("PATCH /tasks/:id — repeatEvery", () => {
+  const base = {
+    id: "every",
+    title: "Regar",
+    date: new Date(2026, 8, 1, 9).getTime(),
+    duration: "10m",
+    priority: 0,
+    repeat: "Daily" as const,
+    completed: [],
+  };
+
+  it("grava, limpa com null e some quando a série vira Off", async () => {
+    await insertTask(env.DB, "u3", base);
+    expect((await patch("every", { repeatEvery: 3 })).status).toBe(200);
+    expect((await getTask(env.DB, "u3", "every"))?.repeatEvery).toBe(3);
+
+    await patch("every", { repeatEvery: null });
+    expect((await getTask(env.DB, "u3", "every"))?.repeatEvery).toBeUndefined();
+
+    await patch("every", { repeatEvery: 3 });
+    await patch("every", { repeat: "Off" });
+    await patch("every", { repeat: "Daily" });
+    expect((await getTask(env.DB, "u3", "every"))?.repeatEvery).toBeUndefined();
+  });
+
+  it("400 fora de 2..365", async () => {
+    expect((await patch("every", { repeatEvery: 1 })).status).toBe(400);
+  });
+
+  it("editar só esta: a ocorrência sai sem intervalo, a série mantém o dela", async () => {
+    await insertTask(env.DB, "u3", { ...base, id: "every2", repeatEvery: 2 });
+    const occurrence = new Date(2026, 8, 3, 9).getTime();
+    const res = await app.request(
+      `/tasks/every2?occurrence=${occurrence}`,
+      { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ title: "Regar só hoje" }) },
+      env,
+    );
+    const { task, series } = await res.json<{ task: Task; series: Task }>();
+    expect(task.repeat).toBe("Off");
+    expect(task.repeatEvery).toBeUndefined();
+    expect(series.repeatEvery).toBe(2);
+    expect(series.exdates).toEqual([occurrence]);
+  });
+});

@@ -23,6 +23,10 @@ function isEpochMs(value: unknown): value is number {
   );
 }
 
+/** `Task.repeatEvery`: inteiro 2..365. O 1 nunca é guardado — é a ausência. */
+export const isRepeatEvery = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= 2 && value <= 365;
+
 // `undefined` = campo nao veio (ou veio null); "invalid" = veio e nao presta pra nada.
 // So http(s) passa porque `javascript:`/`data:` num `<a href>` do cliente e XSS; `username`/
 // `password` sao recusados porque "paypal.com@evil.com" se disfarca de dominio confiavel.
@@ -102,6 +106,14 @@ export function parseTaskFields(body: unknown, opts: { partial: boolean }): Pars
 
   const repeat = field(body, "repeat");
   if (repeat !== undefined) fields.repeat = normalizeRepeat(repeat);
+
+  // `null` volta a 1 (mesmo truque do `alert`).
+  const repeatEvery = field(body, "repeatEvery");
+  if (repeatEvery === null) fields.repeatEvery = undefined;
+  else if (repeatEvery !== undefined) {
+    if (!isRepeatEvery(repeatEvery)) return { error: "invalid repeatEvery" };
+    fields.repeatEvery = repeatEvery;
+  }
 
   // Chave presente com lista vazia (ou null) = limpar o campo, e por isso o `!== undefined` olha o
   // valor cru: `fields.tags = undefined` sobrescreve no spread do updateTask, a chave ausente nao.

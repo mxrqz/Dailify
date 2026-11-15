@@ -10,7 +10,7 @@ import {
   type ParsedTaskWire,
 } from "@dailify/shared";
 import type { Env } from "../index";
-import { sanitizeLinks } from "./task-input";
+import { isRepeatEvery, sanitizeLinks } from "./task-input";
 
 export const openaiClient = (env: Env) => new OpenAI({ apiKey: env.OPENAI_API_KEY });
 
@@ -29,6 +29,7 @@ interface GPTTask {
   date: string | null;
   duration: string | null;
   repeat: unknown;
+  repeatEvery?: unknown;
   links: string[];
 }
 
@@ -89,7 +90,7 @@ const SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["title", "date", "duration", "repeat", "links"],
+        required: ["title", "date", "duration", "repeat", "repeatEvery", "links"],
         properties: {
           title: { type: "string" },
           date: { type: ["string", "null"] },
@@ -110,6 +111,7 @@ const SCHEMA = {
               },
             ],
           },
+          repeatEvery: { type: ["integer", "null"] },
           links: { type: "array", items: { type: "string" } },
         },
       },
@@ -144,6 +146,8 @@ Cada item de "tasks":
 - "duration": só se dita, no formato "15m", "1h", "1h30m" (nunca "min"); senão null.
 - "repeat": só se dita explicitamente — "Off" | "Daily" | "Monthly" | "Yearly" |
   {"Weekly": ["Monday", ...]} (nomes em inglês); senão "Off".
+- "repeatEvery": o N de "a cada N" (2 a 365) na unidade do "repeat" — "a cada 2 semanas" é Weekly
+  com 2, "dia sim, dia não" é Daily com 2, "a cada 3 meses" é Monthly com 3; senão null.
 - "links": as URLs citadas, exatamente como vieram; [] se nenhuma.
 Várias tarefas no mesmo pedido viram vários itens. Não invente prioridade, alerta nem tags.
 
@@ -174,6 +178,7 @@ function toDraft(t: GPTTask, timeZone: string): ParsedTaskWire {
     .flatMap((l) => sanitizeLinks([l]) ?? [])
     .filter((l) => l !== "invalid")
     .slice(0, TASK_LIMITS.linksMax);
+  const repeat = normalizeRepeat(t.repeat);
   return {
     text: t.title.trim().slice(0, TASK_LIMITS.titleMax),
     date,
@@ -181,7 +186,8 @@ function toDraft(t: GPTTask, timeZone: string): ParsedTaskWire {
     hasDay: date !== null,
     duration: toDuration(t.duration),
     links,
-    repeat: normalizeRepeat(t.repeat),
+    repeat,
+    repeatEvery: repeat !== "Off" && isRepeatEvery(t.repeatEvery) ? t.repeatEvery : undefined,
   };
 }
 

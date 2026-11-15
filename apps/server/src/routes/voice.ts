@@ -66,6 +66,7 @@ function draftToTask(d: ParsedTaskWire, timezone: string, now: number): Task {
     duration: d.duration ?? DEFAULT_DURATION,
     priority: 0,
     repeat: d.repeat,
+    repeatEvery: d.repeatEvery,
     links: d.links.length ? d.links.slice(0, 1) : undefined,
     completed: [],
   };
@@ -84,8 +85,8 @@ function draftToTask(d: ParsedTaskWire, timezone: string, now: number): Task {
 function readLocally(text: string, timezone: string): AiParse | null {
   const parsed = parseTaskText(text, new TZDate(Date.now(), timezone));
   if (parsed.unsure.length || !parsed.text) return null;
-  const { date, hasTime, hasDay, duration, links, repeat } = parsed;
-  const draft = { text: parsed.text, date: date?.getTime() ?? null, hasTime, hasDay, duration, links, repeat };
+  const { date, hasTime, hasDay, duration, links, repeat, repeatEvery } = parsed;
+  const draft = { text: parsed.text, date: date?.getTime() ?? null, hasTime, hasDay, duration, links, repeat, repeatEvery };
   return { reply: "Anotei!", intent: "create", drafts: [draft] };
 }
 

@@ -67,6 +67,24 @@ const task = (over: Record<string, unknown>) => ({
   ...over,
 });
 
+describe("POST /tasks/parse — repeatEvery", () => {
+  it("passa o N da IA e descarta o que não cabe", async () => {
+    userId = "pu-every";
+    aiReturns({
+      intent: "create",
+      reply: "Anotei!",
+      tasks: [
+        task({ title: "Faxina", repeat: { Weekly: ["Monday"] }, repeatEvery: 2 }),
+        task({ title: "Avulsa", repeatEvery: 3 }),
+        task({ title: "Lixo", repeat: "Daily", repeatEvery: 9999 }),
+      ],
+    });
+    const res = await parse({ text: "faxina a cada 2 semanas", timezone: "UTC" });
+    const { drafts } = await res.json<AiParse>();
+    expect(drafts.map((d) => d.repeatEvery)).toEqual([2, undefined, undefined]);
+  });
+});
+
 describe("POST /tasks/parse", () => {
   it("devolve rascunhos sem criar tarefa e debita exatamente 1 crédito", async () => {
     userId = "pu1";

@@ -41,6 +41,8 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
   edição, não a do envio. `stampUpdatedAt` (`@dailify/shared`) recusa relógio adiantado além de 5min.
 - **Dates are epoch-ms `number`s** in/out (same `Task` as the web). The month read expands recurring
   server-side (`expandRecurringTask`) and dedupes by `` `${id}-${date}` `` before returning.
+- **`repeatEvery` (coluna `repeat_every`, `0010`)**: NULL = 1, e só 2..365 entra. No PATCH, `null`
+  volta a 1 (ausente mantém, como o `alert`); série que vira `Off` perde o intervalo (`everyCol`).
 - **Sem data = flag `undated`**: `date` vira só âncora e a tarefa fica fora da leitura do mês; lista via `GET /tasks/undated`.
 - **Fuso vem do cliente, nunca do runtime.** O Worker roda em UTC, então `GET /tasks` aceita `?tz=`
   (IANA, validado com `IANAZone`) e repassa para `expandRecurringTask`/`startOfMonthMs` — sem isso a
