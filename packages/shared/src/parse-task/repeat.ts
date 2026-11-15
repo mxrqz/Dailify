@@ -270,7 +270,8 @@ export function parseInterval(text: string, now: Date): RepeatHit | null {
     // "the first of every other month", "última sexta de cada 2 meses": dia ordinal por extenso
     // não cabe no `Repeat`, e o UNSUPPORTED_REPEAT_RE ainda vê o intervalo.
     if (ORDINAL_OF_EVERY_RE.test(text)) return null;
-    let [value, every] = read(match, now);
+    const [parsed, every] = read(match, now);
+    let value = parsed;
     if (!Number.isInteger(every) || every < 1 || every > 365) return null;
     const extra: Span[] = [];
     // "a cada 2 semanas na segunda e quarta": os dias colados são os da série.

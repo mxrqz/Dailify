@@ -1,6 +1,7 @@
 {
   "name": "dailify",
   "private": true,
+  "type": "module",
   "workspaces": ["apps/*", "packages/*"],
   "scripts": {
     "dev": "bun --filter '*' dev",
@@ -8,6 +9,15 @@
     "dev:api": "bun --filter @dailify/server dev",
     "build": "bun --filter @dailify/web build",
     "test": "bun --filter '*' test",
+    "format": "bun --filter '*' format",
+    "lint": "bun --filter '*' lint",
     "check": "bun --filter '*' check"
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "eslint": "^10.8.0",
+    "prettier": "^3.9.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.65.0"
   }
 }

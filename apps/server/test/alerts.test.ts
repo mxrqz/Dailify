@@ -1,9 +1,11 @@
 import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 
 // hoisted: o vi.mock abaixo sobe para o topo do módulo e precisa do mock já construído.
-// Os parâmetros são declarados para que `sendPush.mock.calls[i][2]` (o payload) tenha tipo.
+// A assinatura no genérico é o que dá tipo a `sendPush.mock.calls[i][2]` (o payload).
 const { sendPush } = vi.hoisted(() => ({
-  sendPush: vi.fn(async (_env: unknown, _subscription: unknown, _payload: unknown) => 201),
+  sendPush: vi.fn<(env: unknown, subscription: unknown, payload: unknown) => Promise<number>>(
+    async () => 201,
+  ),
 }));
 
 vi.mock("../src/lib/push", async (importOriginal) => {
