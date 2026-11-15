@@ -21,6 +21,10 @@ const TLDS = [
   "be",
 ];
 
+// Hosts de reunião/encurtador comuns em tarefa cujo TLD fica fora da allowlist (zoom.us, bit.ly…):
+// entram pelo host (ou subdomínio dele, "us02web.zoom.us"), sem abrir o TLD inteiro.
+const KNOWN_HOSTS = ["zoom.us", "bit.ly", "forms.gle", "goo.gl", "t.me", "wa.me", "cal.com"];
+
 // Dentro da allowlist acima, `so` também é extensão de lib compilada (`libfoo.so`) — path ou
 // query depois do host é o que distingue "notion.so/xyz" (link) de "libfoo.so" (arquivo).
 const AMBIGUOUS_FILE_TLDS = ["so"];
@@ -43,8 +47,10 @@ function toAbsolute(candidate: string): string | null {
   // Sem esquema e sem "www.", só passa com TLD da allowlist — é o que separa "youtube.com/x"
   // (link) de "main.ts" (nome de arquivo).
   if (!SCHEME_RE.test(candidate) && !/^www\./i.test(candidate)) {
-    const tld = hostname.split(".").pop()?.toLowerCase();
-    if (!tld || !TLDS.includes(tld)) return null;
+    const host = hostname.toLowerCase();
+    const known = KNOWN_HOSTS.some((h) => host === h || host.endsWith(`.${h}`));
+    const tld = host.split(".").pop() ?? "";
+    if (!known && !TLDS.includes(tld)) return null;
     if (AMBIGUOUS_FILE_TLDS.includes(tld) && pathname === "/" && !search) return null;
   }
 

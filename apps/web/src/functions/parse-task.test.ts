@@ -37,7 +37,7 @@ describe("dia — pt-BR", () => {
     ["dia 3", [2026, 9, 3]], // já passou neste mês → mês que vem
     ["sexta", [2026, 8, 14]],
     ["sexta-feira", [2026, 8, 14]],
-    ["quarta", [2026, 8, 12]], // hoje é quarta: conta como ela mesma
+    ["quarta", [2026, 8, 19]], // hoje é quarta: quem quer hoje diz "hoje" — é a da semana que vem
     ["próxima quarta", [2026, 8, 19]],
     ["sexta que vem", [2026, 8, 21]],
     ["semana que vem", [2026, 8, 19]],
@@ -177,6 +177,46 @@ describe("período pela próxima ocorrência", () => {
   it("às 23h30, com as duas leituras no passado, fica a mais recente", () => {
     expect(hhmm("hoje às 11", new Date(2026, 7, 12, 23, 30))).toEqual([12, 23, 0]);
   });
+
+  // Relógio é literal; hora sem dia que já passou é a de amanhã; "hoje" fica hoje.
+  it.each([
+    ["hoje 9h", [12, 9, 0]],
+    ["10:30", [13, 10, 30]],
+    ["9am", [13, 9, 0]],
+    ["às 9", [12, 21, 0]],
+    ["às 6", [12, 18, 0]],
+  ])("às 14h: %s", (input, expected) => {
+    expect(hhmm(input, twoPM)).toEqual(expected);
+  });
+
+  it.each([
+    ["às 9", [13, 9, 0]],
+    ["às 7", [13, 19, 0]],
+    ["hoje às 8", [12, 20, 0]],
+  ])("às 21h30: %s", (input, expected) => {
+    expect(hhmm(input, new Date(2026, 7, 12, 21, 30))).toEqual(expected);
+  });
+});
+
+describe("data sem ano e dia que não existe no mês", () => {
+  const ymd = (input: string, now: Date) => {
+    const parsed = parseWhen(input, now);
+    return parsed && [parsed.date.getFullYear(), parsed.date.getMonth() + 1, parsed.date.getDate()];
+  };
+  const nov15 = new Date(2026, 10, 15, 14, 0);
+
+  it.each([
+    ["10 de fevereiro", [2027, 2, 10]],
+    ["2/1", [2027, 1, 2]],
+    ["Jan 5", [2027, 1, 5]],
+    ["20 de novembro", [2026, 11, 20]],
+    ["10 de março de 2026", [2026, 3, 10]],
+    ["29/02", [2028, 2, 29]],
+    ["dia 31", [2026, 12, 31]],
+    ["dia 3", [2026, 12, 3]],
+  ])("%s", (input, expected) => {
+    expect(ymd(input, nov15)).toEqual(expected);
+  });
 });
 
 describe("limites", () => {
@@ -302,7 +342,7 @@ describe("duração explícita", () => {
     ["call de meia hora", "30m"],
     ["call de 2 horas", "2h"],
   ])("%j → %s", (input, expected) => {
-    expect(parseDuration(normalize(input))?.duration).toBe(expected);
+    expect(parseDuration(normalize(input), input)?.duration).toBe(expected);
   });
 
   it("não inventa duração onde não tem", () => {
@@ -317,7 +357,7 @@ describe("intervalo — início e duração no mesmo achado", () => {
     ["reunião 15h-16h", "1h", 15, 0],
     ["reunião das 14:15 às 14:45", "30m", 14, 15],
   ])("%j → %s começando %d:%d", (input, duration, hour, minute) => {
-    const parsed = parseDuration(normalize(input));
+    const parsed = parseDuration(normalize(input), input);
     expect(parsed?.duration).toBe(duration);
     expect(parsed?.start).toEqual({ hour, minute });
   });
@@ -329,13 +369,24 @@ describe("intervalo — início e duração no mesmo achado", () => {
     ["call das 14h às 15h30", "1h30m", 14, 0],
     ["call de 14h até 15h", "1h", 14, 0],
   ])("%j → %s começando %d:%d", (input, duration, hour, minute) => {
-    const parsed = parseDuration(normalize(input));
+    const parsed = parseDuration(normalize(input), input);
     expect(parsed?.duration).toBe(duration);
     expect(parsed?.start).toEqual({ hour, minute });
   });
 
-  it("intervalo que vira o dia seguinte não é intervalo", () => {
+  it("intervalo seco que vira o dia seguinte não é intervalo", () => {
     expect(parseDuration(normalize("plantão das 22 às 6"))).toBeNull();
+  });
+
+  // Com marca de relógio, virar a meia-noite é turno de verdade.
+  it.each([
+    ["plantão 22h-6h", "8h", 22],
+    ["festa das 23h à 1h", "2h", 23],
+    ["shift 10pm-6am", "8h", 22],
+  ])("%j → %s começando %d:00", (input, duration, hour) => {
+    const parsed = parseDuration(normalize(input), input);
+    expect(parsed?.duration).toBe(duration);
+    expect(parsed?.start).toEqual({ hour, minute: 0 });
   });
 });
 
@@ -346,7 +397,7 @@ describe("intervalo — prefixo e conector misturados", () => {
     ["call de 14 às 15", "1h", 14, 0],
     ["call das 9 até 10:30", "1h30m", 9, 0],
   ])("%j → %s começando %d:%d", (input, duration, hour, minute) => {
-    const parsed = parseDuration(normalize(input));
+    const parsed = parseDuration(normalize(input), input);
     expect(parsed?.duration).toBe(duration);
     expect(parsed?.start).toEqual({ hour, minute });
   });
@@ -362,7 +413,7 @@ describe("intervalo — prefixo e conector misturados", () => {
     "corrigir provas das 5 até 10",
     "revisar questões das 2 até 8",
   ])("%j continua não sendo intervalo", (input) => {
-    expect(parseDuration(normalize(input))).toBeNull();
+    expect(parseDuration(normalize(input), input)).toBeNull();
   });
 });
 
@@ -371,8 +422,6 @@ describe("duração — rejeita falso positivo", () => {
     // Critical 1: "Nh"/"NhNNm" solto é horário em pt-BR, não duração — precisa de "de/por/durante".
     "reunião 14h",
     "reunião 9h30",
-    // Critical 2: sem conector textual, "22h-6h" cai no fallback de duração explícita sem guarda.
-    "plantão 22h-6h",
     // Important 4: conector "a" pelado entre dois números não é intervalo de horário.
     "15/08 a 16/08",
     "partida 1 a 7",
@@ -384,7 +433,7 @@ describe("duração — rejeita falso positivo", () => {
     "ligar 3 vezes",
     "reunião sala 3 andar",
   ])("%j → null", (input) => {
-    expect(parseDuration(normalize(input))).toBeNull();
+    expect(parseDuration(normalize(input), input)).toBeNull();
   });
 
   // Limitação conhecida e aceita (ver relatório): "das X as Y" é a forma completa e correta de um
