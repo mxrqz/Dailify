@@ -116,7 +116,7 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
             <motion.div {...content}>
               <TaskComposer
                 day={day}
-                onVoiceCreated={onDayDone}
+                onCreated={onDayDone}
                 submitting={submitting}
                 onSubmit={(values) => {
                   onSubmit(values);
@@ -207,7 +207,7 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
                   <TaskComposer
                     large={!desktop}
                     day={day}
-                    onVoiceCreated={() => changeOpen(false)}
+                    onCreated={() => changeOpen(false)}
                     submitting={submitting}
                     onSubmit={(values, again) => {
                       onSubmit(values);

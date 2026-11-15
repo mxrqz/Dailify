@@ -1,4 +1,5 @@
 import type {
+  AiParse,
   Task,
   TaskInput,
   QuotaLimits,
@@ -17,6 +18,8 @@ import { appTimeZone, zoned } from "./zone";
 export interface ApiError {
   message: string;
   offline: boolean;
+  /** HTTP status quando o servidor respondeu: 429 (créditos esgotados) pede outra reação que 502. */
+  status?: number;
 }
 
 const OFFLINE: ApiError = { message: "Sem conexão com o servidor.", offline: true };
@@ -64,6 +67,7 @@ async function request<T>(
       error: {
         message: serverMessage(body) ?? `O servidor falhou (${res.status}).`,
         offline: false,
+        status: res.status,
       },
     };
   }
@@ -203,6 +207,18 @@ export async function deleteTask(
     method: "DELETE",
   });
   return { series: data?.series, error };
+}
+
+/** Só lê: devolve rascunhos, quem cria é o composer depois de confirmar. Debita 1 crédito de IA. */
+export async function parseTaskAi(
+  token: string,
+  text: string,
+): Promise<{ result?: AiParse; error?: ApiError }> {
+  const { data, error } = await request<AiParse>("/tasks/parse", token, {
+    method: "POST",
+    body: JSON.stringify({ text, timezone: appTimeZone() }),
+  });
+  return { result: data, error };
 }
 
 /** Sem `request`: o corpo é FormData, e o Content-Type JSON dele quebraria o upload. */

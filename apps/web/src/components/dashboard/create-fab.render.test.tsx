@@ -9,6 +9,19 @@ vi.mock("@/hooks/useVoiceCreate", () => ({
   useVoiceCreate: () => ({ state: "idle", start: vi.fn(), stop: vi.fn() }),
   voiceSupported: () => false,
 }));
+vi.mock("@/hooks/useMewParse", () => ({
+  useMewParse: () => ({
+    pending: false,
+    result: null,
+    exhausted: false,
+    remaining: null,
+    ask: vi.fn(),
+    reset: vi.fn(),
+  }),
+}));
+vi.mock("@/hooks/useCreateTask", () => ({
+  useCreateTask: () => ({ createMany: vi.fn(), submitting: false }),
+}));
 
 import { CreateFab } from "./create-fab";
 

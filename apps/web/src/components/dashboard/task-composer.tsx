@@ -1,4 +1,5 @@
 import { FormEvent, useMemo, useState } from "react";
+import { Link } from "react-router-dom";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -16,10 +17,13 @@ import {
 import { TASK_LIMITS } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
+import { MewStatic } from "@/components/mew/mew-static";
 import { Label } from "@/components/ui/label";
-import { composeTaskInput } from "@/functions/compose-input";
+import { composeTaskInput, fromWire, onDay } from "@/functions/compose-input";
 import { parseTaskText, type ParsedTask } from "@/functions/parse-task";
-import { onDay } from "@/functions/compose-input";
+import { useCreateTask } from "@/hooks/useCreateTask";
+import { useMewParse } from "@/hooks/useMewParse";
+import { useOnline } from "@/hooks/useOnline";
 import { useVoiceCreate, voiceSupported } from "@/hooks/useVoiceCreate";
 import { repeatLabel } from "@/functions/repeat-label";
 import { linkLabel } from "@/functions/link-label";
@@ -48,8 +52,8 @@ interface TaskComposerProps {
   large?: boolean;
   /** Dia escolhido no calendário: vale quando a frase não cita um dia. */
   day?: Date | null;
-  /** A voz criou tarefas (direto no servidor): quem abriu a folha pode fechá-la. */
-  onVoiceCreated?: () => void;
+  /** A voz ou a Mew criaram tarefas (direto no servidor): quem abriu a folha pode fechá-la. */
+  onCreated?: () => void;
 }
 
 /**
@@ -62,16 +66,33 @@ export function TaskComposer({
   onSubmit,
   large,
   day,
-  onVoiceCreated,
+  onCreated,
 }: TaskComposerProps): JSX.Element {
   const [input, setInput] = useState("");
   const { hour12 } = useDailify();
+  const online = useOnline();
+  const mew = useMewParse();
+  const many = useCreateTask();
 
-  const parsed = useMemo(() => onDay(parseTaskText(input), day), [input, day]);
+  const local = useMemo(() => onDay(parseTaskText(input), day), [input, day]);
+  // A leitura da Mew vale pro texto que ela leu: editar chama `mew.reset` e volta pro parser local.
+  const drafts = useMemo(
+    () => (mew.result?.intent === "create" ? mew.result.drafts.map(fromWire) : []),
+    [mew.result],
+  );
+  const reply = mew.result && !drafts.length ? mew.result.reply : null;
+  const multi = drafts.length > 1;
+  const parsed = useMemo(
+    () => (drafts.length === 1 ? onDay(drafts[0], day) : local),
+    [drafts, local, day],
+  );
   const task = useMemo(() => composeTaskInput(parsed, zoned()), [parsed]);
-  const voice = useVoiceCreate(onVoiceCreated);
+  const voice = useVoiceCreate(onCreated);
   const listening = voice.state === "recording";
-  const canSubmit = Boolean(parsed.text) && !submitting && voice.state === "idle";
+  const busy = submitting || many.submitting || mew.pending || voice.state !== "idle";
+  const canSubmit = Boolean(parsed.text) && !busy;
+  const canAsk = Boolean(input.trim()) && !mew.result && !busy;
+  const prominent = online && local.unsure.length > 0 && Boolean(input.trim()) && !mew.result;
 
   const destination = !task.undated
     ? copy.composer.toAgenda
@@ -81,11 +102,65 @@ export function TaskComposer({
 
   const recurring = parsed.repeat !== "Off";
 
+  const clear = () => {
+    setInput("");
+    mew.reset();
+  };
+
   const submit = (again: boolean) => {
     if (!canSubmit) return;
+    if (multi) {
+      void many.createMany(drafts).then((ok) => {
+        if (!ok) return;
+        clear();
+        onCreated?.();
+      });
+      return;
+    }
     onSubmit({ parsed }, again);
-    setInput("");
+    clear();
   };
+
+  // O botão fica desativado durante a leitura e o foco cairia no body: volta pro campo, pro Enter.
+  const askMew = () =>
+    void mew.ask(input).then(() => document.getElementById("composer-text")?.focus());
+
+  const remaining =
+    mew.remaining === null
+      ? null
+      : mew.remaining === 1
+        ? copy.mew.remainingOne
+        : copy.mew.remainingMany.replace("{n}", String(mew.remaining));
+  const improveLabel = remaining ? `${copy.mew.improve} · ${remaining}` : copy.mew.improve;
+  const mewIcon = mew.pending ? (
+    <Loader2Icon className="size-4 animate-spin" aria-hidden="true" />
+  ) : (
+    <MewStatic className="size-4" />
+  );
+
+  // Discreta, ao lado do mic: o parser erra ~20% dos casos difíceis sem avisar, então o pedido
+  // fica sempre à mão. Com motivo de dúvida, quem aparece é a linha de baixo.
+  const ask =
+    !online || prominent ? null : mew.exhausted ? (
+      <Link
+        to="/premium"
+        aria-label={`${copy.mew.exhausted} · ${copy.mew.upgrade}`}
+        className="relative flex size-8.5 hit-target shrink-0 items-center justify-center rounded-sm text-ink-tertiary transition-colors hover:bg-fill"
+      >
+        <MewStatic className="size-4" />
+      </Link>
+    ) : (
+      <button
+        type="button"
+        aria-label={mew.pending ? copy.mew.pending : improveLabel}
+        title={improveLabel}
+        disabled={!canAsk}
+        onClick={askMew}
+        className="relative flex size-8.5 hit-target shrink-0 items-center justify-center rounded-sm text-ink-secondary transition-colors hover:bg-fill disabled:text-ink-tertiary disabled:hover:bg-transparent"
+      >
+        {mewIcon}
+      </button>
+    );
 
   const pill = cn(chip, large && "py-1.5");
   const mic = voiceSupported() && (
@@ -150,7 +225,10 @@ export function TaskComposer({
           id="composer-text"
           type="text"
           value={input}
-          onChange={(e) => setInput(e.target.value)}
+          onChange={(e) => {
+            setInput(e.target.value);
+            mew.reset();
+          }}
           onKeyDown={(e) => {
             if (e.key !== "Enter" || !e.shiftKey) return;
             e.preventDefault();
@@ -158,7 +236,7 @@ export function TaskComposer({
           }}
           maxLength={TASK_LIMITS.titleMax}
           // Gravando, o campo vira o aviso: a fala vai direto pro servidor, não pra este texto.
-          readOnly={voice.state !== "idle"}
+          readOnly={voice.state !== "idle" || mew.pending}
           placeholder={listening ? copy.voice.listening : copy.composer.textPlaceholder}
           autoComplete="off"
           className={cn(
@@ -176,64 +254,130 @@ export function TaskComposer({
           large ? "pt-5 pb-2" : "pt-2.5 pb-1.5",
         )}
       >
-        <span className={cn(pill, recurring ? chipRepeat : parsed.date ? chipDate : chipGhost)}>
-          {recurring ? (
-            <>
-              <RepeatIcon className="size-3" aria-hidden="true" />
-              {repeatLabel(parsed.repeat)}
-            </>
-          ) : parsed.date ? (
-            <>
-              <CalendarIcon className="size-3" aria-hidden="true" />
-              {/* EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso. */}
-              {format(parsed.date, "EEEEEE · d MMM", { locale: ptBR })}
-            </>
-          ) : (
-            copy.composer.addDay
-          )}
-        </span>
-        <span className={cn(pill, parsed.hasTime ? chipTime : chipGhost)}>
-          {parsed.hasTime && parsed.date ? (
-            <>
-              <ClockIcon className="size-3" aria-hidden="true" />
-              {formatClock(format(parsed.date, "HH:mm"), hour12)}
-            </>
-          ) : (
-            copy.composer.addTime
-          )}
-        </span>
-        <span className={cn(pill, parsed.duration ? chipGot : chipGhost)}>
-          {parsed.duration ?? copy.composer.addDuration}
-        </span>
-        <span
-          className={cn(
-            chip,
-            task.alert ? "border-accent-line bg-accent-subtle text-brand-text" : chipGhost,
-          )}
-        >
-          {task.alert ? (
-            <>
-              <BellIcon className="size-3" aria-hidden="true" />
-              {format(zoned(task.alert), "EEEEEE", { locale: ptBR })}{" "}
-              {formatClock(format(zoned(task.alert), "HH:mm"), hour12)}
-            </>
-          ) : (
-            copy.composer.addReminder
-          )}
-        </span>
-        {parsed.links.slice(0, 1).map((url) => (
-          <span key={url} className={cn(pill, chipGot)}>
-            <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
-            {linkLabel(url)}
-          </span>
-        ))}
+        {multi ? (
+          <ul aria-label={copy.mew.drafts} className="flex w-full flex-col gap-1.5">
+            {drafts.map((draft, i) => (
+              <li key={i} className="flex items-center gap-2 text-sm text-ink">
+                <MewStatic className="size-4 shrink-0" />
+                <span className="min-w-0 flex-1 truncate">{draft.text}</span>
+                <span className="shrink-0 text-xs text-ink-tertiary">
+                  {draft.date
+                    ? format(draft.date, "EEEEEE · d MMM", { locale: ptBR })
+                    : copy.composer.toUndated}
+                  {draft.hasTime &&
+                    draft.date &&
+                    ` · ${formatClock(format(draft.date, "HH:mm"), hour12)}`}
+                </span>
+              </li>
+            ))}
+          </ul>
+        ) : (
+          <>
+            {drafts.length === 1 && <MewStatic className="size-4" title={copy.mew.draft} />}
+            <span className={cn(pill, recurring ? chipRepeat : parsed.date ? chipDate : chipGhost)}>
+              {recurring ? (
+                <>
+                  <RepeatIcon className="size-3" aria-hidden="true" />
+                  {repeatLabel(parsed.repeat)}
+                </>
+              ) : parsed.date ? (
+                <>
+                  <CalendarIcon className="size-3" aria-hidden="true" />
+                  {/* EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso. */}
+                  {format(parsed.date, "EEEEEE · d MMM", { locale: ptBR })}
+                </>
+              ) : (
+                copy.composer.addDay
+              )}
+            </span>
+            <span className={cn(pill, parsed.hasTime ? chipTime : chipGhost)}>
+              {parsed.hasTime && parsed.date ? (
+                <>
+                  <ClockIcon className="size-3" aria-hidden="true" />
+                  {formatClock(format(parsed.date, "HH:mm"), hour12)}
+                </>
+              ) : (
+                copy.composer.addTime
+              )}
+            </span>
+            <span className={cn(pill, parsed.duration ? chipGot : chipGhost)}>
+              {parsed.duration ?? copy.composer.addDuration}
+            </span>
+            <span
+              className={cn(
+                chip,
+                task.alert ? "border-accent-line bg-accent-subtle text-brand-text" : chipGhost,
+              )}
+            >
+              {task.alert ? (
+                <>
+                  <BellIcon className="size-3" aria-hidden="true" />
+                  {format(zoned(task.alert), "EEEEEE", { locale: ptBR })}{" "}
+                  {formatClock(format(zoned(task.alert), "HH:mm"), hour12)}
+                </>
+              ) : (
+                copy.composer.addReminder
+              )}
+            </span>
+            {parsed.links.slice(0, 1).map((url) => (
+              <span key={url} className={cn(pill, chipGot)}>
+                <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
+                {linkLabel(url)}
+              </span>
+            ))}
+          </>
+        )}
         {large && (
           <span className="ml-auto flex items-center gap-1">
+            {ask}
             {mic}
             {send}
           </span>
         )}
       </div>
+
+      {multi && (
+        <div className="px-2 pt-1">
+          <button
+            type="button"
+            disabled={!canSubmit}
+            onClick={() => submit(false)}
+            className="h-7 rounded-xs bg-brand px-2.5 text-xs font-medium text-on-brand transition-colors hover:bg-brand-pressed disabled:bg-fill disabled:text-ink-tertiary"
+          >
+            {copy.mew.confirmMany.replace("{n}", String(drafts.length))}
+          </button>
+        </div>
+      )}
+
+      {reply && (
+        <p role="status" className="flex items-start gap-2 px-2 pt-1 text-sm text-ink-secondary">
+          <MewStatic className="mt-0.5 size-4 shrink-0" />
+          {reply}
+        </p>
+      )}
+
+      {/* Com motivo de dúvida o pedido vira linha própria, com o porquê. */}
+      {prominent && (
+        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 pt-1 text-xs">
+          <button
+            type="button"
+            disabled={mew.exhausted || !canAsk}
+            onClick={askMew}
+            className="inline-flex h-7 items-center gap-1.5 rounded-xs bg-brand-soft px-2 font-medium text-brand-text transition-colors hover:text-ink disabled:bg-fill disabled:text-ink-tertiary"
+          >
+            {mewIcon}
+            {mew.pending ? copy.mew.pending : copy.mew.improve}
+          </button>
+          <span className="text-ink-secondary">{copy.mew.unsure[local.unsure[0].code]}</span>
+          {mew.exhausted ? (
+            <Link to="/premium" className="ml-auto font-medium text-brand-text">
+              {copy.mew.exhausted} · {copy.mew.upgrade}
+            </Link>
+          ) : (
+            remaining && <span className="ml-auto text-ink-tertiary">{remaining}</span>
+          )}
+        </div>
+      )}
 
       <div className="flex items-center justify-between gap-2 px-2 pt-1.5 pb-1 text-xs text-muted-foreground">
         <span>
@@ -246,6 +390,7 @@ export function TaskComposer({
             <kbd className="rounded-md border border-surface-line px-1 font-mono text-2xs">⇧⏎</kbd>{" "}
             {copy.composer.hintContinue}
           </span>
+          {ask}
           {mic}
           {send}
         </span>

@@ -1,5 +1,7 @@
 import type { QuotaKey } from "@dailify/shared";
 
+import type { UnsureCode } from "@/functions/parse-task";
+
 /**
  * Dicionário de copy pt-BR do dashboard.
  *
@@ -292,6 +294,38 @@ export const copy = {
     micDeniedHint: "Libere o microfone nas permissões do navegador.",
     limitReached: "Créditos de IA esgotados",
     limitReachedHint: "Você usou os créditos de IA do seu plano neste mês.",
+  },
+
+  // "Melhorar com a Mew": a leitura por IA do texto do composer, sempre a pedido (1 crédito).
+  mew: {
+    improve: "Melhorar com a Mew · 1 crédito",
+    pending: "A Mew está lendo…",
+    remainingOne: "1 restante",
+    remainingMany: "{n} restantes",
+    exhausted: "Créditos de IA esgotados",
+    upgrade: "Assinar",
+    failed: "A Mew não conseguiu agora",
+    noCredit: "Nenhum crédito foi usado.",
+    draft: "Lido pela Mew",
+    drafts: "Tarefas lidas pela Mew",
+    confirmMany: "Criar {n} tarefas",
+    createdMany: "{n} tarefas criadas",
+    // Por que o parser local pode ter errado — o motivo que aparece junto do botão.
+    unsure: {
+      question: "Parece uma pergunta",
+      command: "Parece um pedido sobre a agenda",
+      multi: "Tem mais de uma tarefa",
+      "list-values": "Tem uma lista no meio",
+      "repeat-unsupported": "Não entendi a repetição",
+      alert: "Não entendi o lembrete",
+      vague: "O quando ficou vago",
+      "ambiguous-number": "Um número pode não ser hora",
+      "ambiguous-word": "Uma palavra pode não ser data",
+      leftover: "Sobrou data ou hora no título",
+      dangling: "A frase ficou pela metade",
+      past: "A data caiu no passado",
+      long: "Frase longa",
+    } satisfies Record<UnsureCode, string>,
   },
 
   task: {

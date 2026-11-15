@@ -2,13 +2,11 @@ import { useRef, useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import type { Task } from "@dailify/shared";
-
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { createTaskVoice, deleteTask } from "@/functions/api";
-import { upsertTaskWithRecurrence } from "@/functions/functions";
+import { createTaskVoice } from "@/functions/api";
 import { appTimeZone } from "@/functions/zone";
+import { useShowCreated } from "@/hooks/useCreateTask";
 import { useQuotas } from "@/hooks/useQuotas";
 
 // Cortesia, não controle: quem limita o custo é o cap de 512 KB no servidor. Parar aqui só evita
@@ -23,22 +21,13 @@ export const voiceSupported = (): boolean =>
 /** Grava, manda pro servidor (que transcreve e cria) e põe as tarefas na tela, com Desfazer. */
 export function useVoiceCreate(onCreated?: () => void) {
   const { getToken } = useAuth();
-  const { tasks, setTasks, loadedMonths, bumpUsage } = useDailify();
-  // A resposta chega segundos depois do toque; a lista de agora, não a daquele render.
-  const latest = useRef(tasks);
-  latest.current = tasks;
+  const { bumpUsage } = useDailify();
+  const showCreated = useShowCreated();
   const quotas = useQuotas();
   const navigate = useNavigate();
   const [state, setState] = useState<"idle" | "recording" | "sending">("idle");
   const recorder = useRef<MediaRecorder | null>(null);
   const cap = useRef<ReturnType<typeof setTimeout>>();
-
-  const undo = async (created: Task[]) => {
-    const ids = new Set(created.map((t) => t.id));
-    setTasks((latest.current ?? []).filter((t) => !ids.has(t.id)));
-    const token = await getToken();
-    if (token) await Promise.all(created.map((t) => deleteTask(token, t.id)));
-  };
 
   const send = async (audio: Blob) => {
     setState("sending");
@@ -59,23 +48,13 @@ export function useVoiceCreate(onCreated?: () => void) {
         return;
       }
 
-      setTasks(
-        created.reduce(
-          (list, task) => upsertTaskWithRecurrence(list, task, loadedMonths),
-          latest.current ?? [],
-        ),
-      );
-      created.forEach(() => bumpUsage("tasks"));
-      onCreated?.();
-      toast.success(
+      showCreated(
+        created,
         created.length === 1
           ? copy.voice.createdOne
           : copy.voice.createdMany.replace("{n}", String(created.length)),
-        {
-          description: created.map((t) => t.title).join(" · "),
-          action: { label: copy.task.undo, onClick: () => void undo(created) },
-        },
       );
+      onCreated?.();
     } finally {
       setState("idle");
     }
