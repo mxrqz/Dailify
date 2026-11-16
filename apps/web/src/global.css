@@ -58,12 +58,16 @@
   /* Design System Mewki (tokens.json). Dark é o tema principal; os tokens legados abaixo
      (shadcn, surface-*) apontam pra cá, então telas antigas herdam o visual sem trocar classe. */
   --canvas: light-dark(oklch(97% 0.002 60), oklch(0% 0 0));
-  --surface: light-dark(oklch(100% 0 0), oklch(19.5% 0.002 30));
+  /* Escuro "opção C" (QA do redesign mobile): grafite frio, um degrau perto do preto do canvas. */
+  --surface: light-dark(oklch(100% 0 0), oklch(12% 0.006 265));
   /* No claro é igual a surface: o que flutua se separa por shadow-raised, não por cor. */
-  --surface-raised: light-dark(oklch(100% 0 0), oklch(23.5% 0.002 30));
-  --fill: light-dark(oklch(94.5% 0.003 60), oklch(27% 0.003 30));
-  --fill-pressed: light-dark(oklch(91% 0.004 60), oklch(31% 0.003 30));
-  --separator: light-dark(oklch(91.5% 0.003 60), oklch(28% 0.003 30));
+  --surface-raised: light-dark(oklch(100% 0 0), oklch(15% 0.007 265));
+  --fill: light-dark(oklch(94.5% 0.003 60), oklch(18% 0.008 265));
+  --fill-pressed: light-dark(oklch(91% 0.004 60), oklch(21.5% 0.009 265));
+  --separator: light-dark(oklch(91.5% 0.003 60), oklch(17% 0.008 265));
+  /* Contorno de 1px de todo card (utility `card`): com surface tão perto do canvas, é ele que
+     desenha a borda; no claro só um fio, que branco sobre off-white já separa. */
+  --card-edge: light-dark(oklch(92% 0.003 265), oklch(16.5% 0.008 265));
   --ink: light-dark(oklch(18% 0.004 40), oklch(97% 0.002 60));
   --ink-secondary: light-dark(oklch(50% 0.006 40), oklch(72% 0.005 40));
   /* Só placeholder e desabilitado (isentos no WCAG): não passa 4.5:1. */
@@ -74,9 +78,25 @@
   /* Vermelho como texto/ícone e anel de foco: --brand como texto fica em ~4:1 no escuro. */
   --brand-text: light-dark(oklch(53% 0.21 20), oklch(70% 0.18 18));
   --brand-soft: light-dark(oklch(95% 0.03 15), oklch(28% 0.07 18));
-  /* Único token translúcido: vai junto de backdrop-blur. */
+  /* Translúcidos: material-bar, scrim e o vidro abaixo, sempre junto de backdrop-filter. */
   --material-bar: light-dark(oklch(97.7% 0.002 68 / 78%), oklch(15.9% 0 0 / 78%));
-  --scrim: light-dark(oklch(0% 0 0 / 35%), oklch(0% 0 0 / 60%));
+  --scrim: light-dark(oklch(0% 0 0 / 26%), oklch(0% 0 0 / 45%));
+  /* Vidro dos overlays (utility `glass`): painel quase sólido sobre pouco blur. */
+  --glass: light-dark(oklch(99% 0.002 270 / 82%), oklch(11% 0.006 265 / 80%));
+  /* Sem backdrop-filter (ou com prefers-reduced-transparency) o painel fica quase opaco. */
+  --glass-solid: light-dark(oklch(99% 0.002 270 / 94%), oklch(11% 0.006 265 / 94%));
+  /* Tint azulado e brilho no topo só no escuro: no claro sujariam o branco. */
+  --glass-tint: light-dark(transparent, oklch(67.5% 0.032 248 / 9.4%));
+  --glass-sheen: light-dark(transparent, oklch(100% 0 0 / 3.5%));
+  /* Borda de cima: um fio de luz entre um vermelho e um azul (aberração cromática). */
+  --glass-spec: light-dark(oklch(100% 0 0 / 60%), oklch(100% 0 0 / 20%));
+  --glass-ca-r: light-dark(oklch(62% 0.2 25 / 25%), oklch(70% 0.17 25 / 50%));
+  --glass-ca-b: light-dark(oklch(58% 0.15 250 / 25%), oklch(72% 0.13 245 / 42%));
+  /* Controles dentro do vidro sobem um tom: o vidro escuro ≈ surface, e fill sumiria nele. */
+  --glass-fill: light-dark(oklch(94.5% 0.003 60), oklch(24% 0.008 265));
+  --glass-fill-pressed: light-dark(oklch(91% 0.004 60), oklch(28% 0.008 265));
+  /* Sombra pra cima: o vidro nasce de baixo (sheet) ou sobre a tela (dialog). */
+  --shadow-glass: 0 -16px 48px -24px oklch(0% 0 0 / 70%);
   /* No escuro, o anel de 1px faz o papel que a sombra não faz sobre preto. */
   --shadow-raised:
     0 0 0 1px light-dark(oklch(0% 0 0 / 5%), oklch(100% 0 0 / 8%)),
@@ -274,6 +294,7 @@
   --color-fill: var(--fill);
   --color-fill-pressed: var(--fill-pressed);
   --color-separator: var(--separator);
+  --color-card-edge: var(--card-edge);
   --color-ink: var(--ink);
   --color-ink-secondary: var(--ink-secondary);
   --color-ink-tertiary: var(--ink-tertiary);
@@ -514,6 +535,86 @@
       black calc(var(--skirt) + 0.5px)
     );
   }
+}
+
+/*
+ * Card do DS: surface com o contorno de 1px por dentro. `outline` e não `border`: não ocupa
+ * layout e fica por cima do fundo pressionado das linhas que o `overflow-hidden` recorta.
+ */
+@utility card {
+  background-color: var(--surface);
+  outline: 1px solid var(--card-edge);
+  outline-offset: -1px;
+}
+
+/*
+ * Vidro dos overlays (sheet, gaveta, sidebar, dialog, action sheet; popover NÃO): painel 80% +
+ * tint + brilho no topo sobre blur curto, grão estático (::after) e um fio cromático só na borda
+ * de cima (::before). Nenhum ancestral pode ter opacity<1, filter, mask ou mix-blend-mode — vira
+ * backdrop root e o blur some (cuidado com o fade de wrapper do AnimatePresence); anime só
+ * transform/opacity do próprio painel, nunca o raio do blur; no máximo 2 camadas de vidro.
+ * `position: relative` ancora os pseudo-elementos; `fixed`/`absolute` na mesma classe vencem.
+ */
+@utility glass {
+  position: relative;
+  isolation: isolate;
+  /* Tudo dentro sobe um degrau: o vidro escuro ≈ surface, então card vira raised e fill clareia. */
+  --surface: var(--surface-raised);
+  --fill: var(--glass-fill);
+  --fill-pressed: var(--glass-fill-pressed);
+  background:
+    linear-gradient(var(--glass-sheen), transparent 6rem),
+    linear-gradient(var(--glass-tint), var(--glass-tint)), var(--glass);
+  -webkit-backdrop-filter: blur(8px) contrast(1.04) saturate(1.2);
+  backdrop-filter: blur(8px) contrast(1.04) saturate(1.2);
+  box-shadow: var(--shadow-glass);
+
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    border-radius: inherit;
+    pointer-events: none;
+  }
+
+  &::before {
+    top: -0.5px;
+    box-shadow:
+      inset 0 0.5px 0 var(--glass-ca-r),
+      inset 0 1px 0 var(--glass-spec),
+      inset 0 1.5px 0 var(--glass-ca-b);
+    mask: linear-gradient(
+      90deg,
+      transparent 24px,
+      black 96px,
+      black calc(100% - 96px),
+      transparent calc(100% - 24px)
+    );
+  }
+
+  &::after {
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='160' height='160'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='.9' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='saturate' values='0'/%3E%3C/filter%3E%3Crect width='160' height='160' filter='url(%23n)'/%3E%3C/svg%3E");
+    opacity: 0.035;
+  }
+
+  @supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+    background: var(--glass-solid);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    background: var(--glass-solid);
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+}
+
+/* Fundo atrás de qualquer overlay: escurece e desfoca pouco. */
+@utility scrim {
+  background-color: var(--scrim);
+  -webkit-backdrop-filter: blur(2px);
+  backdrop-filter: blur(2px);
 }
 
 @layer base {

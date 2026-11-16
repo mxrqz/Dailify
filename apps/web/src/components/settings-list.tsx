@@ -12,9 +12,7 @@ export function SettingsGroup({ title, children }: { title: string; children: Re
       <h2 className="px-1 font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
         {title}
       </h2>
-      <div className="divide-y divide-surface-line rounded-xl border border-surface-line bg-surface-card">
-        {children}
-      </div>
+      <div className="card divide-y divide-separator rounded-xl">{children}</div>
     </section>
   );
 }
