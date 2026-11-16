@@ -8,6 +8,7 @@ import {
   SheetTitle,
   SheetTrigger,
 } from "./ui/sheet";
+import { AddToCalendar } from "@/components/add-to-calendar";
 import { RecurrenceScopeDialog } from "@/components/dashboard/recurrence-scope-dialog";
 import { TaskProps } from "@/types/types";
 import { useAuth, useUser } from "@clerk/clerk-react";
@@ -304,6 +305,7 @@ export function EditTaskContent({
               {loading ? <Loader2 className="animate-spin" /> : copy.form.save}
             </Button>
           )}
+          <AddToCalendar task={task} variant="sheet" />
           <div className="grid grid-cols-2 gap-2">
             {/* Concluída não desabilita o botão: ele vira o reabrir. */}
             {wasUndated ? (

@@ -10,6 +10,7 @@ import {
   PriorityMenu,
   RepeatMenu,
 } from "@/components/dashboard/task-meta-menus";
+import { AddToCalendar } from "@/components/add-to-calendar";
 import { ClockCheck } from "@/components/clock-check";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
 import { TaskCard, TimeLabel } from "@/components/task-card";
@@ -117,6 +118,7 @@ export function DayTaskRow({
           toggle: () => void (data.completed ? onUncomplete() : onComplete()),
         },
         remove: () => void onDelete(),
+        calendar: <AddToCalendar task={task} variant="toolbar" />,
       };
 
   const time = hour ? formatClock(hour, hour12) : "";

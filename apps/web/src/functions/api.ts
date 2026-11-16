@@ -7,6 +7,7 @@ import type {
   PaymentDetails,
   Invoice,
   WeekStart,
+  IntegrationLink,
   IntegrationStatus,
   ProviderId,
 } from "@dailify/shared";
@@ -22,6 +23,8 @@ export interface ApiError {
   offline: boolean;
   /** HTTP status quando o servidor respondeu: 429 (créditos esgotados) pede outra reação que 502. */
   status?: number;
+  /** `code` do corpo de erro (`INTEGRATION_ERROR`): o recado muda com ele, não com o texto. */
+  code?: string;
 }
 
 const OFFLINE: ApiError = { message: "Sem conexão com o servidor.", offline: true };
@@ -42,6 +45,11 @@ function serverMessage(body: unknown): string | undefined {
     if (typeof error === "string") return error;
   }
   return undefined;
+}
+
+function serverCode(body: unknown): string | undefined {
+  const code = body && typeof body === "object" ? Reflect.get(body, "code") : undefined;
+  return typeof code === "string" ? code : undefined;
 }
 
 /**
@@ -70,6 +78,7 @@ async function request<T>(
         message: serverMessage(body) ?? `O servidor falhou (${res.status}).`,
         offline: false,
         status: res.status,
+        code: serverCode(body),
       },
     };
   }
@@ -349,4 +358,18 @@ export async function disconnectIntegration(
 ): Promise<{ error?: ApiError }> {
   const { error } = await request<never>(`/integrations/${provider}`, token, { method: "DELETE" });
   return { error };
+}
+
+/** 409 com `code`: `reconnect` (sem conexão ativa) ou `already_linked`. */
+export async function createCalendarEvent(
+  token: string,
+  taskId: string,
+  meet: boolean,
+): Promise<{ link?: IntegrationLink; task?: Task; error?: ApiError }> {
+  const { data, error } = await request<{ link: IntegrationLink; task: Task }>(
+    "/integrations/google-calendar/events",
+    token,
+    { method: "POST", body: JSON.stringify({ taskId, timezone: appTimeZone(), meet }) },
+  );
+  return { link: data?.link, task: data?.task, error };
 }

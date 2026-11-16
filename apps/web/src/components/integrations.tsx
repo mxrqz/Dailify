@@ -25,6 +25,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { connectIntegration, disconnectIntegration, getIntegrations } from "@/functions/api";
+import { patchIntegration, setIntegrations } from "@/hooks/useIntegrations";
 import { useOnline } from "@/hooks/useOnline";
 
 const LOGOS: Record<ProviderId, ComponentType<SVGProps<SVGSVGElement>>> = {
@@ -41,7 +42,7 @@ export function IntegrationsGroup(): JSX.Element {
   const online = useOnline();
   // undefined = carregando; null = não deu pra ler (rede ou servidor).
   const [statuses, setStatuses] = useState<IntegrationStatus[] | null>();
-  // O GET não diz se o servidor tem as credenciais; o 503 do connect é quem conta.
+  // `configured` do GET já diz; o 503 do connect cobre o servidor que perdeu a credencial depois.
   const [soon, setSoon] = useState<ProviderId[]>([]);
   const [busy, setBusy] = useState<ProviderId | null>(null);
 
@@ -52,6 +53,7 @@ export function IntegrationsGroup(): JSX.Element {
       if (!token) return;
       const { integrations } = await getIntegrations(token);
       setStatuses(integrations ?? null);
+      if (integrations) setIntegrations(integrations);
     })();
   }, [getToken, online]);
 
@@ -75,9 +77,9 @@ export function IntegrationsGroup(): JSX.Element {
       toast.error(named(t.disconnectError, id), { description: error?.message });
       return;
     }
-    setStatuses((list) =>
-      list?.map((s) => (s.provider === id ? { ...s, connected: false, status: undefined } : s)),
-    );
+    const patch = { connected: false, status: undefined };
+    setStatuses((list) => list?.map((s) => (s.provider === id ? { ...s, ...patch } : s)));
+    patchIntegration(id, patch);
     toast.success(named(t.disconnected, id));
   };
 
@@ -93,7 +95,7 @@ export function IntegrationsGroup(): JSX.Element {
         let control: JSX.Element;
         if (statuses === undefined && online) {
           control = <Loader2Icon className="size-4 animate-spin text-muted-foreground" />;
-        } else if (soon.includes(id)) {
+        } else if (soon.includes(id) || status?.configured === false) {
           control = (
             <Button size="sm" variant="outline" disabled className={button}>
               {t.soon}

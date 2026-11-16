@@ -208,7 +208,7 @@ const toolbarClass =
   "focus-within:opacity-100 has-[[data-state=open]]:pointer-events-auto " +
   "has-[[data-state=open]]:opacity-100";
 
-const ToolbarButton = forwardRef<
+export const ToolbarButton = forwardRef<
   HTMLButtonElement,
   { label: string; children: ReactNode } & ComponentPropsWithoutRef<"button">
 >(function ToolbarButton({ label, children, className, ...props }, ref) {
@@ -315,6 +315,8 @@ export interface TaskCardProps extends TaskCardData {
     /** Depois do divisor: excluir e, na ponta, concluir/reabrir — a ação mais usada. */
     complete?: { done: boolean; toggle: () => void };
     remove?: () => void;
+    /** Ação de integração pronta (`AddToCalendar`), antes do divisor. */
+    calendar?: JSX.Element;
   };
 }
 
@@ -464,6 +466,7 @@ function CardBody({
                 <TimerIcon className="size-4" aria-hidden="true" />
               </ToolbarButton>,
             )}
+            {edit.calendar}
             {(edit.complete || edit.remove) && (
               <span className="mx-0.5 h-5 w-px bg-surface-line" aria-hidden="true" />
             )}

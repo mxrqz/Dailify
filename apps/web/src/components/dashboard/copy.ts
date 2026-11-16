@@ -262,6 +262,25 @@ export const copy = {
     failed: "Não deu pra concluir a conexão; tente de novo",
   },
 
+  /** O cartão de confirmação das ações externas (`mew/confirm-action.tsx`). */
+  confirmAction: {
+    title: "A Mewki vai fazer isto",
+    confirm: "Confirmar",
+    cancel: "Cancelar",
+  },
+
+  calendar: {
+    add: "Adicionar ao Google Agenda",
+    linked: "No Google Agenda",
+    meet: "Criar link do Meet",
+    added: "Evento criado no Google Agenda",
+    open: "Abrir",
+    alreadyLinked: "Esta tarefa já está no Google Agenda",
+    revoked: "O acesso ao Google Agenda foi revogado",
+    reconnect: "Reconectar",
+    error: "Não foi possível criar o evento",
+  },
+
   composer: {
     text: "Tarefa",
     textPlaceholder: "Reunião com o time hoje às 16:30",

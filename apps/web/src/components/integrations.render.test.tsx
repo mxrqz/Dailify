@@ -24,7 +24,12 @@ import { IntegrationsGroup } from "./integrations";
 import { copy } from "@/components/dashboard/copy";
 
 const t = copy.integrations;
-const GCAL: IntegrationStatus = { provider: "google-calendar", allowed: true, connected: false };
+const GCAL: IntegrationStatus = {
+  provider: "google-calendar",
+  allowed: true,
+  configured: true,
+  connected: false,
+};
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -92,6 +97,12 @@ describe("<IntegrationsGroup>", () => {
     await userEvent.click(await screen.findByRole("button", { name: t.connect }));
     expect(await screen.findByRole("button", { name: t.soon })).toBeDisabled();
     expect(toast.error).not.toHaveBeenCalled();
+  });
+
+  it("servidor sem credencial: Em breve logo de cara", async () => {
+    renderWith({ configured: false });
+    expect(await screen.findByRole("button", { name: t.soon })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: t.connect })).not.toBeInTheDocument();
   });
 
   it("offline desabilita e não busca", () => {
