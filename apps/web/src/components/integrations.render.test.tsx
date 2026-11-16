@@ -22,6 +22,7 @@ vi.mock("sonner", () => ({ toast }));
 
 import { IntegrationsGroup } from "./integrations";
 import { copy } from "@/components/dashboard/copy";
+import { HIDE_EVENTS_KEY } from "@/hooks/useExternalEvents";
 
 const t = copy.integrations;
 const GCAL: IntegrationStatus = {
@@ -74,6 +75,16 @@ describe("<IntegrationsGroup>", () => {
     );
     expect(await screen.findByRole("button", { name: t.connect })).toBeInTheDocument();
     expect(toast.success).toHaveBeenCalledWith("Google Agenda desconectado");
+  });
+
+  it("conectado: Mostrar eventos do Google nasce ligado e desligar fica no device", async () => {
+    localStorage.clear();
+    renderWith({ connected: true, status: "active" });
+    const toggle = await screen.findByRole("switch", { name: copy.calendar.showEvents });
+    expect(toggle).toBeChecked();
+    await userEvent.click(toggle);
+    expect(toggle).not.toBeChecked();
+    expect(localStorage.getItem(HIDE_EVENTS_KEY)).toBe("1");
   });
 
   it("revogado pede pra reconectar", async () => {

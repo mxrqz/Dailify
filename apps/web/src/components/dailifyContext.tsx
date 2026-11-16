@@ -10,6 +10,7 @@ import type { ApiError, QuotaSnapshot } from "@/functions/api";
 import { initialMonths, mergeMonth, monthsBetween } from "@/functions/functions";
 import { copy } from "@/components/dashboard/copy";
 import { appTimeZone, setAppTimeZone, zoned } from "@/functions/zone";
+import { forgetExternalEvents } from "@/hooks/useExternalEvents";
 
 interface DailifyContextType {
   selectedDay: Date;
@@ -109,6 +110,7 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
   };
 
   const reloadMonths = async (months: Date[]) => {
+    forgetExternalEvents();
     const keys = [...new Set(months.map((m) => startOfMonth(m).getTime()))];
     const errors = await Promise.all(keys.map((key) => fetchMonth(zoned(key))));
     const error = errors.find(Boolean);

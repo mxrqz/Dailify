@@ -184,8 +184,8 @@ export function groupTasksByHour(tasks: ReadonlyArray<TaskProps>): TimeGroup[] {
   return [...byHour.entries()].map(([time, group]) => ({ time, tasks: group }));
 }
 
-/** "HH:MM" → minutos desde a meia-noite. Interno; `getTime` já garante o zero-padding. */
-function timeToMinutes(time: string): number {
+/** "HH:MM" → minutos desde a meia-noite; `getTime` já garante o zero-padding. */
+export function timeToMinutes(time: string): number {
   const [hours, minutes] = time.split(":").map(Number);
   return hours * 60 + minutes;
 }

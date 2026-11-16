@@ -7,6 +7,7 @@ import type {
   PaymentDetails,
   Invoice,
   WeekStart,
+  ExternalEvent,
   IntegrationLink,
   IntegrationStatus,
   ProviderId,
@@ -388,4 +389,35 @@ export async function syncCalendarEvent(
     { method: "POST", body: JSON.stringify({ timezone: appTimeZone() }) },
   );
   return { task: data?.task, error };
+}
+
+/** Eventos do Google na janela `[from, to)`, lidos na hora; o servidor não guarda nada. */
+export async function getCalendarEvents(
+  token: string,
+  from: number,
+  to: number,
+  signal?: AbortSignal,
+): Promise<{ events?: ExternalEvent[]; error?: ApiError }> {
+  const tz = encodeURIComponent(appTimeZone());
+  const { data, error } = await request<{ events: ExternalEvent[] }>(
+    `/integrations/google-calendar/events?from=${from}&to=${to}&tz=${tz}`,
+    token,
+    { signal },
+  );
+  return { events: data?.events, error };
+}
+
+/** "Vincular": a tarefa passa a ser o evento que já existia. 409 `already_linked` traz a tarefa. */
+export async function linkCalendarEvent(
+  token: string,
+  taskId: string,
+  eventId: string,
+): Promise<{ link?: IntegrationLink; task?: Task; error?: ApiError }> {
+  const { data, error, errorBody } = await request<{ link: IntegrationLink; task: Task }>(
+    "/integrations/google-calendar/links",
+    token,
+    { method: "POST", body: JSON.stringify({ taskId, eventId, timezone: appTimeZone() }) },
+  );
+  const body = data ?? errorBody;
+  return { link: body?.link, task: body?.task, error };
 }

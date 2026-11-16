@@ -12,7 +12,13 @@ vi.mock("../src/lib/clerk", async (importOriginal) => {
 });
 
 import { env, applyD1Migrations } from "cloudflare:test";
-import { INTEGRATIONS, zonedEpoch, type IntegrationLink, type Task } from "@dailify/shared";
+import {
+  INTEGRATIONS,
+  zonedEpoch,
+  type ExternalEvent,
+  type IntegrationLink,
+  type Task,
+} from "@dailify/shared";
 import app from "../src/index";
 import { sealTokens, loadCtx } from "../src/integrations/connection";
 import { createEvent } from "../src/integrations/google-calendar";
@@ -280,5 +286,187 @@ describe("POST /integrations/google-calendar/events", () => {
     if (!ctx) throw new Error("sem ctx");
     const text = await createEvent.preview(ctx, { taskId: tid, timeZone: TZ, meet: true });
     expect(text).toMatch(/^Criar evento no Google Agenda · .* 15:00–16:30 · com Meet$/);
+  });
+});
+
+const list = (q: string) =>
+  app.request(`/integrations/google-calendar/events?${q}`, { headers: { origin: ORIGIN } }, env);
+const from = at(10, 1, 0);
+const window = (over: Record<string, string | number> = {}) =>
+  new URLSearchParams(
+    Object.entries({ from, to: at(11, 1, 0), tz: TZ, ...over }).map(([k, v]) => [k, String(v)]),
+  ).toString();
+
+describe("GET /integrations/google-calendar/events", () => {
+  it("pagina, abre séries, lê dia inteiro no fuso e marca os da Mewki", async () => {
+    await seed();
+    routes[google.EVENTS] = () =>
+      Response.json(
+        calls.filter((c) => c.url.startsWith(google.EVENTS)).length === 1
+          ? google.listPage1
+          : google.listPage2,
+      );
+    const res = await list(window());
+    expect(res.status).toBe(200);
+    const { events } = await res.json<{ events: ExternalEvent[] }>();
+
+    const gets = calls.filter((c) => c.url.startsWith(google.EVENTS)).map((c) => new URL(c.url));
+    expect(gets).toHaveLength(2);
+    expect(Object.fromEntries(gets[0].searchParams)).toMatchObject({
+      singleEvents: "true",
+      orderBy: "startTime",
+      showDeleted: "false",
+      timeMin: new Date(from).toISOString(),
+    });
+    expect(gets[1].searchParams.get("pageToken")).toBe("page-2");
+
+    expect(events).toEqual([
+      {
+        id: "ev1",
+        title: "Dentista",
+        start: at(10, 16, 10),
+        end: at(10, 16, 11),
+        allDay: false,
+        url: "https://www.google.com/calendar/event?eid=ev1",
+        meet: "https://meet.google.com/abc-defg-hij",
+      },
+      {
+        id: "ev2",
+        title: "Feriado",
+        start: at(10, 20, 0),
+        end: at(10, 21, 0),
+        allDay: true,
+        url: "https://www.google.com/calendar/event?eid=ev2",
+      },
+      expect.objectContaining({ id: "daily_20261117T120000Z", recurring: true }),
+      expect.objectContaining({ id: "mewki1", mewkiTaskId: "task01" }),
+    ]);
+    expect(await getLink(env.DB, userId, "google-calendar", "ev1")).toBeNull();
+  });
+
+  it("dia inteiro segue o fuso pedido", async () => {
+    await seed();
+    routes[google.EVENTS] = () => Response.json({ items: [google.listPage1.items[1]] });
+    const res = await list(window({ tz: "Asia/Tokyo" }));
+    const { events } = await res.json<{ events: ExternalEvent[] }>();
+    expect(events[0].start).toBe(
+      zonedEpoch({ year: 2026, month: 10, day: 20, hour: 0, minute: 0, second: 0 }, "Asia/Tokyo"),
+    );
+  });
+
+  it("janela maior que 62 dias é cortada; janela ou fuso inválidos -> 400", async () => {
+    await seed();
+    routes[google.EVENTS] = () => Response.json({ items: [] });
+    expect((await list(window({ to: from + 400 * 86_400_000 }))).status).toBe(200);
+    const max = new URL(calls[0].url).searchParams.get("timeMax");
+    expect(max).toBe(new Date(from + 62 * 86_400_000).toISOString());
+    expect((await list(window({ to: from }))).status).toBe(400);
+    expect((await list(window({ from: "x" }))).status).toBe(400);
+    expect((await list(window({ tz: "Marte/Base" }))).status).toBe(400);
+  });
+
+  it("sem conexão ou refresh recusado -> 409 reconnect; Google fora -> 502", async () => {
+    expect((await list(window())).status).toBe(409);
+    await seed({ expiresAt: Date.now() - 1 });
+    routes["https://oauth2.googleapis.com/token"] = () =>
+      Response.json(google.invalidGrant, { status: 400 });
+    const revoked = await list(window());
+    expect(revoked.status).toBe(409);
+    expect(await revoked.json()).toMatchObject({ code: "reconnect" });
+
+    userId = `eu-${crypto.randomUUID()}`;
+    await seed();
+    routes[google.EVENTS] = () => new Response("boom", { status: 500 });
+    expect((await list(window())).status).toBe(502);
+  });
+
+  it("fora do plano -> 403", async () => {
+    await seed();
+    const roles = INTEGRATIONS["google-calendar"].roles;
+    INTEGRATIONS["google-calendar"].roles = ["max"];
+    try {
+      expect((await list(window())).status).toBe(403);
+    } finally {
+      INTEGRATIONS["google-calendar"].roles = roles;
+    }
+  });
+});
+
+const link = (body: unknown) =>
+  app.request(
+    "/integrations/google-calendar/links",
+    {
+      method: "POST",
+      headers: { origin: ORIGIN, "content-type": "application/json" },
+      body: JSON.stringify(body),
+    },
+    env,
+  );
+
+describe("POST /integrations/google-calendar/links", () => {
+  const EV = `${google.EVENTS}/ev1`;
+  const linkInput = () => ({ taskId: tid, eventId: "ev1", timezone: TZ });
+
+  it("vincula sem criar evento: marca o mewkiTaskId, grava o vínculo e põe os links", async () => {
+    await seed({ links: ["https://x.com/doc"] });
+    routes[EV] = () => Response.json(google.existing);
+    const res = await link(linkInput());
+    expect(res.status).toBe(200);
+    const body = await res.json<{ link: IntegrationLink; task: Task }>();
+
+    expect(calls.some((c) => c.method === "POST")).toBe(false);
+    const patch = calls.find((c) => c.method === "PATCH");
+    expect(patch?.url).toBe(EV);
+    // Só a marca: título, horário e descrição do evento ficam como estão até a próxima edição.
+    expect(JSON.parse(patch?.body ?? "{}")).toEqual({
+      extendedProperties: { private: { mewkiTaskId: tid } },
+    });
+    expect(body.link).toEqual({
+      provider: "google-calendar",
+      taskId: tid,
+      externalId: "ev1",
+      url: google.existing.htmlLink,
+    });
+    expect(body.task.links).toEqual([
+      "https://x.com/doc",
+      google.existing.htmlLink,
+      google.existing.hangoutLink,
+    ]);
+    expect(await getLink(env.DB, userId, "google-calendar", tid)).toEqual(body.link);
+  });
+
+  it("409 se a tarefa ou o evento já têm vínculo, sem PATCH", async () => {
+    await seed();
+    routes[EV] = () => Response.json(google.existing);
+    expect((await link(linkInput())).status).toBe(200);
+
+    calls = [];
+    const again = await link(linkInput());
+    expect(again.status).toBe(409);
+    expect(await again.json()).toMatchObject({ code: "already_linked" });
+
+    await insertTask(env.DB, userId, task({ id: `o${tid}` }));
+    const other = await link({ ...linkInput(), taskId: `o${tid}` });
+    expect(other.status).toBe(409);
+    expect(calls).toHaveLength(0);
+
+    // Marcado no Google por outra tarefa (vínculo perdido no D1) também é 409.
+    routes[EV] = () =>
+      Response.json({ ...google.existing, extendedProperties: { private: { mewkiTaskId: "z" } } });
+    await insertTask(env.DB, userId, task({ id: `p${tid}` }));
+    await env.DB.prepare("DELETE FROM integration_links WHERE user_id=?").bind(userId).run();
+    expect((await link({ ...linkInput(), taskId: `p${tid}` })).status).toBe(409);
+    expect(calls.some((c) => c.method === "PATCH")).toBe(false);
+  });
+
+  it("evento sumido -> 404; recorrente -> 400; body inválido -> 400", async () => {
+    await seed();
+    routes[EV] = () => Response.json({ error: { code: 404 } }, { status: 404 });
+    expect((await link(linkInput())).status).toBe(404);
+    routes[EV] = () => Response.json({ ...google.existing, recurringEventId: "s" });
+    expect((await link(linkInput())).status).toBe(400);
+    expect((await link({ ...linkInput(), eventId: "" })).status).toBe(400);
+    expect((await link({ ...linkInput(), timezone: "x" })).status).toBe(400);
+    expect(await getLink(env.DB, userId, "google-calendar", tid)).toBeNull();
   });
 });

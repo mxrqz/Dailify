@@ -2,18 +2,23 @@ import { duration, ease } from "@/consts/motion";
 import { format, isSameWeek, isToday, isTomorrow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, useReducedMotion, type Variants } from "motion/react";
+import { matchExternalEvent, type ExternalEvent } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { AnytimeBlock, ScheduleDrop } from "@/components/dashboard/anytime-block";
 import { copy } from "@/components/dashboard/copy";
 import { DayTaskRow } from "@/components/dashboard/day-task-row";
+import { LinkToEvent } from "@/components/add-to-calendar";
+import { GoogleCalendarLogo } from "@/components/logos";
 import { TaskCard } from "@/components/task-card";
 import {
+  formatClock,
   getTasksForDay,
   getTime,
   groupTasksByHour,
   minutesUntil,
   nextGroupIndex,
+  timeToMinutes,
   type TimeGroup,
 } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
@@ -32,33 +37,67 @@ export const dayAnchorId = (day: Date) => `day-${format(day, "yyyy-MM-dd")}`;
 function TimeGroupRows({
   group,
   day,
+  events,
   variants,
   isPast,
   countdownFor,
 }: {
   group: TimeGroup;
   day: Date;
+  events: ExternalEvent[];
   variants: Variants;
   isPast: (task: TaskProps) => boolean;
   countdownFor: (task: TaskProps) => string | undefined;
 }): JSX.Element {
   return (
     <>
-      {group.tasks.map((task, index) => (
-        <motion.li key={task.id} variants={variants}>
-          {/* O recuo do passado mora AQUI, não no <li>: a variante `visible` anima opacity e o
-              style inline do framer venceria a classe. Volta inteiro no hover — segue editável. */}
-          <div className={cn(isPast(task) && "opacity-60 transition-opacity hover:opacity-100")}>
-            <DayTaskRow
-              task={task}
-              day={day}
-              hour={index === 0 ? group.time : undefined}
-              countdown={countdownFor(task)}
-            />
-          </div>
-        </motion.li>
-      ))}
+      {group.tasks.map((task, index) => {
+        const match = events.length ? matchExternalEvent(task, events) : undefined;
+        return (
+          <motion.li key={task.id} variants={variants}>
+            {/* O recuo do passado mora AQUI, não no <li>: a variante `visible` anima opacity e o
+                style inline do framer venceria a classe. Volta inteiro no hover — segue editável. */}
+            <div className={cn(isPast(task) && "opacity-60 transition-opacity hover:opacity-100")}>
+              <DayTaskRow
+                task={task}
+                day={day}
+                hour={index === 0 ? group.time : undefined}
+                countdown={countdownFor(task)}
+              />
+              {match && <LinkToEvent task={task} event={match} />}
+            </div>
+          </motion.li>
+        );
+      })}
     </>
+  );
+}
+
+/** Um evento do Google na agenda: só leitura — sem concluir, editar nem arrastar. */
+function ExternalEventRow({ event }: { event: ExternalEvent }): JSX.Element {
+  const { hour12 } = useDailify();
+  const t = copy.calendar;
+  const link = "shrink-0 text-xs underline-offset-2 hover:text-foreground hover:underline";
+  return (
+    <div
+      role="group"
+      aria-label={t.event}
+      className="flex min-w-0 items-center gap-3 rounded-lg border border-dashed border-surface-line px-3 py-2 text-sm text-content-secondary"
+    >
+      <GoogleCalendarLogo className="size-4 shrink-0" aria-hidden="true" />
+      <span className="shrink-0 font-mono text-xs text-muted-foreground">
+        {event.allDay ? t.allDay : formatClock(getTime(event.start, "HH:MM"), hour12)}
+      </span>
+      <span className="min-w-0 flex-1 truncate">{event.title || t.untitled}</span>
+      {event.meet && (
+        <a href={event.meet} target="_blank" rel="noreferrer" className={link}>
+          {t.meetLink}
+        </a>
+      )}
+      <a href={event.url} target="_blank" rel="noreferrer" className={link}>
+        {t.openInGoogle}
+      </a>
+    </div>
   );
 }
 
@@ -105,7 +144,14 @@ function taskCountLabel(count: number): string {
  * Um dia: cabeçalho (marcador + rótulo, pontilhada, data em mono) e as tarefas embaixo. É o bloco
  * que a `DayList` empilha — o scroll é da página, não daqui.
  */
-export function DaySection({ day }: { day: Date }): JSX.Element {
+export function DaySection({
+  day,
+  events = [],
+}: {
+  day: Date;
+  /** Os eventos do Google deste dia (`useExternalEvents`), já sem os da Mewki. */
+  events?: ExternalEvent[];
+}): JSX.Element {
   const { tasks } = useDailify();
   const reduce = useReducedMotion();
   const now = useNow(60_000);
@@ -123,6 +169,14 @@ export function DaySection({ day }: { day: Date }): JSX.Element {
     isCurrentDay && (nextAt === -1 || ordered.indexOf(task) < nextAt);
   const countdownFor = (task: TaskProps) =>
     task === next ? countdownLabel(minutesUntil(times[nextAt].time, now)) : undefined;
+  // Tarefas (por hora) e eventos numa ordem só; dia inteiro no topo.
+  const rows = [
+    ...groups.map((group) => ({ at: timeToMinutes(group.time), group, event: undefined })),
+    ...events.map((event) => {
+      const { hours, minutes } = getTime(event.start, "{hours, minutes}");
+      return { at: event.allDay ? -1 : hours * 60 + minutes, group: undefined, event };
+    }),
+  ].sort((a, b) => a.at - b.at);
 
   const listVariants: Variants = {
     hidden: {},
@@ -168,27 +222,34 @@ export function DaySection({ day }: { day: Date }): JSX.Element {
 
         {isCurrentDay && <AnytimeBlock />}
 
-        {!isCurrentDay && dayTasks.length === 0 && (
+        {!isCurrentDay && dayTasks.length === 0 && events.length === 0 && (
           <p className="text-sm text-content-secondary">{copy.day.emptyDay}</p>
         )}
 
-        {groups.length > 0 && (
+        {rows.length > 0 && (
           <motion.ul
             className="flex flex-col gap-3"
             variants={listVariants}
             initial={reduce ? "visible" : "hidden"}
             animate="visible"
           >
-            {groups.map((group) => (
-              <TimeGroupRows
-                key={group.time}
-                group={group}
-                day={day}
-                variants={rowVariants}
-                isPast={isPast}
-                countdownFor={countdownFor}
-              />
-            ))}
+            {rows.map(({ group, event }) =>
+              group ? (
+                <TimeGroupRows
+                  key={group.time}
+                  group={group}
+                  day={day}
+                  events={events}
+                  variants={rowVariants}
+                  isPast={isPast}
+                  countdownFor={countdownFor}
+                />
+              ) : (
+                <motion.li key={`g-${event.id}`} variants={rowVariants}>
+                  <ExternalEventRow event={event} />
+                </motion.li>
+              ),
+            )}
           </motion.ul>
         )}
       </section>

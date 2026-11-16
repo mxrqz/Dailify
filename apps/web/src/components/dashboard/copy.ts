@@ -293,6 +293,19 @@ export const copy = {
     notAdded: "Tarefa criada, mas não foi pro Google Agenda",
     notAddedMany: "{n} tarefas não foram pro Google Agenda",
     tryAgain: "Tentar de novo",
+    // Eventos do Google na agenda (0xp.8): só leitura.
+    event: "Evento do Google Agenda",
+    allDay: "Dia todo",
+    untitled: "(sem título)",
+    openInGoogle: "Abrir no Google",
+    meetLink: "Meet",
+    showEvents: "Mostrar eventos do Google na agenda",
+    // O dedupe: a tarefa parece ser um evento que já existe lá.
+    looksLinked: "Parece que isso já está no Google Agenda",
+    link: "Vincular",
+    linkPreview: "Vincular a tarefa ao evento “{title}”?",
+    linkDone: "Tarefa vinculada ao evento do Google Agenda",
+    linkError: "Não foi possível vincular",
   },
 
   composer: {

@@ -25,6 +25,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { connectIntegration, disconnectIntegration, getIntegrations } from "@/functions/api";
+import { useHideExternalEvents } from "@/hooks/useExternalEvents";
 import { patchIntegration, setIntegrations } from "@/hooks/useIntegrations";
 import { useOnline } from "@/hooks/useOnline";
 
@@ -35,6 +36,23 @@ const LOGOS: Record<ProviderId, ComponentType<SVGProps<SVGSVGElement>>> = {
 const t = copy.integrations;
 const named = (text: string, id: ProviderId) => text.replace("{name}", INTEGRATIONS[id].name);
 const button = "rounded-sm";
+
+/** Por device (localStorage), como o modo do composer: é preferência de tela, não da conta. */
+function ShowEventsRow(): JSX.Element {
+  const [hidden, setHidden] = useHideExternalEvents();
+  return (
+    <SettingsRow label={copy.calendar.showEvents}>
+      <input
+        type="checkbox"
+        role="switch"
+        aria-label={copy.calendar.showEvents}
+        checked={!hidden}
+        onChange={(e) => setHidden(!e.target.checked)}
+        className="size-4 accent-accent-primary"
+      />
+    </SettingsRow>
+  );
+}
 
 /** O grupo Integrações de /settings: uma linha por provedor do catálogo compartilhado. */
 export function IntegrationsGroup(): JSX.Element {
@@ -155,7 +173,7 @@ export function IntegrationsGroup(): JSX.Element {
           );
         }
 
-        return (
+        const row = (
           <SettingsRow
             key={id}
             label={INTEGRATIONS[id].name}
@@ -165,6 +183,9 @@ export function IntegrationsGroup(): JSX.Element {
             {control}
           </SettingsRow>
         );
+        if (id !== "google-calendar" || !status?.connected || status.status === "revoked")
+          return row;
+        return [row, <ShowEventsRow key={`${id}-events`} />];
       })}
     </SettingsGroup>
   );

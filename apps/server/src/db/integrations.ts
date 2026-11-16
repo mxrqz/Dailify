@@ -177,6 +177,23 @@ export async function getLink(
   return row ? toLink(provider, row) : null;
 }
 
+/** O "Vincular" confere o lado externo: o UNIQUE(external_id) viraria 500 no upsert. */
+export async function getLinkByExternal(
+  db: D1Database,
+  userId: string,
+  provider: ProviderId,
+  externalId: string,
+): Promise<IntegrationLink | null> {
+  const row = await db
+    .prepare(
+      `SELECT task_id, external_id, url FROM integration_links
+       WHERE user_id=? AND provider=? AND external_id=?`,
+    )
+    .bind(userId, provider, externalId)
+    .first<LinkRow>();
+  return row ? toLink(provider, row) : null;
+}
+
 /** Upsert: duas confirmações simultâneas caem no mesmo evento (id determinístico), não em erro. */
 export async function upsertLink(
   db: D1Database,

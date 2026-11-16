@@ -6,8 +6,10 @@ import {
   durationMinutes,
   isCalendarEventLink,
   isProviderId,
+  matchExternalEvent,
   PROVIDER_IDS,
   videoLink,
+  type ExternalEvent,
 } from "./integrations";
 import { zonedEpoch } from "./timezone";
 import type { Task } from "./types";
@@ -106,5 +108,43 @@ describe("calendário", () => {
     expect(videoLink(["https://notzoom.us.evil.com"])).toBeUndefined();
     expect(isCalendarEventLink("https://www.google.com/calendar/event?eid=abc")).toBe(true);
     expect(isCalendarEventLink("https://google.com/calendar/event?eid=abc")).toBe(false);
+  });
+});
+
+describe("matchExternalEvent", () => {
+  const ev = (over: Partial<ExternalEvent> = {}): ExternalEvent => ({
+    id: "g1",
+    title: "Reunião com o time",
+    start: at(16, 15),
+    end: at(16, 16),
+    allDay: false,
+    url: "https://www.google.com/calendar/event?eid=g1",
+    ...over,
+  });
+  const t = (over: Partial<Task> = {}) => task({ title: "reuniao  com o TIME", ...over });
+
+  it("mesmo título normalizado e início até 15 min", () => {
+    expect(matchExternalEvent(t({ date: at(16, 15, 15) }), [ev()])?.id).toBe("g1");
+    expect(matchExternalEvent(t({ date: at(16, 15, 16) }), [ev()])).toBeUndefined();
+    expect(matchExternalEvent(t({ title: "Outra" }), [ev()])).toBeUndefined();
+    expect(matchExternalEvent(t(), [ev({ allDay: true })])).toBeUndefined();
+  });
+
+  it("mesmo Meet casa em qualquer horário e título; querystring não importa", () => {
+    const meet = "https://meet.google.com/abc-defg-hij";
+    const hit = t({ title: "x", date: at(16, 9), links: [`${meet}?authuser=0`] });
+    expect(matchExternalEvent(hit, [ev({ title: "y", meet })])?.id).toBe("g1");
+    expect(matchExternalEvent(hit, [ev({ title: "y", meet: "https://meet.google.com/zzz" })])).toBe(
+      undefined,
+    );
+  });
+
+  it("não sugere pra tarefa vinculada, recorrente ou Sem data, nem evento da Mewki ou de série", () => {
+    const linked = t({ links: ["https://www.google.com/calendar/event?eid=z"] });
+    expect(matchExternalEvent(linked, [ev()])).toBeUndefined();
+    expect(matchExternalEvent(t({ repeat: "Daily" }), [ev()])).toBeUndefined();
+    expect(matchExternalEvent(t({ undated: true }), [ev()])).toBeUndefined();
+    expect(matchExternalEvent(t(), [ev({ mewkiTaskId: "t1" })])).toBeUndefined();
+    expect(matchExternalEvent(t(), [ev({ recurring: true })])).toBeUndefined();
   });
 });

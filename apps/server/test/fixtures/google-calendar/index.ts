@@ -46,3 +46,63 @@ export const eventExists = {
 export const rateLimited = {
   error: { code: 429, message: "Rate Limit Exceeded", errors: [{ reason: "rateLimitExceeded" }] },
 };
+
+// `events.list` com singleEvents=true: série já aberta em ocorrências (recurringEventId).
+export const listPage1 = {
+  kind: "calendar#events",
+  nextPageToken: "page-2",
+  items: [
+    {
+      id: "ev1",
+      status: "confirmed",
+      htmlLink: "https://www.google.com/calendar/event?eid=ev1",
+      summary: "Dentista",
+      start: { dateTime: "2026-11-16T10:00:00-03:00", timeZone: "America/Sao_Paulo" },
+      end: { dateTime: "2026-11-16T11:00:00-03:00", timeZone: "America/Sao_Paulo" },
+      hangoutLink: "https://meet.google.com/abc-defg-hij",
+    },
+    {
+      id: "ev2",
+      status: "confirmed",
+      htmlLink: "https://www.google.com/calendar/event?eid=ev2",
+      summary: "Feriado",
+      start: { date: "2026-11-20" },
+      end: { date: "2026-11-21" },
+    },
+  ],
+};
+
+export const listPage2 = {
+  kind: "calendar#events",
+  items: [
+    {
+      id: "daily_20261117T120000Z",
+      recurringEventId: "daily",
+      status: "confirmed",
+      htmlLink: "https://www.google.com/calendar/event?eid=daily1",
+      summary: "Standup",
+      start: { dateTime: "2026-11-17T12:00:00Z" },
+      end: { dateTime: "2026-11-17T12:15:00Z" },
+    },
+    {
+      id: "mewki1",
+      status: "confirmed",
+      htmlLink: "https://www.google.com/calendar/event?eid=mewki1",
+      summary: "Criada pela Mewki",
+      start: { dateTime: "2026-11-18T15:00:00-03:00" },
+      end: { dateTime: "2026-11-18T15:30:00-03:00" },
+      extendedProperties: { private: { mewkiTaskId: "task01" } },
+    },
+  ],
+};
+
+export const existing = {
+  id: "ev1",
+  status: "confirmed",
+  htmlLink: "https://www.google.com/calendar/event?eid=ev1",
+  summary: "Dentista",
+  start: { dateTime: "2026-11-16T10:00:00-03:00" },
+  end: { dateTime: "2026-11-16T11:00:00-03:00" },
+  hangoutLink: "https://meet.google.com/abc-defg-hij",
+  extendedProperties: { private: { other: "app" } },
+};

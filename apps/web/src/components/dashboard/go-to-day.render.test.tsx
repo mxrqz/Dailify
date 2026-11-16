@@ -8,6 +8,7 @@ import { dayAnchorId } from "./day-section";
 
 const dailify = vi.hoisted((): { current: Record<string, unknown> } => ({ current: {} }));
 vi.mock("@/components/dailifyContext", () => ({ useDailify: () => dailify.current }));
+vi.mock("@/hooks/useExternalEvents", () => ({ useExternalEvents: () => [] }));
 
 const scrollIntoView = vi.fn();
 

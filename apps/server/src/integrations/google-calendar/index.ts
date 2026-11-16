@@ -3,10 +3,12 @@ import {
   calendarEventPreview,
   INTEGRATION_ERROR,
   TASK_LIMITS,
+  zonedEpoch,
+  type ExternalEvent,
   type IntegrationLink,
   type Task,
 } from "@dailify/shared";
-import { getLink, upsertLink, type StoredLink } from "../../db/integrations";
+import { getLink, getLinkByExternal, upsertLink, type StoredLink } from "../../db/integrations";
 import { getTask, updateTask } from "../../db/tasks";
 import { ActionError, type Action, type Ctx, type Provider } from "../types";
 import { toEvent, type GoogleEvent } from "./event";
@@ -29,10 +31,30 @@ async function ownTask(ctx: Ctx, id: string): Promise<Task> {
   return task;
 }
 
+const field = (body: unknown, key: string): unknown =>
+  typeof body === "object" && body !== null ? Reflect.get(body, key) : undefined;
 const text = (body: unknown, key: string): string | undefined => {
-  const v = typeof body === "object" && body !== null ? Reflect.get(body, key) : undefined;
+  const v = field(body, key);
   return typeof v === "string" ? v : undefined;
 };
+
+async function ensureOk(res: Response): Promise<void> {
+  if (res.ok) return;
+  console.error(`Google Agenda ${res.status}`, await res.text().catch(() => ""));
+  throw new ActionError(
+    502,
+    res.status === 403 || res.status === 429
+      ? "O Google Agenda está limitando os pedidos; tente de novo em alguns minutos"
+      : "O Google Agenda não respondeu; tente de novo",
+  );
+}
+
+/** Os links novos entram no fim e, se passar do teto, quem sai são os mais antigos do fim. */
+async function addLinks(ctx: Ctx, task: Task, added: string[]): Promise<Task> {
+  const kept = (task.links ?? []).filter((l) => !added.includes(l));
+  const links = [...kept.slice(0, TASK_LIMITS.linksMax - added.length), ...added];
+  return (await updateTask(ctx.env.DB, ctx.userId, task.id, { links })) ?? task;
+}
 
 /** Insert; 409 = o id já existe (retry depois de o D1 falhar, ou evento apagado que volta). */
 async function saveEvent(ctx: Ctx, event: GoogleEvent, meet: boolean) {
@@ -49,15 +71,7 @@ async function saveEvent(ctx: Ctx, event: GoogleEvent, meet: boolean) {
       `${EVENTS_API}/${event.id}${query}`,
       init("PATCH", { ...event, status: "confirmed" }),
     );
-  if (!res.ok) {
-    console.error(`Google Agenda ${res.status}`, await res.text().catch(() => ""));
-    throw new ActionError(
-      502,
-      res.status === 403 || res.status === 429
-        ? "O Google Agenda está limitando os pedidos; tente de novo em alguns minutos"
-        : "O Google Agenda não respondeu; tente de novo",
-    );
-  }
+  await ensureOk(res);
   const body: unknown = await res.json();
   const htmlLink = text(body, "htmlLink");
   if (!htmlLink) throw new ActionError(502, "O Google Agenda não respondeu; tente de novo");
@@ -108,15 +122,138 @@ export const createEvent: Action<CreateEventInput> = {
       url: saved.htmlLink,
     };
     await upsertLink(ctx.env.DB, ctx.userId, link, input.timeZone, Date.now());
-
-    // Os links novos entram no fim e, se passar do teto, quem sai são os mais antigos do fim.
     const added = [saved.htmlLink, saved.hangoutLink].filter((l): l is string => !!l);
-    const kept = (task.links ?? []).filter((l) => !added.includes(l));
-    const links = [...kept.slice(0, TASK_LIMITS.linksMax - added.length), ...added];
-    const updated = await updateTask(ctx.env.DB, ctx.userId, task.id, { links });
-    return { link, task: updated ?? task };
+    return { link, task: await addLinks(ctx, task, added) };
   },
 };
+
+const DAY = 86_400_000;
+export const MAX_WINDOW = 62 * DAY;
+// ponytail: 4 páginas × 250 = 1000 eventos por janela; agenda mais cheia que isso perde o fim.
+const MAX_PAGES = 4;
+
+/** "2026-11-16" → meia-noite no fuso; o `date` do dia inteiro não tem fuso próprio. */
+const dayStart = (date: string, timeZone: string) => {
+  const [year, month, day] = date.split("-").map(Number);
+  return zonedEpoch({ year, month: month - 1, day, hour: 0, minute: 0, second: 0 }, timeZone);
+};
+
+function when(raw: unknown, timeZone: string): { at: number; allDay: boolean } | null {
+  const date = text(raw, "date");
+  if (date) return { at: dayStart(date, timeZone), allDay: true };
+  const at = Date.parse(text(raw, "dateTime") ?? "");
+  return Number.isNaN(at) ? null : { at, allDay: false };
+}
+
+/** Evento cru do Google → `ExternalEvent`; o que não tem início/fim legível fica de fora. */
+export function toExternal(raw: unknown, timeZone: string): ExternalEvent | null {
+  const id = text(raw, "id");
+  const url = text(raw, "htmlLink");
+  const start = when(field(raw, "start"), timeZone);
+  const end = when(field(raw, "end"), timeZone);
+  if (!id || !url || !start || !end || text(raw, "status") === "cancelled") return null;
+  const mewkiTaskId = text(field(field(raw, "extendedProperties"), "private"), "mewkiTaskId");
+  const meet = text(raw, "hangoutLink");
+  return {
+    id,
+    title: text(raw, "summary") ?? "",
+    start: start.at,
+    end: end.at,
+    allDay: start.allDay,
+    url,
+    ...(meet && { meet }),
+    ...(mewkiTaskId && { mewkiTaskId }),
+    ...(text(raw, "recurringEventId") && { recurring: true }),
+  };
+}
+
+/** A janela visível, lida na hora e não guardada (0xp.8): séries já vêm abertas em ocorrências. */
+export async function listEvents(
+  ctx: Ctx,
+  window: { from: number; to: number; timeZone: string },
+): Promise<ExternalEvent[]> {
+  const to = Math.min(window.to, window.from + MAX_WINDOW);
+  const events: ExternalEvent[] = [];
+  let pageToken: string | undefined;
+  for (let page = 0; page < MAX_PAGES; page++) {
+    const query = new URLSearchParams({
+      singleEvents: "true",
+      orderBy: "startTime",
+      showDeleted: "false",
+      maxResults: "250",
+      timeMin: new Date(window.from).toISOString(),
+      timeMax: new Date(to).toISOString(),
+      ...(pageToken && { pageToken }),
+    });
+    const res = await ctx.api(`${EVENTS_API}?${query}`);
+    await ensureOk(res);
+    const body: unknown = await res.json();
+    const items = field(body, "items");
+    if (Array.isArray(items))
+      for (const item of items) {
+        const event = toExternal(item, window.timeZone);
+        if (event) events.push(event);
+      }
+    pageToken = text(body, "nextPageToken");
+    if (!pageToken) break;
+  }
+  return events;
+}
+
+/**
+ * "Vincular": a tarefa passa a ser deste evento que já existia, sem criar outro. O evento ganha o
+ * `mewkiTaskId` (some da leitura como duplicata) e fica como está: só a próxima edição da tarefa o
+ * sobrescreve, pela propagação (F4) — vincular não pode mudar a agenda de ninguém sem uma edição.
+ */
+export async function linkEvent(
+  ctx: Ctx,
+  input: { taskId: string; eventId: string; timeZone: string },
+): Promise<{ link: IntegrationLink; task: Task }> {
+  const task = await ownTask(ctx, input.taskId);
+  const { DB } = ctx.env;
+  const already = { code: INTEGRATION_ERROR.alreadyLinked };
+  const existing = await getLink(DB, ctx.userId, "google-calendar", task.id);
+  if (existing)
+    throw new ActionError(409, "Esta tarefa já está no Google Agenda", {
+      ...already,
+      link: existing,
+      task,
+    });
+  if (task.repeat !== "Off")
+    throw new ActionError(400, "Tarefa recorrente não dá pra vincular a um evento");
+  if (await getLinkByExternal(DB, ctx.userId, "google-calendar", input.eventId))
+    throw new ActionError(409, "Este evento já está vinculado a outra tarefa", already);
+
+  const url = `${EVENTS_API}/${encodeURIComponent(input.eventId)}`;
+  const res = await ctx.api(url);
+  if (res.status === 404 || res.status === 410)
+    throw new ActionError(404, "Evento não encontrado no Google Agenda");
+  await ensureOk(res);
+  const event = toExternal(await res.json(), input.timeZone);
+  if (!event) throw new ActionError(404, "Evento não encontrado no Google Agenda");
+  if (event.mewkiTaskId)
+    throw new ActionError(409, "Este evento já está vinculado a outra tarefa", already);
+  if (event.recurring)
+    throw new ActionError(400, "Evento recorrente não dá pra vincular a uma tarefa");
+
+  // PATCH mescla os mapas de extendedProperties: o que outros apps guardaram ali fica.
+  await ensureOk(
+    await ctx.api(url, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ extendedProperties: { private: { mewkiTaskId: task.id } } }),
+    }),
+  );
+  const link: IntegrationLink = {
+    provider: "google-calendar",
+    taskId: task.id,
+    externalId: event.id,
+    url: event.url,
+  };
+  await upsertLink(DB, ctx.userId, link, input.timeZone, Date.now());
+  const added = [event.url, event.meet].filter((l): l is string => !!l);
+  return { link, task: await addLinks(ctx, task, added) };
+}
 
 // PATCH mescla objetos: sem os nulls, trocar horário por dia inteiro deixaria date e dateTime juntos.
 const CLEAR_WHEN = { date: null, dateTime: null, timeZone: null };

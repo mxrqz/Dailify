@@ -39,8 +39,8 @@ import {
 import { loadCtx, makeCtx, revokeSealed, sealTokens } from "../integrations/connection";
 import { pushLink } from "../integrations/propagate";
 import { getTask } from "../db/tasks";
-import { createEvent } from "../integrations/google-calendar";
-import { ActionError } from "../integrations/types";
+import { createEvent, linkEvent, listEvents } from "../integrations/google-calendar";
+import { ActionError, type Ctx as ProviderCtx } from "../integrations/types";
 
 type Ctx = Context<{ Bindings: Env; Variables: { userId: string } }>;
 
@@ -171,16 +171,15 @@ integrations.post("/integrations/:provider/callback", async (c) => {
 
 const RECONNECT = "Reconecte o Google Agenda para continuar";
 
-integrations.post("/integrations/google-calendar/events", async (c) => {
-  const parsed = createEvent.parse(await c.req.json().catch(() => null));
-  if ("error" in parsed) return fail(c, 400, parsed.error);
+/** Plano + conexão ativa + os erros esperados do Google, iguais em toda rota que fala com ele. */
+async function withCalendar(c: Ctx, run: (ctx: ProviderCtx) => Promise<unknown>) {
   const userId = c.get("userId");
   if (!canUseIntegration(await getUserRole(c.env, userId), "google-calendar"))
     return fail(c, 403, "Seu plano não inclui esta integração");
   const ctx = await loadCtx(c.env, userId, "google-calendar");
   if (!ctx) return fail(c, 409, RECONNECT, { code: INTEGRATION_ERROR.reconnect });
   try {
-    return c.json(await createEvent.run(ctx, parsed.input));
+    return c.json(await run(ctx));
   } catch (err) {
     if (err instanceof ActionError) return fail(c, err.status, err.message, err.extra);
     // O refresh recusado já marcou a conexão revogada (`makeCtx`).
@@ -188,6 +187,40 @@ integrations.post("/integrations/google-calendar/events", async (c) => {
       return fail(c, 409, RECONNECT, { code: INTEGRATION_ERROR.reconnect });
     throw err;
   }
+}
+
+const field = (body: unknown, key: string): unknown =>
+  typeof body === "object" && body !== null ? Reflect.get(body, key) : undefined;
+
+integrations.post("/integrations/google-calendar/events", async (c) => {
+  const parsed = createEvent.parse(await c.req.json().catch(() => null));
+  if ("error" in parsed) return fail(c, 400, parsed.error);
+  return withCalendar(c, (ctx) => createEvent.run(ctx, parsed.input));
+});
+
+// Leitura sob demanda da janela visível (0xp.8): nada é guardado, a janela passa de 62 dias cortada.
+integrations.get("/integrations/google-calendar/events", async (c) => {
+  const from = Number(c.req.query("from"));
+  const to = Number(c.req.query("to"));
+  const timeZone = c.req.query("tz") ?? "";
+  if (!Number.isSafeInteger(from) || !Number.isSafeInteger(to) || to <= from)
+    return fail(c, 400, "Janela inválida");
+  if (!IANAZone.isValidZone(timeZone)) return fail(c, 400, "Fuso inválido");
+  return withCalendar(c, async (ctx) => ({
+    events: await listEvents(ctx, { from, to, timeZone }),
+  }));
+});
+
+integrations.post("/integrations/google-calendar/links", async (c) => {
+  const body: unknown = await c.req.json().catch(() => null);
+  const taskId = field(body, "taskId");
+  const eventId = field(body, "eventId");
+  const timeZone = field(body, "timezone");
+  if (typeof taskId !== "string" || !taskId || typeof eventId !== "string" || !eventId)
+    return fail(c, 400, "taskId e eventId são obrigatórios");
+  if (typeof timeZone !== "string" || !IANAZone.isValidZone(timeZone))
+    return fail(c, 400, "Fuso inválido");
+  return withCalendar(c, (ctx) => linkEvent(ctx, { taskId, eventId, timeZone }));
 });
 
 // O retry do "não sincronizado": reenvia agora, sem comparar, no fuso que o aparelho mandar.

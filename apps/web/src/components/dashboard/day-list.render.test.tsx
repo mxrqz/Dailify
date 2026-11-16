@@ -7,6 +7,7 @@ import { DayList } from "./day-list";
 
 const dailify = vi.hoisted((): { current: Record<string, unknown> } => ({ current: {} }));
 vi.mock("@/components/dailifyContext", () => ({ useDailify: () => dailify.current }));
+vi.mock("@/hooks/useExternalEvents", () => ({ useExternalEvents: () => [] }));
 vi.mock("@/components/dashboard/day-section", () => ({
   DaySection: () => <section />,
   TaskSkeletons: () => <div data-testid="skeleton" />,
