@@ -21,6 +21,8 @@ export interface Task {
   exdates?: number[]; // epoch ms
   /** `true` = Sem data (fora da agenda); ausente/`false` = tarefa de agenda. */
   undated?: boolean;
+  /** Instância expandida: a `date` da série. Derivado na expansão, nunca gravado. */
+  seriesStart?: number;
 }
 
 export type TaskInput = Omit<Task, "id" | "completed" | "hash" | "repeatEvery"> & {

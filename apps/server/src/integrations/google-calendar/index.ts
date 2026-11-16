@@ -6,7 +6,7 @@ import {
   type IntegrationLink,
   type Task,
 } from "@dailify/shared";
-import { getLink, upsertLink } from "../../db/integrations";
+import { getLink, upsertLink, type StoredLink } from "../../db/integrations";
 import { getTask, updateTask } from "../../db/tasks";
 import { ActionError, type Action, type Ctx, type Provider } from "../types";
 import { toEvent, type GoogleEvent } from "./event";
@@ -95,6 +95,7 @@ export const createEvent: Action<CreateEventInput> = {
       throw new ActionError(409, "Esta tarefa já está no Google Agenda", {
         code: INTEGRATION_ERROR.alreadyLinked,
         link: existing,
+        task,
       });
     const event = toEvent(task, input.timeZone, { meet: input.meet });
     if (!event) throw new ActionError(400, NO_DAY);
@@ -106,7 +107,7 @@ export const createEvent: Action<CreateEventInput> = {
       externalId: event.id,
       url: saved.htmlLink,
     };
-    await upsertLink(ctx.env.DB, ctx.userId, link, Date.now());
+    await upsertLink(ctx.env.DB, ctx.userId, link, input.timeZone, Date.now());
 
     // Os links novos entram no fim e, se passar do teto, quem sai são os mais antigos do fim.
     const added = [saved.htmlLink, saved.hangoutLink].filter((l): l is string => !!l);
@@ -116,6 +117,48 @@ export const createEvent: Action<CreateEventInput> = {
     return { link, task: updated ?? task };
   },
 };
+
+// PATCH mescla objetos: sem os nulls, trocar horário por dia inteiro deixaria date e dateTime juntos.
+const CLEAR_WHEN = { date: null, dateTime: null, timeZone: null };
+
+/** O que a Mewki escreve, com null no que saiu (local, recorrência). O Meet criado fica. */
+const patchBody = (e: GoogleEvent) => ({
+  summary: e.summary,
+  description: e.description,
+  location: e.location ?? null,
+  start: { ...CLEAR_WHEN, ...e.start },
+  end: { ...CLEAR_WHEN, ...e.end },
+  recurrence: e.recurrence ?? null,
+  extendedProperties: e.extendedProperties,
+});
+
+/** 404/410 = o evento já não existe (apagado no Google): o vínculo cai junto. */
+async function syncEvent(
+  ctx: Ctx,
+  link: StoredLink,
+  before: Task | null,
+  after: Task | null,
+): Promise<"unlink" | void> {
+  const url = `${EVENTS_API}/${link.externalId}`;
+  const tz = link.timeZone;
+  if (!tz) throw new Error("vínculo sem fuso");
+  // Sem dia (Sem data sem lembrete) o evento não tem onde ficar: sai, como a tarefa apagada.
+  const next = after && toEvent(after, tz, { meet: false });
+  let res: Response;
+  if (!next) res = await ctx.api(url, { method: "DELETE" });
+  else {
+    const prev = before && toEvent(before, tz, { meet: false });
+    if (prev && JSON.stringify(prev) === JSON.stringify(next)) return;
+    res = await ctx.api(url, {
+      method: "PATCH",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(patchBody(next)),
+    });
+  }
+  if (res.status === 404 || res.status === 410) return "unlink";
+  if (!res.ok) throw new Error(`Google Agenda ${res.status}: ${await res.text().catch(() => "")}`);
+  if (!next) return "unlink";
+}
 
 export const googleCalendar: Provider = {
   id: "google-calendar",
@@ -141,4 +184,5 @@ export const googleCalendar: Provider = {
     return { accountId: sub, email: typeof email === "string" ? email : null };
   },
   actions: [createEvent],
+  onTaskChanged: syncEvent,
 };

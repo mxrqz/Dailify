@@ -20,6 +20,7 @@ import { enforceCreate } from "../db/limits";
 import { expandRecurringTask, type Task } from "@dailify/shared";
 import { parseClientId, parseNewTask, parseTaskFields } from "../lib/task-input";
 import { fail } from "../lib/errors";
+import { linkedTask, propagate } from "../integrations/propagate";
 
 const tasks = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 tasks.use("*", requireAuth);
@@ -94,21 +95,32 @@ tasks.patch("/:id", async (c) => {
   const parsed = parseTaskFields(await readJson(c), { partial: true });
   if ("error" in parsed) return fail(c, 400, parsed.error);
 
+  const linked = await linkedTask(c.env, userId, id);
+
   // ?occurrence=<epoch-ms> = "editar só esta": edita a instância daquele dia em vez da série.
+  // A série ganha o EXDATE no evento; a tarefa destacada nasce sem vínculo.
   const occurrence = c.req.query("occurrence");
   if (occurrence !== undefined) {
     const at = Number(occurrence);
     if (!Number.isInteger(at)) return fail(c, 400, "invalid occurrence");
     const detached = await detachOccurrence(c.env.DB, userId, id, at, parsed.fields, nanoid(6));
     if (!detached) return fail(c, 404, "Recurring task not found");
+    if (linked)
+      c.executionCtx.waitUntil(
+        propagate(c.env, userId, linked.links, linked.before, detached.series),
+      );
     return c.json(detached); // { task, series }
   }
 
   const updated = await updateTask(c.env.DB, userId, id, parsed.fields);
   if (!updated) return fail(c, 404, "Task not found");
+  if (linked)
+    c.executionCtx.waitUntil(propagate(c.env, userId, linked.links, linked.before, updated));
   return c.json({ task: updated });
 });
 
+// Concluir não propaga: avulsa concluída segue sendo o compromisso que foi, e na série a conclusão
+// é histórico (`completed`), não muda regra nem datas do evento.
 tasks.post("/:id/complete", async (c) => {
   const userId = c.get("userId");
   // `at` opcional: uma conclusão feita offline aconteceu quando o cliente diz, não quando a fila
@@ -135,6 +147,8 @@ tasks.delete("/:id", async (c) => {
   const userId = c.get("userId");
   const id = c.req.param("id");
 
+  const linked = await linkedTask(c.env, userId, id);
+
   // Mesmo contrato do PATCH: ?occurrence=<epoch-ms> mexe num dia só, sem ?occurrence apaga a série.
   const occurrence = c.req.query("occurrence");
   if (occurrence !== undefined) {
@@ -142,10 +156,13 @@ tasks.delete("/:id", async (c) => {
     if (!Number.isInteger(at)) return fail(c, 400, "invalid occurrence");
     const series = await excludeOccurrence(c.env.DB, userId, id, at);
     if (!series) return fail(c, 404, "Recurring task not found");
+    if (linked)
+      c.executionCtx.waitUntil(propagate(c.env, userId, linked.links, linked.before, series));
     return c.json({ series });
   }
 
   await deleteTask(c.env.DB, userId, id);
+  if (linked) c.executionCtx.waitUntil(propagate(c.env, userId, linked.links, linked.before, null));
   return c.body(null, 204);
 });
 

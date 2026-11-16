@@ -61,7 +61,7 @@ async function request<T>(
   path: string,
   token: string,
   init: RequestInit = {},
-): Promise<{ data?: T; error?: ApiError }> {
+): Promise<{ data?: T; error?: ApiError; errorBody?: Partial<T> }> {
   let res: Response;
   try {
     res = await fetch(`${apiURL}${path}`, authed(token, init));
@@ -80,6 +80,8 @@ async function request<T>(
         status: res.status,
         code: serverCode(body),
       },
+      // Erro com dados (o 409 `already_linked` traz o vínculo e a tarefa): quem precisa, lê.
+      errorBody: body,
     };
   }
 
@@ -366,10 +368,24 @@ export async function createCalendarEvent(
   taskId: string,
   meet: boolean,
 ): Promise<{ link?: IntegrationLink; task?: Task; error?: ApiError }> {
-  const { data, error } = await request<{ link: IntegrationLink; task: Task }>(
+  const { data, error, errorBody } = await request<{ link: IntegrationLink; task: Task }>(
     "/integrations/google-calendar/events",
     token,
     { method: "POST", body: JSON.stringify({ taskId, timezone: appTimeZone(), meet }) },
   );
-  return { link: data?.link, task: data?.task, error };
+  const body = data ?? errorBody;
+  return { link: body?.link, task: body?.task, error };
+}
+
+/** Reenvia uma tarefa `stale` ao Google agora; devolve a tarefa como ficou (null = apagada). */
+export async function syncCalendarEvent(
+  token: string,
+  taskId: string,
+): Promise<{ task?: Task | null; error?: ApiError }> {
+  const { data, error } = await request<{ task: Task | null }>(
+    `/integrations/google-calendar/events/${encodeURIComponent(taskId)}/sync`,
+    token,
+    { method: "POST", body: JSON.stringify({ timezone: appTimeZone() }) },
+  );
+  return { task: data?.task, error };
 }

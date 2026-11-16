@@ -77,8 +77,26 @@ describe("calendário", () => {
         meet: false,
         now,
       }),
-    ).toBe("Criar evento no Google Agenda · hoje · dia inteiro · recorrente");
+    ).toBe("Criar evento no Google Agenda · todo dia, dia inteiro, desde 15/11");
     expect(calendarEventPreview(task({ undated: true }), TZ, { meet: false, now })).toBeNull();
+  });
+
+  it("série: a regra e o início da série, não o dia da instância", () => {
+    const weekly = task({ date: at(16, 10), repeat: { Weekly: ["Monday"] } });
+    const instance = { ...weekly, date: at(30, 10), seriesStart: weekly.date };
+    expect(calendarEventPreview(instance, TZ, { meet: false, now })).toBe(
+      "Criar evento no Google Agenda · toda segunda 10:00–10:30, desde 16/11",
+    );
+    const rule = (over: Partial<Task>) =>
+      calendarEventPreview(task(over), TZ, { meet: false, now })?.split(" · ")[1];
+    expect(rule({ repeat: { Weekly: ["Wednesday", "Saturday"] }, repeatEvery: 2 })).toBe(
+      "a cada 2 semanas, quarta e sábado 15:00–15:30, desde 16/11",
+    );
+    expect(rule({ repeat: { Weekly: ["Sunday"] } })).toMatch(/^todo domingo/);
+    expect(rule({ repeat: "Monthly" })).toMatch(/^todo dia 16 /);
+    expect(rule({ repeat: "Yearly", date: at(16, 15) + 366 * 86_400_000 })).toMatch(
+      /^todo ano em 17\/11 .*desde 17\/11\/2027$/,
+    );
   });
 
   it("links de vídeo e de evento", () => {

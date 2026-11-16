@@ -1,4 +1,4 @@
-import type { IntegrationLink, ProviderId } from "@dailify/shared";
+import { isProviderId, type IntegrationLink, type ProviderId } from "@dailify/shared";
 
 export interface ConnectionRow {
   provider: string;
@@ -182,15 +182,84 @@ export async function upsertLink(
   db: D1Database,
   userId: string,
   link: IntegrationLink,
+  timeZone: string,
   now: number,
 ): Promise<void> {
   await db
     .prepare(
-      `INSERT INTO integration_links (user_id, provider, task_id, external_id, url, updated_at)
-       VALUES (?, ?, ?, ?, ?, ?)
+      `INSERT INTO integration_links
+         (user_id, provider, task_id, external_id, url, time_zone, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?, ?)
        ON CONFLICT(user_id, provider, task_id) DO UPDATE SET external_id=excluded.external_id,
-         url=excluded.url, updated_at=excluded.updated_at`,
+         url=excluded.url, time_zone=excluded.time_zone, stale=0, updated_at=excluded.updated_at`,
     )
-    .bind(userId, link.provider, link.taskId, link.externalId, link.url, now)
+    .bind(userId, link.provider, link.taskId, link.externalId, link.url, timeZone, now)
+    .run();
+}
+
+/** O vínculo como a propagação precisa: o fuso em que o evento foi montado e se ficou pra trás. */
+export interface StoredLink extends IntegrationLink {
+  timeZone: string | null;
+  stale: boolean;
+}
+
+export async function listTaskLinks(
+  db: D1Database,
+  userId: string,
+  taskId: string,
+): Promise<StoredLink[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT provider, task_id, external_id, url, time_zone, stale FROM integration_links
+       WHERE user_id=? AND task_id=?`,
+    )
+    .bind(userId, taskId)
+    .all<LinkRow & { provider: string; time_zone: string | null; stale: number }>();
+  return results.flatMap((r) =>
+    isProviderId(r.provider)
+      ? [{ ...toLink(r.provider, r), timeZone: r.time_zone, stale: r.stale === 1 }]
+      : [],
+  );
+}
+
+/** Tarefas com vínculo `stale`, por provider: o "não sincronizado" do web. */
+export async function listStale(
+  db: D1Database,
+  userId: string,
+): Promise<{ provider: string; task_id: string }[]> {
+  const { results } = await db
+    .prepare(`SELECT provider, task_id FROM integration_links WHERE user_id=? AND stale=1`)
+    .bind(userId)
+    .all<{ provider: string; task_id: string }>();
+  return results;
+}
+
+/** `timeZone` só quando vem (o retry manda o fuso do aparelho); ausente mantém o gravado. */
+export async function setLinkState(
+  db: D1Database,
+  userId: string,
+  provider: ProviderId,
+  taskId: string,
+  state: { stale: boolean; timeZone?: string },
+  now: number,
+): Promise<void> {
+  await db
+    .prepare(
+      `UPDATE integration_links SET stale=?, time_zone=COALESCE(?, time_zone), updated_at=?
+       WHERE user_id=? AND provider=? AND task_id=?`,
+    )
+    .bind(state.stale ? 1 : 0, state.timeZone ?? null, now, userId, provider, taskId)
+    .run();
+}
+
+export async function deleteLink(
+  db: D1Database,
+  userId: string,
+  provider: ProviderId,
+  taskId: string,
+): Promise<void> {
+  await db
+    .prepare(`DELETE FROM integration_links WHERE user_id=? AND provider=? AND task_id=?`)
+    .bind(userId, provider, taskId)
     .run();
 }

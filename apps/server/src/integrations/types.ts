@@ -1,4 +1,5 @@
-import type { ProviderId } from "@dailify/shared";
+import type { ProviderId, Task } from "@dailify/shared";
+import type { StoredLink } from "../db/integrations";
 import type { Env } from "../index";
 
 export interface OAuthConfig {
@@ -55,4 +56,14 @@ export interface Provider {
   oauth: OAuthConfig;
   identify(ctx: Ctx): Promise<{ accountId: string; email: string | null }>;
   actions: readonly Action[];
+  /**
+   * Tarefa vinculada mudou (`propagate`). `before` null = reenvio forçado (o retry do web); `after`
+   * null = tarefa apagada. "unlink" = o objeto externo não existe mais. Falha = throw.
+   */
+  onTaskChanged?(
+    ctx: Ctx,
+    link: StoredLink,
+    before: Task | null,
+    after: Task | null,
+  ): Promise<"unlink" | void>;
 }

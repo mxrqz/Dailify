@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
-import { CalendarCheckIcon, CalendarPlusIcon } from "lucide-react";
+import { CalendarCheckIcon, CalendarPlusIcon, CalendarSyncIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   calendarEventPreview,
@@ -14,12 +14,13 @@ import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { ConfirmAction } from "@/components/mew/confirm-action";
 import { ToolbarButton } from "@/components/task-card";
-import { createCalendarEvent } from "@/functions/api";
+import { createCalendarEvent, syncCalendarEvent } from "@/functions/api";
 import { upsertTaskWithRecurrence } from "@/functions/functions";
 import { upsertUndated } from "@/functions/undated";
 import { appTimeZone } from "@/functions/zone";
-import { patchIntegration, useCalendarReady } from "@/hooks/useIntegrations";
+import { patchIntegration, useCalendarReady, useIntegrations } from "@/hooks/useIntegrations";
 import { useOnline } from "@/hooks/useOnline";
+import { cn } from "@/lib/utils";
 import type { TaskProps } from "@/types/types";
 
 const t = copy.calendar;
@@ -28,7 +29,8 @@ const sheetAction =
 
 /**
  * "Adicionar ao Google Agenda": só com a agenda conectada e a tarefa com dia. Já vinculada (o
- * `htmlLink` está nos links) vira "No Google Agenda", que abre o evento.
+ * `htmlLink` está nos links) vira "No Google Agenda", que abre o evento; se a última edição não
+ * chegou lá (`stale`), ganha o "não sincronizado" e o reenviar.
  */
 export function AddToCalendar({
   task,
@@ -38,6 +40,8 @@ export function AddToCalendar({
   variant: "toolbar" | "sheet";
 }): JSX.Element | null {
   const ready = useCalendarReady();
+  const staleIds = useIntegrations()?.find((s) => s.provider === "google-calendar")?.stale ?? [];
+  const stale = staleIds.includes(task.id);
   const online = useOnline();
   const { tasks, setTasks, undatedTasks, setUndatedTasks, loadedMonths } = useDailify();
   const { getToken } = useAuth();
@@ -54,6 +58,56 @@ export function AddToCalendar({
   const linked = task.links?.find(isCalendarEventLink);
   if (!ready || !preview) return null;
 
+  const applyTask = (updated: TaskProps) => {
+    if (updated.undated) setUndatedTasks(upsertUndated(undatedTasks ?? [], updated));
+    else setTasks(upsertTaskWithRecurrence(tasks ?? [], updated, loadedMonths));
+  };
+  const onRevoked = () => {
+    patchIntegration("google-calendar", { status: "revoked" });
+    toast.error(t.revoked, {
+      action: { label: t.reconnect, onClick: () => navigate("/settings") },
+    });
+  };
+
+  const retry = async () => {
+    setPending(true);
+    const token = await getToken().catch(() => null);
+    const res = token
+      ? await syncCalendarEvent(token, task.id)
+      : { error: { message: copy.form.authError, offline: false } };
+    setPending(false);
+    if (!res.error) {
+      patchIntegration("google-calendar", { stale: staleIds.filter((id) => id !== task.id) });
+      if (res.task) applyTask(res.task);
+      toast.success(t.synced);
+    } else if (res.error.code === INTEGRATION_ERROR.reconnect) onRevoked();
+    else toast.error(t.syncError, { description: res.error.message });
+  };
+
+  if (linked && stale && online) {
+    return variant === "toolbar" ? (
+      <ToolbarButton label={t.retry} onClick={() => void retry()} disabled={pending}>
+        <CalendarSyncIcon className="size-4" aria-hidden="true" />
+      </ToolbarButton>
+    ) : (
+      <div className="flex gap-2">
+        <a href={linked} target="_blank" rel="noreferrer" className={cn(sheetAction, "flex-1")}>
+          <CalendarCheckIcon className="size-5" aria-hidden="true" />
+          {t.linked}
+          <span className="text-muted-foreground">· {t.unsynced}</span>
+        </a>
+        <button
+          type="button"
+          aria-label={t.retry}
+          className={cn(sheetAction, "px-4")}
+          onClick={() => void retry()}
+          disabled={pending}
+        >
+          <CalendarSyncIcon className="size-5" aria-hidden="true" />
+        </button>
+      </div>
+    );
+  }
   if (linked) {
     return variant === "toolbar" ? (
       <ToolbarButton
@@ -80,10 +134,15 @@ export function AddToCalendar({
     setPending(false);
     setOpen(false);
 
-    if ("task" in res && res.task) {
-      const updated = res.task;
-      if (updated.undated) setUndatedTasks(upsertUndated(undatedTasks ?? [], updated));
-      else setTasks(upsertTaskWithRecurrence(tasks ?? [], updated, loadedMonths));
+    const { error } = res;
+    // `already_linked` devolve a tarefa como está no servidor: a lista já passa a "No Google Agenda".
+    if (res.task && error?.code === INTEGRATION_ERROR.alreadyLinked) {
+      applyTask(res.task);
+      toast.info(t.alreadyLinked);
+      return;
+    }
+    if (res.task && !error) {
+      applyTask(res.task);
       const url = res.link?.url;
       toast.success(t.added, {
         action: url
@@ -93,12 +152,8 @@ export function AddToCalendar({
       return;
     }
 
-    const { error } = res;
     if (error?.code === INTEGRATION_ERROR.reconnect) {
-      patchIntegration("google-calendar", { status: "revoked" });
-      toast.error(t.revoked, {
-        action: { label: t.reconnect, onClick: () => navigate("/settings") },
-      });
+      onRevoked();
     } else if (error?.code === INTEGRATION_ERROR.alreadyLinked) {
       toast.info(t.alreadyLinked);
     } else {

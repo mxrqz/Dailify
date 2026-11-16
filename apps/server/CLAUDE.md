@@ -12,7 +12,8 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
   `billing.ts` (checkout, portal, payment details, invoices, `POST /webhooks/stripe`),
   `push.ts` (VAPID key + subscriptions), `clerk-webhook.ts` (`user.deleted` → wipe),
   `integrations.ts` (`GET /integrations`, `POST /:p/connect`, `POST /:p/callback`, `DELETE /:p`,
-  `POST /integrations/google-calendar/events` = a action `create-event`).
+  `POST /integrations/google-calendar/events` = a action `create-event`, `POST …/events/:taskId/sync`
+  = o retry do "não sincronizado").
 - **`src/integrations/`** — providers externos (epic `zpq`): `types.ts` (`Provider`, `Ctx`),
   `oauth.ts` (code + PKCE em fetch puro, `InvalidGrantError`), `crypto.ts` (AES-GCM dos tokens),
   `connection.ts` (`loadCtx`/`makeCtx`: bearer + refresh preguiçoso, revogação best-effort),
@@ -86,6 +87,11 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
   Action = `parse`/`preview`/`run`; falha esperada é `ActionError` (status + `code`). O evento do
   Google tem id = base32hex do id da tarefa: 409 do Google vira PATCH (retry idempotente), e o
   `htmlLink` entra nos links da tarefa via `updateTask` — é ele que o web lê como "já vinculada".
+  **Propagação (F4)**: PATCH/DELETE de tarefa (inclusive `?occurrence=`) com vínculo chamam
+  `propagate` (`integrations/propagate.ts`) no `waitUntil` → `Provider.onTaskChanged`. Só chama o
+  Google se o evento remontado (no `time_zone` do vínculo) mudou; sem dia ou apagada = delete +
+  vínculo e `url` saem. Concluir não propaga. Falha = `stale` (o web oferece reenviar), nunca
+  derruba a escrita da tarefa. Teste de rota que toca vínculo passa `createExecutionContext()`.
 - **Stripe webhook** needs the **raw body** for signature verification — keep it off any body
   parser and verify async (`constructEventAsync`).
 

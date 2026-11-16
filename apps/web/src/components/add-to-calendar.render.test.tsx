@@ -8,7 +8,7 @@ import type { IntegrationStatus, Task } from "@dailify/shared";
 const { dailify, useOnline, api, toast, navigate } = vi.hoisted(() => ({
   dailify: vi.fn(),
   useOnline: vi.fn(),
-  api: { createCalendarEvent: vi.fn(), getIntegrations: vi.fn() },
+  api: { createCalendarEvent: vi.fn(), syncCalendarEvent: vi.fn(), getIntegrations: vi.fn() },
   toast: { success: vi.fn(), error: vi.fn(), info: vi.fn() },
   navigate: vi.fn(),
 }));
@@ -156,5 +156,52 @@ describe("<AddToCalendar>", () => {
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: t.add })).not.toBeInTheDocument(),
     );
+  });
+
+  it("already_linked: põe a tarefa do servidor na lista na hora", async () => {
+    const updated = { ...task, links: [EVENT] };
+    api.createCalendarEvent.mockResolvedValue({
+      link: { url: EVENT },
+      task: updated,
+      error: { message: "x", offline: false, status: 409, code: "already_linked" },
+    });
+    renderWith();
+    await userEvent.click(screen.getByRole("button", { name: t.add }));
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: copy.confirmAction.confirm,
+      }),
+    );
+    await waitFor(() => expect(toast.info).toHaveBeenCalledWith(t.alreadyLinked));
+    expect(setTasks).toHaveBeenCalledWith([updated]);
+  });
+
+  it("série: o preview mostra a regra e o início, não o dia tocado", async () => {
+    const start = new Date(2026, 10, 16, 10).getTime();
+    renderWith({
+      date: new Date(2026, 10, 30, 10).getTime(),
+      seriesStart: start,
+      repeat: { Weekly: ["Monday"] },
+    });
+    await userEvent.click(screen.getByRole("button", { name: t.add }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/toda segunda 10:00–10:30, desde 16\/11/)).toBeInTheDocument();
+  });
+
+  it("stale: mostra não sincronizado e o reenviar limpa", async () => {
+    setIntegrations([{ ...GCAL, stale: [task.id] }]);
+    api.syncCalendarEvent.mockResolvedValue({ task: { ...task, links: [EVENT] } });
+    renderWith({ links: [EVENT] });
+    expect(screen.getByRole("link", { name: new RegExp(t.unsynced) })).toHaveAttribute(
+      "href",
+      EVENT,
+    );
+    await userEvent.click(screen.getByRole("button", { name: t.retry }));
+    await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t.synced));
+    expect(api.syncCalendarEvent).toHaveBeenCalledWith("t", "task01");
+    await waitFor(() =>
+      expect(screen.queryByRole("button", { name: t.retry })).not.toBeInTheDocument(),
+    );
+    expect(screen.getByRole("link", { name: t.linked })).toBeInTheDocument();
   });
 });

@@ -113,7 +113,7 @@ function expandAll(task: Task, month: Date, timeZone?: string): Task[] {
       },
       timeZone,
     );
-  const instance = (date: number): Task => ({ ...task, date });
+  const instance = (date: number): Task => ({ ...task, date, seriesStart: task.date });
   const every = task.repeatEvery && task.repeatEvery > 1 ? task.repeatEvery : 1;
   const onPhase = (units: number) => units >= 0 && units % every === 0;
   const daysFromStart = (day: number) =>

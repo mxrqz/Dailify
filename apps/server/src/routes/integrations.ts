@@ -1,4 +1,5 @@
 import { Hono, type Context } from "hono";
+import { IANAZone } from "luxon";
 import {
   canUseIntegration,
   INTEGRATION_ERROR,
@@ -21,6 +22,8 @@ import {
   getConnection,
   insertState,
   listConnections,
+  listStale,
+  listTaskLinks,
   upsertConnection,
   type ConnectionRow,
 } from "../db/integrations";
@@ -34,6 +37,8 @@ import {
   revoke,
 } from "../integrations/oauth";
 import { loadCtx, makeCtx, revokeSealed, sealTokens } from "../integrations/connection";
+import { pushLink } from "../integrations/propagate";
+import { getTask } from "../db/tasks";
 import { createEvent } from "../integrations/google-calendar";
 import { ActionError } from "../integrations/types";
 
@@ -55,6 +60,7 @@ function statusOf(
   id: ProviderId,
   allowed: boolean,
   row?: ConnectionRow | null,
+  stale: string[] = [],
 ): IntegrationStatus {
   const configured = Boolean(PROVIDERS[id].oauth.credentials(env).id);
   if (!row) return { provider: id, allowed, configured, connected: false };
@@ -65,14 +71,16 @@ function statusOf(
     connected: true,
     status: row.status === "revoked" ? "revoked" : "active",
     account: row.account_email ?? undefined,
+    ...(stale.length && { stale }),
   };
 }
 
 integrations.get("/integrations", async (c) => {
   const userId = c.get("userId");
-  const [role, rows] = await Promise.all([
+  const [role, rows, stale] = await Promise.all([
     getUserRole(c.env, userId),
     listConnections(c.env.DB, userId),
+    listStale(c.env.DB, userId),
   ]);
   return c.json(
     PROVIDER_IDS.map((id) =>
@@ -81,6 +89,7 @@ integrations.get("/integrations", async (c) => {
         id,
         canUseIntegration(role, id),
         rows.find((r) => r.provider === id),
+        stale.filter((s) => s.provider === id).map((s) => s.task_id),
       ),
     ),
   );
@@ -179,6 +188,37 @@ integrations.post("/integrations/google-calendar/events", async (c) => {
       return fail(c, 409, RECONNECT, { code: INTEGRATION_ERROR.reconnect });
     throw err;
   }
+});
+
+// O retry do "não sincronizado": reenvia agora, sem comparar, no fuso que o aparelho mandar.
+integrations.post("/integrations/google-calendar/events/:taskId/sync", async (c) => {
+  const body: unknown = await c.req.json().catch(() => null);
+  const timeZone = typeof body === "object" && body !== null ? Reflect.get(body, "timezone") : null;
+  if (typeof timeZone !== "string" || !IANAZone.isValidZone(timeZone))
+    return fail(c, 400, "Fuso inválido");
+  const userId = c.get("userId");
+  const taskId = c.req.param("taskId");
+  const link = (await listTaskLinks(c.env.DB, userId, taskId)).find(
+    (l) => l.provider === "google-calendar",
+  );
+  if (!link) return fail(c, 404, "Tarefa não está no Google Agenda");
+  const ctx = await loadCtx(c.env, userId, "google-calendar");
+  if (!ctx) return fail(c, 409, RECONNECT, { code: INTEGRATION_ERROR.reconnect });
+  try {
+    await pushLink(
+      c.env,
+      ctx,
+      { ...link, timeZone },
+      null,
+      await getTask(c.env.DB, userId, taskId),
+    );
+  } catch (err) {
+    if (err instanceof InvalidGrantError)
+      return fail(c, 409, RECONNECT, { code: INTEGRATION_ERROR.reconnect });
+    console.error(`Falha ao sincronizar ${taskId}`, err);
+    return fail(c, 502, "O Google Agenda não respondeu; tente de novo");
+  }
+  return c.json({ task: await getTask(c.env.DB, userId, taskId) });
 });
 
 // Sem gate de plano: quem perdeu o plano ainda precisa conseguir desconectar.

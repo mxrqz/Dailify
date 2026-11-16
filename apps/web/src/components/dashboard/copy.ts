@@ -279,6 +279,10 @@ export const copy = {
     revoked: "O acesso ao Google Agenda foi revogado",
     reconnect: "Reconectar",
     error: "Não foi possível criar o evento",
+    unsynced: "não sincronizado",
+    retry: "Sincronizar com o Google Agenda",
+    synced: "Google Agenda sincronizado",
+    syncError: "Não foi possível sincronizar com o Google Agenda",
   },
 
   composer: {

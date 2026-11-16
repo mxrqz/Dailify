@@ -1,4 +1,5 @@
 import type { Role, Task } from "./types";
+import { dayMap } from "./recurrence";
 import { zonedParts, type ZonedParts } from "./timezone";
 
 export type ProviderId = "google-calendar";
@@ -29,6 +30,8 @@ export interface IntegrationStatus {
   connected: boolean;
   status?: "active" | "revoked";
   account?: string;
+  /** Tarefas cuja última propagação falhou: o web mostra "não sincronizado" e oferece reenviar. */
+  stale?: string[];
 }
 
 /** Tarefa <-> objeto externo (`integration_links`). */
@@ -85,46 +88,78 @@ export function isCalendarEventLink(url: string): boolean {
   return hostname === "www.google.com" && pathname === "/calendar/event";
 }
 
+const WEEKDAYS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
+const list = (items: string[]) =>
+  items.length > 1 ? `${items.slice(0, -1).join(", ")} e ${items.at(-1)}` : items[0];
+
+/** "toda segunda e quarta", "a cada 3 dias", "todo dia 16": a regra da série, como no RRULE. */
+function repeatText(task: Task, start: ZonedParts): string {
+  const { repeat } = task;
+  const every = task.repeatEvery && task.repeatEvery > 1 ? task.repeatEvery : 1;
+  const ddmm = `${String(start.day).padStart(2, "0")}/${String(start.month + 1).padStart(2, "0")}`;
+  if (typeof repeat === "object") {
+    const days = repeat.Weekly.map((d) => dayMap[d]).sort((a, b) => a - b);
+    const names = list(days.map((d) => WEEKDAYS[d]));
+    if (every > 1) return `a cada ${every} semanas, ${names}`;
+    return `${days[0] === 0 || days[0] === 6 ? "todo" : "toda"} ${names}`;
+  }
+  if (repeat === "Daily") return every > 1 ? `a cada ${every} dias` : "todo dia";
+  if (repeat === "Monthly")
+    return every > 1 ? `a cada ${every} meses, dia ${start.day}` : `todo dia ${start.day}`;
+  return every > 1 ? `a cada ${every} anos em ${ddmm}` : `todo ano em ${ddmm}`;
+}
+
 /**
  * O texto da confirmação ("Criar evento no Google Agenda · amanhã 15:00–15:30 · com Meet"). Mesmo
- * texto no cartão do web e no `preview` da action; `null` = a tarefa não tem dia.
+ * texto no cartão do web e no `preview` da action; `null` = a tarefa não tem dia. Série mostra a
+ * regra e o início dela, que é onde o evento começa — não o dia da instância tocada.
  */
 export function calendarEventPreview(
-  task: Task,
+  instance: Task,
   timeZone: string,
   opts: { meet: boolean; now: number },
 ): string | null {
+  const task =
+    instance.seriesStart === undefined ? instance : { ...instance, date: instance.seriesStart };
   const slot = calendarSlot(task, timeZone);
   if (!slot) return null;
   const at = slot.allDay ? Date.UTC(slot.day.year, slot.day.month, slot.day.day, 12) : slot.start;
   const zone = slot.allDay ? "UTC" : timeZone;
-  const dayKey = (ms: number, tz: string) => {
-    const p = zonedParts(ms, tz);
-    return Date.UTC(p.year, p.month, p.day);
-  };
-  const diff = (dayKey(at, zone) - dayKey(opts.now, timeZone)) / 86_400_000;
-  const day =
-    diff === 0
-      ? "hoje"
-      : diff === 1
-        ? "amanhã"
-        : new Intl.DateTimeFormat("pt-BR", {
-            weekday: "short",
-            day: "numeric",
-            month: "short",
-            timeZone: zone,
-          }).format(at);
   const clock = (ms: number) =>
     new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone }).format(ms);
-  const when = slot.allDay
-    ? `${day} · dia inteiro`
-    : `${day} ${clock(slot.start)}–${clock(slot.end)}`;
-  return [
-    "Criar evento no Google Agenda",
-    when,
-    task.repeat !== "Off" && "recorrente",
-    opts.meet && !videoLink(task.links) && "com Meet",
-  ]
+  const time = slot.allDay ? "dia inteiro" : `${clock(slot.start)}–${clock(slot.end)}`;
+
+  let when: string;
+  if (task.repeat !== "Off") {
+    const start = zonedParts(at, zone);
+    const sameYear = start.year === zonedParts(opts.now, timeZone).year;
+    const since = new Intl.DateTimeFormat("pt-BR", {
+      day: "2-digit",
+      month: "2-digit",
+      ...(!sameYear && { year: "numeric" }),
+      timeZone: zone,
+    }).format(at);
+    when = `${repeatText(task, start)}${slot.allDay ? "," : ""} ${time}, desde ${since}`;
+  } else {
+    const dayKey = (ms: number, tz: string) => {
+      const p = zonedParts(ms, tz);
+      return Date.UTC(p.year, p.month, p.day);
+    };
+    const diff = (dayKey(at, zone) - dayKey(opts.now, timeZone)) / 86_400_000;
+    const day =
+      diff === 0
+        ? "hoje"
+        : diff === 1
+          ? "amanhã"
+          : new Intl.DateTimeFormat("pt-BR", {
+              weekday: "short",
+              day: "numeric",
+              month: "short",
+              timeZone: zone,
+            }).format(at);
+    when = slot.allDay ? `${day} · dia inteiro` : `${day} ${time}`;
+  }
+  return ["Criar evento no Google Agenda", when, opts.meet && !videoLink(task.links) && "com Meet"]
     .filter(Boolean)
     .join(" · ");
 }
