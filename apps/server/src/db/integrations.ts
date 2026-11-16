@@ -1,4 +1,4 @@
-import type { ProviderId } from "@dailify/shared";
+import type { IntegrationLink, ProviderId } from "@dailify/shared";
 
 export interface ConnectionRow {
   provider: string;
@@ -146,4 +146,51 @@ export async function consumeState(
     )
     .bind(state, now)
     .first<OAuthState>();
+}
+
+interface LinkRow {
+  task_id: string;
+  external_id: string;
+  url: string | null;
+}
+
+const toLink = (provider: ProviderId, r: LinkRow): IntegrationLink => ({
+  provider,
+  taskId: r.task_id,
+  externalId: r.external_id,
+  url: r.url,
+});
+
+export async function getLink(
+  db: D1Database,
+  userId: string,
+  provider: ProviderId,
+  taskId: string,
+): Promise<IntegrationLink | null> {
+  const row = await db
+    .prepare(
+      `SELECT task_id, external_id, url FROM integration_links
+       WHERE user_id=? AND provider=? AND task_id=?`,
+    )
+    .bind(userId, provider, taskId)
+    .first<LinkRow>();
+  return row ? toLink(provider, row) : null;
+}
+
+/** Upsert: duas confirmações simultâneas caem no mesmo evento (id determinístico), não em erro. */
+export async function upsertLink(
+  db: D1Database,
+  userId: string,
+  link: IntegrationLink,
+  now: number,
+): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO integration_links (user_id, provider, task_id, external_id, url, updated_at)
+       VALUES (?, ?, ?, ?, ?, ?)
+       ON CONFLICT(user_id, provider, task_id) DO UPDATE SET external_id=excluded.external_id,
+         url=excluded.url, updated_at=excluded.updated_at`,
+    )
+    .bind(userId, link.provider, link.taskId, link.externalId, link.url, now)
+    .run();
 }

@@ -27,10 +27,27 @@ export interface Ctx {
   api(url: string, init?: RequestInit): Promise<Response>;
 }
 
-export interface Action {
+/** Falha esperada de uma action: vira status + corpo da resposta, não o 500 genérico. */
+export class ActionError extends Error {
+  constructor(
+    readonly status: 400 | 404 | 409 | 502,
+    message: string,
+    readonly extra: Record<string, unknown> = {},
+  ) {
+    super(message);
+  }
+}
+
+// Métodos (não propriedades) de propósito: o parâmetro fica bivariante e `Action<Input>` cabe em
+// `readonly Action[]` do registry.
+export interface Action<I = unknown> {
   name: string;
   kind: "read" | "write";
-  run(ctx: Ctx, input: unknown): Promise<unknown>;
+  /** O schema: o input vem do cliente (ou de um rascunho da IA) e só passa validado. */
+  parse(raw: unknown): { input: I } | { error: string };
+  /** O que o componente de confirmação mostra, em pt-BR. */
+  preview(ctx: Ctx, input: I): Promise<string>;
+  run(ctx: Ctx, input: I): Promise<unknown>;
 }
 
 export interface Provider {

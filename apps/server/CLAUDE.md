@@ -11,7 +11,8 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
 - **`src/routes/`** — `tasks.ts` (CRUD + month read + `GET /tasks/undated`), `settings.ts` (`GET`/`PUT /settings`, `weekStart`), `voice.ts` (`POST /tasks/voice` + `POST /tasks/parse`, the AI routes),
   `billing.ts` (checkout, portal, payment details, invoices, `POST /webhooks/stripe`),
   `push.ts` (VAPID key + subscriptions), `clerk-webhook.ts` (`user.deleted` → wipe),
-  `integrations.ts` (`GET /integrations`, `POST /:p/connect`, `POST /:p/callback`, `DELETE /:p`).
+  `integrations.ts` (`GET /integrations`, `POST /:p/connect`, `POST /:p/callback`, `DELETE /:p`,
+  `POST /integrations/google-calendar/events` = a action `create-event`).
 - **`src/integrations/`** — providers externos (epic `zpq`): `types.ts` (`Provider`, `Ctx`),
   `oauth.ts` (code + PKCE em fetch puro, `InvalidGrantError`), `crypto.ts` (AES-GCM dos tokens),
   `connection.ts` (`loadCtx`/`makeCtx`: bearer + refresh preguiçoso, revogação best-effort),
@@ -82,6 +83,9 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
   veio concedido → 400 sem gravar. Tokens só em repouso cifrados (`v1.<iv>.<ct>`, AAD
   `user:provider`); `invalid_grant` no refresh marca a conexão `revoked`. Gate por plano em
   `INTEGRATIONS[id].roles`, não em `QUOTAS`; o `DELETE` não tem gate (desconectar sempre pode).
+  Action = `parse`/`preview`/`run`; falha esperada é `ActionError` (status + `code`). O evento do
+  Google tem id = base32hex do id da tarefa: 409 do Google vira PATCH (retry idempotente), e o
+  `htmlLink` entra nos links da tarefa via `updateTask` — é ele que o web lê como "já vinculada".
 - **Stripe webhook** needs the **raw body** for signature verification — keep it off any body
   parser and verify async (`constructEventAsync`).
 

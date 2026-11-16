@@ -148,7 +148,9 @@ describe("POST /integrations/:provider/connect", () => {
       const res = await request("/integrations/google-calendar/connect", { method: "POST" });
       expect(res.status).toBe(403);
       const list = await (await request("/integrations")).json<IntegrationStatus[]>();
-      expect(list).toEqual([{ provider: "google-calendar", allowed: false, connected: false }]);
+      expect(list).toEqual([
+        { provider: "google-calendar", allowed: false, configured: true, connected: false },
+      ]);
     } finally {
       INTEGRATIONS["google-calendar"].roles = roles;
     }
@@ -164,6 +166,7 @@ describe("POST /integrations/:provider/callback", () => {
     expect(await res.json()).toEqual({
       provider: "google-calendar",
       allowed: true,
+      configured: true,
       connected: true,
       status: "active",
       account: "pessoa@gmail.com",

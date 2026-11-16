@@ -29,3 +29,20 @@ export const invalidGrant = {
 };
 
 export const userinfo = { sub: "1098765", email: "pessoa@gmail.com", email_verified: true };
+
+export const EVENTS = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+
+export const event = {
+  kind: "calendar#event",
+  status: "confirmed",
+  htmlLink: "https://www.google.com/calendar/event?eid=abc123",
+  hangoutLink: "https://meet.google.com/abc-defg-hij",
+};
+
+export const eventExists = {
+  error: { code: 409, message: "The requested identifier already exists." },
+};
+
+export const rateLimited = {
+  error: { code: 429, message: "Rate Limit Exceeded", errors: [{ reason: "rateLimitExceeded" }] },
+};

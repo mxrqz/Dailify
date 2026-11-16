@@ -1,6 +1,7 @@
 import { Hono, type Context } from "hono";
 import {
   canUseIntegration,
+  INTEGRATION_ERROR,
   isProviderId,
   MISSING_SCOPE_ERROR,
   PROVIDER_IDS,
@@ -24,8 +25,17 @@ import {
   type ConnectionRow,
 } from "../db/integrations";
 import { PROVIDERS } from "../integrations/registry";
-import { authorizeUrl, exchange, hasScopes, pkce, revoke } from "../integrations/oauth";
-import { makeCtx, revokeSealed, sealTokens } from "../integrations/connection";
+import {
+  authorizeUrl,
+  exchange,
+  hasScopes,
+  InvalidGrantError,
+  pkce,
+  revoke,
+} from "../integrations/oauth";
+import { loadCtx, makeCtx, revokeSealed, sealTokens } from "../integrations/connection";
+import { createEvent } from "../integrations/google-calendar";
+import { ActionError } from "../integrations/types";
 
 type Ctx = Context<{ Bindings: Env; Variables: { userId: string } }>;
 
@@ -40,11 +50,18 @@ integrations.use("/integrations/*", requireAuth, rateLimit("API_LIMITER"));
 const redirectUri = (c: Ctx, id: ProviderId) =>
   `${appOrigin(c.env, c.req.header("origin"))}/integrations/${id}/callback`;
 
-function statusOf(id: ProviderId, allowed: boolean, row?: ConnectionRow | null): IntegrationStatus {
-  if (!row) return { provider: id, allowed, connected: false };
+function statusOf(
+  env: Env,
+  id: ProviderId,
+  allowed: boolean,
+  row?: ConnectionRow | null,
+): IntegrationStatus {
+  const configured = Boolean(PROVIDERS[id].oauth.credentials(env).id);
+  if (!row) return { provider: id, allowed, configured, connected: false };
   return {
     provider: id,
     allowed,
+    configured,
     connected: true,
     status: row.status === "revoked" ? "revoked" : "active",
     account: row.account_email ?? undefined,
@@ -60,6 +77,7 @@ integrations.get("/integrations", async (c) => {
   return c.json(
     PROVIDER_IDS.map((id) =>
       statusOf(
+        c.env,
         id,
         canUseIntegration(role, id),
         rows.find((r) => r.provider === id),
@@ -139,7 +157,28 @@ integrations.post("/integrations/:provider/callback", async (c) => {
     },
     Date.now(),
   );
-  return c.json(statusOf(id, true, await getConnection(c.env.DB, userId, id)));
+  return c.json(statusOf(c.env, id, true, await getConnection(c.env.DB, userId, id)));
+});
+
+const RECONNECT = "Reconecte o Google Agenda para continuar";
+
+integrations.post("/integrations/google-calendar/events", async (c) => {
+  const parsed = createEvent.parse(await c.req.json().catch(() => null));
+  if ("error" in parsed) return fail(c, 400, parsed.error);
+  const userId = c.get("userId");
+  if (!canUseIntegration(await getUserRole(c.env, userId), "google-calendar"))
+    return fail(c, 403, "Seu plano não inclui esta integração");
+  const ctx = await loadCtx(c.env, userId, "google-calendar");
+  if (!ctx) return fail(c, 409, RECONNECT, { code: INTEGRATION_ERROR.reconnect });
+  try {
+    return c.json(await createEvent.run(ctx, parsed.input));
+  } catch (err) {
+    if (err instanceof ActionError) return fail(c, err.status, err.message, err.extra);
+    // O refresh recusado já marcou a conexão revogada (`makeCtx`).
+    if (err instanceof InvalidGrantError)
+      return fail(c, 409, RECONNECT, { code: INTEGRATION_ERROR.reconnect });
+    throw err;
+  }
 });
 
 // Sem gate de plano: quem perdeu o plano ainda precisa conseguir desconectar.
