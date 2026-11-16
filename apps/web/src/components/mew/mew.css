@@ -1,0 +1,114 @@
+/* Enfeites de cada humor da `MewArt`: só CSS, ligados pelo `data-mood` da raiz. */
+.mew-x {
+  opacity: 0;
+  transition: opacity var(--motion-duration-slow) var(--motion-ease-out);
+}
+.mew[data-mood="listening"] .mew-waves,
+.mew[data-mood="thinking"] .mew-think,
+.mew[data-mood="sleepy"] .mew-zz {
+  opacity: 1;
+}
+
+.mew-waves path {
+  opacity: 0;
+  transform-box: fill-box;
+  transform-origin: center;
+}
+.mew[data-mood="listening"] .mew-waves path {
+  animation: mew-wave 1.1s cubic-bezier(0.2, 0.7, 0.3, 1) infinite;
+}
+.mew[data-mood="listening"] .mew-waves path:nth-child(even) {
+  animation-delay: 0.22s;
+}
+@keyframes mew-wave {
+  0% {
+    opacity: 0;
+    scale: 0.85;
+  }
+  35% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    scale: 1.18;
+  }
+}
+
+.mew[data-mood="thinking"] .mew-think circle {
+  animation: mew-dots 1.2s ease-in-out infinite;
+}
+.mew[data-mood="thinking"] .mew-think circle:nth-child(2) {
+  animation-delay: 0.15s;
+}
+.mew[data-mood="thinking"] .mew-think circle:nth-child(3) {
+  animation-delay: 0.3s;
+}
+@keyframes mew-dots {
+  0%,
+  60%,
+  100% {
+    opacity: 0.35;
+    translate: 0 0;
+  }
+  30% {
+    opacity: 1;
+    translate: 0 -36px;
+  }
+}
+
+.mew-zz text {
+  opacity: 0;
+}
+.mew[data-mood="sleepy"] .mew-zz text {
+  animation: mew-zz 2.7s ease-in-out infinite both;
+}
+.mew[data-mood="sleepy"] .mew-zz text:nth-child(2) {
+  animation-delay: 0.9s;
+}
+.mew[data-mood="sleepy"] .mew-zz text:nth-child(3) {
+  animation-delay: 1.8s;
+}
+@keyframes mew-zz {
+  0% {
+    opacity: 0;
+    translate: 0 50px;
+  }
+  30% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+    translate: 90px -170px;
+  }
+}
+
+.mew-q {
+  transform-box: fill-box;
+  transform-origin: 50% 100%;
+  scale: 0;
+  rotate: -24deg;
+  transition:
+    scale 560ms var(--motion-ease-spring),
+    rotate 560ms var(--motion-ease-out);
+}
+.mew[data-mood="confused"] .mew-q {
+  scale: 1;
+  rotate: 10deg;
+  animation: mew-bob 2.6s ease-in-out 0.7s infinite;
+}
+@keyframes mew-bob {
+  50% {
+    translate: 0 -26px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .mew * {
+    animation: none !important;
+    transition: none !important;
+  }
+  .mew[data-mood="listening"] .mew-waves path,
+  .mew[data-mood="sleepy"] .mew-zz text {
+    opacity: 1;
+  }
+}

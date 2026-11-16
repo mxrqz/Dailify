@@ -389,6 +389,8 @@ export const copy = {
     drafts: "Tarefas lidas pela Mew",
     confirmMany: "Criar {n} tarefas",
     createdMany: "{n} tarefas criadas",
+    /** A Mew com `onPet` vira botão: tocar faz carinho. */
+    pet: "Fazer carinho na Mew",
     // Por que o parser local pode ter errado — o motivo que aparece junto do botão.
     unsure: {
       question: "Parece uma pergunta",
