@@ -10,6 +10,7 @@ import { createTask, deleteTask } from "@/functions/api";
 import { upsertTaskWithRecurrence } from "@/functions/functions";
 import { enqueue, newTaskId } from "@/functions/offline";
 import { upsertUndated } from "@/functions/undated";
+import { useCalendarPush, type CalendarPick } from "@/hooks/useCalendarPush";
 import { useQuotas } from "@/hooks/useQuotas";
 import { zoned } from "@/functions/zone";
 
@@ -63,6 +64,7 @@ export function useCreateTask() {
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
   const showCreated = useShowCreated();
+  const pushCalendar = useCalendarPush();
 
   const limited = () => {
     if (!quotas.states.tasks.exhausted) return false;
@@ -75,7 +77,7 @@ export function useCreateTask() {
 
   const create = async (
     parsed: ParsedTask,
-    { undatedOnly }: { undatedOnly?: boolean } = {},
+    { undatedOnly, calendar }: { undatedOnly?: boolean; calendar?: CalendarPick } = {},
   ): Promise<boolean> => {
     if (limited()) return false;
 
@@ -127,9 +129,12 @@ export function useCreateTask() {
 
       apply(previous, task);
       bumpUsage("tasks");
-      toast.message(undated ? copy.form.createdUndated : copy.form.created, {
-        description: task.title,
-      });
+      // Com a etiqueta, o toast de criado vem depois, junto do resultado do Google.
+      if (calendar) void pushCalendar([{ id: task.id, ...calendar }]);
+      else
+        toast.message(undated ? copy.form.createdUndated : copy.form.created, {
+          description: task.title,
+        });
       return true;
     } finally {
       setSubmitting(false);
@@ -139,8 +144,12 @@ export function useCreateTask() {
   /**
    * Os rascunhos da Mew, confirmados juntos: sem otimismo nem fila (só aparece online), e um
    * Desfazer pra todos. `true` quando ao menos um foi criado — repetir duplicaria os que entraram.
+   * `calendar[i]`: o rascunho `i` vai pro Google Agenda depois de criado.
    */
-  const createMany = async (list: ParsedTask[]): Promise<boolean> => {
+  const createMany = async (
+    list: ParsedTask[],
+    calendar: (CalendarPick | undefined)[] = [],
+  ): Promise<boolean> => {
     if (limited()) return false;
     setSubmitting(true);
     try {
@@ -161,6 +170,11 @@ export function useCreateTask() {
       if (created.length) {
         showCreated(created, copy.mew.createdMany.replace("{n}", String(created.length)));
       }
+      const pushes = created.flatMap((task, i) => {
+        const pick = calendar[i];
+        return pick ? [{ id: task.id, ...pick }] : [];
+      });
+      if (pushes.length) void pushCalendar(pushes);
       return created.length > 0;
     } finally {
       setSubmitting(false);

@@ -22,6 +22,7 @@ vi.mock("@/hooks/useMewParse", () => ({
 vi.mock("@/hooks/useCreateTask", () => ({
   useCreateTask: () => ({ createMany: vi.fn(), submitting: false }),
 }));
+vi.mock("@/hooks/useIntegrations", () => ({ useCalendarReady: () => false }));
 
 import { CreateFab } from "./create-fab";
 

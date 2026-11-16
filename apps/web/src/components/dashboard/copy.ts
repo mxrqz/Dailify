@@ -283,6 +283,15 @@ export const copy = {
     retry: "Sincronizar com o Google Agenda",
     synced: "Google Agenda sincronizado",
     syncError: "Não foi possível sincronizar com o Google Agenda",
+    // A etiqueta do composer: ligada, a tarefa nasce e vai pro Google Agenda — ligar já é confirmar.
+    chip: "Google Agenda",
+    chipLabel: "Enviar ao Google Agenda",
+    meetChip: "+ Meet",
+    createdAdded: "Tarefa criada e no Google Agenda",
+    createdAddedMany: "{n} tarefas criadas e no Google Agenda",
+    notAdded: "Tarefa criada, mas não foi pro Google Agenda",
+    notAddedMany: "{n} tarefas não foram pro Google Agenda",
+    tryAgain: "Tentar de novo",
   },
 
   composer: {

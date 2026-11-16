@@ -10,14 +10,12 @@ import {
   videoLink,
 } from "@dailify/shared";
 
-import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { ConfirmAction } from "@/components/mew/confirm-action";
 import { ToolbarButton } from "@/components/task-card";
 import { createCalendarEvent, syncCalendarEvent } from "@/functions/api";
-import { upsertTaskWithRecurrence } from "@/functions/functions";
-import { upsertUndated } from "@/functions/undated";
 import { appTimeZone } from "@/functions/zone";
+import { calendarRevoked, useApplyTask } from "@/hooks/useCalendarPush";
 import { patchIntegration, useCalendarReady, useIntegrations } from "@/hooks/useIntegrations";
 import { useOnline } from "@/hooks/useOnline";
 import { cn } from "@/lib/utils";
@@ -43,7 +41,7 @@ export function AddToCalendar({
   const staleIds = useIntegrations()?.find((s) => s.provider === "google-calendar")?.stale ?? [];
   const stale = staleIds.includes(task.id);
   const online = useOnline();
-  const { tasks, setTasks, undatedTasks, setUndatedTasks, loadedMonths } = useDailify();
+  const applyTask = useApplyTask();
   const { getToken } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
@@ -58,16 +56,7 @@ export function AddToCalendar({
   const linked = task.links?.find(isCalendarEventLink);
   if (!ready || !preview) return null;
 
-  const applyTask = (updated: TaskProps) => {
-    if (updated.undated) setUndatedTasks(upsertUndated(undatedTasks ?? [], updated));
-    else setTasks(upsertTaskWithRecurrence(tasks ?? [], updated, loadedMonths));
-  };
-  const onRevoked = () => {
-    patchIntegration("google-calendar", { status: "revoked" });
-    toast.error(t.revoked, {
-      action: { label: t.reconnect, onClick: () => navigate("/settings") },
-    });
-  };
+  const onRevoked = () => calendarRevoked(navigate);
 
   const retry = async () => {
     setPending(true);

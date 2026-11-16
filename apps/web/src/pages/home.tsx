@@ -28,7 +28,7 @@ export default function Home() {
           day={createOn}
           onDayDone={() => setCreateOn(null)}
           submitting={submitting}
-          onSubmit={({ parsed }) => create(parsed)}
+          onSubmit={({ parsed, calendar }) => create(parsed, { calendar })}
         />
       </div>
 

@@ -36,10 +36,12 @@ import {
   type Span,
 } from "@dailify/shared";
 
+import { CalendarChip, useCalendarChip } from "@/components/dashboard/calendar-chip";
 import { copy } from "@/components/dashboard/copy";
 import { MewStatic } from "@/components/mew/mew-static";
 import { Label } from "@/components/ui/label";
 import { fromWire, markSegments, onDay, withEdits, type Edits } from "@/functions/compose-input";
+import type { CalendarPick } from "@/hooks/useCalendarPush";
 import { useCreateTask } from "@/hooks/useCreateTask";
 import { useMewParse } from "@/hooks/useMewParse";
 import { useOnline } from "@/hooks/useOnline";
@@ -179,6 +181,8 @@ export interface ComposerValues {
   parsed: ParsedTask;
   /** A frase como foi digitada, pra devolver ao campo se a criação falhar. */
   text: string;
+  /** A etiqueta Google Agenda ligada: depois de criada, a tarefa vai pra lá. */
+  calendar?: CalendarPick;
 }
 
 interface TaskComposerProps {
@@ -219,6 +223,7 @@ export function TaskComposer({
   const online = useOnline();
   const mew = useMewParse();
   const many = useCreateTask();
+  const calendar = useCalendarChip();
 
   const local = useMemo(
     () => onDay(parseTaskText(input, zoned(), { ignore }), day),
@@ -229,6 +234,7 @@ export function TaskComposer({
     () => (mew.result?.intent === "create" ? mew.result.drafts.map(fromWire) : []),
     [mew.result],
   );
+  const draftTasks = useMemo(() => drafts.map((d) => composeTaskInput(d, zoned())), [drafts]);
   const reply = mew.result && !drafts.length ? mew.result.reply : null;
   const multi = drafts.length > 1;
   const read = useMemo(
@@ -266,6 +272,7 @@ export function TaskComposer({
     setIgnore([]);
     setEdits({});
     mew.reset();
+    calendar.reset();
   };
 
   const edit = (next: Edits) => setEdits((current) => ({ ...current, ...next }));
@@ -292,7 +299,8 @@ export function TaskComposer({
   const submit = (again: boolean) => {
     if (!canSubmit) return;
     if (multi) {
-      void many.createMany(drafts).then((ok) => {
+      const picks = draftTasks.map((draft, i) => calendar.value(i, draft));
+      void many.createMany(drafts, picks).then((ok) => {
         if (!ok) return;
         clear();
         onCreated?.();
@@ -300,15 +308,17 @@ export function TaskComposer({
       return;
     }
     const text = input;
-    void onSubmit({ parsed, text }, again).then((ok) => {
+    void onSubmit({ parsed, text, calendar: calendar.value(0, task) }, again).then((ok) => {
       if (!ok) setInput((current) => current || text);
     });
     clear();
   };
 
   // O botão fica desativado durante a leitura e o foco cairia no body: volta pro campo, pro Enter.
-  const askMew = () =>
+  const askMew = () => {
+    calendar.reset();
     void mew.ask(input).then(() => document.getElementById("composer-text")?.focus());
+  };
 
   const remaining =
     mew.remaining === null
@@ -443,6 +453,8 @@ export function TaskComposer({
               const next = e.target.value;
               setIgnore((current) => remapSpans(current, input, next));
               setInput(next);
+              // Os rascunhos da Mew somem com a edição, e as etiquetas deles junto.
+              if (mew.result) calendar.reset();
               mew.reset();
             }}
             onKeyDown={(e) => {
@@ -500,6 +512,7 @@ export function TaskComposer({
                     draft.date &&
                     ` · ${formatClock(format(draft.date, "HH:mm"), hour12)}`}
                 </span>
+                <CalendarChip state={calendar} index={i} task={draftTasks[i]} />
               </li>
             ))}
           </ul>
@@ -639,6 +652,7 @@ export function TaskComposer({
                 {linkLabel(url)}
               </Chip>
             ))}
+            <CalendarChip state={calendar} index={0} task={task} large={large} />
           </>
         )}
         {large && (
