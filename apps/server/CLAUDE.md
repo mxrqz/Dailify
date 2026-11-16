@@ -70,6 +70,10 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
 - **IA**: voz e `POST /tasks/parse` passam pelo mesmo `interpretText`. GPT recebe **hora local
   ingênua** e as datas voltam reinterpretadas no fuso do cliente (Clerk `unsafeMetadata` é só
   fallback da voz). `/parse` só devolve rascunhos (`{ reply, intent, drafts }`); a voz cria.
+  **`targets` (F6)**: o `/parse` passa as conexões `active` que o plano libera; elas viram o enum
+  do schema e a linha "Integrações conectadas" do prompt (nenhuma = `maxItems: 0`), e `toDraft`
+  ainda descarta o que não estiver nelas. A IA só sugere: o web liga a etiqueta e a pessoa confirma.
+  A voz passa `[]` (cria sem confirmação).
 - **Crédito `ai`: `enforce` antes de chamar a OpenAI, débito só depois de uma resposta dentro do
   contrato.** Falha, timeout ou JSON fora do shape → 502 sem débito. `question`/`unsupported`
   válidos debitam (a IA foi usada). Voz = transcrição + leitura = 1 crédito.

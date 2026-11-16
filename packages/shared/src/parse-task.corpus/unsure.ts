@@ -209,4 +209,54 @@ export default [
     ["move out of the apartment by friday", "move out of the apartment", FRI],
     ["email the team about friday's offsite", "email the team about friday's offsite"],
   ]),
+
+  // F6 (bd Dailify-0xp.7): pedido pra pôr num app conectado vai pra Mew, que sabe o que está
+  // conectado e limpa o título. App como assunto (API, configurar, sincronizar) é tarefa comum.
+  ...section("pt", "out-of-scope", [
+    oos("integration", "reunião amanhã 15h coloca no Google Agenda"),
+    oos("integration", "dentista sexta 10h no Google Agenda"),
+    oos("integration", "marca no calendar a call com o João amanhã"),
+    oos("integration", "joga pro Google Calendar a reunião de quinta"),
+    oos("integration", "põe na agenda do Google o aniversário da Bia dia 20"),
+    oos("integration", "call com cliente amanhã 9h no gcal com meet"),
+    oos("integration", "coloca na minha agenda do google: pagar IPVA dia 10"),
+    oos("integration", "academia segunda 7h pro meu Google Agenda"),
+    oos("integration", "salva no Google Calendar a entrevista de sexta às 14h"),
+    oos("integration", "manda pro calendar a consulta de terça"),
+    oos("integration", "almoço com a Ana sábado 12h, adiciona no Google Agenda"),
+    oos("integration", "reunião de planejamento quarta 10h para o Google Agenda com Meet"),
+    oos("integration", "lembrar de pagar o aluguel dia 5 no google agenda"),
+    oos("integration", "agenda no gcal: daily às 9h"),
+  ]),
+
+  ...section("en", "out-of-scope", [
+    oos("integration", "add to my calendar dentist friday 10am"),
+    oos("integration", "standup tomorrow 9am put it on my calendar"),
+    oos("integration", "put the team sync on google calendar thursday 3pm"),
+    oos("integration", "lunch with Sam saturday noon, add it to the calendar"),
+    oos("integration", "schedule a call with Ana tomorrow on gcal with a meet link"),
+    oos("integration", "save the interview friday 2pm to my google calendar"),
+    oos("integration", "board meeting next monday 10am in my calendar"),
+    oos("integration", "send the dentist appointment to my calendar"),
+    oos("integration", "1:1 with Bob wednesday 4pm add to google calendar"),
+    oos("integration", "throw the vet appointment on the calendar for tuesday"),
+  ]),
+
+  ...section("pt", "trap", [
+    ["revisar integração com Google Calendar API", "revisar integração com Google Calendar API"],
+    ["estudar a API do Google Agenda amanhã", "estudar a API do Google Agenda", MON],
+    ["configurar o Google Agenda da minha mãe", "configurar o Google Agenda da minha mãe"],
+    ["corrigir bug no calendar api sexta", "corrigir bug no calendar api", FRI],
+    ["exportar os feriados do Google Calendar", "exportar os feriados do Google Calendar"],
+    ["marcar dentista na agenda sexta", "marcar dentista na agenda", FRI],
+    ["comprar um calendário de mesa", "comprar um calendário de mesa"],
+  ]),
+
+  ...section("en", "trap", [
+    ["review the Google Calendar API docs", "review the Google Calendar API docs"],
+    ["fix the calendar sync bug tomorrow", "fix the calendar sync bug", MON],
+    ["write a blog post about gcal shortcuts", "write a blog post about gcal shortcuts"],
+    ["buy a wall calendar for the office", "buy a wall calendar for the office"],
+    ["migrate the team off Google Calendar", "migrate the team off Google Calendar"],
+  ]),
 ];

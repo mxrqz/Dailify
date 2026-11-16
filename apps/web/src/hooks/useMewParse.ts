@@ -23,11 +23,12 @@ export function useMewParse() {
   // O 429 chega antes de as quotas recarregarem: sem isto o botão continuaria aceso.
   const [refused, setRefused] = useState(false);
 
-  const ask = async (text: string) => {
+  /** Devolve a leitura (ou `null`) pra quem pediu reagir a ela sem esperar outro render. */
+  const ask = async (text: string): Promise<AiParse | null> => {
     setPending(true);
     try {
       const token = await getToken();
-      if (!token) return;
+      if (!token) return null;
       const { result: read, error } = await parseTaskAi(token, text);
       if (error?.status === 429 || error?.status === 403) {
         setRefused(true);
@@ -35,14 +36,15 @@ export function useMewParse() {
           description: copy.voice.limitReachedHint,
           action: { label: copy.mew.upgrade, onClick: () => navigate("/premium") },
         });
-        return;
+        return null;
       }
       if (!read) {
         toast.error(copy.mew.failed, { description: copy.mew.noCredit });
-        return;
+        return null;
       }
       bumpUsage("ai");
       setResult(read);
+      return read;
     } finally {
       setPending(false);
     }

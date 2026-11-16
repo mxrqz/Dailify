@@ -28,6 +28,7 @@ import { env, applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
 import { limitsFor, type AiParse } from "@dailify/shared";
 import { bumpStoredUsage, periodFor, readStoredUsage } from "../src/db/usage";
+import { markRevoked, upsertConnection } from "../src/db/integrations";
 
 beforeAll(async () => {
   await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
@@ -200,5 +201,78 @@ describe("POST /tasks/parse", () => {
     expect((await parse({ text: "x".repeat(201), timezone: "UTC" })).status).toBe(400);
     expect((await parse({ text: "comprar pão", timezone: "Mars/Olympus" })).status).toBe(400);
     expect(openaiMock.responses.create).not.toHaveBeenCalled();
+  });
+});
+
+describe("POST /tasks/parse — targets", () => {
+  const connect = (id: string) =>
+    upsertConnection(
+      env.DB,
+      id,
+      "google-calendar",
+      { accountId: "g1", email: null, scopes: "", tokens: "v1.x.y" },
+      Date.now(),
+    );
+  type Sent = { instructions: string; text: { format: { schema: unknown } } };
+  const sent = (): Sent => openaiMock.responses.create.mock.calls[0][0];
+  const targetsSchema = () =>
+    JSON.parse(JSON.stringify(sent().text.format.schema)).properties.tasks.items.properties.targets;
+
+  it("sem conexão: o schema só aceita [] e um target inventado cai", async () => {
+    userId = "pt-none";
+    aiReturns({
+      intent: "create",
+      reply: "ok",
+      tasks: [task({ targets: [{ provider: "google-calendar", meet: true }] })],
+    });
+    const { drafts } = await (await parse({ text: "x", timezone: "UTC" })).json<AiParse>();
+    expect(targetsSchema().maxItems).toBe(0);
+    expect(sent().instructions).toContain("nenhum app conectado");
+    expect(drafts[0].targets).toBeUndefined();
+  });
+
+  it("conexão revogada não entra", async () => {
+    userId = "pt-revoked";
+    await connect(userId);
+    await markRevoked(env.DB, userId, "google-calendar", Date.now());
+    aiReturns({ intent: "create", reply: "ok", tasks: [task({ targets: [] })] });
+    await parse({ text: "x", timezone: "UTC" });
+    expect(targetsSchema().maxItems).toBe(0);
+  });
+
+  it("conectada: enum no schema, nome no prompt, target válido passa e o resto cai", async () => {
+    userId = "pt-on";
+    await connect(userId);
+    aiReturns({
+      intent: "create",
+      reply: "ok",
+      tasks: [
+        task({ title: "Call", targets: [{ provider: "google-calendar", meet: true }] }),
+        task({ title: "Sem", targets: [{ provider: "slack", meet: false }] }),
+        task({ title: "Plain", targets: [{ provider: "google-calendar", meet: false }] }),
+      ],
+    });
+    const res = await parse({ text: "call amanhã, coloca no Google Agenda", timezone: "UTC" });
+    const { drafts } = await res.json<AiParse>();
+    expect(targetsSchema().maxItems).toBe(1);
+    expect(targetsSchema().items.properties.provider.enum).toEqual(["google-calendar"]);
+    expect(sent().instructions).toContain("Integrações conectadas: Google Agenda");
+    expect(drafts.map((d) => d.targets)).toEqual([
+      [{ provider: "google-calendar", meet: true }],
+      undefined,
+      [{ provider: "google-calendar" }],
+    ]);
+    expect(await used(userId)).toBe(1);
+  });
+
+  it("target com shape errado → 502 sem débito", async () => {
+    userId = "pt-bad";
+    aiReturns({
+      intent: "create",
+      reply: "ok",
+      tasks: [task({ targets: [{ provider: "google-calendar", meet: "sim" }] })],
+    });
+    expect((await parse({ text: "x", timezone: "UTC" })).status).toBe(502);
+    expect(await used(userId)).toBe(0);
   });
 });

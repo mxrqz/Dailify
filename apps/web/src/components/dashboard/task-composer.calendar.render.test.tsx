@@ -256,3 +256,67 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
     );
   });
 });
+
+describe("<TaskComposer> destino sugerido pela Mew", () => {
+  const gcal = (meet: boolean): ParsedTaskWire["targets"] => [
+    { provider: "google-calendar", meet },
+  ];
+  const mewReads = (...drafts: ParsedTaskWire[]) =>
+    api.parseTaskAi.mockResolvedValue({ result: { reply: "", intent: "create", drafts } });
+  const ask = async (user: ReturnType<typeof userEvent.setup>, text: string) => {
+    await user.type(screen.getByRole("textbox"), text);
+    await user.click(screen.getByRole("button", { name: /Melhorar com a Mew/ }));
+  };
+
+  it("target liga a etiqueta e o + Meet, com a marca da Mew; Enter confirma", async () => {
+    mewReads({ ...draft("Call", 15), targets: gcal(true) });
+    const user = setup();
+    await ask(user, "call amanhã 15h coloca no Google Agenda com meet");
+
+    expect(await screen.findByRole("button", { name: t.chipLabel })).toHaveAttribute(
+      "aria-pressed",
+      "true",
+    );
+    expect(chip()).toHaveAttribute("title", t.mewPicked);
+    expect(meet()).toHaveAttribute("aria-pressed", "true");
+    expect(api.createCalendarEvent).not.toHaveBeenCalled();
+
+    await send(user);
+    await waitFor(() =>
+      expect(api.createCalendarEvent).toHaveBeenCalledWith("token", expect.any(String), true),
+    );
+  });
+
+  it("a pessoa pode desligar: cria sem ir pro Google", async () => {
+    mewReads({ ...draft("Call", 15), targets: gcal(false) });
+    const user = setup();
+    await ask(user, "call amanhã 15h no google agenda");
+    await user.click(await screen.findByRole("button", { name: t.chipLabel, pressed: true }));
+    expect(chip()).toHaveAttribute("aria-pressed", "false");
+    expect(chip()).not.toHaveAttribute("title");
+    await send(user);
+    await waitFor(() => expect(api.createTask).toHaveBeenCalled());
+    expect(api.createCalendarEvent).not.toHaveBeenCalled();
+  });
+
+  it("desconectado: o target é ignorado", async () => {
+    connect(false);
+    mewReads({ ...draft("Call", 15), targets: gcal(true) });
+    const user = setup();
+    await ask(user, "call amanhã 15h no google agenda");
+    await screen.findByRole("img", { name: copy.mew.draft });
+    connect(true);
+    expect(await screen.findByRole("button", { name: t.chipLabel })).toHaveAttribute(
+      "aria-pressed",
+      "false",
+    );
+  });
+
+  it("vários rascunhos: só a linha com target vem ligada", async () => {
+    mewReads(draft("Pão", 9), { ...draft("Reunião", 10), targets: gcal(false) }, draft("Café", 11));
+    const user = setup();
+    await ask(user, "pão às 9, reunião às 10 no gcal e café às 11");
+    const chips = await screen.findAllByRole("button", { name: t.chipLabel });
+    expect(chips.map((c) => c.getAttribute("aria-pressed"))).toEqual(["false", "true", "false"]);
+  });
+});

@@ -24,7 +24,8 @@ export type UnsureCode =
   | "leftover"
   | "dangling"
   | "past"
-  | "long";
+  | "long"
+  | "integration";
 
 export interface Unsure {
   code: UnsureCode;
@@ -198,6 +199,19 @@ const DANGLING_END_RE =
   /(?:^|\s)(?:e|ou|and|or|to|pra|para|pro|das|dos|from|for|until|till|after|depois|antes|before|entre|between|ate|as|at|ao|aos)[\s,.;:!?]*$/;
 const DANGLING_START_RE = /^\s*(?:e|ou|and|or|to|pra|para|ate|until)\s/;
 
+// "coloca no Google Agenda", "add to my calendar": pedido pra pôr a tarefa num app conectado. Só a
+// Mew sabe o que está conectado e tira o pedido do título. App como assunto ("revisar integração com
+// Google Calendar API", "configurar o Google Agenda") não tem a preposição de destino e não marca;
+// "na agenda"/"no calendário" sem o Google é a própria Mewki.
+const APP = String.raw`(?:google\s+(?:agenda|calendar)|gcal|agenda\s+do\s+google|calendar)\b(?!\s+(?:api|sdk)\b)`;
+const INTEGRATION_RE = new RegExp(
+  [
+    String.raw`\b(?:n[oa]|pr[oa]|pra|para\s+[oa])\s+(?:meu\s+|minha\s+|o\s+|a\s+)?${APP}`,
+    String.raw`\b(?:to|on|in|into)\s+(?:my\s+|the\s+)?(?:google\s+calendar|gcal)\b(?!\s+(?:api|sdk)\b)|\b(?:to|on|in|into)\s+my\s+calendar\b`,
+    String.raw`\b(?:add|put|send|save|throw|stick)\s+(?:\S+\s+){0,3}?(?:to|on|in|into)\s+(?:the\s+)?calendar\b`,
+  ].join("|"),
+);
+
 /** "hoje às 8" às 14h: hoje foi pedido com todas as letras — não é dúvida. "ontem pagar boleto" é. */
 const ASKED_PAST_RE = /\b(?:hoje|hj|today|tonight|this\s+(?:morning|afternoon|evening))\b/;
 const match = (re: RegExp, text: string) => {
@@ -297,6 +311,9 @@ export function unsureOf({
   }
 
   if (normalized.split(/\s+/).filter(Boolean).length > 15) flag("long");
+
+  const integration = match(INTEGRATION_RE, normalized);
+  if (integration) flag("integration", integration);
 
   return out.filter(({ code }, i) => out.findIndex((other) => other.code === code) === i);
 }

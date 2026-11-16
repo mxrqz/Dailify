@@ -317,7 +317,10 @@ export function TaskComposer({
   // O botão fica desativado durante a leitura e o foco cairia no body: volta pro campo, pro Enter.
   const askMew = () => {
     calendar.reset();
-    void mew.ask(input).then(() => document.getElementById("composer-text")?.focus());
+    void mew.ask(input).then((read) => {
+      if (read?.intent === "create") calendar.suggest(read.drafts.map((d) => d.targets));
+      document.getElementById("composer-text")?.focus();
+    });
   };
 
   const remaining =

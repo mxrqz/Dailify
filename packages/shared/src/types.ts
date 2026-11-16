@@ -1,3 +1,5 @@
+import type { ProviderId } from "./integrations";
+
 export type Repeat = "Off" | "Daily" | "Monthly" | "Yearly" | { Weekly: string[] };
 
 export interface Task {
@@ -47,6 +49,8 @@ export interface ParsedTaskWire {
   links: string[];
   repeat: Repeat;
   repeatEvery?: number;
+  /** Só da IA: o app conectado em que a pessoa pediu pra pôr a tarefa. Sugestão — o cliente confirma. */
+  targets?: { provider: ProviderId; meet?: boolean }[];
 }
 
 export type AiIntent = "create" | "question" | "command" | "unsupported";

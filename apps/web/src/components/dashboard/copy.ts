@@ -287,6 +287,7 @@ export const copy = {
     chip: "Google Agenda",
     chipLabel: "Enviar ao Google Agenda",
     meetChip: "+ Meet",
+    mewPicked: "A Mew marcou: você pediu pra pôr no Google Agenda",
     createdAdded: "Tarefa criada e no Google Agenda",
     createdAddedMany: "{n} tarefas criadas e no Google Agenda",
     notAdded: "Tarefa criada, mas não foi pro Google Agenda",
@@ -404,6 +405,7 @@ export const copy = {
       dangling: "A frase ficou pela metade",
       past: "A data caiu no passado",
       long: "Frase longa",
+      integration: "Pede pra pôr num app conectado",
     } satisfies Record<UnsureCode, string>,
   },
 

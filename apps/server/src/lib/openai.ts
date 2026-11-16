@@ -2,12 +2,15 @@ import OpenAI from "openai";
 import { DateTime } from "luxon";
 import {
   DATE_RANGE,
+  INTEGRATIONS,
+  PROVIDER_IDS,
   TASK_LIMITS,
   normalizeRepeat,
   weekDays,
   type AiIntent,
   type AiParse,
   type ParsedTaskWire,
+  type ProviderId,
 } from "@dailify/shared";
 import type { Env } from "../index";
 import { isRepeatEvery, sanitizeLinks } from "./task-input";
@@ -31,6 +34,12 @@ interface GPTTask {
   repeat: unknown;
   repeatEvery?: unknown;
   links: string[];
+  targets?: GPTTarget[];
+}
+
+interface GPTTarget {
+  provider: string;
+  meet: boolean;
 }
 
 interface GPTResponse {
@@ -51,13 +60,17 @@ function isStringArray(v: unknown): v is string[] {
 
 const isNullableString = (v: unknown) => v === null || typeof v === "string";
 
+const isGPTTarget = (v: unknown): v is GPTTarget =>
+  isRecord(v) && typeof v.provider === "string" && typeof v.meet === "boolean";
+
 function isGPTTask(v: unknown): v is GPTTask {
   return (
     isRecord(v) &&
     typeof v.title === "string" &&
     isNullableString(v.date) &&
     isNullableString(v.duration) &&
-    isStringArray(v.links)
+    isStringArray(v.links) &&
+    (v.targets === undefined || (Array.isArray(v.targets) && v.targets.every(isGPTTarget)))
   );
 }
 
@@ -77,8 +90,9 @@ function isGPTResponse(v: unknown): v is GPTResponse {
 }
 
 // O mesmo contrato em JSON Schema: com `strict` a OpenAI já devolve neste formato, e o guard acima
-// continua sendo a porta — mock, modelo trocado ou schema ignorado não passam dele.
-const SCHEMA = {
+// continua sendo a porta — mock, modelo trocado ou schema ignorado não passam dele. `targets` só
+// aceita as integrações desta pessoa: sem nenhuma, `maxItems: 0` (enum vazio não é schema válido).
+const schema = (allowed: readonly ProviderId[]) => ({
   type: "object",
   additionalProperties: false,
   required: ["intent", "reply", "tasks"],
@@ -90,7 +104,7 @@ const SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        required: ["title", "date", "duration", "repeat", "repeatEvery", "links"],
+        required: ["title", "date", "duration", "repeat", "repeatEvery", "links", "targets"],
         properties: {
           title: { type: "string" },
           date: { type: ["string", "null"] },
@@ -113,16 +127,29 @@ const SCHEMA = {
           },
           repeatEvery: { type: ["integer", "null"] },
           links: { type: "array", items: { type: "string" } },
+          targets: {
+            type: "array",
+            maxItems: allowed.length,
+            items: {
+              type: "object",
+              additionalProperties: false,
+              required: ["provider", "meet"],
+              properties: {
+                provider: { type: "string", enum: allowed.length ? allowed : PROVIDER_IDS },
+                meet: { type: "boolean" },
+              },
+            },
+          },
         },
       },
     },
   },
-};
+});
 
 // `now` vai em hora LOCAL ingênua (sem offset) e as datas voltam assim também: o servidor as
 // reinterpreta no fuso do cliente (`toEpoch`). Deixar a IA fazer a conta do offset abriria a porta
 // pra conversão dupla.
-const PROMPT = (now: string, weekday: string) => `
+const PROMPT = (now: string, weekday: string, allowed: readonly ProviderId[]) => `
 Você é a Mewki — "Mew" pros íntimos —, a gatinha assistente do app de tarefas Mewki. Fale sempre no
 feminino ("anotei", "pronto, marquei"), em português do Brasil. Se o usuário escrever em inglês,
 responda em inglês.
@@ -149,10 +176,22 @@ Cada item de "tasks":
 - "repeatEvery": o N de "a cada N" (2 a 365) na unidade do "repeat" — "a cada 2 semanas" é Weekly
   com 2, "dia sim, dia não" é Daily com 2, "a cada 3 meses" é Monthly com 3; senão null.
 - "links": as URLs citadas, exatamente como vieram; [] se nenhuma.
+${targetsRule(allowed)}
 Várias tarefas no mesmo pedido viram vários itens. Não invente prioridade, alerta nem tags.
 
 "reply": uma frase curta na sua voz, sem markdown (ex.: "Anotei! Reunião amanhã às 14h 🐾").
 `;
+
+// Você só sugere: o app mostra o destino ligado e a pessoa confirma antes de qualquer coisa sair.
+function targetsRule(allowed: readonly ProviderId[]): string {
+  if (!allowed.length) return `- "targets": sempre [] (nenhum app conectado).`;
+  const list = allowed.map((id) => `${INTEGRATIONS[id].name} ("${id}")`).join(", ");
+  return `- "targets": Integrações conectadas: ${list}. Só inclua uma quando o usuário pedir com
+  todas as letras pra pôr a tarefa naquele app ("coloca no Google Agenda", "add to my calendar",
+  "marca no calendar"); citar o app como assunto ("revisar a API do Google Calendar") não conta.
+  "meet": true só se ele pedir link de Meet/videochamada; senão false. Sem pedido, [].
+  Nunca deixe o nome do app ou o pedido de colocar nele no "title".`;
+}
 
 const DURATION_RE = /^(?:\d{1,3}h)?(?:\d{1,4}m)?$/;
 const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
@@ -170,7 +209,7 @@ function toEpoch(iso: string, timeZone: string): number | null {
   return Number.isFinite(ms) && ms >= DATE_RANGE.min && ms <= DATE_RANGE.max ? ms : null;
 }
 
-function toDraft(t: GPTTask, timeZone: string): ParsedTaskWire {
+function toDraft(t: GPTTask, timeZone: string, allowed: readonly ProviderId[]): ParsedTaskWire {
   const date = t.date === null ? null : toEpoch(t.date, timeZone);
   if (t.date !== null && date === null) throw new Error("AI returned an invalid date");
   // Link a link: um `javascript:` inventado cai sozinho, sem levar os bons junto.
@@ -179,6 +218,11 @@ function toDraft(t: GPTTask, timeZone: string): ParsedTaskWire {
     .filter((l) => l !== "invalid")
     .slice(0, TASK_LIMITS.linksMax);
   const repeat = normalizeRepeat(t.repeat);
+  // O schema já restringe; isto vale pra quando ele não segurou. Um destino por provider.
+  const targets = allowed.flatMap((provider) => {
+    const target = t.targets?.find((x) => x.provider === provider);
+    return target ? [{ provider, ...(target.meet && { meet: true }) }] : [];
+  });
   return {
     text: t.title.trim().slice(0, TASK_LIMITS.titleMax),
     date,
@@ -188,15 +232,22 @@ function toDraft(t: GPTTask, timeZone: string): ParsedTaskWire {
     links,
     repeat,
     repeatEvery: repeat !== "Off" && isRepeatEvery(t.repeatEvery) ? t.repeatEvery : undefined,
+    ...(targets.length && { targets }),
   };
 }
 
 /**
  * Texto → rascunhos. Porta única da IA de criação: `POST /tasks/parse` e a voz (depois da
  * transcrição) passam por aqui. Lança quando a OpenAI falha ou devolve fora do contrato — e
- * quem chama só debita crédito depois que isto voltou.
+ * quem chama só debita crédito depois que isto voltou. `allowed`: as integrações ativas que o plano
+ * libera — os únicos `targets` que a IA pode sugerir.
  */
-export async function interpretText(env: Env, text: string, timezone: string): Promise<AiParse> {
+export async function interpretText(
+  env: Env,
+  text: string,
+  timezone: string,
+  allowed: readonly ProviderId[],
+): Promise<AiParse> {
   const local = DateTime.now().setZone(timezone);
   const result = await openaiClient(env).responses.create(
     {
@@ -204,6 +255,7 @@ export async function interpretText(env: Env, text: string, timezone: string): P
       instructions: PROMPT(
         local.toISO({ includeOffset: false, suppressMilliseconds: true }) ?? "",
         weekDays[local.weekday % 7],
+        allowed,
       ),
       input: text,
       text: {
@@ -211,7 +263,7 @@ export async function interpretText(env: Env, text: string, timezone: string): P
           type: "json_schema",
           name: "mewki_parse",
           strict: true,
-          schema: SCHEMA,
+          schema: schema(allowed),
         },
       },
     },
@@ -228,7 +280,7 @@ export async function interpretText(env: Env, text: string, timezone: string): P
 
   const drafts =
     parsed.intent === "create"
-      ? parsed.tasks.map((t) => toDraft(t, timezone)).filter((d) => d.text)
+      ? parsed.tasks.map((t) => toDraft(t, timezone, allowed)).filter((d) => d.text)
       : [];
   return { reply: parsed.reply.trim(), intent: parsed.intent, drafts };
 }

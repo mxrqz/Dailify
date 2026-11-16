@@ -4,12 +4,15 @@ import { IANAZone } from "luxon";
 import { TZDate } from "@date-fns/tz";
 import type { User } from "@clerk/backend";
 import {
+  PROVIDER_IDS,
   TASK_LIMITS,
+  canUseIntegration,
   composeTaskInput,
   limitsFor,
   parseTaskText,
   type AiParse,
   type ParsedTaskWire,
+  type Role,
   type Task,
 } from "@dailify/shared";
 import type { Env } from "../index";
@@ -20,6 +23,7 @@ import { interpretText, transcribe } from "../lib/openai";
 import { insertTask } from "../db/tasks";
 import { enforce, enforceCreate } from "../db/limits";
 import { bumpStoredUsage, periodFor } from "../db/usage";
+import { listConnections } from "../db/integrations";
 import { fail } from "../lib/errors";
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
@@ -39,8 +43,8 @@ function validZone(value: unknown): string | undefined {
 type Ctx = Context<{ Bindings: Env; Variables: { userId: string } }>;
 
 /** Barra antes de qualquer chamada à OpenAI. Bloqueado (limite 0) e esgotado: sem crédito, 403/429. */
-async function aiQuotaError(c: Ctx): Promise<Response | null> {
-  const limits = limitsFor(await getUserRole(c.env, c.get("userId")));
+async function aiQuotaError(c: Ctx, role: Role): Promise<Response | null> {
+  const limits = limitsFor(role);
   const err = await enforce(c.env.DB, c.get("userId"), limits, "ai", new Date());
   return err ? fail(c, limits.ai === 0 ? 403 : 429, err) : null;
 }
@@ -81,12 +85,21 @@ voice.post("/parse", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const timezone = validZone(isRecord(body) ? body.timezone : undefined);
   if (!timezone) return fail(c, 400, "invalid timezone");
 
-  const quotaError = await aiQuotaError(c);
+  const [role, connections] = await Promise.all([
+    getUserRole(c.env, c.get("userId")),
+    listConnections(c.env.DB, c.get("userId")),
+  ]);
+  const quotaError = await aiQuotaError(c, role);
   if (quotaError) return quotaError;
+  const allowed = PROVIDER_IDS.filter(
+    (id) =>
+      canUseIntegration(role, id) &&
+      connections.some((r) => r.provider === id && r.status === "active"),
+  );
 
   let result: AiParse;
   try {
-    result = await interpretText(c.env, text, timezone);
+    result = await interpretText(c.env, text, timezone, allowed);
   } catch (err) {
     console.error(err);
     return fail(c, 502, "AI request failed");
@@ -97,7 +110,7 @@ voice.post("/parse", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
 
 voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const userId = c.get("userId");
-  const quotaError = await aiQuotaError(c);
+  const quotaError = await aiQuotaError(c, await getUserRole(c.env, userId));
   if (quotaError) return quotaError;
 
   const body = await c.req.parseBody();
@@ -121,7 +134,9 @@ voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   let ai: AiParse;
   try {
     const transcript = await transcribe(c.env, audio);
-    ai = readLocally(transcript, timezone) ?? (await interpretText(c.env, transcript, timezone));
+    // A voz cria sem confirmação, então não recebe destino: nada de `targets` nesta fase.
+    ai =
+      readLocally(transcript, timezone) ?? (await interpretText(c.env, transcript, timezone, []));
   } catch (err) {
     console.error(err);
     return fail(c, 502, "AI request failed");

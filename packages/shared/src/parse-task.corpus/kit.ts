@@ -27,7 +27,8 @@ export type Category =
   | "trap"
   | "out-of-scope";
 /** Frases que o parser deve marcar como `unsure` (caminho da IA) em vez de parsear com confiança. */
-export type OutOfScope = "multi-task" | "question" | "command" | "recurrence" | "alert" | "vague";
+export type OutOfScope =
+  "multi-task" | "question" | "command" | "recurrence" | "alert" | "vague" | "integration";
 
 /** O motivo que cada `outOfScope` cobra quando a linha não diz outro. */
 const OUT_OF_SCOPE_CODE: Record<OutOfScope, UnsureCode> = {
@@ -37,6 +38,7 @@ const OUT_OF_SCOPE_CODE: Record<OutOfScope, UnsureCode> = {
   recurrence: "repeat-unsupported",
   alert: "alert",
   vague: "vague",
+  integration: "integration",
 };
 
 export interface Expect {
