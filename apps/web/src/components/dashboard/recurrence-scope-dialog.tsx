@@ -1,13 +1,5 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 import { copy } from "@/components/dashboard/copy";
-import { cn } from "@/lib/utils";
+import { ActionSheet } from "@/components/kit/action-sheet";
 
 /**
  * Escolha entre a ocorrência e a série — usada ao editar e ao excluir uma tarefa recorrente.
@@ -30,34 +22,15 @@ export function RecurrenceScopeDialog({
   onSeries: () => void;
 }): JSX.Element {
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="rounded-panel border-surface-line bg-surface-card sm:max-w-sm">
-        <DialogHeader>
-          <DialogTitle>{copy.form.scopeTitle}</DialogTitle>
-          <DialogDescription>{description}</DialogDescription>
-        </DialogHeader>
-
-        <div className="flex flex-col gap-2">
-          <Button
-            variant={destructive ? "destructive" : "default"}
-            className={cn(
-              "h-12 cursor-pointer rounded-md",
-              // fora do destrutivo, a ação principal usa o accent do app, não o `primary` do shadcn
-              !destructive && "bg-accent-primary text-primary-foreground hover:bg-accent-hover",
-            )}
-            onClick={onOccurrence}
-          >
-            {copy.form.scopeOccurrence}
-          </Button>
-          <Button
-            variant="outline"
-            className="h-12 cursor-pointer rounded-md border-surface-line"
-            onClick={onSeries}
-          >
-            {copy.form.scopeSeries}
-          </Button>
-        </div>
-      </DialogContent>
-    </Dialog>
+    <ActionSheet
+      open={open}
+      onOpenChange={onOpenChange}
+      title={copy.form.scopeTitle}
+      description={description}
+      actions={[
+        { label: copy.form.scopeOccurrence, onSelect: onOccurrence, primary: true },
+        { label: copy.form.scopeSeries, onSelect: onSeries, destructive },
+      ]}
+    />
   );
 }

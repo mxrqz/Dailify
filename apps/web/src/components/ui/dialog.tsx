@@ -2,6 +2,7 @@ import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
 
+import { copy } from "@/components/dashboard/copy";
 import { cn } from "@/lib/utils";
 
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -20,22 +21,6 @@ function DialogClose({ ...props }: React.ComponentProps<typeof DialogPrimitive.C
   return <DialogPrimitive.Close data-slot="dialog-close" {...props} />;
 }
 
-// function DialogOverlay({
-//   className,
-//   ...props
-// }: React.ComponentProps<typeof DialogPrimitive.Overlay>) {
-//   return (
-//     <DialogPrimitive.Overlay
-//       data-slot="dialog-overlay"
-//       className={cn(
-//         "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/50",
-//         className
-//       )}
-//       {...props}
-//     />
-//   )
-// }
-
 const DialogOverlay = React.forwardRef<
   HTMLDivElement,
   React.ComponentProps<typeof DialogPrimitive.Overlay>
@@ -45,7 +30,7 @@ const DialogOverlay = React.forwardRef<
       ref={ref}
       data-slot="dialog-overlay"
       className={cn(
-        "data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50 bg-black/80",
+        "scrim data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50",
         className,
       )}
       {...props}
@@ -53,27 +38,46 @@ const DialogOverlay = React.forwardRef<
   );
 });
 
+/**
+ * O X dos overlays de vidro (dialog, sheet): alvo de 44px com o círculo `fill` de 30px dentro —
+ * `fill` sobe um tom no vidro. `plain` tira o círculo (gaveta lateral).
+ */
+function OverlayClose({ className, plain }: { className?: string; plain?: boolean }) {
+  return (
+    <DialogPrimitive.Close
+      className={cn(
+        "absolute grid size-11 cursor-pointer place-items-center rounded-full text-ink-secondary outline-none transition-colors hover:text-ink focus-visible:ring-[3px] focus-visible:ring-ring/50",
+        className,
+      )}
+    >
+      <span className={cn("grid size-7.5 place-items-center rounded-full", !plain && "bg-fill")}>
+        <XIcon className={plain ? "size-5.5" : "size-4"} strokeWidth={plain ? 2 : 2.5} />
+      </span>
+      <span className="sr-only">{copy.kit.close}</span>
+    </DialogPrimitive.Close>
+  );
+}
+
 function DialogContent({
   className,
   children,
+  showCloseButton = true,
   ...props
-}: React.ComponentProps<typeof DialogPrimitive.Content>) {
+}: React.ComponentProps<typeof DialogPrimitive.Content> & { showCloseButton?: boolean }) {
   return (
     <DialogPortal data-slot="dialog-portal">
       <DialogOverlay />
+      {/* Vidro: o fade e o zoom são do próprio painel, nunca de um ancestral (mataria o blur). */}
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "bg-background data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg border p-6 shadow-lg duration-200 sm:max-w-lg",
+          "glass text-ink data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg p-6 duration-base ease-out sm:max-w-lg",
           className,
         )}
         {...props}
       >
         {children}
-        <DialogPrimitive.Close className="ring-offset-background focus:ring-ring data-[state=open]:bg-accent data-[state=open]:text-muted-foreground absolute top-4 right-4 rounded-xs opacity-70 transition-opacity hover:opacity-100 focus:ring-2 focus:ring-offset-2 focus:outline-hidden disabled:pointer-events-none [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4">
-          <XIcon />
-          <span className="sr-only">Close</span>
-        </DialogPrimitive.Close>
+        {showCloseButton && <OverlayClose className="top-2 right-2" />}
       </DialogPrimitive.Content>
     </DialogPortal>
   );
@@ -103,7 +107,7 @@ function DialogTitle({ className, ...props }: React.ComponentProps<typeof Dialog
   return (
     <DialogPrimitive.Title
       data-slot="dialog-title"
-      className={cn("text-lg leading-none font-semibold", className)}
+      className={cn("text-title-3 font-semibold", className)}
       {...props}
     />
   );
@@ -116,7 +120,7 @@ function DialogDescription({
   return (
     <DialogPrimitive.Description
       data-slot="dialog-description"
-      className={cn("text-muted-foreground text-sm", className)}
+      className={cn("text-ink-secondary text-subhead font-normal", className)}
       {...props}
     />
   );
@@ -131,6 +135,7 @@ export {
   DialogHeader,
   DialogOverlay,
   DialogPortal,
+  OverlayClose,
   DialogTitle,
   DialogTrigger,
 };

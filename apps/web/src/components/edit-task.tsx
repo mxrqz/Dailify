@@ -254,12 +254,7 @@ export function EditTaskContent({
   return (
     // Folha de BAIXO: no desktop a edição acontece no próprio cartão; quem abre isto é o toque.
     // Altura pelo conteúdo, com teto em `svh` (o `dvh` encolheria com o teclado).
-    <SheetContent
-      side="bottom"
-      className="max-h-[85svh] gap-0 overflow-hidden rounded-t-panel border-surface-line bg-surface-card pb-[env(safe-area-inset-bottom)] shadow-panel"
-    >
-      <div className="mx-auto mt-2 h-1 w-9 shrink-0 rounded-full bg-surface-line" aria-hidden />
-
+    <SheetContent side="bottom" className="max-h-[85svh]">
       {/* Na raiz o título da tarefa é o cabeçalho; dentro de um campo vira "voltar + nome dele". */}
       <SheetHeader className="gap-2 pb-0">
         <SheetTitle className="sr-only">{copy.form.editTitle}</SheetTitle>
@@ -287,7 +282,7 @@ export function EditTaskContent({
         view={view}
         onView={setView}
         onDirtyChange={setDirty}
-        className="min-h-0 flex-1 scrollbar-floating px-4 pb-2"
+        className="min-h-0 flex-1 scrollbar-floating pb-2"
         onSubmit={handleSubmit}
       />
 

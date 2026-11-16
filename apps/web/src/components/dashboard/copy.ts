@@ -10,6 +10,13 @@ import type { QuotaKey, UnsureCode } from "@dailify/shared";
  * Não hard-codar números de plano aqui: limites vêm de `@dailify/shared` `limitsFor`/`QUOTAS`.
  */
 export const copy = {
+  /** Os primitivos de `components/kit` e dos overlays de `ui/` (fechar, cancelar, remover). */
+  kit: {
+    close: "Fechar",
+    cancel: "Cancelar",
+    remove: "Remover",
+  },
+
   header: {
     back: "Voltar",
     forward: "Avançar",

@@ -78,6 +78,8 @@
   /* Vermelho como texto/ícone e anel de foco: --brand como texto fica em ~4:1 no escuro. */
   --brand-text: light-dark(oklch(53% 0.21 20), oklch(70% 0.18 18));
   --brand-soft: light-dark(oklch(95% 0.03 15), oklch(28% 0.07 18));
+  /* Hover/press do botão vermelho suave (soft-danger): um degrau de brand-soft, como fill-pressed. */
+  --brand-soft-pressed: light-dark(oklch(92% 0.045 15), oklch(32% 0.08 18));
   /* Translúcidos: material-bar, scrim e o vidro abaixo, sempre junto de backdrop-filter. */
   --material-bar: light-dark(oklch(97.7% 0.002 68 / 78%), oklch(15.9% 0 0 / 78%));
   --scrim: light-dark(oklch(0% 0 0 / 26%), oklch(0% 0 0 / 45%));
@@ -303,6 +305,7 @@
   --color-on-brand: var(--on-brand);
   --color-brand-text: var(--brand-text);
   --color-brand-soft: var(--brand-soft);
+  --color-brand-soft-pressed: var(--brand-soft-pressed);
   --color-material-bar: var(--material-bar);
   --color-scrim: var(--scrim);
   --shadow-raised: var(--shadow-raised);
@@ -407,6 +410,28 @@
   /* Font sizes — Tailwind's text-xs..text-9xl scale plus a project 2xs (was text-[0.6rem]). */
   --text-2xs: 0.625rem;
   --text-2xs--line-height: 0.875rem;
+
+  /* Escala iOS do DS (tokens.json → type). O tracking negativo cresce com o tamanho. */
+  /* Large Title de tela: "Hoje", "Configurações". */
+  --text-title-1: 2.125rem;
+  --text-title-1--line-height: 2.5rem;
+  --text-title-1--letter-spacing: -0.025em;
+  --text-title-1--font-weight: 700;
+  /* Título de sheet e de tarefa aberta. */
+  --text-title-3: 1.375rem;
+  --text-title-3--line-height: 1.75rem;
+  --text-title-3--letter-spacing: -0.015em;
+  /* Texto de linha, de botão grande e de título de tarefa (17px, como o iOS). Corrido: leading-6. */
+  --text-body: 1.0625rem;
+  --text-body--line-height: 1.375rem;
+  --text-body--letter-spacing: -0.01em;
+  /* Rótulo de seção, botão regular, segmented control. */
+  --text-subhead: 0.9375rem;
+  --text-subhead--line-height: 1.25rem;
+  --text-subhead--letter-spacing: -0.005em;
+  /* Metadado, legenda de grupo, texto de tag. */
+  --text-footnote: 0.8125rem;
+  --text-footnote--line-height: 1.125rem;
 
   /* Shadows use Tailwind's tokenized scale (shadow-sm..shadow-2xl); override those here if needed. */
 

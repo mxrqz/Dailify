@@ -24,10 +24,7 @@ export function MobileNav(): JSX.Element {
         <MenuIcon className="size-5" />
       </SheetTrigger>
 
-      <SheetContent
-        side="left"
-        className="w-64 gap-0 border-surface-line bg-surface-card p-3 pb-[env(safe-area-inset-bottom)]"
-      >
+      <SheetContent side="left">
         <SheetTitle className="sr-only">{copy.profile.navLabel}</SheetTitle>
         <SheetDescription className="sr-only">{copy.header.openNav}</SheetDescription>
 
