@@ -5,7 +5,7 @@ vi.mock("@clerk/hono", async (importOriginal) => {
   return { ...actual, getAuth: vi.fn(() => ({ userId: "u5" })) };
 });
 
-import { env } from "cloudflare:test";
+import { env, createExecutionContext } from "cloudflare:test";
 import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
 import { insertTask } from "../src/db/tasks";
@@ -27,14 +27,14 @@ describe("DELETE /tasks/:id", () => {
       completed: [],
     });
 
-    const before = await app.request("/tasks?month=2026-08", {}, env);
+    const before = await app.request("/tasks?month=2026-08", {}, env, createExecutionContext());
     const beforeBody = await before.json<{ tasks: Task[] }>();
     expect(beforeBody.tasks.some((t) => t.id === "del1")).toBe(true);
 
     const del = await app.request("/tasks/del1", { method: "DELETE" }, env);
     expect(del.status).toBe(204);
 
-    const after = await app.request("/tasks?month=2026-08", {}, env);
+    const after = await app.request("/tasks?month=2026-08", {}, env, createExecutionContext());
     const afterBody = await after.json<{ tasks: Task[] }>();
     expect(afterBody.tasks.some((t) => t.id === "del1")).toBe(false);
   });
@@ -63,7 +63,7 @@ describe("DELETE /tasks/:id?occurrence — excluir só esta", () => {
     const { series } = await res.json<{ series: Task }>();
     expect(series.exdates).toEqual([occurrence]);
 
-    const month = await app.request("/tasks?month=2026-10", {}, env);
+    const month = await app.request("/tasks?month=2026-10", {}, env, createExecutionContext());
     const { tasks } = await month.json<{ tasks: Task[] }>();
     expect(tasks.some((t) => t.date === occurrence)).toBe(false);
     // a série continua lá, com os outros dias

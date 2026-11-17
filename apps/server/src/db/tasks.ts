@@ -83,7 +83,7 @@ export function rowToTask(r: Row): Task {
   return { ...task, hash: taskHash(task) };
 }
 
-function insertStatement(db: D1Database, userId: string, task: Task): D1PreparedStatement {
+export function insertStatement(db: D1Database, userId: string, task: Task): D1PreparedStatement {
   const { kind, days } = repeatToCols(task.repeat);
   // Upsert, não INSERT: a fila offline reenvia a mesma criação quando a rede volta no meio do
   // caminho, e um id repetido não pode virar 500. O WHERE impede duas coisas: pisar na linha de

@@ -21,6 +21,7 @@ import { expandRecurringTask, type Task } from "@dailify/shared";
 import { parseClientId, parseNewTask, parseTaskFields } from "../lib/task-input";
 import { fail } from "../lib/errors";
 import { linkedTask, propagate } from "../integrations/propagate";
+import { syncIfDue } from "../integrations/google-calendar/sync";
 
 const tasks = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 tasks.use("*", requireAuth);
@@ -53,6 +54,8 @@ tasks.get("/", async (c) => {
   // O fuso vem do cliente pelo mesmo motivo que o `from`/`to` do DELETE /complete: o Worker roda em
   // UTC e não tem como saber onde o dia do usuário começa. Sem `tz` o comportamento é o antigo.
   const timeZone = validZone(c.req.query("tz"));
+  // A Agenda entra no fundo (throttle de 60 s): o que ela trouxer aparece na próxima leitura.
+  c.executionCtx.waitUntil(syncIfDue(c.env, userId));
 
   const [inRange, recurring] = await Promise.all([
     getMonthTasks(c.env.DB, userId, month, timeZone),

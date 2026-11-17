@@ -9,6 +9,7 @@ import clerkWebhook from "./routes/clerk-webhook";
 import push from "./routes/push";
 import integrations from "./routes/integrations";
 import { dispatchAlerts } from "./alerts";
+import { syncOldest } from "./integrations/google-calendar/sync";
 import { fail } from "./lib/errors";
 import { allowedOrigins } from "./lib/origin";
 
@@ -66,5 +67,6 @@ app.onError((err, c) => {
 export default Object.assign(app, {
   scheduled: async (_controller: ScheduledController, env: Env, ctx: ExecutionContext) => {
     ctx.waitUntil(dispatchAlerts(env));
+    ctx.waitUntil(syncOldest(env));
   },
 });

@@ -10,7 +10,7 @@ vi.mock("../src/lib/clerk", async (importOriginal) => {
   return { ...actual, getUserRole: vi.fn(async () => "free" as const) };
 });
 
-import { env } from "cloudflare:test";
+import { env, createExecutionContext } from "cloudflare:test";
 import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
 import { insertTask, getTask } from "../src/db/tasks";
@@ -245,7 +245,7 @@ describe("PATCH /tasks/:id?occurrence — editar só esta ocorrência", () => {
   });
 
   it("o mês não devolve a ocorrência destacada duas vezes", async () => {
-    const res = await app.request("/tasks?month=2026-09", {}, env);
+    const res = await app.request("/tasks?month=2026-09", {}, env, createExecutionContext());
     const { tasks } = await res.json<{ tasks: Task[] }>();
     const atThatDay = tasks.filter((t) => t.date === occurrence);
     expect(atThatDay).toHaveLength(0); // a antiga sumiu; a nova está uma hora depois

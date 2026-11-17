@@ -22,7 +22,11 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
   (`@dailify/shared`) + módulo aqui; o teste de contrato em `test/integrations.test.ts` cobra o resto.
 - **`src/alerts.ts`** — `dispatchAlerts`, the Cron Trigger pass that sends due task alerts.
 - **`src/db/`** — `tasks.ts` (all D1 queries), `settings.ts` (`weekStart` por usuário), `limits.ts` (`enforceCreate` tier gate),
-  `push.ts` (subscriptions + due-alert query).
+  `push.ts` (subscriptions + due-alert query), `calendar-sync.ts` (claim/token/vínculos do sync da Agenda).
+- **`src/integrations/google-calendar/sync.ts`** — `syncCalendar`: eventos da agenda principal viram
+  tarefas (full 30 dias ou incremental pelo syncToken; 410 = full). Roda no `waitUntil` do `GET /tasks`
+  e no cron (25 conexões mais antigas); o `UPDATE … RETURNING` do `synced_at` é throttle de 60 s e
+  lock. LWW por `updated` × `updatedAt`, eco por `remote_updated`; nunca chama a propagação.
 - **`src/lib/`** — `clerk.ts` (client + `getUserRole` from `privateMetadata.plan`), `stripe.ts`,
   `openai.ts` (`transcribe` = `gpt-4o-mini-transcribe`; `interpretText` = texto → `AiParse`, o prompt da Mew), `errors.ts` (`fail`),
   `task-input.ts` (validação do body), `push.ts` (Web Push), `svix.ts` (assinatura do webhook Clerk).

@@ -10,7 +10,7 @@ vi.mock("../src/lib/clerk", async (importOriginal) => {
   return { ...actual, getUserRole: vi.fn(async () => "max") };
 });
 
-import { env, applyD1Migrations } from "cloudflare:test";
+import { env, applyD1Migrations, createExecutionContext } from "cloudflare:test";
 import app from "../src/index";
 import { insertTask } from "../src/db/tasks";
 import type { Task } from "@dailify/shared";
@@ -35,7 +35,8 @@ const json = (method: string, body: unknown) => ({
   headers: { "content-type": "application/json" },
   body: JSON.stringify(body),
 });
-const get = async (path: string) => (await app.request(path, {}, env)).json<{ tasks: Task[] }>();
+const get = async (path: string) =>
+  (await app.request(path, {}, env, createExecutionContext())).json<{ tasks: Task[] }>();
 
 describe("tarefas Sem data", () => {
   it("POST grava undated e GET /tasks/undated devolve", async () => {
