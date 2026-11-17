@@ -1,4 +1,3 @@
-import { useUser } from "@clerk/clerk-react";
 import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, UserIcon } from "lucide-react";
 import { Link, useMatch, useNavigate } from "react-router-dom";
 
@@ -8,7 +7,8 @@ import { SyncBadge } from "@/components/sync-badge";
 import { copy } from "@/components/dashboard/copy";
 import { Button } from "@/components/ui/button";
 import { PLAN_ID } from "@/consts/conts";
-import { cn, toText } from "@/lib/utils";
+import { planOf, useSession } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
 const barButton =
   "grid size-11 shrink-0 place-items-center rounded-full text-ink transition-colors hover:bg-fill pointer-fine:active:bg-fill-pressed [&_svg]:size-5.5 md:size-8 md:rounded-md md:text-muted-foreground md:[&_svg]:size-4";
@@ -19,11 +19,10 @@ const barButton =
  * em `/settings`; "Entrar" sobrevive pq `/premium` reusa o layout.
  */
 export function AppHeader({ className }: { className?: string }): JSX.Element {
-  const { user, isSignedIn } = useUser();
+  const user = useSession().data?.user;
+  const isSignedIn = Boolean(user);
   const navigate = useNavigate();
-  // `publicMetadata.plan` só nasce por webhook do Stripe: quem nunca assinou não tem o campo, e a
-  // comparação crua escondia o "Assinar" justamente de quem deveria ver.
-  const isFree = isSignedIn && toText(user?.publicMetadata?.plan, PLAN_ID.free) === PLAN_ID.free;
+  const isFree = isSignedIn && planOf(user) === PLAN_ID.free;
   const dashboard = useMatch("/dashboard") !== null;
 
   return (

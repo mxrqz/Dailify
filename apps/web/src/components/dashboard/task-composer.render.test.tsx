@@ -19,8 +19,8 @@ const toast = vi.hoisted(() =>
 );
 const ctx = vi.hoisted(() => ({ aiUsed: 5 }));
 
-vi.mock("@clerk/clerk-react", () => ({
-  useAuth: () => ({ getToken: async () => "token", userId: "u1" }),
+vi.mock("@/lib/auth", () => ({
+  useSession: () => ({ data: { user: { id: "u1" } }, isPending: false }),
 }));
 vi.mock("@/components/dailifyContext", () => ({
   useDailify: () => ({
@@ -142,7 +142,7 @@ describe("<TaskComposer> Melhorar com a Mew", () => {
     await user.type(screen.getByRole("textbox"), "dentista dps do almoço");
     await user.click(screen.getByRole("button", { name: copy.mew.improve }));
 
-    expect(api.parseTaskAi).toHaveBeenCalledWith("token", "dentista dps do almoço");
+    expect(api.parseTaskAi).toHaveBeenCalledWith("dentista dps do almoço");
     expect(screen.getByRole("img", { name: copy.mew.draft })).toBeInTheDocument();
     expect(screen.getByText("15:00")).toBeInTheDocument();
     expect(screen.getByRole("textbox")).toHaveValue("dentista dps do almoço");
@@ -161,7 +161,7 @@ describe("<TaskComposer> Melhorar com a Mew", () => {
 
   it("vários rascunhos: lista pra confirmar, e confirmar cria todos com Desfazer", async () => {
     reads({ reply: "", intent: "create", drafts: [draft("Pão", 9), draft("Leite", 10)] });
-    api.createTask.mockImplementation(async (_token, input) => ({
+    api.createTask.mockImplementation(async (input) => ({
       task: { ...input, completed: [] },
     }));
     const { user, onSubmit } = setup();

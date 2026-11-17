@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
@@ -119,7 +118,6 @@ let shown = false;
 
 /** O container: lê `duplicates` do status da Agenda, acha os pares nas tarefas e resolve. */
 export function Duplicates(): JSX.Element | null {
-  const { getToken } = useAuth();
   const { tasks, setTasks, undatedTasks, setUndatedTasks, loadedMonths, hour12 } = useDailify();
   const duplicates = useIntegrations()?.find((s) => s.provider === "google-calendar")?.duplicates;
   const [closed, setClosed] = useState(shown);
@@ -140,10 +138,7 @@ export function Duplicates(): JSX.Element | null {
 
   const resolve = async (importedId: string, action: "merge" | "keep") => {
     setPending(importedId);
-    const token = await getToken().catch(() => null);
-    const res = token
-      ? await resolveDuplicate(token, importedId, action)
-      : { error: { message: copy.form.authError, offline: false } };
+    const res = await resolveDuplicate(importedId, action);
     setPending(undefined);
     if (res.error) {
       toast.error(t.resolveError, { description: res.error.message });

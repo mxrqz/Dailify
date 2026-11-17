@@ -1,10 +1,10 @@
-import { useAuth } from "@clerk/clerk-react";
 import { CloudOffIcon } from "lucide-react";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { pendingCount } from "@/functions/offline";
 import { useOnline } from "@/hooks/useOnline";
+import { useSession } from "@/lib/auth";
 
 /**
  * O aviso de que o app está guardando escritas em vez de mandá-las. Sem ele o offline é silencioso
@@ -14,7 +14,7 @@ import { useOnline } from "@/hooks/useOnline";
  */
 export function SyncBadge(): JSX.Element | null {
   const online = useOnline();
-  const { userId } = useAuth();
+  const userId = useSession().data?.user.id;
   const { tasks } = useDailify();
 
   if (!userId) return null;

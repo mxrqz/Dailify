@@ -5,7 +5,7 @@ primitives (see `ui/CLAUDE.md`). `@/` resolves to `src/`.
 
 ## Kit do redesign mobile — `kit/`
 
-Peças apresentacionais (props → markup, sem `useDailify`/Clerk): o container busca os dados e passa.
+Peças apresentacionais (props → markup, sem `useDailify`/sessão): o container busca os dados e passa.
 Toda string visível vem de `copy` (os defaults "Fechar"/"Cancelar"/"Remover" estão em `copy.kit`).
 
 - `ListGroup({ title?, footer?, compact? })` e `ListRow({ icon?, label, sublabel?, value?, trailing?, below?, accessory?, danger?, href?, onClick?, asChild? })`
@@ -50,9 +50,9 @@ Single source of truth via `useDailify()`: `tasks`, `selectedDay`, `targetDay`, 
 `weekStart`, and their setters. Keep per-frame UI state OUT of this context: every consumer
 re-renders (the whole Home, measuring every swipe row).
 
-- **`protected-route.tsx`** is where it all loads: gates on Clerk (`isLoaded`/`userId`), then
-  `getTasks()`: flushes the offline queue, then `reloadMonths` (context) for today, next month and
-  every month already in `loadedMonths`. Each month is fetched (`getTasksForMonth`) and merged into
+- **`protected-route.tsx`** is where it all loads: gates on `useSession()`
+  (`isPending`/`data.user.id`), then `getTasks()`: flushes the offline queue, then `reloadMonths`
+  (context) for today, next month and every month already in `loadedMonths`. Each month is fetched (`getTasksForMonth`) and merged into
   `tasks` with `mergeMonth` — a month never replaces the others. `loadMonth(month)` adds one more
   month on demand, idempotent (loaded or in flight → no refetch). `goToDay(day)` loads every month
   between today and `day`, then sets `selectedDay` and `targetDay` (the list scrolls to it).
@@ -120,8 +120,9 @@ passariam por qualquer suíte de função pura.
   `environmentMatchGlobs` não existe mais no vitest 4.
 - `src/test/setup.ts` faz `cleanup` entre testes e stuba `IntersectionObserver` / `ResizeObserver` /
   `matchMedia`, que jsdom não tem e o app usa (motion, Radix, `useMediaQuery`).
-- Mocke `@clerk/clerk-react` e `useDailify` por arquivo — montar os providers de verdade traria
-  rede e sessão para dentro do teste. Envolva em `MemoryRouter` quem usa rota.
+- Mocke `@/lib/auth` (`useSession`) e `useDailify` por arquivo — montar os providers de verdade traria
+  rede e sessão para dentro do teste. Quem também usa `planOf`/`authClient` mocka parcial
+  (`importOriginal` + `useSession`). Envolva em `MemoryRouter` quem usa rota.
 - Prefira o contrato acessível ao detalhe visual: `aria-current="page"` para item de navegação
   aceso, `getByRole("heading")` para título. E cuidado com escopo: a `/billing` mostra a tabela de
   planos junto, então "Tarefas ilimitadas" existe na página mesmo para o Free — use `within()`.

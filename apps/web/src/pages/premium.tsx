@@ -1,4 +1,3 @@
-import { useAuth, useUser } from "@clerk/clerk-react";
 import { InfoIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
@@ -10,12 +9,12 @@ import { PLAN_ID } from "@/consts/conts";
 import type { PlanRole } from "@/consts/pricing";
 import { copy } from "@/components/pricing/copy";
 import { checkout } from "@/functions/api";
-import { toText } from "@/lib/utils";
+import { planOf, useSession } from "@/lib/auth";
 
 const ROLES: readonly PlanRole[] = [PLAN_ID.free, PLAN_ID.pro, PLAN_ID.max];
 
 /**
- * A tela de Planos, sem Clerk: `currentPlan` indefinido = deslogado (ninguém marcado, o Free vira
+ * A tela de Planos, sem sessão: `currentPlan` indefinido = deslogado (ninguém marcado, o Free vira
  * "Começar grátis"). O recomendado é o Max (`PLAN_ID.max`), o das orelhinhas.
  */
 export function PlansView({
@@ -90,25 +89,18 @@ export function PlansView({
 
 /** Escolher plano — pública, fica fora do `ProtectedRoute` de propósito (é a página de venda). */
 export default function PremiumPage(): JSX.Element {
-  const { getToken } = useAuth();
-  const { user } = useUser();
+  const user = useSession().data?.user;
 
   const handleSelectPlan = async (role: PlanRole, cycle: Cycle) => {
-    const token = await getToken();
-    if (!token) {
+    if (!user) {
       toast.error(copy.page.signInFirst);
       return;
     }
 
-    const { url } = await checkout(token, cycle === "yearly" ? `${role}-year` : role);
+    const { url } = await checkout(cycle === "yearly" ? `${role}-year` : role);
     if (url) window.location.href = url;
     else toast.error(copy.page.checkoutFailed);
   };
 
-  return (
-    <PlansView
-      currentPlan={user ? toText(user.publicMetadata?.plan, PLAN_ID.free) : undefined}
-      onSelect={handleSelectPlan}
-    />
-  );
+  return <PlansView currentPlan={user ? planOf(user) : undefined} onSelect={handleSelectPlan} />;
 }

@@ -1,5 +1,4 @@
 import { useMemo, useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
 import { CheckIcon } from "lucide-react";
 import { toast } from "sonner";
 
@@ -34,7 +33,6 @@ function offsetOf(zone: string): string {
  */
 export function TimeZoneSelect(): JSX.Element {
   const { timeZone, setTimeZone } = useDailify();
-  const { getToken } = useAuth();
   const [open, setOpen] = useState(false);
   const device = deviceTimeZone();
   const zones = useMemo(
@@ -47,9 +45,8 @@ export function TimeZoneSelect(): JSX.Element {
     if (next === timeZone) return;
     const previous = timeZone;
     setTimeZone(next);
-    const token = await getToken();
-    const result = token ? await saveSettings(token, { timeZone: next }) : undefined;
-    if (!result || result.error) {
+    const result = await saveSettings({ timeZone: next });
+    if (result.error) {
       setTimeZone(previous);
       toast.error(copy.profile.timeZoneError);
     }

@@ -3,12 +3,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-const { useUser, useClerk, useAuth } = vi.hoisted(() => ({
-  useUser: vi.fn(),
-  useClerk: vi.fn(),
-  useAuth: vi.fn(),
+const { useSession } = vi.hoisted(() => ({ useSession: vi.fn() }));
+vi.mock("@/lib/auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/auth")>()),
+  useSession,
 }));
-vi.mock("@clerk/clerk-react", () => ({ useUser, useClerk, useAuth }));
 const { useDailify } = vi.hoisted(() => ({ useDailify: vi.fn() }));
 vi.mock("@/components/dailifyContext", () => ({ useDailify }));
 
@@ -17,12 +16,12 @@ import { copy } from "@/components/dashboard/copy";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useUser.mockReturnValue({ isSignedIn: true, user: { firstName: "Seu", publicMetadata: {} } });
+  useSession.mockReturnValue({
+    data: { user: { id: "u1", name: "Seu", email: "seu@mewki.app", image: null } },
+  });
   useDailify.mockReturnValue({
     quotas: { limits: { tasks: -1, ai: 30 }, usage: { tasks: 0, ai: 12 } },
   });
-  useClerk.mockReturnValue({ signOut: vi.fn() });
-  useAuth.mockReturnValue({ signOut: vi.fn(), getToken: async () => "t" });
 });
 
 const renderAt = (path: string) =>
@@ -76,7 +75,7 @@ describe("<Sidebar>", () => {
     expect(screen.getByText(copy.profile.signOut)).toBeInTheDocument();
     unmount(); // o cleanup automático só roda entre testes, não entre renders do mesmo teste
 
-    useUser.mockReturnValue({ isSignedIn: false });
+    useSession.mockReturnValue({ data: null });
     renderAt("/premium");
     expect(screen.queryByText(copy.profile.signOut)).not.toBeInTheDocument();
   });

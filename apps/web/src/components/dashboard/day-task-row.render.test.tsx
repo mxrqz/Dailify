@@ -8,9 +8,8 @@ const { dailify, api } = vi.hoisted(() => ({
   api: { completeTask: vi.fn(), uncompleteTask: vi.fn(), deleteTask: vi.fn() },
 }));
 vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
-vi.mock("@clerk/clerk-react", () => ({
-  useAuth: () => ({ getToken: async () => "token", userId: "u1" }),
-  useUser: () => ({ user: { id: "u1" } }),
+vi.mock("@/lib/auth", () => ({
+  useSession: () => ({ data: { user: { id: "u1" } }, isPending: false }),
 }));
 vi.mock("@/functions/api", () => api);
 vi.mock("@/components/edit-task", () => ({
@@ -83,7 +82,7 @@ describe("DayTaskRow", () => {
       name: "Excluir “Reunião” da Mewki e da Agenda?",
     });
     fireEvent.click(screen.getByRole("button", { name: copy.calendar.deleteConfirm }));
-    await waitFor(() => expect(api.deleteTask).toHaveBeenCalledWith("token", "t"));
+    await waitFor(() => expect(api.deleteTask).toHaveBeenCalledWith("t"));
   });
 
   it("duração: minutos, horas e horas com minutos", () => {

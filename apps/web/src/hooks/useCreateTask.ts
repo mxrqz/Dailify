@@ -1,5 +1,4 @@
 import { useRef, useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { composeTaskInput, type ParsedTask, type Task } from "@dailify/shared";
@@ -13,13 +12,13 @@ import { upsertUndated } from "@/functions/undated";
 import { useCalendarPush, type CalendarPick } from "@/hooks/useCalendarPush";
 import { useQuotas } from "@/hooks/useQuotas";
 import { zoned } from "@/functions/zone";
+import { useSession } from "@/lib/auth";
 
 /**
  * Tarefas que já existem no servidor (a voz, os rascunhos da Mew): põe na agenda ou no A qualquer
  * hora e avisa com Desfazer.
  */
 export function useShowCreated() {
-  const { getToken } = useAuth();
   const { tasks, setTasks, undatedTasks, setUndatedTasks, loadedMonths, bumpUsage } = useDailify();
   // A resposta chega segundos depois do toque; as listas de agora, não as daquele render.
   const latest = useRef({ tasks, undatedTasks });
@@ -29,8 +28,7 @@ export function useShowCreated() {
     const ids = new Set(created.map((t) => t.id));
     setTasks((latest.current.tasks ?? []).filter((t) => !ids.has(t.id)));
     setUndatedTasks((latest.current.undatedTasks ?? []).filter((t) => !ids.has(t.id)));
-    const token = await getToken();
-    if (token) await Promise.all(created.map((t) => deleteTask(token, t.id)));
+    await Promise.all(created.map((t) => deleteTask(t.id)));
   };
 
   return (created: Task[], message: string) => {
@@ -58,7 +56,7 @@ export function useShowCreated() {
  * Devolve `true` quando a tarefa existe (no servidor ou na fila), pra quem chamou limpar o campo.
  */
 export function useCreateTask() {
-  const { getToken, userId } = useAuth();
+  const userId = useSession().data?.user.id;
   const { tasks, setTasks, undatedTasks, setUndatedTasks, bumpUsage, loadedMonths } = useDailify();
   const quotas = useQuotas();
   const navigate = useNavigate();
@@ -83,7 +81,7 @@ export function useCreateTask() {
 
     setSubmitting(true);
 
-    // `finally`: qualquer exceção no meio (o token do Clerk, o parser) deixava o botão girando
+    // `finally`: qualquer exceção no meio (o parser, a rede) deixava o botão girando
     // pra sempre — o mesmo modo de falha que `protected-route.tsx` já tinha aprendido.
     // O id nasce aqui, não no servidor: sem rede a tarefa precisa existir na tela e na fila com
     // uma identidade estável, e o upsert do servidor aceita o id do cliente sem duplicar.
@@ -104,13 +102,10 @@ export function useCreateTask() {
     apply(previous, optimistic);
 
     try {
-      const token = await getToken().catch(() => null);
+      const { task, error } = await createTask(input);
 
-      const { task, error } = token
-        ? await createTask(token, input)
-        : { task: undefined, error: { message: copy.task.queued, offline: !navigator.onLine } };
-
-      if (error?.offline && userId) {
+      // 401: a sessão caiu (aba velha, troca de conta), não a tarefa — espera na fila pelo login.
+      if ((error?.offline || error?.status === 401) && userId) {
         enqueue(userId, { op: "create", taskId: input.id, input, at });
         toast.message(undated ? copy.form.createdUndated : copy.form.created, {
           description: copy.task.queued,
@@ -153,14 +148,11 @@ export function useCreateTask() {
     if (limited()) return false;
     setSubmitting(true);
     try {
-      const token = await getToken().catch(() => null);
       const created: Task[] = [];
       for (const parsed of list) {
         const at = Date.now();
         const input = { ...composeTaskInput(parsed, zoned(at)), id: newTaskId(), updatedAt: at };
-        const { task, error } = token
-          ? await createTask(token, input)
-          : { task: undefined, error: undefined };
+        const { task, error } = await createTask(input);
         if (!task) {
           toast.error(copy.form.createError, { description: error?.message });
           break;

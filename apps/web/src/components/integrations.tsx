@@ -1,5 +1,4 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { useAuth } from "@clerk/clerk-react";
 import {
   CalendarPlusIcon,
   CheckIcon,
@@ -159,7 +158,6 @@ export function UpcomingIntegrations(): JSX.Element {
 
 /** O corpo de /integrations: o card do Google Agenda (conectar, ajustes, desconectar) e o Em breve. */
 export function Integrations(): JSX.Element {
-  const { getToken } = useAuth();
   const online = useOnline();
   // undefined = carregando; null = não deu pra ler (rede ou servidor).
   const [statuses, setStatuses] = useState<IntegrationStatus[] | null>();
@@ -170,18 +168,15 @@ export function Integrations(): JSX.Element {
   useEffect(() => {
     if (!online) return;
     void (async () => {
-      const token = await getToken();
-      if (!token) return;
-      const { integrations } = await getIntegrations(token);
+      const { integrations } = await getIntegrations();
       setStatuses(integrations ?? null);
       if (integrations) setIntegrations(integrations);
     })();
-  }, [getToken, online]);
+  }, [online]);
 
   const connect = async () => {
     setBusy(true);
-    const token = await getToken();
-    const { url, error } = token ? await connectIntegration(token, GCAL) : {};
+    const { url, error } = await connectIntegration(GCAL);
     // Sem `setBusy(false)`: a página vai embora pro consentimento do provedor.
     if (url) return window.location.assign(url);
     setBusy(false);
@@ -191,10 +186,9 @@ export function Integrations(): JSX.Element {
 
   const disconnect = async () => {
     setBusy(true);
-    const token = await getToken();
-    const { error } = token ? await disconnectIntegration(token, GCAL) : { error: undefined };
+    const { error } = await disconnectIntegration(GCAL);
     setBusy(false);
-    if (!token || error) {
+    if (error) {
       toast.error(named(t.disconnectError), { description: error?.message });
       return;
     }

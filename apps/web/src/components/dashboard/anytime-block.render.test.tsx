@@ -16,9 +16,8 @@ const { dailify, api } = vi.hoisted(() => ({
   },
 }));
 vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
-vi.mock("@clerk/clerk-react", () => ({
-  useAuth: () => ({ getToken: async () => "token", userId: "u1" }),
-  useUser: () => ({ user: { id: "u1" } }),
+vi.mock("@/lib/auth", () => ({
+  useSession: () => ({ data: { user: { id: "u1" } }, isPending: false }),
 }));
 vi.mock("@/functions/api", () => api);
 
@@ -159,7 +158,6 @@ describe("<AnytimeBlock>", () => {
     touch(sheet);
     await act(async () => sheet.getByRole("button", { name: copy.form.save }).click());
     expect(api.updateTask).toHaveBeenCalledWith(
-      "token",
       "a",
       expect.objectContaining({ alert: null, undated: true }),
       undefined,
@@ -186,7 +184,6 @@ describe("<AnytimeBlock>", () => {
     touch(sheet);
     await act(async () => sheet.getByRole("button", { name: copy.form.save }).click());
     expect(api.updateTask).toHaveBeenCalledWith(
-      "token",
       "a",
       expect.objectContaining({ alert: null, undated: true }),
       undefined,
@@ -201,7 +198,6 @@ describe("<AnytimeBlock>", () => {
     await act(async () => sheet.getByRole("button", { name: copy.form.save }).click());
     const next = MONDAY_9H + WEEK;
     expect(api.updateTask).toHaveBeenCalledWith(
-      "token",
       "a",
       expect.objectContaining({ alert: next, undated: true }),
       undefined,
@@ -279,7 +275,7 @@ describe("useUndatedActions", () => {
 
     await act(() => result.current.toggle());
 
-    expect(api.uncompleteTaskRange).toHaveBeenCalledWith("token", "s", MONDAY_6H, FRIDAY);
+    expect(api.uncompleteTaskRange).toHaveBeenCalledWith("s", MONDAY_6H, FRIDAY);
     const [[next]] = setUndatedTasks.mock.calls;
     expect(next[0].completed).toEqual([MONDAY - WEEK]);
   });
@@ -293,7 +289,7 @@ describe("useUndatedActions", () => {
     expect(result.current.done).toBe(false);
     await act(() => result.current.toggle());
 
-    expect(api.completeTask).toHaveBeenCalledWith("token", "x", FRIDAY);
+    expect(api.completeTask).toHaveBeenCalledWith("x", FRIDAY);
   });
 
   it("recusa do servidor desfaz", async () => {
@@ -324,7 +320,7 @@ describe("useUndatedActions", () => {
     expect(await screen.findByText(copy.task.completed)).toBeInTheDocument();
     await undo();
 
-    expect(api.uncompleteTaskRange).toHaveBeenCalledWith("token", "x", 0, FRIDAY);
+    expect(api.uncompleteTaskRange).toHaveBeenCalledWith("x", 0, FRIDAY);
     expect(setUndatedTasks.mock.lastCall?.[0][0].completed).toEqual([]);
   });
 
@@ -400,7 +396,7 @@ describe("arrastar da Sem data pra um dia", () => {
     await act(async () => picker.getByRole("button", { name: copy.undated.schedule }).click());
 
     const at = new Date(2026, 9, 23, 14).getTime();
-    expect(api.updateTask).toHaveBeenCalledWith("token", "a", {
+    expect(api.updateTask).toHaveBeenCalledWith("a", {
       date: at,
       alert: at,
       undated: false,

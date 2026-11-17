@@ -12,7 +12,7 @@ import type { ApiError } from "./api";
 import { zoned } from "./zone";
 
 /** O corpo do PATCH: `alert: null` limpa o lembrete. */
-type TaskPatch = Parameters<typeof updateTask>[2];
+type TaskPatch = Parameters<typeof updateTask>[1];
 
 /**
  * O que ainda não chegou no servidor. Cada entrada é uma chamada da API que falhou por rede — a
@@ -174,28 +174,29 @@ export function clearLocal(userId: string): void {
 /**
  * Sobe a fila em ordem. Para no primeiro erro de REDE (a ordem importa: criar antes de editar), e
  * descarta a entrada num erro de servidor — quota estourada, tarefa que não existe mais. Retentar
- * pra sempre o que o servidor recusa é como uma fila entope.
+ * pra sempre o que o servidor recusa é como uma fila entope. Um 401 conta como rede: a sessão caiu
+ * (aba velha, troca de conta), não a edição — ela espera o próximo login.
  */
-export function flushQueue(userId: string, token: string): Promise<FlushResult> {
+export function flushQueue(userId: string): Promise<FlushResult> {
   const running = flushing.get(userId);
   if (running) return running;
   // Começa no próximo tique: o `flushing` já tem que estar marcado quando o primeiro envio sair.
   const flush = Promise.resolve()
-    .then(() => drainQueue(userId, token))
+    .then(() => drainQueue(userId))
     .finally(() => flushing.delete(userId));
   flushing.set(userId, flush);
   return flush;
 }
 
 // Lê a fila guardada a cada passo, não um retrato do começo: o que entra durante a subida não se perde.
-async function drainQueue(userId: string, token: string): Promise<FlushResult> {
+async function drainQueue(userId: string): Promise<FlushResult> {
   let sent = 0;
   let dropped = 0;
 
   for (let mutation = readQueue(userId)[0]; mutation; mutation = readQueue(userId)[0]) {
-    const error = await send(token, mutation);
+    const error = await send(mutation);
 
-    if (error?.offline) {
+    if (error?.offline || error?.status === 401) {
       writeQueue(userId, collapseQueue(readQueue(userId)));
       return { sent, dropped, offline: true };
     }
@@ -214,21 +215,21 @@ async function drainQueue(userId: string, token: string): Promise<FlushResult> {
   return { sent, dropped, offline: false };
 }
 
-async function send(token: string, mutation: Mutation): Promise<ApiError | undefined> {
+async function send(mutation: Mutation): Promise<ApiError | undefined> {
   switch (mutation.op) {
     case "create":
-      return (await createTask(token, { ...mutation.input, id: mutation.taskId })).error;
+      return (await createTask({ ...mutation.input, id: mutation.taskId })).error;
     case "patch":
-      return (await updateTask(token, mutation.taskId, mutation.patch, mutation.occurrence)).error;
+      return (await updateTask(mutation.taskId, mutation.patch, mutation.occurrence)).error;
     case "complete":
-      return (await completeTask(token, mutation.taskId, mutation.at)).error;
+      return (await completeTask(mutation.taskId, mutation.at)).error;
     case "uncomplete":
       return mutation.until === undefined
-        ? (await uncompleteTask(token, mutation.taskId, zoned(mutation.day))).error
-        : (await uncompleteTaskRange(token, mutation.taskId, mutation.day, mutation.until)).error;
+        ? (await uncompleteTask(mutation.taskId, zoned(mutation.day))).error
+        : (await uncompleteTaskRange(mutation.taskId, mutation.day, mutation.until)).error;
     case "delete":
-      return (await deleteTask(token, mutation.taskId)).error;
+      return (await deleteTask(mutation.taskId)).error;
     case "delete-occurrence":
-      return (await deleteTask(token, mutation.taskId, mutation.occurrence)).error;
+      return (await deleteTask(mutation.taskId, mutation.occurrence)).error;
   }
 }

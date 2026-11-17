@@ -12,6 +12,7 @@ import type {
   ProviderId,
 } from "@dailify/shared";
 import { apiURL } from "@/consts/conts";
+import { authHeaders } from "@/lib/auth";
 import { appTimeZone, zoned } from "./zone";
 
 /**
@@ -29,11 +30,13 @@ export interface ApiError {
 
 const OFFLINE: ApiError = { message: "Sem conexão com o servidor.", offline: true };
 
-const authed = (token: string, init: RequestInit = {}) => ({
+// Web: cookie da sessão (`credentials`). App nativo: o bearer de `authHeaders()`.
+const authed = (init: RequestInit = {}): RequestInit => ({
   ...init,
+  credentials: "include",
   headers: {
     "Content-Type": "application/json",
-    Authorization: `Bearer ${token}`,
+    ...authHeaders(),
     ...(init.headers ?? {}),
   },
 });
@@ -59,12 +62,11 @@ function serverCode(body: unknown): string | undefined {
  */
 async function request<T>(
   path: string,
-  token: string,
   init: RequestInit = {},
 ): Promise<{ data?: T; error?: ApiError; errorBody?: Partial<T> }> {
   let res: Response;
   try {
-    res = await fetch(`${apiURL}${path}`, authed(token, init));
+    res = await fetch(`${apiURL}${path}`, authed(init));
   } catch {
     // `fetch` só rejeita por rede/CORS — status de erro chega como resposta normal.
     return { error: OFFLINE };
@@ -88,20 +90,17 @@ async function request<T>(
   return { data: body };
 }
 
-export async function getTasksForMonth(
-  token: string,
-  month: Date,
-): Promise<{ tasks: Task[]; error?: ApiError }> {
+export async function getTasksForMonth(month: Date): Promise<{ tasks: Task[]; error?: ApiError }> {
   const m = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
   // O fuso vai junto: o Worker roda em UTC e sem isto a expansão da recorrência e a janela do mês
   // saem na hora errada para quem não está em Greenwich.
   const tz = encodeURIComponent(appTimeZone());
-  const { data, error } = await request<{ tasks?: Task[] }>(`/tasks?month=${m}&tz=${tz}`, token);
+  const { data, error } = await request<{ tasks?: Task[] }>(`/tasks?month=${m}&tz=${tz}`);
   return { tasks: data?.tasks ?? [], error };
 }
 
-export async function getUndatedTasks(token: string): Promise<{ tasks: Task[]; error?: ApiError }> {
-  const { data, error } = await request<{ tasks?: Task[] }>("/tasks/undated", token);
+export async function getUndatedTasks(): Promise<{ tasks: Task[]; error?: ApiError }> {
+  const { data, error } = await request<{ tasks?: Task[] }>("/tasks/undated");
   return { tasks: data?.tasks ?? [], error };
 }
 
@@ -112,30 +111,24 @@ export interface Settings {
   hour12: boolean;
 }
 
-export async function getSettings(
-  token: string,
-): Promise<{ settings?: Settings; error?: ApiError }> {
-  const { data, error } = await request<Settings>("/settings", token);
+export async function getSettings(): Promise<{ settings?: Settings; error?: ApiError }> {
+  const { data, error } = await request<Settings>("/settings");
   return { settings: data, error };
 }
 
 /** Parcial: manda só o que mudou, o servidor mantém o resto. */
 export async function saveSettings(
-  token: string,
   patch: Partial<Settings>,
 ): Promise<{ settings?: Settings; error?: ApiError }> {
-  const { data, error } = await request<Settings>("/settings", token, {
+  const { data, error } = await request<Settings>("/settings", {
     method: "PUT",
     body: JSON.stringify(patch),
   });
   return { settings: data, error };
 }
 
-export async function createTask(
-  token: string,
-  input: TaskInput,
-): Promise<{ task?: Task; error?: ApiError }> {
-  const { data, error } = await request<{ task?: Task; error?: string }>("/tasks", token, {
+export async function createTask(input: TaskInput): Promise<{ task?: Task; error?: ApiError }> {
+  const { data, error } = await request<{ task?: Task; error?: string }>("/tasks", {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -147,7 +140,6 @@ export async function createTask(
  * numa tarefa própria e devolve as duas — a nova em `task`, a série atualizada em `series`.
  */
 export async function updateTask(
-  token: string,
   id: string,
   /** `alert: null` limpa o lembrete. */
   patch: Partial<Omit<TaskInput, "alert">> & { alert?: number | null },
@@ -155,22 +147,20 @@ export async function updateTask(
   occurrence?: number,
 ): Promise<{ task?: Task; series?: Task; error?: ApiError }> {
   const query = occurrence === undefined ? "" : `?occurrence=${occurrence}`;
-  const { data, error } = await request<{ task?: Task; series?: Task }>(
-    `/tasks/${id}${query}`,
-    token,
-    { method: "PATCH", body: JSON.stringify(patch) },
-  );
+  const { data, error } = await request<{ task?: Task; series?: Task }>(`/tasks/${id}${query}`, {
+    method: "PATCH",
+    body: JSON.stringify(patch),
+  });
   return { task: data?.task, series: data?.series, error };
 }
 
 export async function completeTask(
-  token: string,
   id: string,
   at: number = Date.now(),
 ): Promise<{ task?: Task; error?: ApiError }> {
   // `at` vai no corpo: uma conclusão feita offline aconteceu na hora do toque, não na hora em que
   // a fila conseguiu subir.
-  const { data, error } = await request<{ task?: Task }>(`/tasks/${id}/complete`, token, {
+  const { data, error } = await request<{ task?: Task }>(`/tasks/${id}/complete`, {
     method: "POST",
     body: JSON.stringify({ at }),
   });
@@ -182,12 +172,10 @@ export async function completeTask(
  * usuário e o Worker roda em UTC.
  */
 export async function uncompleteTask(
-  token: string,
   id: string,
   day: Date,
 ): Promise<{ task?: Task; error?: ApiError }> {
   return uncompleteTaskRange(
-    token,
     id,
     zoned(day).setHours(0, 0, 0, 0),
     zoned(day).setHours(23, 59, 59, 999),
@@ -195,39 +183,33 @@ export async function uncompleteTask(
 }
 
 export async function uncompleteTaskRange(
-  token: string,
   id: string,
   from: number,
   to: number,
 ): Promise<{ task?: Task; error?: ApiError }> {
   const { data, error } = await request<{ task?: Task }>(
     `/tasks/${id}/complete?from=${from}&to=${to}`,
-    token,
     { method: "DELETE" },
   );
   return { task: data?.task, error };
 }
 
 export async function deleteTask(
-  token: string,
   id: string,
   /** Epoch-ms da ocorrência quando a exclusão vale só pra ela: sai da série via `exdates`, e a
    *  série volta em `series` para o cliente reexpandir o mês sem aquele dia. */
   occurrence?: number,
 ): Promise<{ series?: Task; error?: ApiError }> {
   const query = occurrence === undefined ? "" : `?occurrence=${occurrence}`;
-  const { data, error } = await request<{ series?: Task }>(`/tasks/${id}${query}`, token, {
+  const { data, error } = await request<{ series?: Task }>(`/tasks/${id}${query}`, {
     method: "DELETE",
   });
   return { series: data?.series, error };
 }
 
 /** Só lê: devolve rascunhos, quem cria é o composer depois de confirmar. Debita 1 crédito de IA. */
-export async function parseTaskAi(
-  token: string,
-  text: string,
-): Promise<{ result?: AiParse; error?: ApiError }> {
-  const { data, error } = await request<AiParse>("/tasks/parse", token, {
+export async function parseTaskAi(text: string): Promise<{ result?: AiParse; error?: ApiError }> {
+  const { data, error } = await request<AiParse>("/tasks/parse", {
     method: "POST",
     body: JSON.stringify({ text, timezone: appTimeZone() }),
   });
@@ -236,14 +218,14 @@ export async function parseTaskAi(
 
 /** Sem `request`: o corpo é FormData, e o Content-Type JSON dele quebraria o upload. */
 export async function createTaskVoice(
-  token: string,
   formData: FormData,
 ): Promise<{ tasks: Task[]; response?: string; error?: ApiError }> {
   let res: Response;
   try {
     res = await fetch(`${apiURL}/tasks/voice`, {
       method: "POST",
-      headers: { Authorization: `Bearer ${token}` },
+      credentials: "include",
+      headers: authHeaders(),
       body: formData,
     });
   } catch {
@@ -264,21 +246,23 @@ export async function getPushKey(): Promise<string | null> {
   return data.key ?? null;
 }
 
-export async function savePushSubscription(
-  token: string,
-  subscription: { endpoint: string; p256dh: string; auth: string; timezone: string },
-): Promise<boolean> {
+export async function savePushSubscription(subscription: {
+  endpoint: string;
+  p256dh: string;
+  auth: string;
+  timezone: string;
+}): Promise<boolean> {
   const res = await fetch(
     `${apiURL}/push/subscription`,
-    authed(token, { method: "POST", body: JSON.stringify(subscription) }),
+    authed({ method: "POST", body: JSON.stringify(subscription) }),
   );
   return res.ok;
 }
 
-export async function removePushSubscription(token: string, endpoint: string): Promise<void> {
+export async function removePushSubscription(endpoint: string): Promise<void> {
   await fetch(
     `${apiURL}/push/subscription`,
-    authed(token, { method: "DELETE", body: JSON.stringify({ endpoint }) }),
+    authed({ method: "DELETE", body: JSON.stringify({ endpoint }) }),
   );
 }
 
@@ -287,61 +271,55 @@ export interface QuotaSnapshot {
   usage: QuotaUsage;
 }
 
-export async function getQuotas(token: string, month: Date): Promise<QuotaSnapshot | undefined> {
+export async function getQuotas(month: Date): Promise<QuotaSnapshot | undefined> {
   const m = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
-  const { data } = await request<QuotaSnapshot>(`/permissions?month=${m}`, token);
+  const { data } = await request<QuotaSnapshot>(`/permissions?month=${m}`);
   return data;
 }
 
-export async function getPaymentDetails(token: string): Promise<PaymentDetails | null> {
-  const { data } = await request<PaymentDetails>("/billing/payment-details", token);
+export async function getPaymentDetails(): Promise<PaymentDetails | null> {
+  const { data } = await request<PaymentDetails>("/billing/payment-details");
   return data ?? null;
 }
 
-export async function getInvoices(token: string): Promise<Invoice[]> {
-  const { data } = await request<Invoice[]>("/billing/invoices", token);
+export async function getInvoices(): Promise<Invoice[]> {
+  const { data } = await request<Invoice[]>("/billing/invoices");
   return data ?? [];
 }
 
-export async function checkout(
-  token: string,
-  productName: string,
-): Promise<{ url: string | null }> {
-  const { data } = await request<{ url: string | null }>("/billing/checkout", token, {
+export async function checkout(productName: string): Promise<{ url: string | null }> {
+  const { data } = await request<{ url: string | null }>("/billing/checkout", {
     method: "POST",
     body: JSON.stringify({ productName }),
   });
   return { url: data?.url ?? null };
 }
 
-export async function billingPortal(token: string): Promise<{ url: string | null }> {
-  const { data } = await request<{ url: string | null }>("/billing/portal", token);
+export async function billingPortal(): Promise<{ url: string | null }> {
+  const { data } = await request<{ url: string | null }>("/billing/portal");
   return { url: data?.url ?? null };
 }
 
-export async function getIntegrations(
-  token: string,
-): Promise<{ integrations?: IntegrationStatus[]; error?: ApiError }> {
-  const { data, error } = await request<IntegrationStatus[]>("/integrations", token);
+export async function getIntegrations(): Promise<{
+  integrations?: IntegrationStatus[];
+  error?: ApiError;
+}> {
+  const { data, error } = await request<IntegrationStatus[]>("/integrations");
   return { integrations: data, error };
 }
 
 /** Devolve a URL de consentimento do provedor; 403 = plano não inclui, 503 = não configurada. */
 export async function connectIntegration(
-  token: string,
   provider: ProviderId,
 ): Promise<{ url?: string; error?: ApiError }> {
-  const { data, error } = await request<{ url?: string }>(
-    `/integrations/${provider}/connect`,
-    token,
-    { method: "POST" },
-  );
+  const { data, error } = await request<{ url?: string }>(`/integrations/${provider}/connect`, {
+    method: "POST",
+  });
   return { url: data?.url, error };
 }
 
 /** O `state` é de uso único no servidor: um segundo POST com ele volta 400. */
 export async function completeIntegration(
-  token: string,
   provider: ProviderId,
   code: string,
   state: string,
@@ -349,29 +327,23 @@ export async function completeIntegration(
   // `imported`: quantos eventos da Agenda viraram tarefa no sync inicial.
   const { data, error } = await request<IntegrationStatus & { imported?: number }>(
     `/integrations/${provider}/callback`,
-    token,
     { method: "POST", body: JSON.stringify({ code, state }) },
   );
   return { integration: data, error };
 }
 
-export async function disconnectIntegration(
-  token: string,
-  provider: ProviderId,
-): Promise<{ error?: ApiError }> {
-  const { error } = await request<never>(`/integrations/${provider}`, token, { method: "DELETE" });
+export async function disconnectIntegration(provider: ProviderId): Promise<{ error?: ApiError }> {
+  const { error } = await request<never>(`/integrations/${provider}`, { method: "DELETE" });
   return { error };
 }
 
 /** 409 com `code`: `reconnect` (sem conexão ativa) ou `already_linked`. */
 export async function createCalendarEvent(
-  token: string,
   taskId: string,
   meet: boolean,
 ): Promise<{ link?: IntegrationLink; task?: Task; error?: ApiError }> {
   const { data, error, errorBody } = await request<{ link: IntegrationLink; task: Task }>(
     "/integrations/google-calendar/events",
-    token,
     { method: "POST", body: JSON.stringify({ taskId, timezone: appTimeZone(), meet }) },
   );
   const body = data ?? errorBody;
@@ -380,12 +352,10 @@ export async function createCalendarEvent(
 
 /** Reenvia uma tarefa `stale` ao Google agora; devolve a tarefa como ficou (null = apagada). */
 export async function syncCalendarEvent(
-  token: string,
   taskId: string,
 ): Promise<{ task?: Task | null; error?: ApiError }> {
   const { data, error } = await request<{ task: Task | null }>(
     `/integrations/google-calendar/events/${encodeURIComponent(taskId)}/sync`,
-    token,
     { method: "POST", body: JSON.stringify({ timezone: appTimeZone() }) },
   );
   return { task: data?.task, error };
@@ -393,12 +363,10 @@ export async function syncCalendarEvent(
 
 /** "Gerar novo Meet": o evento ganha uma sala nova e a tarefa volta com o link dela no lugar do antigo. */
 export async function replaceCalendarMeet(
-  token: string,
   taskId: string,
 ): Promise<{ task?: Task; error?: ApiError }> {
   const { data, error } = await request<{ task: Task }>(
     `/integrations/google-calendar/events/${encodeURIComponent(taskId)}/meet`,
-    token,
     { method: "POST" },
   );
   return { task: data?.task, error };
@@ -406,13 +374,11 @@ export async function replaceCalendarMeet(
 
 /** Duplicata da importação: "merge" junta na tarefa própria (a importada some), "keep" mantém as duas. */
 export async function resolveDuplicate(
-  token: string,
   importedId: string,
   action: "merge" | "keep",
 ): Promise<{ task?: Task; removedId?: string; error?: ApiError }> {
   const { data, error } = await request<{ task?: Task; removedId?: string }>(
     `/integrations/google-calendar/duplicates/${encodeURIComponent(importedId)}`,
-    token,
     { method: "POST", body: JSON.stringify({ action }) },
   );
   return { task: data?.task, removedId: data?.removedId, error };

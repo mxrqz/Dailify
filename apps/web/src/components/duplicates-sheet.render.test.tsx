@@ -16,7 +16,6 @@ const { resolveDuplicate, dailify, toast } = vi.hoisted(() => ({
   },
   toast: { error: vi.fn(), success: vi.fn() },
 }));
-vi.mock("@clerk/clerk-react", () => ({ useAuth: () => ({ getToken: async () => "t" }) }));
 vi.mock("@/components/dailifyContext", () => ({ useDailify: () => dailify }));
 vi.mock("@/functions/api", () => ({ resolveDuplicate, getIntegrations: vi.fn() }));
 vi.mock("sonner", () => ({ toast }));
@@ -73,7 +72,7 @@ describe("<Duplicates>", () => {
     expect(within(sheet).getByText(/^Agenda · /)).toBeInTheDocument();
     await userEvent.click(within(sheet).getByRole("button", { name: t.merge }));
 
-    await waitFor(() => expect(resolveDuplicate).toHaveBeenCalledWith("t", "imp", "merge"));
+    await waitFor(() => expect(resolveDuplicate).toHaveBeenCalledWith("imp", "merge"));
     await waitFor(() => expect(dailify.setTasks).toHaveBeenCalled());
     const next: Task[] = dailify.setTasks.mock.calls[0][0];
     expect(next.map((x) => x.id)).toEqual(["own"]);

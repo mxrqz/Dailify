@@ -1,4 +1,3 @@
-import { useAuth, useUser } from "@clerk/clerk-react";
 import { addMonths, format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
@@ -26,11 +25,12 @@ import ApplePayLogo from "@/components/ui/applePayLogo";
 import { Button } from "@/components/ui/button";
 import GooglePayLogo from "@/components/ui/googlePayLogo";
 import { Progress } from "@/components/ui/progress";
-import { PLAN_ID, planMap } from "@/consts/conts";
+import { planMap } from "@/consts/conts";
 import { billingPortal, getInvoices, getPaymentDetails } from "@/functions/api";
 import { billingSections } from "@/functions/billing-sections";
 import { quotaLabel } from "@/functions/quota-label";
 import { useQuotas } from "@/hooks/useQuotas";
+import { planOf, useSession } from "@/lib/auth";
 import { toText } from "@/lib/utils";
 import { zoned } from "@/functions/zone";
 import type { InvoicesProps, PaymentDetailsProps } from "@/types/types";
@@ -59,7 +59,7 @@ function cardLabel(invoice: InvoicesProps): JSX.Element {
   );
 }
 
-/** A tela de Assinatura, sem Clerk nem contexto: o container passa plano, quotas e cobrança. */
+/** A tela de Assinatura, sem sessão nem contexto: o container passa plano, quotas e cobrança. */
 export function BillingView({
   currentPlan,
   quotas,
@@ -241,60 +241,47 @@ export function BillingView({
 }
 
 export default function BillingPage(): JSX.Element {
-  const { user } = useUser();
-  const { getToken, userId } = useAuth();
+  const { data, refetch } = useSession();
+  const userId = data?.user.id;
   const { invoices, paymentDetails, setInvoices, setPaymentDetails } = useDailify();
   const [searchParams, setSearchParams] = useSearchParams();
   const checkoutStatus = searchParams.get("checkout");
   const quotas = useQuotas();
 
-  // Volta do checkout do Stripe. O plano novo chega pelo webhook, então recarrega o user do Clerk
-  // em vez de confiar no publicMetadata que veio com a sessão antiga.
+  // Volta do checkout do Stripe. O plano novo chega pelo webhook, então relê a sessão sem o cache
+  // de cookie (5 min) em vez de confiar no `plan` que veio com ela.
   useEffect(() => {
     if (!checkoutStatus) return;
     if (checkoutStatus === "success") {
       toast.success(copy.page.checkoutSuccess);
-      void user?.reload();
+      void refetch({ query: { disableCookieCache: true } });
     } else {
       toast.info(copy.page.checkoutCanceled);
     }
     setSearchParams({}, { replace: true });
-  }, [checkoutStatus, setSearchParams, user]);
+  }, [checkoutStatus, setSearchParams, refetch]);
 
   // Só esta tela lê cobrança: buscar no boot de toda rota protegida custava duas idas ao Stripe
   // por abertura do app. O contexto guarda o último valor, então voltar aqui pinta na hora.
   useEffect(() => {
     if (!userId) return;
     (async () => {
-      try {
-        const token = await getToken();
-        if (!token) return;
+      // allSettled: uma falha não derruba a vizinha.
+      const [payment, list] = await Promise.allSettled([getPaymentDetails(), getInvoices()]);
 
-        // allSettled: uma falha não derruba a vizinha.
-        const [payment, list] = await Promise.allSettled([
-          getPaymentDetails(token),
-          getInvoices(token),
-        ]);
-
-        if (payment.status === "fulfilled") setPaymentDetails(payment.value);
-        if (list.status === "fulfilled") setInvoices(list.value);
-      } catch {
-        /* sem sessão utilizável */
-      }
+      if (payment.status === "fulfilled") setPaymentDetails(payment.value);
+      if (list.status === "fulfilled") setInvoices(list.value);
     })();
-  }, [userId, getToken, setPaymentDetails, setInvoices]);
+  }, [userId, setPaymentDetails, setInvoices]);
 
   const getBillingPortalUrl = async () => {
-    const token = await getToken();
-    if (!token) return;
-
-    const { url } = await billingPortal(token);
+    const { url } = await billingPortal();
     if (url) window.location.href = url;
   };
 
   return (
     <BillingView
-      currentPlan={toText(user?.publicMetadata.plan, PLAN_ID.free)}
+      currentPlan={planOf(data?.user)}
       quotas={quotas}
       paymentDetails={paymentDetails}
       invoices={invoices}

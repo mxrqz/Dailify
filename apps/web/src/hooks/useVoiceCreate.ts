@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { useDailify } from "@/components/dailifyContext";
@@ -23,7 +22,6 @@ export const voiceSupported = (): boolean =>
  * `analyser` alimenta a onda ao vivo; `cancel` solta o microfone sem enviar.
  */
 export function useVoiceCreate(onCreated?: () => void) {
-  const { getToken } = useAuth();
   const { bumpUsage } = useDailify();
   const showCreated = useShowCreated();
   const quotas = useQuotas();
@@ -39,12 +37,10 @@ export function useVoiceCreate(onCreated?: () => void) {
   const send = async (audio: Blob) => {
     setState("sending");
     try {
-      const token = await getToken();
-      if (!token) return;
       const form = new FormData();
       form.append("audio", audio);
       form.append("timezone", appTimeZone());
-      const { tasks: created, response, error } = await createTaskVoice(token, form);
+      const { tasks: created, response, error } = await createTaskVoice(form);
       if (error) {
         toast.error(copy.voice.error, { description: error.message });
         return;

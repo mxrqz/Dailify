@@ -66,7 +66,7 @@ describe("<PlanCards>", () => {
     expect(screen.queryByText(copy.billing.recommendedBadge)).not.toBeInTheDocument();
   });
 
-  /** Id que nao existe (publicMetadata e texto livre do Clerk) nao pode marcar card nenhum. */
+  /** Id que nao existe (user.plan e texto livre) nao pode marcar card nenhum. */
   it("ignora um plano desconhecido em vez de quebrar", () => {
     render(
       <PlanCards

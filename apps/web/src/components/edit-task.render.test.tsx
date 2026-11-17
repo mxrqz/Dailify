@@ -9,9 +9,8 @@ const { dailify, api } = vi.hoisted(() => ({
   api: { updateTask: vi.fn() },
 }));
 vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
-vi.mock("@clerk/clerk-react", () => ({
-  useAuth: () => ({ getToken: async () => "token", userId: "u1" }),
-  useUser: () => ({ user: { id: "u1" } }),
+vi.mock("@/lib/auth", () => ({
+  useSession: () => ({ data: { user: { id: "u1" } }, isPending: false }),
 }));
 vi.mock("@/functions/api", () => api);
 // O formulário de verdade é coberto no próprio teste; aqui só interessa o que salvar faz.
@@ -74,9 +73,8 @@ describe("<EditTaskContent> offline", () => {
     expect(setTasks).toHaveBeenCalled();
 
     api.updateTask.mockResolvedValueOnce({});
-    await expect(flushQueue("u1", "token")).resolves.toMatchObject({ sent: 1, offline: false });
+    await expect(flushQueue("u1")).resolves.toMatchObject({ sent: 1, offline: false });
     expect(api.updateTask).toHaveBeenLastCalledWith(
-      "token",
       "t",
       expect.objectContaining({ title: "Dentista às 16h", updatedAt: queued.at }),
       undefined,

@@ -1,6 +1,5 @@
 import { InvoicesProps, PaymentDetailsProps, TaskProps } from "@/types/types";
 import { createContext, useContext, useRef, useState, ReactNode } from "react";
-import { useAuth } from "@clerk/clerk-react";
 import { addDays, endOfMonth, startOfDay, startOfMonth } from "date-fns";
 import { toast } from "sonner";
 import { DEFAULT_WEEK_START } from "@dailify/shared";
@@ -67,7 +66,6 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
   const [timeZone, setTimeZoneState] = useState<string | null>(null);
   const [hour12, setHour12] = useState(false);
 
-  const { getToken } = useAuth();
   // Mês carregado ou em voo, pela chave do início do mês; falha sai daqui pra poder tentar de novo.
   const monthRequests = useRef(new Map<number, Promise<ApiError | undefined>>());
 
@@ -81,12 +79,7 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
     };
     const request = (async (): Promise<ApiError | undefined> => {
       try {
-        const token = await getToken();
-        if (!token) {
-          forget();
-          return;
-        }
-        const { tasks: fetched, error } = await getTasksForMonth(token, month);
+        const { tasks: fetched, error } = await getTasksForMonth(month);
         if (error) {
           forget();
           return error;
@@ -142,7 +135,7 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
         });
       }
     } catch {
-      // Offline o `getToken` lança; com agenda na tela, cada mês pedido viraria um toast.
+      // Offline com agenda na tela, cada mês pedido viraria um toast.
       if (navigator.onLine === false && tasks?.length) return;
       toast.error(copy.loading.tasksError, { id: "tasks-load-error" });
     }

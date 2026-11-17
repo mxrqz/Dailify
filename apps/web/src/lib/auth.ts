@@ -14,7 +14,8 @@ export const authHeaders = (): Record<string, string> =>
   bearer ? { Authorization: `Bearer ${bearer}` } : {};
 
 export const authClient = createAuthClient({
-  baseURL: new URL(`${apiURL}/auth`, window.location.origin).href,
+  // Sem `window` só nos testes de ambiente node que importam `api.ts` de tabela.
+  baseURL: new URL(`${apiURL}/auth`, globalThis.location?.origin ?? "http://localhost").href,
   fetchOptions: { credentials: "include", auth: { type: "Bearer", token: () => bearer ?? "" } },
   plugins: [
     magicLinkClient(),

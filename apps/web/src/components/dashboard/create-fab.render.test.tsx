@@ -6,7 +6,7 @@ import userEvent from "@testing-library/user-event";
 const env = vi.hoisted(() => ({ desktop: true, voice: false, start: vi.fn() }));
 
 vi.mock("@/components/dailifyContext", () => ({ useDailify: () => ({ hour12: false }) }));
-// A voz fala com Clerk, rota e quotas; aqui só importa quem a liga.
+// A voz fala com a API, rota e quotas; aqui só importa quem a liga.
 vi.mock("@/hooks/useVoiceCreate", () => ({
   MAX_RECORDING_MS: 60_000,
   useVoiceCreate: () => ({ state: "idle", start: env.start, stop: vi.fn() }),

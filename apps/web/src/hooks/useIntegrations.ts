@@ -1,5 +1,4 @@
 import { useEffect, useSyncExternalStore } from "react";
-import { useAuth } from "@clerk/clerk-react";
 import type { IntegrationStatus, ProviderId } from "@dailify/shared";
 
 import { getIntegrations } from "@/functions/api";
@@ -26,7 +25,6 @@ const subscribe = (listener: () => void) => {
 
 /** Status das integrações; `undefined` enquanto não leu (ou offline). */
 export function useIntegrations(): IntegrationStatus[] | undefined {
-  const { getToken } = useAuth();
   const list = useSyncExternalStore(subscribe, () => current);
 
   useEffect(() => {
@@ -34,8 +32,7 @@ export function useIntegrations(): IntegrationStatus[] | undefined {
     inflight = true;
     void (async () => {
       try {
-        const token = await getToken();
-        const { integrations } = token ? await getIntegrations(token) : {};
+        const { integrations } = await getIntegrations();
         if (integrations) setIntegrations(integrations);
       } catch {
         // Best-effort: sem status o botão só não aparece.
@@ -44,7 +41,7 @@ export function useIntegrations(): IntegrationStatus[] | undefined {
         inflight = false;
       }
     })();
-  }, [getToken]);
+  }, []);
 
   return list;
 }

@@ -4,9 +4,8 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { limitsFor, type QuotaUsage } from "@dailify/shared";
 
-const { useUser, useAuth, dailify, api } = vi.hoisted(() => ({
-  useUser: vi.fn(),
-  useAuth: vi.fn(),
+const { useSession, dailify, api } = vi.hoisted(() => ({
+  useSession: vi.fn(),
   dailify: vi.fn(),
   api: {
     billingPortal: vi.fn(),
@@ -15,13 +14,19 @@ const { useUser, useAuth, dailify, api } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("@clerk/clerk-react", () => ({ useUser, useAuth }));
+vi.mock("@/lib/auth", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/lib/auth")>()),
+  useSession,
+}));
 vi.mock("@/functions/api", () => api);
 vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
 
 import BillingPage from "./billing";
 import { copy } from "@/components/dashboard/copy";
 import { copy as pricingCopy } from "@/components/pricing/copy";
+
+const session = (user: { plan?: string }) =>
+  useSession.mockReturnValue({ data: { user: { id: "u1", ...user } }, refetch: vi.fn() });
 
 const NO_USAGE: QuotaUsage = { tasks: 0, ai: 0 };
 
@@ -43,8 +48,7 @@ function context(over: Record<string, unknown> = {}) {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useAuth.mockReturnValue({ getToken: async () => "t", userId: "u1" });
-  useUser.mockReturnValue({ user: { publicMetadata: {} } });
+  session({});
   dailify.mockReturnValue(context());
 });
 
@@ -113,7 +117,7 @@ describe("<BillingPage>", () => {
   });
 
   it("assinante vê o plano, a próxima cobrança e o botão de gerenciar", () => {
-    useUser.mockReturnValue({ user: { publicMetadata: { plan: "max" } } });
+    session({ plan: "max" });
     dailify.mockReturnValue(
       context({
         quotas: MAX,
@@ -145,7 +149,7 @@ describe("<BillingPage>", () => {
 
     await waitFor(() => expect(ctx.setInvoices).toHaveBeenCalledWith([]));
     expect(ctx.setPaymentDetails).toHaveBeenCalledWith(null);
-    expect(api.getPaymentDetails).toHaveBeenCalledWith("t");
+    expect(api.getPaymentDetails).toHaveBeenCalled();
   });
 
   /**
@@ -154,7 +158,7 @@ describe("<BillingPage>", () => {
    * nenhum, `data-state` eternamente "indeterminate". So um teste que le ARIA pega isso de volta.
    */
   it("as barras de quota expoem o valor pra leitor de tela", () => {
-    useUser.mockReturnValue({ user: { publicMetadata: { plan: "free" } } });
+    session({ plan: "free" });
     dailify.mockReturnValue(
       // Limites fixos: o teste é do ARIA, não da tabela de planos.
       context({

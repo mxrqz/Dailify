@@ -5,13 +5,11 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { MISSING_SCOPE_ERROR } from "@dailify/shared";
 
-const { useAuth, completeIntegration, toast, reloadMonths } = vi.hoisted(() => ({
-  useAuth: vi.fn(),
+const { completeIntegration, toast, reloadMonths } = vi.hoisted(() => ({
   reloadMonths: vi.fn(),
   completeIntegration: vi.fn(),
   toast: { error: vi.fn(), success: vi.fn() },
 }));
-vi.mock("@clerk/clerk-react", () => ({ useAuth }));
 vi.mock("@/functions/api", () => ({ completeIntegration }));
 vi.mock("sonner", () => ({ toast }));
 vi.mock("@/components/dailifyContext", () => ({
@@ -25,7 +23,6 @@ const t = copy.integrations;
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useAuth.mockReturnValue({ getToken: async () => "t" });
 });
 
 const renderAt = (query: string) =>
@@ -47,7 +44,7 @@ describe("<IntegrationCallback>", () => {
 
     expect(await screen.findByText("integrations")).toBeInTheDocument();
     expect(completeIntegration).toHaveBeenCalledTimes(1);
-    expect(completeIntegration).toHaveBeenCalledWith("t", "google-calendar", "c", "s");
+    expect(completeIntegration).toHaveBeenCalledWith("google-calendar", "c", "s");
     expect(toast.success).toHaveBeenCalledWith("Agenda conectada");
     expect(reloadMonths).toHaveBeenCalledTimes(1);
   });

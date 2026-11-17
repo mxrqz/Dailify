@@ -1,5 +1,4 @@
 import { useRef } from "react";
-import { useAuth } from "@clerk/clerk-react";
 import { useNavigate, type NavigateFunction } from "react-router-dom";
 import { toast } from "sonner";
 import { INTEGRATION_ERROR } from "@dailify/shared";
@@ -52,19 +51,11 @@ export interface CalendarPick {
  * aqui não a desfaz, só oferece tentar de novo — com as que falharam, num toast só.
  */
 export function useCalendarPush(): (items: (CalendarPick & { id: string })[]) => Promise<void> {
-  const { getToken } = useAuth();
   const navigate = useNavigate();
   const apply = useApplyTask();
 
   const push = async (items: (CalendarPick & { id: string })[]): Promise<void> => {
-    const token = await getToken().catch(() => null);
-    const results: Awaited<ReturnType<typeof createCalendarEvent>>[] = await Promise.all(
-      items.map((item) =>
-        token
-          ? createCalendarEvent(token, item.id, item.meet)
-          : { task: undefined, error: { message: copy.form.authError, offline: false } },
-      ),
-    );
+    const results = await Promise.all(items.map((item) => createCalendarEvent(item.id, item.meet)));
     const failed = items.filter((_, i) => {
       const { task, error } = results[i];
       if (!task || (error && error.code !== INTEGRATION_ERROR.alreadyLinked)) return true;

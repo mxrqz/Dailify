@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-const { api, offline, dailify, getToken } = vi.hoisted(() => ({
+const { api, offline, dailify } = vi.hoisted(() => ({
   api: {
     getTasksForMonth: vi.fn(async () => ({ tasks: [] })),
     getQuotas: vi.fn(async () => undefined),
@@ -31,19 +31,13 @@ const { api, offline, dailify, getToken } = vi.hoisted(() => ({
     setUndatedTasks: vi.fn(),
     setWeekStart: vi.fn(),
   },
-  // Estável como o do Clerk (`useCallback` na instância): efeitos que dependem dele não refazem.
-  getToken: async () => "token",
 }));
 vi.mock("@/functions/api", () => api);
 vi.mock("@/functions/offline", () => offline);
 vi.mock("./dailifyContext", () => ({ useDailify: () => dailify }));
-vi.mock("@clerk/clerk-react", () => ({
-  useUser: () => ({
-    isSignedIn: true,
-    isLoaded: true,
-    user: { unsafeMetadata: { timezone: "x" } },
-  }),
-  useAuth: () => ({ getToken, userId: "u1" }),
+// Objeto novo a cada render, como o do Better Auth no refetch: o gate depende do id, não dele.
+vi.mock("@/lib/auth", () => ({
+  useSession: () => ({ data: { user: { id: "u1" } }, isPending: false }),
 }));
 
 import ProtectedRoute from "./protected-route";

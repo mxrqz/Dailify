@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import { CalendarCheckIcon, CalendarPlusIcon, CalendarSyncIcon } from "lucide-react";
 import { toast } from "sonner";
@@ -41,7 +40,6 @@ export function AddToCalendar({
   const stale = staleIds.includes(task.id);
   const online = useOnline();
   const applyTask = useApplyTask();
-  const { getToken } = useAuth();
   const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [meet, setMeet] = useState(false);
@@ -59,10 +57,7 @@ export function AddToCalendar({
 
   const retry = async () => {
     setPending(true);
-    const token = await getToken().catch(() => null);
-    const res = token
-      ? await syncCalendarEvent(token, task.id)
-      : { error: { message: copy.form.authError, offline: false } };
+    const res = await syncCalendarEvent(task.id);
     setPending(false);
     if (!res.error) {
       patchIntegration("google-calendar", { stale: staleIds.filter((id) => id !== task.id) });
@@ -97,10 +92,7 @@ export function AddToCalendar({
 
   const confirm = async () => {
     setPending(true);
-    const token = await getToken().catch(() => null);
-    const res = token
-      ? await createCalendarEvent(token, task.id, meet && !hasVideo)
-      : { error: { message: copy.form.authError, offline: false } };
+    const res = await createCalendarEvent(task.id, meet && !hasVideo);
     setPending(false);
     setOpen(false);
 
