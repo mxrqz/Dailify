@@ -1,42 +1,53 @@
-import { FormEvent, useEffect, useMemo, useState, type ReactNode } from "react";
-import { format } from "date-fns";
+import {
+  FormEvent,
+  useEffect,
+  useMemo,
+  useState,
+  type ComponentProps,
+  type ReactNode,
+} from "react";
+import { addDays, addMinutes, format, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import {
   BellIcon,
   CalendarIcon,
   ClockIcon,
   FlagIcon,
-  HourglassIcon,
   LinkIcon,
+  Repeat2Icon,
   RepeatIcon,
   SunIcon,
   TagIcon,
+  TimerIcon,
+  VideoIcon,
   XIcon,
 } from "lucide-react";
 import { toast } from "sonner";
-import { DEFAULT_HOUR, dayMap, undatedReminder, weekDays, type Repeat } from "@dailify/shared";
+import {
+  DEFAULT_HOUR,
+  dayMap,
+  durationMinutes,
+  isCalendarEventLink,
+  undatedReminder,
+  videoLink,
+  weekDays,
+  type Repeat,
+} from "@dailify/shared";
 
 import { TASK_LIMITS } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { LinksField } from "@/components/dashboard/links-field";
 import { DURATIONS } from "@/components/dashboard/task-meta-menus";
+import { ListGroup, ListRow } from "@/components/kit/list";
+import { Switch } from "@/components/kit/switch";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import {
-  bareFieldClass,
-  chip,
-  chipDate,
-  chipGhost,
-  chipGot,
-  chipRepeat,
-  chipTime,
-} from "@/components/dashboard/styles";
+import { bareFieldClass } from "@/components/dashboard/styles";
 import { priorityText } from "@/consts/conts";
-import { useDailify } from "@/components/dailifyContext";
 import { formatClock } from "@/functions/functions";
 import { linkLabel } from "@/functions/link-label";
-import { everyLabel, everyOptions } from "@/functions/repeat-label";
+import { everyLabel, everyOptions, repeatLabel } from "@/functions/repeat-label";
 import { cn } from "@/lib/utils";
 import type { TaskProps } from "@/types/types";
 import { fromDateInput, zoned, zonedAt } from "@/functions/zone";
@@ -91,38 +102,35 @@ interface TaskFormProps {
   onSubmit: (values: TaskFormValues) => void;
   /** Avisa quando algo difere do que abriu: a folha só mostra "Salvar" aí. */
   onDirtyChange?: (dirty: boolean) => void;
+  /** Tags das outras tarefas: a busca as oferece antes de criar uma nova. */
+  knownTags?: string[];
+  hour12?: boolean;
+  /** Grupos extras no fim da raiz (o do Google Agenda), dentro da mesma rolagem. */
+  children?: ReactNode;
 }
 
-/** O controle NATIVO invisível cobre o chip e recebe o toque: o sistema abre o próprio seletor. */
+/** O controle NATIVO invisível cobre a linha e recebe o toque: o sistema abre o próprio seletor. */
 const nativeControlClass = "absolute inset-0 cursor-pointer opacity-0 outline-none";
 
 const reminderHour = `${String(DEFAULT_HOUR).padStart(2, "0")}:00`;
 
-/** Um campo da raiz como chip: preenchido ganha a cor do campo, vazio fica tracejado. */
-function FieldChip({
-  icon,
-  filled,
-  tone = chipGot,
-  children,
-}: {
-  icon: ReactNode;
-  filled: boolean;
-  tone?: string;
-  children: ReactNode;
-}): JSX.Element {
+const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+/** "Ter, 17 nov" — EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso. */
+const shortDay = (day: Date) => capitalize(format(day, "EEEEEE, d MMM", { locale: ptBR }));
+
+/** Uma linha da lista com o controle nativo por cima: a linha mostra o valor, o sistema escolhe. */
+function NativeRow({
+  control,
+  ...row
+}: Omit<ComponentProps<typeof ListRow>, "asChild" | "children"> & { control: ReactNode }) {
   return (
-    <span
-      className={cn(
-        chip,
-        "relative h-8 gap-1.5 px-2.5 focus-within:ring-[3px] focus-within:ring-ring/50",
-        filled ? tone : chipGhost,
-      )}
-    >
-      {icon}
-      {children}
-    </span>
+    <ListRow asChild accessory="chevron" {...row}>
+      <div className="relative focus-within:bg-fill">{control}</div>
+    </ListRow>
   );
 }
+
+const NO_TAGS: string[] = [];
 
 export function TaskForm({
   id,
@@ -133,8 +141,10 @@ export function TaskForm({
   onView,
   onSubmit,
   onDirtyChange,
+  knownTags: otherTags = NO_TAGS,
+  hour12 = false,
+  children,
 }: TaskFormProps) {
-  const { tasks, hour12 } = useDailify();
   const [title, setTitle] = useState(task?.title ?? "");
   const [undated, setUndated] = useState(task?.undated === true);
   const [reminder, setReminder] = useState<Date | undefined>(() =>
@@ -157,6 +167,11 @@ export function TaskForm({
   // undefined (nao []) enquanto intocado, pra casar com task.links undefined: [] explicito so
   // depois que o usuario mexe, e o servidor so limpa o campo quando recebe a chave "links".
   const [links, setLinks] = useState<string[] | undefined>(task?.links);
+  // O evento do Google também mora em `links`: o campo só edita o link da tarefa, e trocá-lo não
+  // pode desvincular a agenda.
+  const calendarLinks = links?.filter(isCalendarEventLink) ?? [];
+  const ownLinks = links?.filter((url) => !isCalendarEventLink(url)) ?? [];
+  const link = ownLinks[0];
 
   const repeatMode = typeof repeat === "string" ? repeat : "Weekly";
   const weekly = typeof repeat === "string" ? [] : repeat.Weekly;
@@ -167,12 +182,10 @@ export function TaskForm({
   );
 
   /** Tags que já existem em outras tarefas: a busca filtra estas antes de oferecer criar uma nova. */
-  const knownTags = useMemo(() => {
-    const all = new Set<string>();
-    for (const t of tasks ?? []) for (const tag of t.tags ?? []) all.add(tag);
-    for (const tag of tags) all.add(tag);
-    return [...all].sort((a, b) => a.localeCompare(b, "pt-BR"));
-  }, [tasks, tags]);
+  const knownTags = useMemo(
+    () => [...new Set([...otherTags, ...tags])].sort((a, b) => a.localeCompare(b, "pt-BR")),
+    [otherTags, tags],
+  );
 
   const values = JSON.stringify([
     title,
@@ -192,7 +205,28 @@ export function TaskForm({
 
   // Mostra o que o salvar grava: 09:00 passado avança na série e some na avulsa.
   const shownReminder = reminder && undatedReminder(reminder, repeat, zoned());
-  const icon = "size-3.5 shrink-0";
+  const clock = (at: Date) => formatClock(format(at, "HH:mm"), hour12);
+  const now = zoned();
+  // "Amanhã, 15:00 às 16:00": o fim sai da duração, como no evento do Google.
+  const when = undated
+    ? copy.form.undatedChip
+    : copy.form.when
+        .replace(
+          "{day}",
+          isSameDay(date, now)
+            ? copy.day.today
+            : isSameDay(date, addDays(now, 1))
+              ? copy.day.tomorrow
+              : shortDay(date),
+        )
+        .replace("{start}", clock(date))
+        .replace("{end}", clock(addMinutes(date, durationMinutes(duration))));
+  const repeatValue =
+    repeatMode === "Weekly" && weekly.length
+      ? `${copy.form.repeatWeekly} · ${repeatLabel({ Weekly: weekly })}`
+      : REPEAT_MODES.find((mode) => mode.value === repeatMode)?.label;
+  const linkName = link ? linkLabel(link) : copy.form.links;
+  const linkHost = link && URL.canParse(link) ? new URL(link).hostname.replace(/^www\./, "") : "";
 
   const [tagDraft, setTagDraft] = useState("");
   const tagsListId = `${id}-tags`;
@@ -206,6 +240,22 @@ export function TaskForm({
 
   const toggleTag = (tag: string) =>
     setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+
+  const toggleUndated = (next: boolean) => {
+    setUndated(next);
+    // O dia escolhido de um lado vira o do outro; a hora da agenda fica.
+    if (next) setReminder(date);
+    else if (reminder)
+      setDate(
+        zonedAt(
+          reminder.getFullYear(),
+          reminder.getMonth(),
+          reminder.getDate(),
+          date.getHours(),
+          date.getMinutes(),
+        ),
+      );
+  };
 
   const handleSubmit = (e: FormEvent) => {
     e.preventDefault();
@@ -232,237 +282,261 @@ export function TaskForm({
   return (
     <form id={id} onSubmit={handleSubmit} noValidate className={cn("flex flex-col", className)}>
       {view === "root" && (
-        <div className="flex flex-col gap-5">
-          <button
-            type="button"
-            onClick={() => onView("title")}
-            className={cn(
-              "text-left text-2xl font-medium outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
-              !title && "text-muted-foreground",
-            )}
-          >
-            {title || copy.form.titlePlaceholder}
-          </button>
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-0.5 px-1 pt-3 pr-10 pb-1">
+            <button
+              type="button"
+              onClick={() => onView("title")}
+              className={cn(
+                "self-start rounded-xs text-left text-title-3 font-semibold outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                !title && "text-ink-secondary",
+              )}
+            >
+              {title || copy.form.titlePlaceholder}
+            </button>
+            <p className="text-subhead text-ink-secondary tabular-nums">{when}</p>
+          </div>
 
-          <div className="flex flex-wrap gap-2">
-            {undated ? (
-              <FieldChip icon={<BellIcon className={icon} />} filled={Boolean(shownReminder)}>
-                {shownReminder
-                  ? `${format(shownReminder, "EEEEEE · d MMM", { locale: ptBR })} · ${reminderHour}`
-                  : copy.form.noReminder}
-                <input
-                  type="date"
-                  aria-label={copy.form.reminder}
-                  min={format(zoned(), "yyyy-MM-dd")}
-                  value={shownReminder ? format(shownReminder, "yyyy-MM-dd") : ""}
-                  onChange={(e) => {
-                    const next = fromDateInput(e.target.value);
-                    setReminder(Number.isNaN(next.getTime()) ? undefined : next);
-                  }}
-                  className={nativeControlClass}
-                />
-              </FieldChip>
-            ) : (
+          <ListGroup compact>
+            {!undated && (
               <>
-                <FieldChip icon={<CalendarIcon className={icon} />} filled tone={chipDate}>
-                  {/* EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso. */}
-                  {format(date, "EEEEEE · d MMM", { locale: ptBR })}
-                  <input
-                    type="date"
-                    aria-label={copy.form.date}
-                    value={format(date, "yyyy-MM-dd")}
-                    onChange={(e) => {
-                      const next = fromDateInput(e.target.value);
-                      if (Number.isNaN(next.getTime())) return;
-                      next.setHours(date.getHours(), date.getMinutes());
-                      setDate(next);
-                    }}
-                    className={nativeControlClass}
-                  />
-                </FieldChip>
-                <FieldChip icon={<ClockIcon className={icon} />} filled tone={chipTime}>
-                  {formatClock(format(date, "HH:mm"), hour12)}
-                  <input
-                    type="time"
-                    aria-label={copy.form.time}
-                    value={format(date, "HH:mm")}
-                    onChange={(e) => {
-                      const [hours, minutes] = e.target.value.split(":").map(Number);
-                      if (Number.isNaN(hours) || Number.isNaN(minutes)) return;
-                      const next = zoned(date);
-                      next.setHours(hours, minutes);
-                      setDate(next);
-                    }}
-                    className={nativeControlClass}
-                  />
-                </FieldChip>
+                <NativeRow
+                  icon={<CalendarIcon />}
+                  label={copy.form.date}
+                  value={shortDay(date)}
+                  control={
+                    <input
+                      type="date"
+                      aria-label={copy.form.date}
+                      value={format(date, "yyyy-MM-dd")}
+                      onChange={(e) => {
+                        const next = fromDateInput(e.target.value);
+                        if (Number.isNaN(next.getTime())) return;
+                        next.setHours(date.getHours(), date.getMinutes());
+                        setDate(next);
+                      }}
+                      className={nativeControlClass}
+                    />
+                  }
+                />
+                <NativeRow
+                  icon={<ClockIcon />}
+                  label={copy.form.time}
+                  value={clock(date)}
+                  control={
+                    <input
+                      type="time"
+                      aria-label={copy.form.time}
+                      value={format(date, "HH:mm")}
+                      onChange={(e) => {
+                        const [hours, minutes] = e.target.value.split(":").map(Number);
+                        if (Number.isNaN(hours) || Number.isNaN(minutes)) return;
+                        const next = zoned(date);
+                        next.setHours(hours, minutes);
+                        setDate(next);
+                      }}
+                      className={nativeControlClass}
+                    />
+                  }
+                />
               </>
             )}
-
-            <FieldChip icon={<HourglassIcon className={icon} />} filled>
-              {duration}
-              <select
-                aria-label={copy.form.duration}
-                value={duration}
-                onChange={(e) => setDuration(e.target.value)}
-                className={nativeControlClass}
-              >
-                {durations.map((value) => (
-                  <option key={value} value={value}>
-                    {value}
-                  </option>
-                ))}
-              </select>
-            </FieldChip>
-
-            <FieldChip
-              icon={<RepeatIcon className={icon} />}
-              filled={repeatMode !== "Off"}
-              tone={chipRepeat}
-            >
-              {repeatMode === "Off"
-                ? copy.form.repeat
-                : REPEAT_MODES.find((mode) => mode.value === repeatMode)?.label}
-              <select
-                aria-label={copy.form.repeat}
-                value={repeatMode}
-                onChange={(e) => {
-                  const next = e.target.value;
-                  setRepeat(
-                    next === "Weekly"
-                      ? // Semanal já nasce no dia da própria tarefa: lista vazia não repete nunca.
-                        { Weekly: weekly.length ? weekly : [weekDays[date.getDay()]] }
-                      : next === "Daily" || next === "Monthly" || next === "Yearly"
-                        ? next
-                        : "Off",
-                  );
-                }}
-                className={nativeControlClass}
-              >
-                {REPEAT_MODES.map(({ value, label }) => (
-                  <option key={value} value={value}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </FieldChip>
-
-            {repeatMode !== "Off" && (
-              <FieldChip
-                icon={<RepeatIcon className={icon} />}
-                filled={every > 1}
-                tone={chipRepeat}
-              >
-                {every > 1 ? everyLabel(repeat, every) : copy.form.repeatEvery}
+            <NativeRow
+              icon={<TimerIcon />}
+              label={copy.form.duration}
+              value={duration}
+              control={
                 <select
-                  aria-label={copy.form.repeatEvery}
-                  value={String(every)}
-                  onChange={(e) => setEvery(Number(e.target.value))}
+                  aria-label={copy.form.duration}
+                  value={duration}
+                  onChange={(e) => setDuration(e.target.value)}
                   className={nativeControlClass}
                 >
-                  {everyOptions(every).map((n) => (
-                    <option key={n} value={String(n)}>
-                      {everyLabel(repeat, n)}
+                  {durations.map((value) => (
+                    <option key={value} value={value}>
+                      {value}
                     </option>
                   ))}
                 </select>
-              </FieldChip>
+              }
+            />
+            <ListRow
+              icon={<SunIcon />}
+              label={copy.form.undated}
+              trailing={
+                <Switch
+                  aria-label={copy.form.undated}
+                  checked={undated}
+                  onCheckedChange={toggleUndated}
+                />
+              }
+            />
+          </ListGroup>
+
+          <ListGroup compact>
+            {/* Lembrete à parte só em Sem data: na agenda o alerta é a própria hora da tarefa. */}
+            {undated && (
+              <NativeRow
+                icon={<BellIcon />}
+                label={copy.form.reminder}
+                value={
+                  shownReminder
+                    ? `${shortDay(shownReminder)} · ${reminderHour}`
+                    : copy.form.noReminder
+                }
+                control={
+                  <input
+                    type="date"
+                    aria-label={copy.form.reminder}
+                    min={format(zoned(), "yyyy-MM-dd")}
+                    value={shownReminder ? format(shownReminder, "yyyy-MM-dd") : ""}
+                    onChange={(e) => {
+                      const next = fromDateInput(e.target.value);
+                      setReminder(Number.isNaN(next.getTime()) ? undefined : next);
+                    }}
+                    className={nativeControlClass}
+                  />
+                }
+              />
             )}
-
-            <FieldChip icon={<SunIcon className={icon} />} filled={undated}>
-              {copy.form.undatedChip}
-              <input
-                type="checkbox"
-                role="switch"
-                aria-label={copy.form.undated}
-                checked={undated}
-                onChange={(e) => {
-                  setUndated(e.target.checked);
-                  // O dia escolhido de um lado vira o do outro; a hora da agenda fica.
-                  if (e.target.checked) setReminder(date);
-                  else if (reminder)
-                    setDate(
-                      zonedAt(
-                        reminder.getFullYear(),
-                        reminder.getMonth(),
-                        reminder.getDate(),
-                        date.getHours(),
-                        date.getMinutes(),
-                      ),
+            <NativeRow
+              icon={<RepeatIcon />}
+              label={copy.form.repeat}
+              value={repeatValue}
+              control={
+                <select
+                  aria-label={copy.form.repeat}
+                  value={repeatMode}
+                  onChange={(e) => {
+                    const next = e.target.value;
+                    setRepeat(
+                      next === "Weekly"
+                        ? // Semanal já nasce no dia da própria tarefa: lista vazia não repete nunca.
+                          { Weekly: weekly.length ? weekly : [weekDays[date.getDay()]] }
+                        : next === "Daily" || next === "Monthly" || next === "Yearly"
+                          ? next
+                          : "Off",
                     );
-                }}
-                className={nativeControlClass}
-              />
-            </FieldChip>
-
-            <FieldChip icon={<FlagIcon className={icon} />} filled={priority > 0}>
-              {priority > 0 ? priorityText[priority] : copy.form.priority}
-              <select
-                aria-label={copy.form.priority}
-                value={String(priority)}
-                onChange={(e) => setPriority(Number(e.target.value))}
-                className={nativeControlClass}
-              >
-                {priorityText.map((label, index) => (
-                  <option key={label} value={String(index)}>
-                    {label}
-                  </option>
-                ))}
-              </select>
-            </FieldChip>
-
-            <FieldChip icon={<TagIcon className={icon} />} filled={tags.length > 0}>
-              {tags.length
-                ? tags[0] + (tags.length > 1 ? ` +${tags.length - 1}` : "")
-                : copy.form.tags}
-              <button
-                type="button"
-                aria-label={copy.form.tags}
-                onClick={() => onView("tags")}
-                className={nativeControlClass}
-              />
-            </FieldChip>
-
-            <FieldChip icon={<LinkIcon className={icon} />} filled={Boolean(links?.length)}>
-              {links?.length
-                ? linkLabel(links[0]) + (links.length > 1 ? ` +${links.length - 1}` : "")
-                : copy.form.links}
-              <button
-                type="button"
-                aria-label={copy.form.links}
-                onClick={() => onView("links")}
-                className={nativeControlClass}
-              />
-            </FieldChip>
-          </div>
-
-          {/* Os dias ficam na própria raiz, não numa página: sem eles "semanal" não diz QUANDO. */}
-          {repeatMode === "Weekly" && (
-            <div role="group" aria-label={copy.form.repeatWeekly} className="flex gap-1.5">
-              {weekDays.map((day) => {
-                const on = weekly.includes(day);
-                return (
-                  <button
-                    key={day}
-                    type="button"
-                    aria-pressed={on}
-                    onClick={() =>
-                      setRepeat({ Weekly: on ? weekly.filter((d) => d !== day) : [...weekly, day] })
-                    }
-                    className={cn(
-                      "size-10 rounded-md border text-sm transition-colors outline-none",
-                      "focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                      on
-                        ? "border-accent-primary bg-accent-subtle text-foreground"
-                        : "border-surface-line text-content-secondary hover:bg-surface-hover",
-                    )}
+                  }}
+                  className={nativeControlClass}
+                >
+                  {REPEAT_MODES.map(({ value, label }) => (
+                    <option key={value} value={value}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              }
+            />
+            {repeatMode !== "Off" && (
+              <NativeRow
+                icon={<Repeat2Icon />}
+                label={copy.form.repeatEvery}
+                value={everyLabel(repeat, every)}
+                control={
+                  <select
+                    aria-label={copy.form.repeatEvery}
+                    value={String(every)}
+                    onChange={(e) => setEvery(Number(e.target.value))}
+                    className={nativeControlClass}
                   >
-                    {copy.form.repeatDays[dayMap[day]]}
-                  </button>
-                );
-              })}
-            </div>
-          )}
+                    {everyOptions(every).map((n) => (
+                      <option key={n} value={String(n)}>
+                        {everyLabel(repeat, n)}
+                      </option>
+                    ))}
+                  </select>
+                }
+              />
+            )}
+            {/* Os dias ficam na própria raiz, não numa página: sem eles "semanal" não diz QUANDO. */}
+            {repeatMode === "Weekly" && (
+              <div
+                role="group"
+                aria-label={copy.form.repeatWeekly}
+                className="flex justify-between border-t border-separator px-3.5 py-3"
+              >
+                {weekDays.map((day) => {
+                  const on = weekly.includes(day);
+                  return (
+                    <button
+                      key={day}
+                      type="button"
+                      aria-pressed={on}
+                      onClick={() =>
+                        setRepeat({
+                          Weekly: on ? weekly.filter((d) => d !== day) : [...weekly, day],
+                        })
+                      }
+                      className={cn(
+                        "size-10 cursor-pointer rounded-full text-footnote font-medium transition-colors duration-fast outline-none",
+                        "focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                        on ? "bg-ink text-canvas" : "bg-fill text-ink hover:bg-fill-pressed",
+                      )}
+                    >
+                      {copy.form.repeatDays[dayMap[day]]}
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+          </ListGroup>
+
+          <ListGroup compact>
+            <NativeRow
+              icon={<FlagIcon />}
+              label={copy.form.priority}
+              value={priorityText[priority]}
+              control={
+                <select
+                  aria-label={copy.form.priority}
+                  value={String(priority)}
+                  onChange={(e) => setPriority(Number(e.target.value))}
+                  className={nativeControlClass}
+                >
+                  {priorityText.map((label, index) => (
+                    <option key={label} value={String(index)}>
+                      {label}
+                    </option>
+                  ))}
+                </select>
+              }
+            />
+            <ListRow
+              icon={<TagIcon />}
+              label={copy.form.tags}
+              aria-label={copy.form.tags}
+              accessory="chevron"
+              onClick={() => onView("tags")}
+              trailing={
+                tags.length > 0 && (
+                  <span className="flex min-w-0 items-center gap-1.5 overflow-hidden">
+                    {tags.slice(0, 2).map((tag) => (
+                      <span
+                        key={tag}
+                        className="flex h-6.5 flex-none items-center rounded-full bg-fill px-2.5 text-footnote font-medium"
+                      >
+                        {tag}
+                      </span>
+                    ))}
+                    {tags.length > 2 && (
+                      <span className="text-footnote text-ink-secondary">+{tags.length - 2}</span>
+                    )}
+                  </span>
+                )
+              }
+            />
+            <ListRow
+              icon={link && videoLink([link]) ? <VideoIcon /> : <LinkIcon />}
+              label={linkName}
+              aria-label={copy.form.links}
+              value={linkHost && linkHost !== linkName ? linkHost : undefined}
+              accessory="chevron"
+              onClick={() => onView("links")}
+            />
+          </ListGroup>
+
+          {children}
         </div>
       )}
 
@@ -501,7 +575,7 @@ export function TaskForm({
                     type="button"
                     onClick={() => toggleTag(tag)}
                     aria-label={`${copy.form.tags}: ${tag}`}
-                    className="flex h-8 items-center gap-1 rounded-md border border-surface-line px-3 text-2xs text-content-secondary transition-colors outline-none hover:bg-surface-hover focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    className="flex h-8 cursor-pointer items-center gap-1 rounded-full bg-fill px-3 text-footnote font-medium text-ink transition-colors duration-fast outline-none hover:bg-fill-pressed focus-visible:ring-[3px] focus-visible:ring-ring/50"
                   >
                     {tag}
                     <XIcon className="size-3 shrink-0" aria-hidden="true" />
@@ -530,12 +604,16 @@ export function TaskForm({
             // Mesma régua do campo de busca: texto puro, e a linha é um Separator.
             className={cn("peer", bareFieldClass)}
           />
-          <Separator className="bg-surface-line peer-focus-visible:bg-accent-primary" />
+          <Separator className="bg-separator peer-focus-visible:bg-brand" />
         </div>
       )}
 
       {view === "links" && (
-        <LinksField value={links ?? []} onChange={setLinks} labelledBy={`${id}-links`} />
+        <LinksField
+          value={ownLinks}
+          onChange={(next) => setLinks([...next, ...calendarLinks])}
+          labelledBy={`${id}-links`}
+        />
       )}
     </form>
   );

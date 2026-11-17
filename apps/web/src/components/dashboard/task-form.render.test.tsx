@@ -5,10 +5,6 @@ import type { Task } from "@dailify/shared";
 
 import { copy } from "./copy";
 
-vi.mock("@/components/dailifyContext", () => ({
-  useDailify: () => ({ tasks: [], hour12: false }),
-}));
-
 import { TaskForm } from "./task-form";
 
 const task: Task = {
@@ -22,9 +18,9 @@ const task: Task = {
   completed: [],
 };
 
-const setup = (initial: Task) => {
+const setup = (initial: Task, view: "root" | "links" = "root") => {
   const onSubmit = vi.fn();
-  render(<TaskForm id="f" task={initial} view="root" onView={vi.fn()} onSubmit={onSubmit} />);
+  render(<TaskForm id="f" task={initial} view={view} onView={vi.fn()} onSubmit={onSubmit} />);
   const submit = () => {
     const form = document.getElementById("f");
     if (form) fireEvent.submit(form);
@@ -51,5 +47,24 @@ describe("<TaskForm> intervalo", () => {
     });
     expect(screen.queryByRole("combobox", { name: copy.form.repeatEvery })).toBeNull();
     expect(submit()).toMatchObject({ repeat: "Off", repeatEvery: 1 });
+  });
+});
+
+describe("<TaskForm> raiz", () => {
+  it("o subtítulo diz o dia e o intervalo pela duração", () => {
+    const tomorrow = new Date();
+    tomorrow.setDate(tomorrow.getDate() + 1);
+    tomorrow.setHours(15, 0, 0, 0);
+    setup({ ...task, date: tomorrow.getTime(), repeat: "Off" });
+    expect(screen.getByText("Amanhã, 15:00 às 16:00")).toBeInTheDocument();
+  });
+
+  it("trocar o link não desvincula o evento do Google Agenda", () => {
+    const event = "https://www.google.com/calendar/event?eid=abc";
+    const { submit } = setup({ ...task, links: [event, "https://meet.google.com/x"] }, "links");
+    const field = screen.getByRole("textbox", { name: copy.form.links });
+    expect(field).toHaveValue("https://meet.google.com/x");
+    fireEvent.change(field, { target: { value: "https://zoom.us/j/1" } });
+    expect(submit()).toMatchObject({ links: ["https://zoom.us/j/1", event] });
   });
 });

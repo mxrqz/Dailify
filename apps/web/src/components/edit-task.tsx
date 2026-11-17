@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useId, useState, ReactNode } from "react";
+import { createContext, useContext, useEffect, useId, useMemo, useState, ReactNode } from "react";
 import {
   Sheet,
   SheetContent,
@@ -14,11 +14,10 @@ import { TaskProps } from "@/types/types";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { useDailify } from "./dailifyContext";
 import { Button } from "./ui/button";
-import { cn } from "@/lib/utils";
 import { updateTask } from "@/functions/api";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeftIcon, CheckIcon, Loader2, RotateCcwIcon, Trash2Icon } from "lucide-react";
+import { ChevronLeftIcon, CheckIcon, Loader2, RotateCcwIcon } from "lucide-react";
 import { getCompletionDate, isTaskModified, upsertTaskWithRecurrence } from "@/functions/functions";
 import {
   FORM_VIEWS,
@@ -91,7 +90,11 @@ export function EditTaskContent({
   open?: boolean;
   onClose: () => void;
 }) {
-  const { tasks, setTasks, undatedTasks, setUndatedTasks, loadedMonths } = useDailify();
+  const { tasks, setTasks, undatedTasks, setUndatedTasks, loadedMonths, hour12 } = useDailify();
+  const knownTags = useMemo(
+    () => [...new Set((tasks ?? []).flatMap((t) => t.tags ?? []))],
+    [tasks],
+  );
   const { getToken, userId } = useAuth();
   const { user } = useUser();
   const navigate = useNavigate();
@@ -229,52 +232,51 @@ export function EditTaskContent({
   };
 
   const completedOnDay = getCompletionDate(task, day) === true;
-  const action =
-    "flex h-18 cursor-pointer flex-col items-center justify-center gap-1.5 rounded-field bg-surface-hover text-sm transition-colors hover:bg-surface-line";
+  // Com algo a salvar, o "Salvar" vira o primário; concluída, o botão é o reabrir.
   const completeButton = (done: boolean, toggle: () => Promise<unknown>) => (
-    <button
-      type="button"
-      className={action}
+    <Button
+      size="lg"
+      variant={done || dirty ? "secondary" : "default"}
       onClick={() => {
         void toggle();
         onClose();
       }}
     >
-      {done ? <RotateCcwIcon className="size-5" /> : <CheckIcon className="size-5" />}
+      {done ? <RotateCcwIcon /> : <CheckIcon />}
       {done ? copy.task.uncomplete : copy.task.complete}
-    </button>
+    </Button>
   );
   const deleteButton = (onClick: () => void) => (
-    <button type="button" onClick={onClick} className={cn(action, "text-destructive")}>
-      <Trash2Icon className="size-5" />
+    <Button variant="ghost" onClick={onClick} className="text-body text-brand-text">
       {copy.task.delete}
-    </button>
+    </Button>
   );
 
   return (
     // Folha de BAIXO: no desktop a edição acontece no próprio cartão; quem abre isto é o toque.
     // Altura pelo conteúdo, com teto em `svh` (o `dvh` encolheria com o teclado).
-    <SheetContent side="bottom" className="max-h-[85svh]">
-      {/* Na raiz o título da tarefa é o cabeçalho; dentro de um campo vira "voltar + nome dele". */}
-      <SheetHeader className="gap-2 pb-0">
-        <SheetTitle className="sr-only">{copy.form.editTitle}</SheetTitle>
-        <SheetDescription className="sr-only">{copy.form.editDescription}</SheetDescription>
+    <SheetContent side="bottom" className="mx-auto max-h-[94svh] w-full max-w-lg">
+      <SheetTitle className="sr-only">{copy.form.editTitle}</SheetTitle>
+      <SheetDescription className="sr-only">{copy.form.editDescription}</SheetDescription>
 
-        {view !== "root" && (
+      {/* Na raiz o título da tarefa é o cabeçalho (do formulário); dentro de um campo vira
+          "voltar + nome dele". */}
+      {view !== "root" && (
+        <SheetHeader className="pb-2">
           <div className="flex h-9 items-center gap-1">
             <Button
               variant="ghost"
               size="icon"
               aria-label={copy.form.back}
               onClick={() => setView("root")}
-              className="relative -ml-2 size-9 hit-target cursor-pointer text-muted-foreground hover:text-foreground"
+              className="relative -ml-2 size-9 hit-target text-ink-secondary hover:text-ink"
             >
               <ChevronLeftIcon className="size-5" />
             </Button>
-            <span className="text-base font-semibold">{FORM_VIEWS[view].title}</span>
+            <span className="text-body font-semibold">{FORM_VIEWS[view].title}</span>
           </div>
-        )}
-      </SheetHeader>
+        </SheetHeader>
+      )}
 
       <TaskForm
         id={formId}
@@ -282,47 +284,43 @@ export function EditTaskContent({
         view={view}
         onView={setView}
         onDirtyChange={setDirty}
-        className="min-h-0 flex-1 scrollbar-floating pb-2"
+        knownTags={knownTags}
+        hour12={hour12}
+        className="min-h-0 flex-1 scrollbar-floating"
         onSubmit={handleSubmit}
-      />
+      >
+        <AddToCalendar task={task} variant="sheet" />
+      </TaskForm>
 
-      {/* Editar é tocar no chip; "Salvar" só aparece quando algo mudou. Dentro de um campo o rodapé
+      {/* Editar é tocar na linha; "Salvar" só aparece quando algo mudou. Dentro de um campo o rodapé
           some: ali quem confirma é a própria escolha. */}
       {view === "root" && (
-        <SheetFooter className="gap-2 pt-4">
+        <SheetFooter className="gap-1 pb-4">
           {dirty && (
-            <Button
-              type="submit"
-              form={formId}
-              className="h-12 cursor-pointer rounded-md bg-accent-primary text-primary-foreground hover:bg-accent-hover"
-              disabled={loading}
-            >
+            <Button type="submit" form={formId} size="lg" disabled={loading}>
               {loading ? <Loader2 className="animate-spin" /> : copy.form.save}
             </Button>
           )}
-          <AddToCalendar task={task} variant="sheet" />
-          <div className="grid grid-cols-2 gap-2">
-            {/* Concluída não desabilita o botão: ele vira o reabrir. */}
-            {wasUndated ? (
-              <WithUndatedActions task={task}>
-                {({ done, toggle }) => completeButton(done, toggle)}
-              </WithUndatedActions>
-            ) : (
-              completeButton(completedOnDay, completedOnDay ? onUncomplete : onComplete)
-            )}
-            {wasUndated ? (
-              <WithUndatedActions task={task}>
-                {({ remove }) =>
-                  deleteButton(() => {
-                    void remove();
-                    onClose();
-                  })
-                }
-              </WithUndatedActions>
-            ) : (
-              deleteButton(() => void onDelete())
-            )}
-          </div>
+          {/* Concluída não desabilita o botão: ele vira o reabrir. */}
+          {wasUndated ? (
+            <WithUndatedActions task={task}>
+              {({ done, toggle }) => completeButton(done, toggle)}
+            </WithUndatedActions>
+          ) : (
+            completeButton(completedOnDay, completedOnDay ? onUncomplete : onComplete)
+          )}
+          {wasUndated ? (
+            <WithUndatedActions task={task}>
+              {({ remove }) =>
+                deleteButton(() => {
+                  void remove();
+                  onClose();
+                })
+              }
+            </WithUndatedActions>
+          ) : (
+            deleteButton(() => void onDelete())
+          )}
         </SheetFooter>
       )}
 

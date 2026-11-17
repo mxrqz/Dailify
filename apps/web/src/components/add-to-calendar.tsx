@@ -12,6 +12,7 @@ import {
 } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
+import { ListGroup, ListRow } from "@/components/kit/list";
 import { ConfirmAction } from "@/components/mew/confirm-action";
 import { ToolbarButton } from "@/components/task-card";
 import { createCalendarEvent, linkCalendarEvent, syncCalendarEvent } from "@/functions/api";
@@ -20,12 +21,9 @@ import { calendarRevoked, useApplyTask } from "@/hooks/useCalendarPush";
 import { tagExternalEvent } from "@/hooks/useExternalEvents";
 import { patchIntegration, useCalendarReady, useIntegrations } from "@/hooks/useIntegrations";
 import { useOnline } from "@/hooks/useOnline";
-import { cn } from "@/lib/utils";
 import type { TaskProps } from "@/types/types";
 
 const t = copy.calendar;
-const sheetAction =
-  "flex h-12 cursor-pointer items-center justify-center gap-2 rounded-field bg-surface-hover text-sm transition-colors hover:bg-surface-line";
 
 /**
  * "Adicionar ao Google Agenda": só com a agenda conectada e a tarefa com dia. Já vinculada (o
@@ -81,22 +79,7 @@ export function AddToCalendar({
         <CalendarSyncIcon className="size-4" aria-hidden="true" />
       </ToolbarButton>
     ) : (
-      <div className="flex gap-2">
-        <a href={linked} target="_blank" rel="noreferrer" className={cn(sheetAction, "flex-1")}>
-          <CalendarCheckIcon className="size-5" aria-hidden="true" />
-          {t.linked}
-          <span className="text-muted-foreground">· {t.unsynced}</span>
-        </a>
-        <button
-          type="button"
-          aria-label={t.retry}
-          className={cn(sheetAction, "px-4")}
-          onClick={() => void retry()}
-          disabled={pending}
-        >
-          <CalendarSyncIcon className="size-5" aria-hidden="true" />
-        </button>
-      </div>
+      <CalendarRows linked={linked} stale pending={pending} onRetry={() => void retry()} />
     );
   }
   if (linked) {
@@ -108,10 +91,7 @@ export function AddToCalendar({
         <CalendarCheckIcon className="size-4" aria-hidden="true" />
       </ToolbarButton>
     ) : (
-      <a href={linked} target="_blank" rel="noreferrer" className={sheetAction}>
-        <CalendarCheckIcon className="size-5" aria-hidden="true" />
-        {t.linked}
-      </a>
+      <CalendarRows linked={linked} />
     );
   }
   if (!online) return null;
@@ -159,15 +139,7 @@ export function AddToCalendar({
           <CalendarPlusIcon className="size-4" aria-hidden="true" />
         </ToolbarButton>
       ) : (
-        <button
-          type="button"
-          className={sheetAction}
-          onClick={() => setOpen(true)}
-          disabled={pending}
-        >
-          <CalendarPlusIcon className="size-5" aria-hidden="true" />
-          {t.add}
-        </button>
+        <CalendarRows pending={pending} onAdd={() => setOpen(true)} />
       )}
       <ConfirmAction
         open={open}
@@ -178,6 +150,51 @@ export function AddToCalendar({
         onConfirm={() => void confirm()}
       />
     </>
+  );
+}
+
+/**
+ * O grupo do Google Agenda na tarefa aberta, só markup: vinculada abre o evento ("· não
+ * sincronizado" + reenviar quando a última edição não chegou lá); sem vínculo, oferece adicionar.
+ */
+export function CalendarRows({
+  linked,
+  stale,
+  pending,
+  onAdd,
+  onRetry,
+}: {
+  linked?: string;
+  stale?: boolean;
+  pending?: boolean;
+  onAdd?: () => void;
+  onRetry?: () => void;
+}): JSX.Element {
+  return (
+    <ListGroup compact>
+      {linked ? (
+        <ListRow
+          href={linked}
+          accessory="external"
+          icon={<CalendarCheckIcon />}
+          label={t.linked}
+          sublabel={stale && t.unsynced}
+          value={t.open}
+          aria-label={stale ? `${t.linked} · ${t.unsynced}` : t.linked}
+        />
+      ) : (
+        <ListRow
+          onClick={onAdd}
+          disabled={pending}
+          accessory="chevron"
+          icon={<CalendarPlusIcon />}
+          label={t.add}
+        />
+      )}
+      {linked && stale && (
+        <ListRow onClick={onRetry} disabled={pending} icon={<CalendarSyncIcon />} label={t.retry} />
+      )}
+    </ListGroup>
   );
 }
 
