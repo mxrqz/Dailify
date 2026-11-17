@@ -1,11 +1,12 @@
 import { Hono } from "hono";
 import { cors } from "hono/cors";
-import { clerkMiddleware } from "./middleware/auth";
+import type { Role } from "@dailify/shared";
+import { auth } from "./auth";
+import { rateLimit } from "./middleware/rate-limit";
 import tasks from "./routes/tasks";
 import billing from "./routes/billing";
 import voice from "./routes/voice";
 import settings from "./routes/settings";
-import clerkWebhook from "./routes/clerk-webhook";
 import push from "./routes/push";
 import integrations from "./routes/integrations";
 import { dispatchAlerts } from "./alerts";
@@ -18,10 +19,12 @@ export interface Env {
   // Opcionais: em teste/dev local o binding de rate limit nao existe (ver middleware/rate-limit.ts).
   API_LIMITER?: RateLimit;
   VOICE_LIMITER?: RateLimit;
+  AUTH_LIMITER?: RateLimit;
   ALLOWED_ORIGIN: string; // lista separada por vírgula (lib/origin.ts)
-  CLERK_SECRET_KEY: string;
-  CLERK_PUBLISHABLE_KEY: string;
-  CLERK_WEBHOOK_SECRET: string;
+  BETTER_AUTH_SECRET: string; // >= 32 chars; assina cookie e cookieCache
+  BETTER_AUTH_URL: string; // origem pública do worker (https://api.mewki.mxrqz.com)
+  TURNSTILE_SECRET_KEY: string;
+  EMAIL: SendEmail; // binding send_email (lib/email/providers/cloudflare.ts)
   STRIPE_SECRET_KEY: string;
   STRIPE_WEBHOOK_SECRET: string;
   OPENAI_API_KEY: string;
@@ -39,22 +42,29 @@ export interface Env {
   TOKEN_KEY_V1: string;
 }
 
-const app = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
+const app = new Hono<{ Bindings: Env; Variables: { userId: string; plan: Role } }>();
 app.use("*", (c, next) =>
   cors({
     origin: (origin) => (allowedOrigins(c.env).includes(origin) ? origin : null),
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    // Os dois `x-` são do login: captcha do Turnstile e o verifier do magic link do app.
+    allowHeaders: ["Authorization", "Content-Type", "x-captcha-response", "x-mewki-verifier"],
+    // Cookie de sessão na web; no app o token volta em `set-auth-token` (plugin bearer).
+    credentials: true,
+    exposeHeaders: ["set-auth-token"],
     // Sem isto cada request autenticado paga um preflight (o Bearer força). Chrome corta em 2h.
     maxAge: 86400,
   })(c, next),
 );
 app.get("/health", (c) => c.json({ ok: true }));
 
-app.use("*", clerkMiddleware());
+// Só o que manda e-mail ou cria sessão: `get-session` roda a cada foco de aba e não entra.
+app.use("/auth/sign-in/*", rateLimit("AUTH_LIMITER"));
+app.use("/auth/magic-link/*", rateLimit("AUTH_LIMITER"));
+app.on(["GET", "POST"], "/auth/*", (c) => auth.handler(c.req.raw));
 app.route("/tasks", tasks);
 app.route("/tasks", voice);
 app.route("/", billing);
-app.route("/", clerkWebhook);
 app.route("/", push);
 app.route("/", settings);
 app.route("/", integrations);

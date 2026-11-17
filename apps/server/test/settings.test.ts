@@ -1,10 +1,8 @@
 import { describe, it, expect, vi, beforeAll } from "vitest";
-import { getAuth } from "@clerk/hono";
 
-vi.mock("@clerk/hono", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@clerk/hono")>();
-  return { ...actual, getAuth: vi.fn(() => ({ userId: "u1" })) };
-});
+vi.mock("../src/auth", () => import("./session"));
+import { mockSession } from "./session";
+mockSession(() => ({ id: "u1" }));
 
 import { env, applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
@@ -74,9 +72,9 @@ describe("GET/PUT /settings", () => {
   });
 
   it("sem auth -> 401", async () => {
-    const actual = await vi.importActual<typeof import("@clerk/hono")>("@clerk/hono");
-    vi.mocked(getAuth).mockImplementationOnce(actual.getAuth);
+    mockSession(() => null);
     expect((await app.request("/settings", {}, env)).status).toBe(401);
+    mockSession(() => ({ id: "u1" }));
   });
 
   it("deleteUserData volta ao default", async () => {

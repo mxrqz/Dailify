@@ -3,12 +3,12 @@ import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 let role: "free" | "pro" | "max" = "free";
 let userId = "vu1";
 
-const { openaiMock, getUserMock } = vi.hoisted(() => {
+const { openaiMock } = vi.hoisted(() => {
   const openaiMock = {
     audio: { transcriptions: { create: vi.fn() } },
     responses: { create: vi.fn() },
   };
-  return { openaiMock, getUserMock: vi.fn() };
+  return { openaiMock };
 });
 
 vi.mock("openai", () => {
@@ -18,25 +18,16 @@ vi.mock("openai", () => {
   return { default: MockOpenAI };
 });
 
-vi.mock("@clerk/hono", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@clerk/hono")>();
-  return { ...actual, getAuth: vi.fn(() => ({ userId })) };
-});
-
-vi.mock("../src/lib/clerk", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/lib/clerk")>();
-  return {
-    ...actual,
-    getUserRole: vi.fn(async () => role),
-    clerk: vi.fn(() => ({ users: { getUser: getUserMock } })),
-  };
-});
+vi.mock("../src/auth", () => import("./session"));
+import { mockSession } from "./session";
+mockSession(() => ({ id: userId, plan: role }));
 
 import { DateTime } from "luxon";
 import { env } from "cloudflare:test";
 import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
 import { getTask } from "../src/db/tasks";
+import { saveSettings } from "../src/db/settings";
 import { limitsFor, type Task } from "@dailify/shared";
 import { bumpStoredUsage, periodFor, readStoredUsage } from "../src/db/usage";
 
@@ -44,9 +35,10 @@ beforeAll(async () => {
   await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
 });
 
-beforeEach(() => {
+beforeEach(async () => {
   vi.clearAllMocks();
-  getUserMock.mockResolvedValue({ id: "vu1", unsafeMetadata: { timezone: "UTC" } });
+  // Sem fuso no form, a voz cai no `user_settings.time_zone`.
+  await saveSettings(env.DB, "vu1", { timeZone: "UTC" });
 });
 
 function audioRequest(timezone?: string) {
@@ -107,10 +99,7 @@ describe("POST /tasks/voice", () => {
   it("reinterprets GPT's naive-local dates using the user's non-UTC timezone (America/Sao_Paulo, UTC-3)", async () => {
     role = "max";
     userId = "vu3";
-    getUserMock.mockResolvedValue({
-      id: "vu3",
-      unsafeMetadata: { timezone: "America/Sao_Paulo" },
-    });
+    await saveSettings(env.DB, "vu3", { timeZone: "America/Sao_Paulo" });
     // Duas tarefas numa frase: o parser local fica em dúvida e o GPT lê.
     openaiMock.audio.transcriptions.create.mockResolvedValue({
       text: "reunião às 14h e almoço às 12h",
@@ -176,6 +165,7 @@ describe("POST /tasks/voice", () => {
   it("does not insert tasks for a non-create ('invalid') AI response", async () => {
     role = "max";
     userId = "vu2";
+    await saveSettings(env.DB, "vu2", { timeZone: "UTC" });
     openaiMock.audio.transcriptions.create.mockResolvedValue({
       text: "quantos dias faltam pro natal?",
     });
@@ -225,7 +215,7 @@ describe("POST /tasks/voice — quota e tamanho", () => {
   it("429s quando os créditos de IA do mês acabaram", async () => {
     role = "free";
     userId = "vq2";
-    getUserMock.mockResolvedValue({ id: "vq2", unsafeMetadata: { timezone: "UTC" } });
+    await saveSettings(env.DB, "vq2", { timeZone: "UTC" });
     for (let i = 0; i < limitsFor("free").ai; i++) {
       await bumpStoredUsage(env.DB, "vq2", "ai", periodFor("ai", new Date()));
     }
@@ -239,7 +229,7 @@ describe("POST /tasks/voice — quota e tamanho", () => {
   it("gasta o crédito mesmo quando a geração não cria tarefa", async () => {
     role = "free";
     userId = "vq3";
-    getUserMock.mockResolvedValue({ id: "vq3", unsafeMetadata: { timezone: "UTC" } });
+    await saveSettings(env.DB, "vq3", { timeZone: "UTC" });
     openaiMock.audio.transcriptions.create.mockResolvedValue({ text: "quais sao minhas tarefas" });
     openaiMock.responses.create.mockResolvedValue({
       output_text: JSON.stringify({ intent: "question", reply: "ok", tasks: [] }),
@@ -254,7 +244,7 @@ describe("POST /tasks/voice — quota e tamanho", () => {
   it("não gasta crédito quando a transcrição falha", async () => {
     role = "free";
     userId = "vq4";
-    getUserMock.mockResolvedValue({ id: "vq4", unsafeMetadata: { timezone: "UTC" } });
+    await saveSettings(env.DB, "vq4", { timeZone: "UTC" });
     openaiMock.audio.transcriptions.create.mockRejectedValue(new Error("boom"));
 
     const res = await audioRequest();
@@ -266,7 +256,7 @@ describe("POST /tasks/voice — quota e tamanho", () => {
   it("dia sem hora vira Sem data com lembrete às 09:00 locais", async () => {
     role = "max";
     userId = "vq5";
-    getUserMock.mockResolvedValue({ id: "vq5", unsafeMetadata: { timezone: "UTC" } });
+    await saveSettings(env.DB, "vq5", { timeZone: "UTC" });
     openaiMock.audio.transcriptions.create.mockResolvedValue({ text: "pagar luz dia 3 ou dia 4" });
     openaiMock.responses.create.mockResolvedValue({
       output_text: JSON.stringify({

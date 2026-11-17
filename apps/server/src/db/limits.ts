@@ -4,10 +4,9 @@ import {
   type QuotaKey,
   type QuotaLimits,
   type QuotaUsage,
+  type Role,
   type Task,
 } from "@dailify/shared";
-import type { Env } from "../index";
-import { getUserRole } from "../lib/clerk";
 import { countMonthlyTasks } from "./tasks";
 import { periodFor, readStoredUsage } from "./usage";
 
@@ -52,7 +51,11 @@ export async function readAllUsage(db: D1Database, userId: string, at: Date): Pr
   return usage;
 }
 
-export async function enforceCreate(env: Env, userId: string, task: Task): Promise<string | null> {
-  const limits = limitsFor(await getUserRole(env, userId));
-  return enforce(env.DB, userId, limits, "tasks", new Date(task.date));
+export async function enforceCreate(
+  db: D1Database,
+  userId: string,
+  role: Role,
+  task: Task,
+): Promise<string | null> {
+  return enforce(db, userId, limitsFor(role), "tasks", new Date(task.date));
 }

@@ -8,11 +8,11 @@ import {
   PROVIDER_IDS,
   type IntegrationStatus,
   type ProviderId,
+  type Role,
 } from "@dailify/shared";
 import type { Env } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
-import { getUserRole } from "../lib/clerk";
 import { fail } from "../lib/errors";
 import { appOrigin } from "../lib/origin";
 import { bytesToBase64url } from "../lib/push";
@@ -47,15 +47,15 @@ import { createEvent, replaceMeet } from "../integrations/google-calendar";
 import { syncCalendar } from "../integrations/google-calendar/sync";
 import { ActionError, type Ctx as ProviderCtx } from "../integrations/types";
 
-type Ctx = Context<{ Bindings: Env; Variables: { userId: string } }>;
+type Ctx = Context<{ Bindings: Env; Variables: { userId: string; plan: Role } }>;
 
 const STATE_TTL = 10 * 60 * 1000;
 
-const integrations = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
+const integrations = new Hono<{ Bindings: Env; Variables: { userId: string; plan: Role } }>();
 integrations.use("/integrations", requireAuth, rateLimit("API_LIMITER"));
 integrations.use("/integrations/*", requireAuth, rateLimit("API_LIMITER"));
 
-// O Google volta pro SPA, que manda {code, state} com o bearer do Clerk: é isso que amarra a conta
+// O Google volta pro SPA, que manda {code, state} com a sessão: é isso que amarra a conta
 // externa a quem está logado (redirect direto pro worker não tem como saber quem é).
 const redirectUri = (c: Ctx, id: ProviderId) =>
   `${appOrigin(c.env, c.req.header("origin"))}/integrations/${id}/callback`;
@@ -85,8 +85,8 @@ function statusOf(
 
 integrations.get("/integrations", async (c) => {
   const userId = c.get("userId");
-  const [role, rows, stale, duplicates, readonly] = await Promise.all([
-    getUserRole(c.env, userId),
+  const role = c.get("plan");
+  const [rows, stale, duplicates, readonly] = await Promise.all([
     listConnections(c.env.DB, userId),
     listStale(c.env.DB, userId),
     listDuplicates(c.env.DB, userId),
@@ -115,7 +115,7 @@ integrations.post("/integrations/:provider/connect", async (c) => {
   const id = c.req.param("provider");
   if (!isProviderId(id)) return fail(c, 404, "Integração desconhecida");
   const userId = c.get("userId");
-  if (!canUseIntegration(await getUserRole(c.env, userId), id))
+  if (!canUseIntegration(c.get("plan"), id))
     return fail(c, 403, "Seu plano não inclui esta integração");
   const { oauth } = PROVIDERS[id];
   if (!oauth.credentials(c.env).id) return fail(c, 503, "Integração não configurada");
@@ -149,7 +149,7 @@ integrations.post("/integrations/:provider/callback", async (c) => {
   if (!saved) return fail(c, 400, "Pedido de conexão inválido ou expirado; tente de novo");
   if (saved.user_id !== userId || saved.provider !== id)
     return fail(c, 403, "Este pedido de conexão não é seu");
-  const role = await getUserRole(c.env, userId);
+  const role = c.get("plan");
   if (!canUseIntegration(role, id)) return fail(c, 403, "Seu plano não inclui esta integração");
 
   const provider = PROVIDERS[id];
@@ -201,7 +201,7 @@ const RECONNECT = "Reconecte a Agenda para continuar";
 /** Plano + conexão ativa + os erros esperados do Google, iguais em toda rota que fala com ele. */
 async function withCalendar(c: Ctx, run: (ctx: ProviderCtx) => Promise<unknown>) {
   const userId = c.get("userId");
-  if (!canUseIntegration(await getUserRole(c.env, userId), "google-calendar"))
+  if (!canUseIntegration(c.get("plan"), "google-calendar"))
     return fail(c, 403, "Seu plano não inclui esta integração");
   const ctx = await loadCtx(c.env, userId, "google-calendar");
   if (!ctx) return fail(c, 409, RECONNECT, { code: INTEGRATION_ERROR.reconnect });

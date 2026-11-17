@@ -1,6 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { stripeMock, getUserMock, updateUserMetadataMock } = vi.hoisted(() => {
+const { stripeMock, profileMock } = vi.hoisted(() => {
   const stripeMock = {
     checkout: { sessions: { create: vi.fn() } },
     billingPortal: { sessions: { create: vi.fn() } },
@@ -8,7 +8,10 @@ const { stripeMock, getUserMock, updateUserMetadataMock } = vi.hoisted(() => {
     invoices: { createPreview: vi.fn(), list: vi.fn() },
     webhooks: { constructEventAsync: vi.fn() },
   };
-  return { stripeMock, getUserMock: vi.fn(), updateUserMetadataMock: vi.fn() };
+  return {
+    stripeMock,
+    profileMock: vi.fn<() => Promise<{ email?: string; stripeCustomerId?: string }>>(),
+  };
 });
 
 vi.mock("stripe", () => {
@@ -19,19 +22,13 @@ vi.mock("stripe", () => {
   return { default: MockStripe };
 });
 
-vi.mock("@clerk/hono", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@clerk/hono")>();
-  return { ...actual, getAuth: vi.fn(() => ({ userId: "u1" })) };
-});
+vi.mock("../src/auth", () => import("./session"));
+import { mockSession } from "./session";
+mockSession(() => ({ id: "u1" }));
 
-vi.mock("../src/lib/clerk", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/lib/clerk")>();
-  return {
-    ...actual,
-    clerk: vi.fn(() => ({
-      users: { getUser: getUserMock, updateUserMetadata: updateUserMetadataMock },
-    })),
-  };
+vi.mock("../src/lib/user", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/lib/user")>();
+  return { ...actual, billingProfile: profileMock };
 });
 
 import { env } from "cloudflare:test";
@@ -59,12 +56,7 @@ describe("POST /billing/checkout", () => {
   });
 
   it("creates a checkout session and returns its url when there's no active subscription", async () => {
-    getUserMock.mockResolvedValue({
-      id: "u1",
-      privateMetadata: {},
-      emailAddresses: [{ id: "e1", emailAddress: "a@b.com" }],
-      primaryEmailAddressId: "e1",
-    });
+    profileMock.mockResolvedValue({ email: "a@b.com" });
     stripeMock.checkout.sessions.create.mockResolvedValue({
       url: "https://checkout.stripe.com/xyz",
     });
@@ -84,12 +76,7 @@ describe("POST /billing/checkout", () => {
   });
 
   it("sends the user back to the allowed origin they came from, else the first one", async () => {
-    getUserMock.mockResolvedValue({
-      id: "u1",
-      privateMetadata: {},
-      emailAddresses: [],
-      primaryEmailAddressId: null,
-    });
+    profileMock.mockResolvedValue({});
     stripeMock.checkout.sessions.create.mockResolvedValue({
       url: "https://checkout.stripe.com/xyz",
     });
@@ -104,12 +91,7 @@ describe("POST /billing/checkout", () => {
   });
 
   it("returns a billing-portal url instead when the user already has an active subscription", async () => {
-    getUserMock.mockResolvedValue({
-      id: "u1",
-      privateMetadata: { stripeCustomerId: "cus_1" },
-      emailAddresses: [],
-      primaryEmailAddressId: null,
-    });
+    profileMock.mockResolvedValue({ stripeCustomerId: "cus_1" });
     stripeMock.subscriptions.list.mockResolvedValue({ data: [{ id: "sub_1" }] });
     stripeMock.billingPortal.sessions.create.mockResolvedValue({
       url: "https://billing.stripe.com/p",
@@ -120,6 +102,17 @@ describe("POST /billing/checkout", () => {
     expect(await res.json()).toEqual({ url: "https://billing.stripe.com/p" });
     expect(stripeMock.checkout.sessions.create).not.toHaveBeenCalled();
   });
+
+  it("reuses the existing Stripe customer instead of creating a duplicate", async () => {
+    profileMock.mockResolvedValue({ email: "a@b.com", stripeCustomerId: "cus_1" });
+    stripeMock.subscriptions.list.mockResolvedValue({ data: [] });
+    stripeMock.checkout.sessions.create.mockResolvedValue({ url: "https://checkout.stripe.com/x" });
+
+    await post({ productName: "pro" });
+    const [arg] = stripeMock.checkout.sessions.create.mock.calls[0];
+    expect(arg).toMatchObject({ customer: "cus_1" });
+    expect(arg).not.toHaveProperty("customer_email");
+  });
 });
 
 describe("GET /billing/portal", () => {
@@ -128,23 +121,13 @@ describe("GET /billing/portal", () => {
   });
 
   it("400s when the user has no Stripe customer id", async () => {
-    getUserMock.mockResolvedValue({
-      id: "u1",
-      privateMetadata: {},
-      emailAddresses: [],
-      primaryEmailAddressId: null,
-    });
+    profileMock.mockResolvedValue({});
     const res = await app.request("/billing/portal", {}, env);
     expect(res.status).toBe(400);
   });
 
   it("returns a billing-portal url", async () => {
-    getUserMock.mockResolvedValue({
-      id: "u1",
-      privateMetadata: { stripeCustomerId: "cus_1" },
-      emailAddresses: [],
-      primaryEmailAddressId: null,
-    });
+    profileMock.mockResolvedValue({ stripeCustomerId: "cus_1" });
     stripeMock.billingPortal.sessions.create.mockResolvedValue({
       url: "https://billing.stripe.com/p",
     });
@@ -169,6 +152,29 @@ describe("CORS", () => {
     expect(
       (await preflight("https://evil.example")).headers.get("access-control-allow-origin"),
     ).toBeNull();
+  });
+
+  it("lets the session cookie through and exposes the bearer token header", async () => {
+    const res = await app.request(
+      "/auth/get-session",
+      {
+        method: "OPTIONS",
+        headers: {
+          Origin: "https://mewki.mxrqz.com",
+          "Access-Control-Request-Method": "GET",
+          "Access-Control-Request-Headers": "x-mewki-verifier",
+        },
+      },
+      env,
+    );
+    expect(res.headers.get("access-control-allow-credentials")).toBe("true");
+    expect(res.headers.get("access-control-allow-headers")).toContain("x-mewki-verifier");
+    const get = await app.request(
+      "/health",
+      { headers: { Origin: "https://mewki.mxrqz.com" } },
+      env,
+    );
+    expect(get.headers.get("access-control-expose-headers")).toContain("set-auth-token");
   });
 
   it("lets the browser cache the preflight", async () => {

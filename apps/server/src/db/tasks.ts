@@ -180,7 +180,7 @@ export async function deleteTask(db: D1Database, userId: string, id: string): Pr
   await db.prepare(`DELETE FROM tasks WHERE user_id=? AND id=?`).bind(userId, id).run();
 }
 
-/** Tudo que o usuário tem no D1 — chamado pelo webhook `user.deleted` do Clerk. */
+/** Tudo que o usuário tem no D1 — chamado pelo `afterDelete` da conta (auth-options.ts). */
 export async function deleteUserData(db: D1Database, userId: string): Promise<void> {
   await db.batch([
     db.prepare(`DELETE FROM tasks WHERE user_id=?`).bind(userId),

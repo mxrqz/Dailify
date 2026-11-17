@@ -13,10 +13,9 @@ vi.mock("../src/lib/push", async (importOriginal) => {
   return { ...actual, sendPush };
 });
 
-vi.mock("@clerk/hono", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@clerk/hono")>();
-  return { ...actual, getAuth: vi.fn(() => ({ userId: "pushuser" })) };
-});
+vi.mock("../src/auth", () => import("./session"));
+import { mockSession } from "./session";
+mockSession(() => ({ id: "pushuser" }));
 
 import { env } from "cloudflare:test";
 import { applyD1Migrations } from "cloudflare:test";

@@ -2,7 +2,6 @@ import { Hono, type Context } from "hono";
 import { nanoid } from "nanoid";
 import { IANAZone } from "luxon";
 import { TZDate } from "@date-fns/tz";
-import type { User } from "@clerk/backend";
 import {
   PROVIDER_IDS,
   TASK_LIMITS,
@@ -18,7 +17,7 @@ import {
 import type { Env } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
-import { clerk, getUserRole } from "../lib/clerk";
+import { getSettings } from "../db/settings";
 import { interpretText, transcribe } from "../lib/openai";
 import { insertTask } from "../db/tasks";
 import { enforce, enforceCreate } from "../db/limits";
@@ -28,19 +27,14 @@ import { fail } from "../lib/errors";
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
 
-const voice = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
-
-function readTimezone(user: User): string | undefined {
-  const tz = user.unsafeMetadata?.timezone;
-  return validZone(tz);
-}
+const voice = new Hono<{ Bindings: Env; Variables: { userId: string; plan: Role } }>();
 
 /** Fuso vindo do cliente: sempre presente (Intl), mas é entrada de usuário — validar antes de usar. */
 function validZone(value: unknown): string | undefined {
   return typeof value === "string" && IANAZone.isValidZone(value) ? value : undefined;
 }
 
-type Ctx = Context<{ Bindings: Env; Variables: { userId: string } }>;
+type Ctx = Context<{ Bindings: Env; Variables: { userId: string; plan: Role } }>;
 
 /** Barra antes de qualquer chamada à OpenAI. Bloqueado (limite 0) e esgotado: sem crédito, 403/429. */
 async function aiQuotaError(c: Ctx, role: Role): Promise<Response | null> {
@@ -85,10 +79,8 @@ voice.post("/parse", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const timezone = validZone(isRecord(body) ? body.timezone : undefined);
   if (!timezone) return fail(c, 400, "invalid timezone");
 
-  const [role, connections] = await Promise.all([
-    getUserRole(c.env, c.get("userId")),
-    listConnections(c.env.DB, c.get("userId")),
-  ]);
+  const role = c.get("plan");
+  const connections = await listConnections(c.env.DB, c.get("userId"));
   const quotaError = await aiQuotaError(c, role);
   if (quotaError) return quotaError;
   const allowed = PROVIDER_IDS.filter(
@@ -110,7 +102,7 @@ voice.post("/parse", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
 
 voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const userId = c.get("userId");
-  const quotaError = await aiQuotaError(c, await getUserRole(c.env, userId));
+  const quotaError = await aiQuotaError(c, c.get("plan"));
   if (quotaError) return quotaError;
 
   const body = await c.req.parseBody();
@@ -125,8 +117,8 @@ voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   if (audio.size > MAX_AUDIO_BYTES) return fail(c, 413, "Audio too large (max 512KB)");
   if (audio.type && !audio.type.startsWith("audio/")) return fail(c, 415, "Unsupported audio type");
 
-  const user = await clerk(c.env).users.getUser(userId);
-  const timezone = validZone(body["timezone"]) ?? readTimezone(user);
+  const timezone =
+    validZone(body["timezone"]) ?? validZone((await getSettings(c.env.DB, userId)).timeZone);
   if (!timezone) return fail(c, 400, "No timezone set");
 
   // Transcrição (+ leitura do GPT, se o parser local ficou em dúvida) = um crédito, debitado só
@@ -147,7 +139,7 @@ voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const tasks: Task[] = [];
   for (const draft of ai.drafts) {
     const task = draftToTask(draft, timezone, now);
-    const err = await enforceCreate(c.env, userId, task);
+    const err = await enforceCreate(c.env.DB, userId, c.get("plan"), task);
     if (err) return fail(c, 429, err);
 
     await insertTask(c.env.DB, userId, task);
