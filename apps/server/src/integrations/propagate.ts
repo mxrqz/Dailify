@@ -51,7 +51,7 @@ export async function propagate(
   env: Env,
   userId: string,
   links: StoredLink[],
-  before: Task,
+  before: Task | null,
   after: Task | null,
 ): Promise<void> {
   await Promise.all(

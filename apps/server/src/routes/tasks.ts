@@ -21,6 +21,7 @@ import { expandRecurringTask, type Task } from "@dailify/shared";
 import { parseClientId, parseNewTask, parseTaskFields } from "../lib/task-input";
 import { fail } from "../lib/errors";
 import { linkedTask, propagate } from "../integrations/propagate";
+import { linkInstance } from "../integrations/google-calendar";
 
 const tasks = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
 tasks.use("*", requireAuth);
@@ -98,17 +99,28 @@ tasks.patch("/:id", async (c) => {
   const linked = await linkedTask(c.env, userId, id);
 
   // ?occurrence=<epoch-ms> = "editar só esta": edita a instância daquele dia em vez da série.
-  // A série ganha o EXDATE no evento; a tarefa destacada nasce sem vínculo.
+  // Série na Agenda: a tarefa destacada vira a instância daquele dia (vínculo próprio + override),
+  // e a data fica fora do EXDATE do evento. Sem isso a ocorrência sumiria do Google.
   const occurrence = c.req.query("occurrence");
   if (occurrence !== undefined) {
     const at = Number(occurrence);
     if (!Number.isInteger(at)) return fail(c, 400, "invalid occurrence");
     const detached = await detachOccurrence(c.env.DB, userId, id, at, parsed.fields, nanoid(6));
     if (!detached) return fail(c, 404, "Recurring task not found");
-    if (linked)
-      c.executionCtx.waitUntil(
-        propagate(c.env, userId, linked.links, linked.before, detached.series),
+    if (linked) {
+      const ctx = { env: c.env, userId };
+      const instances = await Promise.all(
+        linked.links
+          .filter((l) => l.provider === "google-calendar" && l.timeZone)
+          .map((l) => linkInstance(ctx, l, linked.before, detached.task, at)),
       );
+      c.executionCtx.waitUntil(
+        Promise.all([
+          propagate(c.env, userId, linked.links, linked.before, detached.series),
+          propagate(c.env, userId, instances, null, detached.task),
+        ]),
+      );
+    }
     return c.json(detached); // { task, series }
   }
 

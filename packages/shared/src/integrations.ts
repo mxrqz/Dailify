@@ -100,24 +100,7 @@ export function isCalendarEventLink(url: string): boolean {
   return hostname === "www.google.com" && pathname === "/calendar/event";
 }
 
-/** Um evento do Google Agenda lido sob demanda (`GET …/events`): só pra mostrar, nunca guardado. */
-export interface ExternalEvent {
-  id: string;
-  /** "" quando o evento não tem título: o web troca pelo seu texto. */
-  title: string;
-  start: number;
-  /** Exclusivo; no dia inteiro é a meia-noite do dia seguinte, no fuso pedido. */
-  end: number;
-  allDay: boolean;
-  url: string;
-  meet?: string;
-  /** Criado (ou vinculado) pela Mewki: a tarefa já aparece, o evento não precisa. */
-  mewkiTaskId?: string;
-  /** Ocorrência de uma série do Google: vincular só uma ocorrência a uma tarefa não faz sentido. */
-  recurring?: boolean;
-}
-
-const MATCH_WINDOW = 15 * 60_000;
+const MATCH_WINDOW = 15;
 
 const normTitle = (s: string) =>
   s.normalize("NFD").replace(/\p{M}/gu, "").toLowerCase().replace(/\s+/g, " ").trim();
@@ -126,39 +109,44 @@ const normUrl = (url: string) => {
   const { hostname, pathname } = new URL(url);
   return `${hostname}${pathname.replace(/\/$/, "")}`.toLowerCase();
 };
+const sameRule = (a: Task, b: Task) =>
+  (a.repeatEvery ?? 1) === (b.repeatEvery ?? 1) &&
+  (typeof a.repeat === "object" && typeof b.repeat === "object"
+    ? [...a.repeat.Weekly].sort().join() === [...b.repeat.Weekly].sort().join()
+    : a.repeat === b.repeat);
 
 /**
- * O evento do Google que parece ser esta tarefa (o "Vincular" do dedupe): o mesmo Meet, ou o mesmo
- * título (sem acento/caixa) começando até 15 min de distância. `events` = os da janela que o
- * chamador mostra (o dia). Tarefa já vinculada, recorrente ou Sem data não entra; evento da Mewki
- * ou ocorrência de série também não.
+ * A tarefa própria que parece ser esta importada da Agenda (o par que o web oferece juntar): o
+ * mesmo Meet, ou o mesmo título (sem acento/caixa) começando até 15 min de distância. Série casa
+ * com série da mesma regra pela hora de parede no fuso (a 1ª ocorrência de cada uma pode ser outro
+ * dia). Tarefa já vinculada (com o link de um evento) ou Sem data só casa pelo Meet.
  */
-export function matchExternalEvent(task: Task, events: ExternalEvent[]): ExternalEvent | undefined {
-  if (task.undated || task.repeat !== "Off" || task.links?.some(isCalendarEventLink)) return;
-  const meet = videoLink(task.links);
-  const title = normTitle(task.title);
-  return events.find(
-    (e) =>
-      !e.mewkiTaskId &&
-      !e.recurring &&
-      ((meet !== undefined && e.meet !== undefined && normUrl(meet) === normUrl(e.meet)) ||
-        (!e.allDay &&
-          title !== "" &&
-          normTitle(e.title) === title &&
-          Math.abs(e.start - task.date) <= MATCH_WINDOW)),
-  );
+export function matchDuplicate(imported: Task, own: Task[], timeZone: string): Task | undefined {
+  const meet = videoLink(imported.links);
+  const title = normTitle(imported.title);
+  const minutes = (ms: number) => {
+    const p = zonedParts(ms, timeZone);
+    return p.hour * 60 + p.minute;
+  };
+  const near = (t: Task) => {
+    if (imported.repeat === "Off") return Math.abs(t.date - imported.date) <= MATCH_WINDOW * 60_000;
+    const diff = Math.abs(minutes(t.date) - minutes(imported.date));
+    return sameRule(t, imported) && Math.min(diff, 1440 - diff) <= MATCH_WINDOW;
+  };
+  return own.find((t) => {
+    if (t.id === imported.id || t.links?.some(isCalendarEventLink)) return false;
+    const theirs = videoLink(t.links);
+    if (meet && theirs && normUrl(meet) === normUrl(theirs)) return true;
+    return (
+      title !== "" &&
+      !t.undated &&
+      !imported.undated &&
+      (t.repeat === "Off") === (imported.repeat === "Off") &&
+      normTitle(t.title) === title &&
+      near(t)
+    );
+  });
 }
-
-/**
- * A tarefa própria que parece ser esta importada da Agenda (o par que o web oferece juntar). A
- * regra — mesmo Meet, ou mesmo título ±15 min; série também com a mesma regra e hora de parede no
- * fuso — chega na Fase 1B do sync; até lá nada é duplicata.
- */
-export const matchDuplicate: (
-  imported: Task,
-  own: Task[],
-  timeZone: string,
-) => Task | undefined = () => undefined;
 
 const WEEKDAYS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 const list = (items: string[]) =>

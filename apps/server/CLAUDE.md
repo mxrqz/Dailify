@@ -13,8 +13,8 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
   `push.ts` (VAPID key + subscriptions), `clerk-webhook.ts` (`user.deleted` → wipe),
   `integrations.ts` (`GET /integrations`, `POST /:p/connect`, `POST /:p/callback`, `DELETE /:p`,
   `POST /integrations/google-calendar/events` = a action `create-event`, `POST …/events/:taskId/sync`
-  = o retry do "não sincronizado", `GET …/events?from&to&tz` = leitura sob demanda da janela (≤62
-  dias, nada guardado), `POST …/links` = "Vincular" tarefa a evento existente).
+  = o retry do "não sincronizado", `POST …/duplicates/:importedId {action: merge|keep}` = resolve
+  o par de duplicata; o callback espera o import inicial (`syncCalendar`) e devolve `imported`).
 - **`src/integrations/`** — providers externos (epic `zpq`): `types.ts` (`Provider`, `Ctx`),
   `oauth.ts` (code + PKCE em fetch puro, `InvalidGrantError`), `crypto.ts` (AES-GCM dos tokens),
   `connection.ts` (`loadCtx`/`makeCtx`: bearer + refresh preguiçoso, revogação best-effort),
@@ -96,8 +96,11 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
   `propagate` (`integrations/propagate.ts`) no `waitUntil` → `Provider.onTaskChanged`. Só chama o
   Google se o evento remontado (no `time_zone` do vínculo) mudou; sem dia ou apagada = delete +
   vínculo e `url` saem. Concluir não propaga. Falha = `stale` (o web oferece reenviar), nunca
-  derruba a escrita da tarefa. **Vincular (F7)**: só marca o `mewkiTaskId` no evento e grava o vínculo; o
-  evento fica como está até a próxima edição da tarefa, que o sobrescreve (título, horário, descrição). Teste de rota que toca vínculo passa `createExecutionContext()`.
+  derruba a escrita da tarefa. O PATCH leva só as chaves que mudaram; evento que a Mewki não criou
+  (id ≠ `eventId(taskId)`) só recebe summary/start/end/recurrence, convite `readonly` nenhum PATCH.
+  "Editar só esta" numa série vinculada liga a tarefa solta à instância (`${master}_<início UTC>`) e
+  faz override dela; o EXDATE da série pula as datas com instância vinculada. Desconectar ou trocar
+  de conta tira os vínculos, nunca as tarefas (importadas viram comuns). Teste de rota que toca vínculo passa `createExecutionContext()`.
 - **Stripe webhook** needs the **raw body** for signature verification — keep it off any body
   parser and verify async (`constructEventAsync`).
 

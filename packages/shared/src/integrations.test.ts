@@ -7,10 +7,9 @@ import {
   minutesToDuration,
   isCalendarEventLink,
   isProviderId,
-  matchExternalEvent,
+  matchDuplicate,
   PROVIDER_IDS,
   videoLink,
-  type ExternalEvent,
 } from "./integrations";
 import { zonedEpoch } from "./timezone";
 import type { Task } from "./types";
@@ -114,40 +113,44 @@ describe("calendário", () => {
   });
 });
 
-describe("matchExternalEvent", () => {
-  const ev = (over: Partial<ExternalEvent> = {}): ExternalEvent => ({
-    id: "g1",
-    title: "Reunião com o time",
-    start: at(16, 15),
-    end: at(16, 16),
-    allDay: false,
-    url: "https://www.google.com/calendar/event?eid=g1",
-    ...over,
-  });
-  const t = (over: Partial<Task> = {}) => task({ title: "reuniao  com o TIME", ...over });
+describe("matchDuplicate", () => {
+  const imp = (over: Partial<Task> = {}) =>
+    task({ id: "imp", title: "Reunião com o time", links: [HTML], ...over });
+  const own = (over: Partial<Task> = {}) => task({ title: "reuniao  com o TIME", ...over });
+  const HTML = "https://www.google.com/calendar/event?eid=g1";
 
   it("mesmo título normalizado e início até 15 min", () => {
-    expect(matchExternalEvent(t({ date: at(16, 15, 15) }), [ev()])?.id).toBe("g1");
-    expect(matchExternalEvent(t({ date: at(16, 15, 16) }), [ev()])).toBeUndefined();
-    expect(matchExternalEvent(t({ title: "Outra" }), [ev()])).toBeUndefined();
-    expect(matchExternalEvent(t(), [ev({ allDay: true })])).toBeUndefined();
+    expect(matchDuplicate(imp(), [own({ date: at(16, 15, 15) })], TZ)?.id).toBe("t1");
+    expect(matchDuplicate(imp(), [own({ date: at(16, 15, 16) })], TZ)).toBeUndefined();
+    expect(matchDuplicate(imp(), [own({ title: "Outra" })], TZ)).toBeUndefined();
   });
 
   it("mesmo Meet casa em qualquer horário e título; querystring não importa", () => {
     const meet = "https://meet.google.com/abc-defg-hij";
-    const hit = t({ title: "x", date: at(16, 9), links: [`${meet}?authuser=0`] });
-    expect(matchExternalEvent(hit, [ev({ title: "y", meet })])?.id).toBe("g1");
-    expect(matchExternalEvent(hit, [ev({ title: "y", meet: "https://meet.google.com/zzz" })])).toBe(
-      undefined,
-    );
+    const hit = own({ title: "x", date: at(16, 9), links: [`${meet}?authuser=0`] });
+    expect(matchDuplicate(imp({ title: "y", links: [HTML, meet] }), [hit], TZ)?.id).toBe("t1");
+    const other = imp({ title: "y", links: [HTML, "https://meet.google.com/zzz"] });
+    expect(matchDuplicate(other, [hit], TZ)).toBeUndefined();
   });
 
-  it("não sugere pra tarefa vinculada, recorrente ou Sem data, nem evento da Mewki ou de série", () => {
-    const linked = t({ links: ["https://www.google.com/calendar/event?eid=z"] });
-    expect(matchExternalEvent(linked, [ev()])).toBeUndefined();
-    expect(matchExternalEvent(t({ repeat: "Daily" }), [ev()])).toBeUndefined();
-    expect(matchExternalEvent(t({ undated: true }), [ev()])).toBeUndefined();
-    expect(matchExternalEvent(t(), [ev({ mewkiTaskId: "t1" })])).toBeUndefined();
-    expect(matchExternalEvent(t(), [ev({ recurring: true })])).toBeUndefined();
+  it("série (Psico): mesmo título, toda terça, mesma hora de parede ±15 min", () => {
+    const weekly = { repeat: { Weekly: ["Tuesday"] }, title: "Psico" };
+    // A importada começa numa terça de outubro; a própria, semanas depois — a hora é que conta.
+    const g = imp({ ...weekly, date: at(17, 10) - 35 * 86_400_000 });
+    expect(matchDuplicate(g, [own({ ...weekly, date: at(17, 10, 10) })], TZ)?.id).toBe("t1");
+    expect(matchDuplicate(g, [own({ ...weekly, date: at(17, 10, 20) })], TZ)).toBeUndefined();
+    expect(matchDuplicate(g, [own({ ...weekly, repeat: "Daily", date: at(17, 10) })], TZ)).toBe(
+      undefined,
+    );
+    expect(
+      matchDuplicate(g, [own({ ...weekly, repeatEvery: 2, date: at(17, 10) })], TZ),
+    ).toBeUndefined();
+    expect(matchDuplicate(g, [own({ title: "Psico", date: at(17, 10) })], TZ)).toBeUndefined();
+  });
+
+  it("não casa com tarefa já vinculada, Sem data, nem com ela mesma", () => {
+    expect(matchDuplicate(imp(), [own({ links: [HTML] })], TZ)).toBeUndefined();
+    expect(matchDuplicate(imp(), [own({ undated: true })], TZ)).toBeUndefined();
+    expect(matchDuplicate(imp(), [imp()], TZ)).toBeUndefined();
   });
 });

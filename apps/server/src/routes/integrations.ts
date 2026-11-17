@@ -21,9 +21,13 @@ import {
   deleteConnection,
   getConnection,
   insertState,
+  keepDuplicate,
   listConnections,
+  listDuplicates,
+  listReadonly,
   listStale,
   listTaskLinks,
+  mergeDuplicate,
   upsertConnection,
   type ConnectionRow,
 } from "../db/integrations";
@@ -39,7 +43,8 @@ import {
 import { loadCtx, makeCtx, revokeSealed, sealTokens } from "../integrations/connection";
 import { pushLink } from "../integrations/propagate";
 import { getTask } from "../db/tasks";
-import { createEvent, linkEvent, listEvents } from "../integrations/google-calendar";
+import { createEvent } from "../integrations/google-calendar";
+import { syncCalendar } from "../integrations/google-calendar/sync";
 import { ActionError, type Ctx as ProviderCtx } from "../integrations/types";
 
 type Ctx = Context<{ Bindings: Env; Variables: { userId: string } }>;
@@ -60,7 +65,7 @@ function statusOf(
   id: ProviderId,
   allowed: boolean,
   row?: ConnectionRow | null,
-  stale: string[] = [],
+  flags: Pick<IntegrationStatus, "stale" | "duplicates" | "readonly"> = {},
 ): IntegrationStatus {
   const configured = Boolean(PROVIDERS[id].oauth.credentials(env).id);
   if (!row) return { provider: id, allowed, configured, connected: false };
@@ -71,16 +76,20 @@ function statusOf(
     connected: true,
     status: row.status === "revoked" ? "revoked" : "active",
     account: row.account_email ?? undefined,
-    ...(stale.length && { stale }),
+    ...(flags.stale?.length && { stale: flags.stale }),
+    ...(flags.duplicates?.length && { duplicates: flags.duplicates }),
+    ...(flags.readonly?.length && { readonly: flags.readonly }),
   };
 }
 
 integrations.get("/integrations", async (c) => {
   const userId = c.get("userId");
-  const [role, rows, stale] = await Promise.all([
+  const [role, rows, stale, duplicates, readonly] = await Promise.all([
     getUserRole(c.env, userId),
     listConnections(c.env.DB, userId),
     listStale(c.env.DB, userId),
+    listDuplicates(c.env.DB, userId),
+    listReadonly(c.env.DB, userId),
   ]);
   return c.json(
     PROVIDER_IDS.map((id) =>
@@ -89,7 +98,13 @@ integrations.get("/integrations", async (c) => {
         id,
         canUseIntegration(role, id),
         rows.find((r) => r.provider === id),
-        stale.filter((s) => s.provider === id).map((s) => s.task_id),
+        {
+          stale: stale.filter((s) => s.provider === id).map((s) => s.task_id),
+          duplicates: duplicates
+            .filter((d) => d.provider === id)
+            .map((d) => ({ taskId: d.duplicate_of, importedId: d.task_id })),
+          readonly: readonly.filter((r) => r.provider === id).map((r) => r.task_id),
+        },
       ),
     ),
   );
@@ -166,7 +181,18 @@ integrations.post("/integrations/:provider/callback", async (c) => {
     },
     Date.now(),
   );
-  return c.json(statusOf(c.env, id, true, await getConnection(c.env.DB, userId, id)));
+  // O import inicial entra na resposta: o web recarrega os meses com as tarefas novas. Falhar aqui
+  // não desfaz a conexão — o cron e o próximo GET /tasks tentam de novo.
+  let imported = 0;
+  try {
+    ({ imported } = await syncCalendar(c.env, userId));
+  } catch (err) {
+    console.error(`Falha no import inicial de ${id}`, err);
+  }
+  return c.json({
+    ...statusOf(c.env, id, true, await getConnection(c.env.DB, userId, id)),
+    imported,
+  });
 });
 
 const RECONNECT = "Reconecte a Agenda para continuar";
@@ -189,38 +215,27 @@ async function withCalendar(c: Ctx, run: (ctx: ProviderCtx) => Promise<unknown>)
   }
 }
 
-const field = (body: unknown, key: string): unknown =>
-  typeof body === "object" && body !== null ? Reflect.get(body, key) : undefined;
-
 integrations.post("/integrations/google-calendar/events", async (c) => {
   const parsed = createEvent.parse(await c.req.json().catch(() => null));
   if ("error" in parsed) return fail(c, 400, parsed.error);
   return withCalendar(c, (ctx) => createEvent.run(ctx, parsed.input));
 });
 
-// Leitura sob demanda da janela visível (0xp.8): nada é guardado, a janela passa de 62 dias cortada.
-integrations.get("/integrations/google-calendar/events", async (c) => {
-  const from = Number(c.req.query("from"));
-  const to = Number(c.req.query("to"));
-  const timeZone = c.req.query("tz") ?? "";
-  if (!Number.isSafeInteger(from) || !Number.isSafeInteger(to) || to <= from)
-    return fail(c, 400, "Janela inválida");
-  if (!IANAZone.isValidZone(timeZone)) return fail(c, 400, "Fuso inválido");
-  return withCalendar(c, async (ctx) => ({
-    events: await listEvents(ctx, { from, to, timeZone }),
-  }));
-});
-
-integrations.post("/integrations/google-calendar/links", async (c) => {
+// O par da duplicata (`duplicates` do GET): "merge" junta na tarefa própria, "keep" mantém as duas.
+// Só D1, nada no Google — por isso sem gate de plano nem conexão, como o desconectar.
+integrations.post("/integrations/google-calendar/duplicates/:importedId", async (c) => {
   const body: unknown = await c.req.json().catch(() => null);
-  const taskId = field(body, "taskId");
-  const eventId = field(body, "eventId");
-  const timeZone = field(body, "timezone");
-  if (typeof taskId !== "string" || !taskId || typeof eventId !== "string" || !eventId)
-    return fail(c, 400, "taskId e eventId são obrigatórios");
-  if (typeof timeZone !== "string" || !IANAZone.isValidZone(timeZone))
-    return fail(c, 400, "Fuso inválido");
-  return withCalendar(c, (ctx) => linkEvent(ctx, { taskId, eventId, timeZone }));
+  const action = typeof body === "object" && body !== null ? Reflect.get(body, "action") : null;
+  if (action !== "merge" && action !== "keep") return fail(c, 400, "action inválida");
+  const userId = c.get("userId");
+  const importedId = c.req.param("importedId");
+  if (action === "keep")
+    return (await keepDuplicate(c.env.DB, userId, "google-calendar", importedId))
+      ? c.body(null, 204)
+      : fail(c, 404, "Duplicata não encontrada");
+  const task = await mergeDuplicate(c.env.DB, userId, "google-calendar", importedId);
+  if (!task) return fail(c, 404, "Duplicata não encontrada");
+  return c.json({ task, removedId: importedId });
 });
 
 // O retry do "não sincronizado": reenvia agora, sem comparar, no fuso que o aparelho mandar.
@@ -254,7 +269,8 @@ integrations.post("/integrations/google-calendar/events/:taskId/sync", async (c)
   return c.json({ task: await getTask(c.env.DB, userId, taskId) });
 });
 
-// Sem gate de plano: quem perdeu o plano ainda precisa conseguir desconectar.
+// Sem gate de plano: quem perdeu o plano ainda precisa conseguir desconectar. As tarefas ficam,
+// inclusive as importadas: só os vínculos (e o syncToken, com a conexão) saem.
 integrations.delete("/integrations/:provider", async (c) => {
   const id = c.req.param("provider");
   if (!isProviderId(id)) return fail(c, 404, "Integração desconhecida");

@@ -29,6 +29,8 @@ const at = (day: number, hour: number) =>
   zonedEpoch({ year: 2026, month: 10, day, hour, minute: 0, second: 0 }, TZ);
 const HTML = google.event.htmlLink;
 
+const UPDATED = "2026-11-16T15:00:00.123Z";
+
 let tid: string;
 let calls: { url: string; method: string; body: string }[];
 let google404 = false;
@@ -52,7 +54,9 @@ beforeEach(() => {
     if (!url.startsWith(`${google.EVENTS}/`)) throw new Error(`fetch não mockado: ${url}`);
     if (google404) return Response.json({}, { status: 404 });
     if (googleStatus !== 200) return Response.json({}, { status: googleStatus });
-    return init?.method === "DELETE" ? new Response(null, { status: 204 }) : Response.json({});
+    return init?.method === "DELETE"
+      ? new Response(null, { status: 204 })
+      : Response.json({ updated: UPDATED });
   });
 });
 
@@ -70,7 +74,10 @@ const base = (over: Partial<Task> = {}): Task => ({
   ...over,
 });
 
-async function seed(over: Partial<Task> = {}, opts: { linked?: boolean; expired?: boolean } = {}) {
+async function seed(
+  over: Partial<Task> = {},
+  opts: { linked?: boolean; expired?: boolean; external?: string; readonly?: boolean } = {},
+) {
   const tokens = await sealTokens(env, userId, "google-calendar", {
     accessToken: "ya29.ok",
     refreshToken: "1//refresh-1",
@@ -89,9 +96,15 @@ async function seed(over: Partial<Task> = {}, opts: { linked?: boolean; expired?
     await upsertLink(
       env.DB,
       userId,
-      { provider: "google-calendar", taskId: tid, externalId: eventId(tid), url: HTML },
+      {
+        provider: "google-calendar",
+        taskId: tid,
+        externalId: opts.external ?? eventId(tid),
+        url: HTML,
+      },
       TZ,
       Date.now(),
+      { readonly: opts.readonly },
     );
 }
 
@@ -112,22 +125,53 @@ const patch = (body: unknown, query = "") =>
 const remove = (query = "") => send(`/tasks/${tid}${query}`, { method: "DELETE" });
 const link = async () => (await listTaskLinks(env.DB, userId, tid))[0];
 const googleCalls = () => calls.filter((c) => c.url.startsWith(google.EVENTS));
+const bodyOf = (i = 0) => JSON.parse(googleCalls()[i].body);
+const remoteUpdated = async (taskId = tid) =>
+  (
+    await env.DB.prepare(
+      `SELECT remote_updated FROM integration_links WHERE user_id=? AND task_id=?`,
+    )
+      .bind(userId, taskId)
+      .first<{ remote_updated: number | null }>()
+  )?.remote_updated;
 
 describe("propagação de tarefa vinculada", () => {
-  it("PATCH muda o evento: events.patch com o evento remontado", async () => {
+  it("evento criado pela Mewki: PATCH só com o que mudou, e o `updated` vira remote_updated", async () => {
     await seed();
     const res = await patch({ title: "Dentista", date: at(17, 14), duration: "1h" });
     expect(res.status).toBe(200);
     const [call] = googleCalls();
     expect(call.method).toBe("PATCH");
     expect(call.url).toBe(`${google.EVENTS}/${eventId(tid)}`);
-    expect(JSON.parse(call.body)).toMatchObject({
+    expect(JSON.parse(call.body)).toEqual({
       summary: "Dentista",
       start: { date: null, dateTime: "2026-11-17T14:00:00", timeZone: TZ },
-      end: { dateTime: "2026-11-17T15:00:00" },
-      recurrence: null,
+      end: { date: null, dateTime: "2026-11-17T15:00:00", timeZone: TZ },
     });
     expect((await link()).stale).toBe(false);
+    expect(await remoteUpdated()).toBe(Date.parse(UPDATED));
+
+    calls = [];
+    await patch({ links: [HTML, "https://x.com/doc"] });
+    expect(bodyOf()).toEqual({ description: "Criado pela Mewki\nhttps://x.com/doc" });
+  });
+
+  it("evento vinculado (não criado pela Mewki): nunca description/location/extendedProperties", async () => {
+    await seed({}, { external: "ev1" });
+    await patch({ title: "Dentista", links: [HTML, "https://meet.google.com/abc-defg-hij"] });
+    expect(googleCalls()[0].url).toBe(`${google.EVENTS}/ev1`);
+    expect(bodyOf()).toEqual({ summary: "Dentista" });
+
+    // Só link mudou: nada que seja nosso mudou no evento, nem chama o Google.
+    calls = [];
+    await patch({ links: [HTML, "https://x.com/doc"] });
+    expect(googleCalls()).toHaveLength(0);
+  });
+
+  it("convite readonly: a edição fica na Mewki, nenhum PATCH", async () => {
+    await seed({}, { external: "ev1", readonly: true });
+    expect((await patch({ title: "Outro", date: at(17, 9) })).status).toBe(200);
+    expect(googleCalls()).toHaveLength(0);
   });
 
   it("campo que não vai pro evento (prioridade) não chama o Google", async () => {
@@ -156,22 +200,48 @@ describe("propagação de tarefa vinculada", () => {
     expect(await link()).toBeUndefined();
   });
 
-  it("só esta ocorrência: a série ganha o EXDATE", async () => {
+  it("excluir só esta ocorrência: a série ganha o EXDATE", async () => {
     await seed({ repeat: "Daily" });
     const res = await remove(`?occurrence=${at(18, 10)}`);
     expect(res.status).toBe(200);
     const [call] = googleCalls();
     expect(call.method).toBe("PATCH");
-    expect(JSON.parse(call.body).recurrence).toEqual([
-      "RRULE:FREQ=DAILY",
-      `EXDATE;TZID=${TZ}:20261118T100000`,
-    ]);
+    expect(JSON.parse(call.body)).toEqual({
+      recurrence: ["RRULE:FREQ=DAILY", `EXDATE;TZID=${TZ}:20261118T100000`],
+    });
+  });
 
+  it("editar só esta: a solta vira a instância no Google (PATCH dela), sem EXDATE na série", async () => {
+    await seed({ repeat: "Daily" }, { external: "ser1" });
+    const res = await patch({ title: "Só hoje", date: at(19, 11) }, `?occurrence=${at(19, 10)}`);
+    expect(res.status).toBe(200);
+    const { task } = await res.json<{ task: Task }>();
+
+    // 10:00 em São Paulo = 13:00Z: o id da instância é o início original em UTC.
+    const instance = "ser1_20261119T130000Z";
+    expect(googleCalls().map((c) => [c.method, c.url])).toEqual([
+      ["PATCH", `${google.EVENTS}/${instance}`],
+    ]);
+    expect(bodyOf()).toEqual({
+      summary: "Só hoje",
+      start: { date: null, dateTime: "2026-11-19T11:00:00", timeZone: TZ },
+      end: { date: null, dateTime: "2026-11-19T11:30:00", timeZone: TZ },
+    });
+    expect(await listTaskLinks(env.DB, userId, task.id)).toEqual([
+      expect.objectContaining({ externalId: instance, timeZone: TZ, readonly: false }),
+    ]);
+    expect(await remoteUpdated(task.id)).toBe(Date.parse(UPDATED));
+
+    // Excluir outro dia: o EXDATE da série leva só ele, a instância vinculada fica de fora.
     calls = [];
-    await patch({ title: "Só hoje" }, `?occurrence=${at(19, 10)}`);
-    expect(JSON.parse(googleCalls()[0].body).recurrence[1]).toBe(
-      `EXDATE;TZID=${TZ}:20261118T100000,20261119T100000`,
-    );
+    await remove(`?occurrence=${at(20, 10)}`);
+    expect(bodyOf().recurrence).toEqual(["RRULE:FREQ=DAILY", `EXDATE;TZID=${TZ}:20261120T100000`]);
+
+    // Editar a solta depois PATCHa a instância de novo.
+    calls = [];
+    await send(`/tasks/${task.id}`, { method: "PATCH", body: JSON.stringify({ title: "Mudou" }) });
+    expect(googleCalls()[0].url).toBe(`${google.EVENTS}/${instance}`);
+    expect(bodyOf()).toEqual({ summary: "Mudou" });
   });
 
   it("Sem data sem lembrete: o evento sai, o vínculo e o endereço também", async () => {
@@ -211,8 +281,23 @@ describe("propagação de tarefa vinculada", () => {
     calls = [];
     const res = await sync();
     expect(res.status).toBe(200);
-    expect(JSON.parse(googleCalls()[0].body).summary).toBe("Novo");
+    // Reenvio de evento criado pela Mewki: o corpo todo.
+    expect(bodyOf()).toMatchObject({
+      summary: "Novo",
+      description: "Criado pela Mewki",
+      extendedProperties: { private: { mewkiTaskId: tid } },
+    });
     expect((await link()).stale).toBe(false);
+  });
+
+  it("reenvio de evento vinculado: só título, horário e regra", async () => {
+    await seed({}, { external: "ev1" });
+    const res = await send(`/integrations/google-calendar/events/${tid}/sync`, {
+      method: "POST",
+      body: JSON.stringify({ timezone: TZ }),
+    });
+    expect(res.status).toBe(200);
+    expect(Object.keys(bodyOf()).sort()).toEqual(["end", "recurrence", "start", "summary"]);
   });
 
   it("sync grava o fuso do aparelho no vínculo que não tinha", async () => {

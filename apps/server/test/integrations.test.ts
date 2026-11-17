@@ -170,6 +170,7 @@ describe("POST /integrations/:provider/callback", () => {
       connected: true,
       status: "active",
       account: "pessoa@gmail.com",
+      imported: 0,
     });
     const body = new URLSearchParams(callsTo(TOKEN)[0].body);
     expect(body.get("grant_type")).toBe("authorization_code");
