@@ -24,7 +24,7 @@ type Armed = "complete" | "delete" | null;
 
 /** Alpha da cor, não uma mistura sólida: o painel fica ATRÁS do cartão, e translúcido é o que lê
  *  como "atrás" — verde é concluir, vermelho é excluir, e a diferença tem que ser óbvia no gesto. */
-const panelClass = "flex w-full shrink-0 items-center rounded-lg transition-colors";
+const panelClass = "flex w-full shrink-0 items-center rounded-md transition-colors";
 
 /**
  * Arrastar o cartão pro lado no toque: pra direita conclui, pra esquerda exclui. É o que substitui

@@ -8,6 +8,8 @@ import { DayList } from "./day-list";
 const dailify = vi.hoisted((): { current: Record<string, unknown> } => ({ current: {} }));
 vi.mock("@/components/dailifyContext", () => ({ useDailify: () => dailify.current }));
 vi.mock("@/hooks/useExternalEvents", () => ({ useExternalEvents: () => [] }));
+// A Mew do primeiro uso observa a própria visibilidade: sairia no lugar da sentinela.
+vi.mock("@/components/mew/mew", () => ({ Mew: () => null }));
 vi.mock("@/components/dashboard/day-section", () => ({
   DaySection: () => <section />,
   TaskSkeletons: () => <div data-testid="skeleton" />,
@@ -53,7 +55,7 @@ describe("<DayList>", () => {
     const { now } = setup();
     const { container } = render(<DayList />);
 
-    const sentinel = container.querySelector("[aria-hidden]");
+    const sentinel = container.querySelector("div[aria-hidden]");
     expect(sentinel).toBeEmptyDOMElement();
     fire?.();
     expect(loadMonth).toHaveBeenCalledWith(startOfMonth(addMonths(now, 2)));

@@ -44,8 +44,7 @@ orquestrador) builda stories e tira screenshot a 390px nos dois temas.
 Single source of truth via `useDailify()`: `tasks`, `selectedDay`, `targetDay`, `loadedMonths`,
 `loadMonth`, `reloadMonths`, `goToDay`, `quotas`, `invoices`, `paymentDetails`, `undatedTasks`,
 `weekStart`, and their setters. Keep per-frame UI state OUT of this context: every consumer
-re-renders (the whole Home, measuring every swipe row) — the docked week strip flags
-`data-strip-docked` on `<html>` instead, and `AppHeader` reacts with `in-data-strip-docked:`.
+re-renders (the whole Home, measuring every swipe row).
 
 - **`protected-route.tsx`** is where it all loads: gates on Clerk (`isLoaded`/`userId`), then
   `getTasks()`: flushes the offline queue, then `reloadMonths` (context) for today, next month and
@@ -59,8 +58,12 @@ re-renders (the whole Home, measuring every swipe row) — the docked week strip
 - **`dashboard/day-list.tsx`** is the continuous list: one `DaySection` per day with tasks (via
   `listDays`) up to the contiguous run of `loadedMonths`; a sentinel asks for the next month. The
   skeleton shows only at boot (`isLoading && !tasks`) — revalidation keeps the list and its scroll.
-  `day-section.tsx`, `week-strip.tsx` read `tasks` per day with `getTasksForDay`. All read from the
-  shared array — so any write must update it.
+  `day-section.tsx`, `week-strip.tsx`, `month-calendar.tsx` read `tasks` per day with
+  `getTasksForDay`. Each splits a presentational piece (props → markup, for the preview harness)
+  from the container: `WeekDays`/`WeekStrip`, `MonthGrid`/`MonthCalendar`, `TaskRow`/`DayTaskRow`
+  (touch only — desktop keeps `TaskCard` with chip editing), `AnytimeCard`+`AnytimeItem`/`AnytimeBlock`.
+  The month opens from the bar's calendar icon as `/dashboard?view=calendar` (device back closes
+  it). All read from the shared array — so any write must update it.
 
 ## Writes are optimistic against the shared array
 

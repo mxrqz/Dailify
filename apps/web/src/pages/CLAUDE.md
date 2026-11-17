@@ -10,7 +10,7 @@ stay out of the dashboard entry). A new page gets a `lazy()` import too, unless 
 | Path                               | Page                       | Notes                                                                                                         |
 | ---------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------- |
 | `/`                                | `landingPage.tsx`          | public marketing page                                                                                         |
-| `/dashboard`                       | `home.tsx`                 | **protected**; the app (task list + calendar, toggled by `isCalendar`)                                        |
+| `/dashboard`                       | `home.tsx`                 | **protected**; the app (Hoje list + month calendar, `?view=calendar`)                                         |
 | `/profile`                         | `profile.tsx`              | **protected**; personal data, photo, phone, timezone                                                          |
 | `/security`                        | `security.tsx`             | **protected**; active sessions and account security                                                           |
 | `/billing`                         | `billing.tsx`              | **protected**; plan, usage, invoices. Free sees usage + CTA                                                   |

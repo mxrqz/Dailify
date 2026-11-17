@@ -28,13 +28,13 @@ export function periodStarts(
 }
 
 /**
- * Uma bolinha por período desde a criação: cheia (verde) se houve conclusão nele, a atual com anel.
- * Não há `createdAt` no modelo: a origem é a data da tarefa ou a conclusão mais antiga.
+ * Um quadradinho por período desde a criação: cheio se houve conclusão nele. Não há `createdAt` no
+ * modelo: a origem é a data da tarefa ou a conclusão mais antiga.
  */
 export function CheckHistory({
   task,
   weekStart,
-  periods = 12,
+  periods = 7,
 }: {
   task: Task;
   weekStart: WeekStart;
@@ -64,17 +64,13 @@ export function CheckHistory({
     .replace("{unit}", copy.undated[`unit${periodKind(task.repeat)}`]);
 
   return (
-    <span role="img" aria-label={label} className="flex items-center gap-1">
+    <span role="img" aria-label={label} className="ml-1 flex items-center gap-0.75">
+      {/* ponytail: quadrado reto; o spec pede raio de 2px, que não tem token (--radius-2xs). */}
       {filled.map((full, i) => (
         <i
           key={starts[i]}
           data-filled={full}
-          className={cn(
-            "size-1.5 rounded-full",
-            full ? "bg-success" : "bg-surface-line",
-            i === starts.length - 1 &&
-              "ring-1 ring-highlight ring-offset-1 ring-offset-surface-card",
-          )}
+          className={cn("size-1.5", full ? "bg-ink-secondary" : "bg-fill-pressed")}
         />
       ))}
     </span>
