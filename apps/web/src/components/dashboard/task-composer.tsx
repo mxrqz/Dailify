@@ -1,29 +1,7 @@
-import {
-  FormEvent,
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type ReactNode,
-  type SyntheticEvent,
-} from "react";
-import { Link } from "react-router-dom";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import {
-  ArrowUpIcon,
-  BellIcon,
-  CalendarIcon,
-  ClockIcon,
-  LinkIcon,
-  Loader2Icon,
-  MicIcon,
-  RepeatIcon,
-  SquareIcon,
-  XIcon,
-} from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
-
+import { BellIcon, CalendarIcon, ClockIcon, LinkIcon, Loader2Icon, RepeatIcon } from "lucide-react";
 import {
   DEFAULT_DURATION,
   DEFAULT_HOUR,
@@ -34,28 +12,42 @@ import {
   type Field,
   type ParsedTask,
   type Span,
+  videoLink,
 } from "@dailify/shared";
 
-import { CalendarChip, useCalendarChip } from "@/components/dashboard/calendar-chip";
+import {
+  CalendarChip,
+  CalendarToggle,
+  useCalendarChip,
+} from "@/components/dashboard/calendar-chip";
+import {
+  ChipStrip,
+  ComposerActions,
+  ComposerField,
+  ComposerHeader,
+  DraftMeta,
+  HeaderButton,
+  MetaChip,
+  MewBubble,
+  MewCard,
+  MewCredits,
+  MewDrafts,
+  MicButton,
+  VoiceSheet,
+} from "@/components/dashboard/composer-views";
 import { copy } from "@/components/dashboard/copy";
 import { MewStatic } from "@/components/mew/mew-static";
+import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
 import { fromWire, markSegments, onDay, withEdits, type Edits } from "@/functions/compose-input";
 import type { CalendarPick } from "@/hooks/useCalendarPush";
 import { useCreateTask } from "@/hooks/useCreateTask";
+import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { useMewParse } from "@/hooks/useMewParse";
 import { useOnline } from "@/hooks/useOnline";
-import { useVoiceCreate, voiceSupported } from "@/hooks/useVoiceCreate";
+import { MAX_RECORDING_MS, useVoiceCreate, voiceSupported } from "@/hooks/useVoiceCreate";
 import { repeatLabel } from "@/functions/repeat-label";
 import { linkLabel } from "@/functions/link-label";
-import {
-  chip,
-  chipDate,
-  chipGhost,
-  chipGot,
-  chipRepeat,
-  chipTime,
-} from "@/components/dashboard/styles";
 import {
   DateTimePopover,
   DayPopover,
@@ -64,118 +56,8 @@ import {
   RepeatMenu,
 } from "@/components/dashboard/task-meta-menus";
 import { useDailify } from "@/components/dailifyContext";
-import { duration, ease } from "@/consts/motion";
 import { formatClock } from "@/functions/functions";
-import { cn } from "@/lib/utils";
 import { zoned } from "@/functions/zone";
-
-/**
- * Um chip do composer: tocar abre o editor do campo; o × (ou Backspace no chip) tira o campo.
- * Sem `onRemove` é o fantasma ("+ dia"), que só edita.
- */
-function Chip({
-  tone,
-  large,
-  editLabel,
-  removeLabel,
-  onRemove,
-  editor,
-  children,
-}: {
-  tone: string;
-  large?: boolean;
-  editLabel?: string;
-  removeLabel: string;
-  onRemove?: () => void;
-  editor: (trigger: JSX.Element) => JSX.Element;
-  children: ReactNode;
-}): JSX.Element {
-  return (
-    <span className={cn(chip, tone, "gap-0 p-0")}>
-      {editor(
-        <button
-          type="button"
-          aria-label={editLabel}
-          onKeyDown={(e) => {
-            if (!onRemove || (e.key !== "Backspace" && e.key !== "Delete")) return;
-            e.preventDefault();
-            onRemove();
-          }}
-          className={cn("rounded-lg px-2", large ? "py-1.5" : "py-0.5", onRemove && "pr-1")}
-        >
-          <motion.span
-            key={String(Boolean(onRemove))}
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ duration: duration.fast, ease: ease.out }}
-            className="inline-flex items-center gap-1"
-          >
-            {children}
-          </motion.span>
-        </button>,
-      )}
-      {onRemove && (
-        <button
-          type="button"
-          aria-label={removeLabel}
-          onClick={onRemove}
-          className="flex items-center rounded-full pr-1.5 pl-0.5 transition-colors hover:text-foreground"
-        >
-          <XIcon className="size-3" aria-hidden="true" />
-        </button>
-      )}
-    </span>
-  );
-}
-
-const WAVE_BARS = 24;
-
-/**
- * A onda ao vivo da gravação: o volume de cada quadro entra pela direita. Escreve direto no DOM —
- * um render por quadro refaria o composer inteiro. Com movimento reduzido, fica parada.
- */
-function VoiceWave({ analyser }: { analyser: AnalyserNode | null }): JSX.Element {
-  const bars = useRef<(HTMLSpanElement | null)[]>([]);
-  const reduce = useReducedMotion();
-
-  useEffect(() => {
-    if (!analyser || reduce) return;
-    const samples = new Uint8Array(analyser.fftSize);
-    const levels = new Array<number>(WAVE_BARS).fill(0);
-    let frame = requestAnimationFrame(function draw() {
-      analyser.getByteTimeDomainData(samples);
-      let sum = 0;
-      for (const sample of samples) sum += ((sample - 128) / 128) ** 2;
-      levels.shift();
-      // Fala normal fica perto de 0,1–0,25 de RMS; ×4 leva ela pro alto da barra.
-      levels.push(Math.min(1, Math.sqrt(sum / samples.length) * 4));
-      levels.forEach((level, i) => bars.current[i]?.style.setProperty("scale", `1 ${level}`));
-      frame = requestAnimationFrame(draw);
-    });
-    return () => cancelAnimationFrame(frame);
-  }, [analyser, reduce]);
-
-  return (
-    <motion.span
-      role="img"
-      aria-label={copy.voice.wave}
-      initial={{ opacity: 0 }}
-      animate={{ opacity: 1 }}
-      transition={{ duration: duration.fast, ease: ease.out }}
-      className="flex h-6 shrink-0 items-center gap-0.5"
-    >
-      {Array.from({ length: WAVE_BARS }, (_, i) => (
-        <span
-          key={i}
-          ref={(el) => {
-            bars.current[i] = el;
-          }}
-          className="h-full min-h-1 w-0.5 scale-y-15 rounded-full bg-accent-primary"
-        />
-      ))}
-    </motion.span>
-  );
-}
 
 export interface ComposerValues {
   parsed: ParsedTask;
@@ -192,7 +74,7 @@ interface TaskComposerProps {
    * (a tarefa já entrou otimista); `false` devolve o texto, se o campo ainda estiver vazio.
    */
   onSubmit: (values: ComposerValues, again: boolean) => Promise<boolean>;
-  /** Folha do mobile: título grande sem moldura, chips maiores e o enviar na linha deles. */
+  /** Folha do mobile: topo Cancelar | Nova tarefa, texto grande, chips flutuando acima. */
   large?: boolean;
   /** Texto que volta ao campo quando a folha reabre depois de uma criação recusada. */
   initialText?: string;
@@ -200,12 +82,18 @@ interface TaskComposerProps {
   day?: Date | null;
   /** A voz ou a Mew criaram tarefas (direto no servidor): quem abriu a folha pode fechá-la. */
   onCreated?: () => void;
+  /** O "Cancelar" do topo da folha. */
+  onCancel?: () => void;
+  /** Montou pelo mic do dock: já começa gravando. */
+  listen?: boolean;
 }
 
+// EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
+const dayOf = (date: Date) => format(date, "EEEEEE · d MMM", { locale: ptBR });
+
 /**
- * A frase da folha de criação. O que o parser tirou dela aparece em chips logo abaixo, e a linha
- * "Vai para" diz onde a tarefa cai — sem esse eco o usuário só descobre no envio que a hora não
- * foi entendida.
+ * A frase da folha de criação. O que o parser tirou dela aparece em chips logo acima (ou abaixo, no
+ * desktop) — sem esse eco o usuário só descobre no envio que a hora não foi entendida.
  */
 export function TaskComposer({
   submitting,
@@ -214,6 +102,8 @@ export function TaskComposer({
   initialText = "",
   day,
   onCreated,
+  onCancel,
+  listen,
 }: TaskComposerProps): JSX.Element {
   const [input, setInput] = useState(initialText);
   // Trechos de chips tirados: voltam pro título como texto. Valem pro texto atual (`remapSpans`).
@@ -246,18 +136,21 @@ export function TaskComposer({
     () => (drafts.length ? [] : markSegments(input, local, ignore)),
     [drafts, input, local, ignore],
   );
-  const mirror = useRef<HTMLSpanElement>(null);
-  // Texto longo rola dentro do input; o espelho anda junto, direto no DOM como a onda.
-  const follow = (e: SyntheticEvent<HTMLInputElement>) =>
-    mirror.current?.style.setProperty("translate", `${-e.currentTarget.scrollLeft}px`);
   const parsed = useMemo(() => withEdits(read, edits, zoned()), [read, edits]);
   const task = useMemo(() => composeTaskInput(parsed, zoned()), [parsed]);
   const voice = useVoiceCreate(onCreated);
-  const listening = voice.state === "recording";
+  const canVoice = online && voiceSupported();
   const busy = submitting || many.submitting || mew.pending || voice.state !== "idle";
   const canSubmit = Boolean(parsed.text) && !busy;
   const canAsk = Boolean(input.trim()) && !mew.result && !busy;
-  const prominent = online && local.unsure.length > 0 && Boolean(input.trim()) && !mew.result;
+  const unsure = online && local.unsure.length > 0 && Boolean(input.trim()) && !mew.result;
+
+  const startListening = useEffectEvent(() => {
+    if (canVoice) void voice.start();
+  });
+  useEffect(() => {
+    if (listen) startListening();
+  }, [listen]);
 
   const destination = !task.undated
     ? copy.composer.toAgenda
@@ -275,6 +168,7 @@ export function TaskComposer({
     calendar.reset();
   };
 
+  const focusText = () => document.getElementById("composer-text")?.focus();
   const edit = (next: Edits) => setEdits((current) => ({ ...current, ...next }));
   // As palavras que deram o campo voltam pro título; sem palavras (Mew, calendário), o campo só zera.
   const remove = (field: Field) => {
@@ -286,15 +180,16 @@ export function TaskComposer({
       else next[field] = null;
       return next;
     });
-    document.getElementById("composer-text")?.focus();
+    focusText();
   };
 
-  // EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
-  const dayLabel = parsed.date && format(parsed.date, "EEEEEE · d MMM", { locale: ptBR });
+  const dayLabel = parsed.date && dayOf(parsed.date);
   const timeLabel =
     parsed.hasTime && parsed.date ? formatClock(format(parsed.date, "HH:mm"), hour12) : null;
-  const clock = zoned(parsed.date ?? undefined);
-  if (!timeLabel) clock.setHours(DEFAULT_HOUR, 0, 0, 0);
+  const clockAt = zoned(parsed.date ?? undefined);
+  if (!timeLabel) clockAt.setHours(DEFAULT_HOUR, 0, 0, 0);
+  const alertLabel = (alert: number) =>
+    `${format(zoned(alert), "EEEEEE", { locale: ptBR })} ${formatClock(format(zoned(alert), "HH:mm"), hour12)}`;
 
   const submit = (again: boolean) => {
     if (!canSubmit) return;
@@ -319,7 +214,7 @@ export function TaskComposer({
     calendar.reset();
     void mew.ask(input).then((read) => {
       if (read?.intent === "create") calendar.suggest(read.drafts.map((d) => d.targets));
-      document.getElementById("composer-text")?.focus();
+      focusText();
     });
   };
 
@@ -329,403 +224,308 @@ export function TaskComposer({
       : mew.remaining === 1
         ? copy.mew.remainingOne
         : copy.mew.remainingMany.replace("{n}", String(mew.remaining));
-  const improveLabel = remaining ? `${copy.mew.improve} · ${remaining}` : copy.mew.improve;
-  const mewIcon = mew.pending ? (
-    <Loader2Icon className="size-4 animate-spin" aria-hidden="true" />
-  ) : (
-    <MewStatic className="size-4" />
-  );
 
-  // Discreta, ao lado do mic: o parser erra ~20% dos casos difíceis sem avisar, então o pedido
-  // fica sempre à mão. Com motivo de dúvida, quem aparece é a linha de baixo.
-  const ask =
-    !online || prominent ? null : mew.exhausted ? (
-      <Link
-        to="/premium"
-        aria-label={`${copy.mew.exhausted} · ${copy.mew.upgrade}`}
-        className="relative flex size-8.5 hit-target shrink-0 items-center justify-center rounded-sm text-ink-tertiary transition-colors hover:bg-fill"
-      >
-        <MewStatic className="size-4" />
-      </Link>
-    ) : (
-      <button
-        type="button"
-        aria-label={mew.pending ? copy.mew.pending : improveLabel}
-        title={improveLabel}
-        disabled={!canAsk}
-        onClick={askMew}
-        className="relative flex size-8.5 hit-target shrink-0 items-center justify-center rounded-sm text-ink-secondary transition-colors hover:bg-fill disabled:text-ink-tertiary disabled:hover:bg-transparent"
-      >
-        {mewIcon}
-      </button>
+  if (voice.state !== "idle")
+    return (
+      <VoiceSheet
+        sending={voice.state === "sending"}
+        analyser={voice.analyser}
+        maxMs={MAX_RECORDING_MS}
+        onCancel={voice.cancel}
+        onStop={voice.stop}
+      />
     );
 
-  const mic = online && voiceSupported() && (
-    <button
-      type="button"
-      aria-label={listening ? copy.voice.stop : copy.voice.record}
-      aria-pressed={listening}
-      disabled={voice.state === "sending"}
-      onClick={() => (listening ? voice.stop() : void voice.start())}
-      className={cn(
-        "relative flex size-8.5 hit-target shrink-0 items-center justify-center rounded-sm transition-colors",
-        listening
-          ? "bg-accent-primary text-primary-foreground hover:bg-accent-hover"
-          : "text-muted-foreground hover:bg-surface-hover hover:text-foreground",
-      )}
-    >
-      {voice.state === "sending" ? (
-        <Loader2Icon className="size-4 animate-spin" aria-label={copy.voice.sending} />
-      ) : listening ? (
-        <SquareIcon className="size-3.5 fill-current" />
-      ) : (
-        <MicIcon className="size-4" />
-      )}
-    </button>
-  );
-
-  const send = (
-    <button
+  const primary = (
+    <Button
       type="submit"
-      aria-label={copy.composer.submit}
+      size={large ? "lg" : "default"}
+      aria-label={multi ? undefined : copy.composer.submit}
       disabled={!canSubmit}
-      className="relative flex size-8.5 hit-target shrink-0 items-center justify-center rounded-sm bg-accent-primary text-primary-foreground transition-colors hover:bg-accent-hover disabled:bg-surface-hover disabled:text-muted-foreground"
     >
-      {submitting ? (
-        <Loader2Icon className="size-4 animate-spin" />
-      ) : (
-        <ArrowUpIcon className="size-4" />
-      )}
-    </button>
+      {(submitting || many.submitting) && <Loader2Icon className="animate-spin" />}
+      {multi ? copy.mew.confirmMany.replace("{n}", String(drafts.length)) : copy.composer.submit}
+    </Button>
   );
 
-  return (
+  const form = (children: JSX.Element) => (
     <form
+      className="flex flex-col"
       onSubmit={(e: FormEvent) => {
         e.preventDefault();
         submit(false);
       }}
     >
-      <div
-        className={cn(
-          "flex items-center gap-2 transition-colors",
-          large
-            ? "px-2 pt-2 pb-1"
-            : "rounded-field border border-surface-line bg-surface-page px-3.5 py-3 focus-within:border-accent-primary",
-        )}
-      >
-        <Label htmlFor="composer-text" className="sr-only">
-          {copy.composer.text}
-        </Label>
-        {/* Espelho atrás do input, com a mesma fonte: o texto dele é transparente e só os sublinhados
-            aparecem. Caret, seleção, IME e autofill continuam sendo do input de verdade. */}
-        <div className="relative min-w-0 flex-1">
-          <div
-            aria-hidden="true"
-            className={cn(
-              "pointer-events-none absolute inset-0 overflow-hidden whitespace-pre text-transparent",
-              large ? "text-2xl font-medium" : "text-base",
-            )}
-          >
-            <span ref={mirror} className="inline-block">
-              {marks.map(({ text, field, unsure }, i) =>
-                field || unsure ? (
-                  <mark
-                    key={i}
-                    className={cn(
-                      "bg-transparent text-transparent underline underline-offset-3",
-                      unsure
-                        ? "decoration-ink-tertiary decoration-dotted decoration-2"
-                        : "decoration-brand-text",
+      {children}
+    </form>
+  );
+
+  // Vários rascunhos: confirma no balão da Mew antes de criar (o texto volta com "Voltar").
+  if (multi)
+    return form(
+      <>
+        <ComposerHeader
+          start={
+            <HeaderButton
+              onClick={() => {
+                mew.reset();
+                calendar.reset();
+              }}
+            >
+              {copy.header.back}
+            </HeaderButton>
+          }
+        />
+        <p className="mt-2 text-body text-ink-secondary">{input}</p>
+        <MewDrafts
+          say={mew.result?.reply || copy.mew.found.replace("{n}", String(drafts.length))}
+          drafts={drafts.map((draft, i) => {
+            const t = draftTasks[i];
+            const time =
+              draft.hasTime && draft.date ? formatClock(format(draft.date, "HH:mm"), hour12) : null;
+            return {
+              title: draft.text,
+              meta: (
+                <>
+                  <DraftMeta icon={<CalendarIcon aria-hidden="true" />}>
+                    {draft.date ? dayOf(draft.date) : copy.composer.toUndated}
+                    {time && (
+                      <>
+                        <ClockIcon aria-hidden="true" className="ml-1" />
+                        {[time, draft.duration].filter(Boolean).join(" · ")}
+                      </>
                     )}
-                  >
-                    {text}
-                  </mark>
-                ) : (
-                  text
-                ),
-              )}
-            </span>
-          </div>
-          {/* text-base: abaixo de 16px o iOS dá zoom na página ao focar o campo. */}
-          <input
-            id="composer-text"
-            type="text"
-            value={input}
-            onChange={(e) => {
-              const next = e.target.value;
-              setIgnore((current) => remapSpans(current, input, next));
-              setInput(next);
-              // Os rascunhos da Mew somem com a edição, e as etiquetas deles junto.
-              if (mew.result) calendar.reset();
-              mew.reset();
-            }}
-            onKeyDown={(e) => {
-              if (e.key !== "Enter" || !e.shiftKey) return;
-              e.preventDefault();
-              submit(true);
-            }}
-            onScroll={follow}
-            onSelect={follow}
-            maxLength={TASK_LIMITS.titleMax}
-            // Gravando, o campo vira o aviso: a fala vai direto pro servidor, não pra este texto.
-            readOnly={voice.state !== "idle" || mew.pending}
-            placeholder={listening ? copy.voice.listening : copy.composer.textPlaceholder}
-            autoComplete="off"
-            className={cn(
-              "relative block w-full bg-transparent text-foreground placeholder:text-muted-foreground outline-none",
-              large ? "text-2xl font-medium" : "text-base",
-            )}
-          />
-        </div>
-        {listening && (
-          <>
-            <VoiceWave analyser={voice.analyser} />
-            <button
-              type="button"
-              aria-label={copy.voice.cancel}
-              onClick={voice.cancel}
-              className="relative flex size-7 hit-target shrink-0 items-center justify-center rounded-xs text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
-            >
-              <XIcon className="size-4" aria-hidden="true" />
-            </button>
-          </>
-        )}
-      </div>
-
-      {/* Slots sempre montados, na mesma ordem: chip que some e aparece mexe o layout a cada tecla. */}
-      <div
-        aria-live="polite"
-        className={cn(
-          "flex flex-wrap items-center gap-1.5 px-2",
-          large ? "pt-5 pb-2" : "pt-2.5 pb-1.5",
-        )}
-      >
-        {multi ? (
-          <ul aria-label={copy.mew.drafts} className="flex w-full flex-col gap-1.5">
-            {drafts.map((draft, i) => (
-              <li key={i} className="flex items-center gap-2 text-sm text-ink">
-                <MewStatic className="size-4 shrink-0" />
-                <span className="min-w-0 flex-1 truncate">{draft.text}</span>
-                <span className="shrink-0 text-xs text-ink-tertiary">
-                  {draft.date
-                    ? format(draft.date, "EEEEEE · d MMM", { locale: ptBR })
-                    : copy.composer.toUndated}
-                  {draft.hasTime &&
-                    draft.date &&
-                    ` · ${formatClock(format(draft.date, "HH:mm"), hour12)}`}
-                </span>
-                <CalendarChip state={calendar} index={i} task={draftTasks[i]} />
-              </li>
-            ))}
-          </ul>
-        ) : (
-          <>
-            {drafts.length === 1 && <MewStatic className="size-4" title={copy.mew.draft} />}
-            {recurring ? (
-              <Chip
-                tone={chipRepeat}
-                large={large}
-                editLabel={copy.composer.editRepeat.replace(
-                  "{value}",
-                  repeatLabel(parsed.repeat, parsed.repeatEvery),
-                )}
-                removeLabel={copy.composer.removeRepeat}
-                onRemove={() => remove("repeat")}
-                editor={(trigger) => (
-                  <RepeatMenu
-                    value={parsed.repeat}
-                    every={parsed.repeatEvery}
-                    date={(parsed.date ?? zoned()).getTime()}
-                    onChange={(repeat, repeatEvery) => edit({ repeat, repeatEvery })}
-                  >
-                    {trigger}
-                  </RepeatMenu>
-                )}
-              >
-                <RepeatIcon className="size-3" aria-hidden="true" />
-                {repeatLabel(parsed.repeat, parsed.repeatEvery)}
-              </Chip>
-            ) : (
-              <Chip
-                tone={dayLabel ? chipDate : chipGhost}
-                large={large}
-                editLabel={
-                  dayLabel ? copy.composer.editDay.replace("{value}", dayLabel) : undefined
-                }
-                removeLabel={copy.composer.removeDay}
-                onRemove={dayLabel && parsed.hasDay ? () => remove("day") : undefined}
-                editor={(trigger) => (
-                  <DayPopover value={parsed.date ?? zoned()} onChange={(day) => edit({ day })}>
-                    {trigger}
-                  </DayPopover>
-                )}
-              >
-                {dayLabel ? (
-                  <>
-                    <CalendarIcon className="size-3" aria-hidden="true" />
-                    {dayLabel}
-                  </>
-                ) : (
-                  copy.composer.addDay
-                )}
-              </Chip>
-            )}
-            <Chip
-              tone={timeLabel ? chipTime : chipGhost}
-              large={large}
-              editLabel={
-                timeLabel ? copy.composer.editTime.replace("{value}", timeLabel) : undefined
-              }
-              removeLabel={copy.composer.removeTime}
-              onRemove={timeLabel ? () => remove("time") : undefined}
-              editor={(trigger) => (
-                <DateTimePopover
-                  timeOnly
-                  value={clock}
-                  onChange={(at) =>
-                    edit({ time: { hour: at.getHours(), minute: at.getMinutes() } })
-                  }
-                >
-                  {trigger}
-                </DateTimePopover>
-              )}
-            >
-              {timeLabel ? (
-                <>
-                  <ClockIcon className="size-3" aria-hidden="true" />
-                  {timeLabel}
+                  </DraftMeta>
+                  {draft.repeat !== "Off" && (
+                    <DraftMeta icon={<RepeatIcon aria-hidden="true" />}>
+                      {repeatLabel(draft.repeat, draft.repeatEvery)}
+                    </DraftMeta>
+                  )}
+                  {t.alert !== undefined && (
+                    <DraftMeta icon={<BellIcon aria-hidden="true" />}>
+                      {copy.composer.reminderAt.replace("{value}", alertLabel(t.alert))}
+                    </DraftMeta>
+                  )}
                 </>
-              ) : (
-                copy.composer.addTime
-              )}
-            </Chip>
-            <Chip
-              tone={parsed.duration ? chipGot : chipGhost}
-              large={large}
-              editLabel={
-                parsed.duration
-                  ? copy.composer.editDuration.replace("{value}", parsed.duration)
-                  : undefined
-              }
-              removeLabel={copy.composer.removeDuration}
-              onRemove={parsed.duration ? () => remove("duration") : undefined}
-              editor={(trigger) => (
-                <DurationMenu
-                  value={parsed.duration ?? DEFAULT_DURATION}
-                  onChange={(next) => edit({ duration: next })}
-                >
-                  {trigger}
-                </DurationMenu>
-              )}
-            >
-              {parsed.duration ?? copy.composer.addDuration}
-            </Chip>
-            <span
-              className={cn(
-                chip,
-                task.alert ? "border-accent-line bg-accent-subtle text-brand-text" : chipGhost,
-              )}
-            >
-              {task.alert ? (
-                <>
-                  <BellIcon className="size-3" aria-hidden="true" />
-                  {format(zoned(task.alert), "EEEEEE", { locale: ptBR })}{" "}
-                  {formatClock(format(zoned(task.alert), "HH:mm"), hour12)}
-                </>
-              ) : (
-                copy.composer.addReminder
-              )}
-            </span>
-            {parsed.links.slice(0, 1).map((url) => (
-              <Chip
-                key={url}
-                tone={chipGot}
-                large={large}
-                editLabel={copy.composer.editLinks.replace("{value}", linkLabel(url))}
-                removeLabel={copy.composer.removeLinks}
-                onRemove={() => remove("links")}
-                editor={(trigger) => (
-                  <LinksPopover value={parsed.links} onChange={(links) => edit({ links })}>
-                    {trigger}
-                  </LinksPopover>
-                )}
-              >
-                <LinkIcon className="size-3 shrink-0" aria-hidden="true" />
-                {linkLabel(url)}
-              </Chip>
-            ))}
-            <CalendarChip state={calendar} index={0} task={task} large={large} />
-          </>
-        )}
-        {large && (
-          <span className="ml-auto flex items-center gap-1">
-            {ask}
-            {mic}
-            {send}
-          </span>
-        )}
-      </div>
-
-      {multi && (
-        <div className="px-2 pt-1">
-          <button
-            type="button"
-            disabled={!canSubmit}
-            onClick={() => submit(false)}
-            className="h-7 rounded-xs bg-brand px-2.5 text-xs font-medium text-on-brand transition-colors hover:bg-brand-pressed disabled:bg-fill disabled:text-ink-tertiary"
+              ),
+              calendar: <CalendarChip state={calendar} index={i} task={t} />,
+            };
+          })}
+        />
+        <MewCredits credits={remaining && copy.mew.credits.replace("{left}", remaining)} />
+        <ComposerActions large>
+          <Button
+            variant="secondary"
+            size={large ? "lg" : "default"}
+            onClick={() => {
+              clear();
+              onCancel?.();
+            }}
           >
-            {copy.mew.confirmMany.replace("{n}", String(drafts.length))}
-          </button>
-        </div>
+            {copy.kit.cancel}
+          </Button>
+          {primary}
+        </ComposerActions>
+      </>,
+    );
+
+  const meet = calendar.pick(0);
+  const size = { large };
+
+  return form(
+    <>
+      {large && (
+        <ComposerHeader
+          start={onCancel && <HeaderButton onClick={onCancel}>{copy.kit.cancel}</HeaderButton>}
+        />
       )}
+      <Label htmlFor="composer-text" className="sr-only">
+        {copy.composer.text}
+      </Label>
+      <ComposerField
+        id="composer-text"
+        large={large}
+        marks={marks}
+        value={input}
+        onChange={(e) => {
+          const next = e.target.value;
+          setIgnore((current) => remapSpans(current, input, next));
+          setInput(next);
+          // Os rascunhos da Mew somem com a edição, e as etiquetas deles junto.
+          if (mew.result) calendar.reset();
+          mew.reset();
+        }}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter" || e.nativeEvent.isComposing) return;
+          e.preventDefault();
+          submit(e.shiftKey);
+        }}
+        maxLength={TASK_LIMITS.titleMax}
+        readOnly={mew.pending}
+        placeholder={copy.composer.textPlaceholder}
+      />
+
+      {/* Slots sempre montados, na mesma ordem: chip que some e aparece mexe a faixa a cada tecla. */}
+      <ChipStrip large={large}>
+        {drafts.length === 1 && <MewStatic className="size-5 flex-none" title={copy.mew.draft} />}
+        {recurring ? (
+          <MetaChip
+            {...size}
+            icon={<RepeatIcon aria-hidden="true" className="text-meta-repeat" />}
+            editLabel={copy.composer.editRepeat.replace(
+              "{value}",
+              repeatLabel(parsed.repeat, parsed.repeatEvery),
+            )}
+            removeLabel={copy.composer.removeRepeat}
+            onRemove={() => remove("repeat")}
+            editor={(trigger) => (
+              <RepeatMenu
+                value={parsed.repeat}
+                every={parsed.repeatEvery}
+                date={(parsed.date ?? zoned()).getTime()}
+                onChange={(repeat, repeatEvery) => edit({ repeat, repeatEvery })}
+              >
+                {trigger}
+              </RepeatMenu>
+            )}
+          >
+            {repeatLabel(parsed.repeat, parsed.repeatEvery)}
+          </MetaChip>
+        ) : (
+          <MetaChip
+            {...size}
+            ghost={!dayLabel}
+            icon={dayLabel && <CalendarIcon aria-hidden="true" className="text-meta-date" />}
+            editLabel={dayLabel ? copy.composer.editDay.replace("{value}", dayLabel) : undefined}
+            removeLabel={copy.composer.removeDay}
+            onRemove={dayLabel && parsed.hasDay ? () => remove("day") : undefined}
+            editor={(trigger) => (
+              <DayPopover value={parsed.date ?? zoned()} onChange={(day) => edit({ day })}>
+                {trigger}
+              </DayPopover>
+            )}
+          >
+            {dayLabel || copy.composer.addDay}
+          </MetaChip>
+        )}
+        <MetaChip
+          {...size}
+          ghost={!timeLabel}
+          icon={timeLabel && <ClockIcon aria-hidden="true" className="text-meta-time" />}
+          editLabel={timeLabel ? copy.composer.editTime.replace("{value}", timeLabel) : undefined}
+          removeLabel={copy.composer.removeTime}
+          onRemove={timeLabel ? () => remove("time") : undefined}
+          editor={(trigger) => (
+            <DateTimePopover
+              timeOnly
+              value={clockAt}
+              onChange={(at) => edit({ time: { hour: at.getHours(), minute: at.getMinutes() } })}
+            >
+              {trigger}
+            </DateTimePopover>
+          )}
+        >
+          {timeLabel ?? copy.composer.addTime}
+        </MetaChip>
+        <MetaChip
+          {...size}
+          ghost={!parsed.duration}
+          editLabel={
+            parsed.duration
+              ? copy.composer.editDuration.replace("{value}", parsed.duration)
+              : undefined
+          }
+          removeLabel={copy.composer.removeDuration}
+          onRemove={parsed.duration ? () => remove("duration") : undefined}
+          editor={(trigger) => (
+            <DurationMenu
+              value={parsed.duration ?? DEFAULT_DURATION}
+              onChange={(next) => edit({ duration: next })}
+            >
+              {trigger}
+            </DurationMenu>
+          )}
+        >
+          {parsed.duration ?? copy.composer.addDuration}
+        </MetaChip>
+        <MetaChip
+          {...size}
+          ghost={task.alert === undefined}
+          icon={task.alert !== undefined && <BellIcon aria-hidden="true" />}
+        >
+          {task.alert !== undefined ? alertLabel(task.alert) : copy.composer.addReminder}
+        </MetaChip>
+        {parsed.links.slice(0, 1).map((url) => (
+          <MetaChip
+            key={url}
+            {...size}
+            icon={<LinkIcon aria-hidden="true" />}
+            editLabel={copy.composer.editLinks.replace("{value}", linkLabel(url))}
+            removeLabel={copy.composer.removeLinks}
+            onRemove={() => remove("links")}
+            editor={(trigger) => (
+              <LinksPopover value={parsed.links} onChange={(links) => edit({ links })}>
+                {trigger}
+              </LinksPopover>
+            )}
+          >
+            {linkLabel(url)}
+          </MetaChip>
+        ))}
+      </ChipStrip>
 
       {reply && (
-        <p role="status" className="flex items-start gap-2 px-2 pt-1 text-sm text-ink-secondary">
-          <MewStatic className="mt-0.5 size-4 shrink-0" />
-          {reply}
-        </p>
+        <MewBubble role="status">
+          <p className="pr-3 pb-2 text-body">{reply}</p>
+        </MewBubble>
       )}
 
-      {/* Com motivo de dúvida o pedido vira linha própria, com o porquê. */}
-      {prominent && (
-        <div className="flex flex-wrap items-center gap-x-2 gap-y-1 px-2 pt-1 text-xs">
-          <button
-            type="button"
-            disabled={mew.exhausted || !canAsk}
-            onClick={askMew}
-            className="inline-flex h-7 items-center gap-1.5 rounded-xs bg-brand-soft px-2 font-medium text-brand-text transition-colors hover:text-ink disabled:bg-fill disabled:text-ink-tertiary"
-          >
-            {mewIcon}
-            {mew.pending ? copy.mew.pending : copy.mew.improve}
-          </button>
-          <span className="text-ink-secondary">{copy.mew.unsure[local.unsure[0].code]}</span>
-          {mew.exhausted ? (
-            <Link to="/premium" className="ml-auto font-medium text-brand-text">
-              {copy.mew.exhausted} · {copy.mew.upgrade}
-            </Link>
-          ) : (
-            remaining && <span className="ml-auto text-ink-tertiary">{remaining}</span>
-          )}
+      {calendar.available && (
+        <div className="mt-5">
+          <CalendarToggle
+            checked={Boolean(meet)}
+            disabled={!calendar.applies(task)}
+            mew={meet?.mew}
+            onCheckedChange={(on) => calendar.set(0, on ? { meet: false } : undefined)}
+            meet={meet && !videoLink(task.links) ? meet.meet : undefined}
+            onMeetChange={(on) => meet && calendar.set(0, { ...meet, meet: on })}
+          />
         </div>
       )}
 
-      <div className="flex items-center justify-between gap-2 px-2 pt-1.5 pb-1 text-xs text-muted-foreground">
-        <span>
-          {copy.composer.goesTo} <b className="font-medium text-content-secondary">{destination}</b>
-        </span>
+      {/* O parser erra ~20% dos casos difíceis sem avisar: o pedido à Mew fica sempre à mão. */}
+      {online && (
+        <MewCard
+          pending={mew.pending}
+          disabled={mew.exhausted || !canAsk}
+          exhausted={mew.exhausted}
+          hints={[unsure ? copy.mew.unsure[local.unsure[0].code] : null, remaining].filter(
+            (hint): hint is string => Boolean(hint),
+          )}
+          onClick={askMew}
+        />
+      )}
 
-        <span className="flex items-center gap-2.5">
-          <span className="hidden md:inline">
-            {copy.composer.hintCreate}{" "}
-            <kbd className="rounded-md border border-surface-line px-1 font-mono text-2xs">⇧⏎</kbd>{" "}
-            {copy.composer.hintContinue}
-          </span>
-          {ask}
-          {mic}
-          {send}
-        </span>
-      </div>
-    </form>
+      <ComposerActions
+        large={large}
+        start={
+          large ? (
+            canVoice && <MicButton large onClick={() => void voice.start()} />
+          ) : (
+            <span className="mr-auto text-footnote text-ink-secondary">
+              {copy.composer.goesTo} <b className="font-medium text-ink">{destination}</b>
+              <span className="ml-2.5 hidden md:inline">
+                {copy.composer.hintCreate}{" "}
+                <kbd className="rounded-xs border border-separator px-1 font-mono text-2xs">⇧⏎</kbd>{" "}
+                {copy.composer.hintContinue}
+              </span>
+            </span>
+          )
+        }
+      >
+        {!large && canVoice && <MicButton onClick={() => void voice.start()} />}
+        {primary}
+      </ComposerActions>
+    </>,
   );
 }

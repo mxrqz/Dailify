@@ -37,6 +37,7 @@ vi.mock("@/components/dailifyContext", () => ({
 vi.mock("@/functions/api", () => api);
 vi.mock("sonner", () => ({ toast }));
 vi.mock("@/hooks/useVoiceCreate", () => ({
+  MAX_RECORDING_MS: 60_000,
   useVoiceCreate: () => voice,
   voiceSupported: () => true,
 }));
@@ -44,7 +45,6 @@ vi.mock("@/hooks/useVoiceCreate", () => ({
 import { TaskComposer } from "./task-composer";
 
 const QUESTION = "o que tenho amanhã?";
-const improveDiscreet = `${copy.mew.improve} · 25 restantes`;
 
 const setup = () => {
   const onSubmit = vi.fn().mockResolvedValue(true);
@@ -81,11 +81,11 @@ describe("<TaskComposer> voz", () => {
     expect(voice.start).toHaveBeenCalled();
   });
 
-  it("gravando, o campo vira o aviso e o mic para", async () => {
+  it("gravando, a folha vira a Mew ouvindo e o Parar e criar para", async () => {
     voice.state = "recording";
     const { user } = setup();
-    expect(screen.getByPlaceholderText(copy.voice.listening)).toHaveAttribute("readonly");
-    expect(screen.getByRole("button", { name: copy.composer.submit })).toBeDisabled();
+    expect(screen.getByText(copy.voice.listening)).toBeInTheDocument();
+    expect(screen.queryByRole("textbox")).not.toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: copy.voice.stop }));
     expect(voice.stop).toHaveBeenCalled();
   });
@@ -102,18 +102,21 @@ describe("<TaskComposer> criação recusada", () => {
 });
 
 describe("<TaskComposer> Melhorar com a Mew", () => {
-  it("com dúvida, o botão vem com o porquê e os créditos; confiante, fica discreto", async () => {
+  it("com dúvida, o cartão diz o porquê junto dos créditos; confiante, só os créditos", async () => {
     const { user } = setup();
+    expect(screen.getByRole("button", { name: copy.mew.improve })).toBeDisabled();
     await user.type(screen.getByRole("textbox"), QUESTION);
-    expect(screen.getByRole("button", { name: copy.mew.improve })).toBeEnabled();
-    expect(screen.getByText(copy.mew.unsure.question)).toBeInTheDocument();
+    const card = screen.getByRole("button", { name: copy.mew.improve });
+    expect(card).toBeEnabled();
+    expect(card).toHaveAccessibleDescription(/^Parece uma pergunta.*25 restantes$/);
     expect(screen.getByText("25 restantes")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: improveDiscreet })).not.toBeInTheDocument();
 
     await user.clear(screen.getByRole("textbox"));
     await user.type(screen.getByRole("textbox"), "comprar pão");
     expect(screen.queryByText(copy.mew.unsure.question)).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: improveDiscreet })).toBeEnabled();
+    expect(screen.getByRole("button", { name: copy.mew.improve })).toHaveAccessibleDescription(
+      "25 restantes",
+    );
   });
 
   it("sem créditos: desativado, com o caminho pro /premium", async () => {
@@ -131,14 +134,13 @@ describe("<TaskComposer> Melhorar com a Mew", () => {
     const { user } = setup();
     await user.type(screen.getByRole("textbox"), QUESTION);
     expect(screen.queryByRole("button", { name: copy.mew.improve })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: improveDiscreet })).not.toBeInTheDocument();
   });
 
   it("um rascunho troca os chips e o Enter cria ele; editar volta pro parser local", async () => {
     reads({ reply: "", intent: "create", drafts: [draft("Dentista", 15)] });
     const { user, onSubmit } = setup();
     await user.type(screen.getByRole("textbox"), "dentista dps do almoço");
-    await user.click(screen.getByRole("button", { name: improveDiscreet }));
+    await user.click(screen.getByRole("button", { name: copy.mew.improve }));
 
     expect(api.parseTaskAi).toHaveBeenCalledWith("token", "dentista dps do almoço");
     expect(screen.getByRole("img", { name: copy.mew.draft })).toBeInTheDocument();
@@ -149,7 +151,7 @@ describe("<TaskComposer> Melhorar com a Mew", () => {
     expect(screen.queryByRole("img", { name: copy.mew.draft })).not.toBeInTheDocument();
     expect(screen.queryByText("15:00")).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: improveDiscreet }));
+    await user.click(screen.getByRole("button", { name: copy.mew.improve }));
     await user.keyboard("{Enter}");
     expect(onSubmit).toHaveBeenCalledWith(
       expect.objectContaining({ parsed: expect.objectContaining({ text: "Dentista" }) }),
@@ -297,7 +299,7 @@ describe("<TaskComposer> chips", () => {
     reads({ reply: "", intent: "create", drafts: [draft("Dentista", 15)] });
     const { user, onSubmit } = setup();
     await user.type(screen.getByRole("textbox"), "dentista dps do almoço");
-    await user.click(screen.getByRole("button", { name: improveDiscreet }));
+    await user.click(screen.getByRole("button", { name: copy.mew.improve }));
     await user.click(screen.getByRole("button", { name: copy.composer.removeTime }));
 
     expect(screen.queryByText("15:00")).not.toBeInTheDocument();
