@@ -14,7 +14,8 @@
     "check": "prettier --check src && eslint src && tsc --noEmit && vitest run",
     "test": "vitest run",
     "test:watch": "vitest",
-    "tauri": "tauri"
+    "tauri": "tauri",
+    "android": "adb reverse tcp:1420 tcp:1420 && adb reverse tcp:1421 tcp:1421 && CARGO_TARGET_DIR=\"$HOME/.cache/mewki-target\" NDK_HOME=\"${NDK_HOME:-$HOME/Android/Sdk/ndk/27.1.12297006}\" tauri android dev --host 127.0.0.1"
   },
   "dependencies": {
     "@dailify/shared": "workspace:*",

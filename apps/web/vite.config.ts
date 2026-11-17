@@ -8,6 +8,9 @@ import mkcert from 'vite-plugin-mkcert'
 import { VitePWA } from 'vite-plugin-pwa'
 
 const host = process.env.TAURI_DEV_HOST;
+// `bun run android`: the phone reaches this server through `adb reverse` on 127.0.0.1 (a secure
+// context, so crypto.subtle works) and talks to the real API as the app would.
+const mobileDev = /android|ios/.test(process.env.TAURI_ENV_PLATFORM ?? "");
 
 // Proxy de API em dev: HTTPS (mkcert) -> HTTP (wrangler :8787) seria mixed content. bd Dailify-6aq
 const apiTarget = (mode: string) =>
@@ -20,9 +23,7 @@ export default defineConfig(async ({ mode }) => ({
     tailwindcss(),
     // mkcert installs a local CA (needs sudo) — skip under vitest. A phone doesn't trust that CA,
     // so `tauri android|ios dev` serves plain http (devUrl in tauri.android.conf.json).
-    ...(process.env.VITEST || /android|ios/.test(process.env.TAURI_ENV_PLATFORM ?? "")
-      ? []
-      : [mkcert()]),
+    ...(process.env.VITEST || mobileDev ? [] : [mkcert()]),
 
     // Sem service worker o app nem abre sem rede, e todo o cache local do `functions/offline.ts`
     // ficaria inalcançável. `autoUpdate`: versão nova entra sozinha, sem prompt — o app é de uso
@@ -103,10 +104,14 @@ export default defineConfig(async ({ mode }) => ({
     },
     proxy: {
       "/api": {
-        target: apiTarget(mode),
+        target: mobileDev ? "https://api.mewki.mxrqz.com" : apiTarget(mode),
         changeOrigin: true,
         secure: false,
         rewrite: (p: string) => p.replace(/^\/api/, ""),
+        // Better Auth only trusts known origins; in mobile dev, speak as the installed app does.
+        configure: (proxy) => {
+          if (mobileDev) proxy.on("proxyReq", (req) => req.setHeader("origin", "http://tauri.localhost"));
+        },
       },
     },
   },
