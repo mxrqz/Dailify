@@ -230,6 +230,15 @@
   --layout-content: 1380px; /* teto de largura do conteúdo (mastra-like) */
 }
 
+/* Refração do vidro (kit/refraction.tsx): só o Chromium aplica url() no backdrop-filter, então o
+   componente marca o <html> lá e `glass`/`dock-veil` encaixam `var(--refract,)` depois do blur.
+   Sem a classe, ou com movimento/transparência reduzidos, fica vazio: o vidro de sempre. */
+@media (prefers-reduced-motion: no-preference) and (prefers-reduced-transparency: no-preference) {
+  :root.refract {
+    --refract: url(#refract);
+  }
+}
+
 /* Bridge the class-based toggle to color-scheme so light-dark() flips. */
 .dark {
   color-scheme: dark;
@@ -512,6 +521,11 @@
   padding-bottom: max(--spacing(1), env(safe-area-inset-bottom));
 }
 
+/* O mesmo pro dock do composer: a pílula nunca fica a menos de 16px do fim da tela. */
+@utility pb-dock {
+  padding-bottom: max(--spacing(4), env(safe-area-inset-bottom));
+}
+
 @utility section-y {
   padding-block: --spacing(20);
   @variant md {
@@ -591,7 +605,7 @@
     linear-gradient(var(--glass-sheen), transparent 6rem),
     linear-gradient(var(--glass-tint), var(--glass-tint)), var(--glass);
   -webkit-backdrop-filter: blur(8px) contrast(1.04) saturate(1.2);
-  backdrop-filter: blur(8px) contrast(1.04) saturate(1.2);
+  backdrop-filter: blur(8px) var(--refract,) contrast(1.04) saturate(1.2);
   box-shadow: var(--shadow-glass);
 
   &::before,
@@ -632,6 +646,43 @@
     background: var(--glass-solid);
     -webkit-backdrop-filter: none;
     backdrop-filter: none;
+  }
+}
+
+/* O pé da tela atrás do dock do composer: blur leve do topo da pílula até o fim da tela e a aresta
+   cromática do vidro, bem fraca, colada na borda de baixo. Sem fundo sólido: o conteúdo só amacia. */
+@utility dock-veil {
+  &::before,
+  &::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+  }
+
+  &::before {
+    -webkit-backdrop-filter: blur(6px) saturate(1.2);
+    backdrop-filter: blur(6px) var(--refract,) saturate(1.2);
+    mask: linear-gradient(transparent, black 24px);
+  }
+
+  &::after {
+    top: auto;
+    height: 2px;
+    opacity: 0.6;
+    box-shadow:
+      inset 0 -0.5px 0 var(--glass-ca-b),
+      inset 0 -1px 0 var(--glass-spec),
+      inset 0 -1.5px 0 var(--glass-ca-r);
+    mask: linear-gradient(90deg, transparent 8%, black 35%, black 65%, transparent 92%);
+  }
+
+  @media (prefers-reduced-transparency: reduce) {
+    &::before {
+      -webkit-backdrop-filter: none;
+      backdrop-filter: none;
+    }
   }
 }
 

@@ -15,6 +15,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "./components/error-boundary";
 import { AppLayout } from "./components/app-layout";
+import { Refraction } from "@/components/kit/refraction";
 
 // Só o dashboard (start_url do PWA) vai no bundle de entrada; o resto baixa quando a rota abre.
 const LandingPage = lazy(() => import("./pages/landingPage"));
@@ -206,6 +207,7 @@ export default function App() {
                 </ErrorBoundary>
 
                 <Toaster />
+                <Refraction />
               </MotionConfig>
             </TooltipProvider>
           </ThemeProvider>

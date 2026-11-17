@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { ActionSheet } from "./action-sheet";
 import { Chip } from "./chip";
 import { ListGroup, ListRow } from "./list";
+import { Refraction } from "./refraction";
 import { SegmentedControl } from "./segmented-control";
 import { Switch } from "./switch";
 
@@ -102,5 +103,22 @@ describe("controles", () => {
     expect(screen.getByRole("link", { name: "Google Agenda" })).toHaveAttribute("target", "_blank");
     expect(screen.getByRole("button", { name: "Sair" })).toHaveAttribute("type", "button");
     expect(screen.getByText("Versão").closest("a, button")).toBeNull();
+  });
+});
+
+describe("Refraction", () => {
+  it("só marca o <html> no Chromium; o <filter> monta sempre", () => {
+    const html = document.documentElement;
+    const { unmount } = render(<Refraction />);
+    expect(document.getElementById("refract")).not.toBeNull();
+    expect(html).not.toHaveClass("refract");
+    unmount();
+
+    vi.stubGlobal("navigator", { userAgentData: { brands: [{ brand: "Chromium" }] } });
+    const chromium = render(<Refraction />);
+    expect(html).toHaveClass("refract");
+    chromium.unmount();
+    expect(html).not.toHaveClass("refract");
+    vi.unstubAllGlobals();
   });
 });

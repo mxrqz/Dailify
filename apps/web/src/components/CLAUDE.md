@@ -22,6 +22,10 @@ Toda string visível vem de `copy` (os defaults "Fechar"/"Cancelar"/"Remover" es
 - `ProgressRing({ value, max, label })` — anel de 40px com "feitas/total".
 - `ActionSheet({ open, onOpenChange, title, description?, actions, cancelLabel? })` — pergunta do
   iOS (opções + Cancelar em vidro). `RecurrenceScopeDialog` já usa.
+- `Refraction({ strength?, edge? })` — montado uma vez no `App`: o `<filter id="refract">` (fundo
+  escorrega pra fora a ~3×`edge` px das bordas, com franja RGB) e `<html class="refract">` só no
+  Chromium. `glass` e `dock-veil` já usam via `var(--refract,)`; fora do Chromium ou com movimento/
+  transparência reduzidos fica vazio e o vidro é o de sempre.
 - `Button` (`ui/button`): `default` (brand), `secondary` (fill), `ghost`, `soft-danger` (brand-soft +
   brand-text, o "Encerrar"), `link`; `outline` é legado. Tamanhos `sm` 32 / `default` 44 / `lg` 52 /
   `icon` 44, raio pela altura.

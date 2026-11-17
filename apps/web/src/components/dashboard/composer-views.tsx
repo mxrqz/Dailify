@@ -506,12 +506,12 @@ export function CreateDock({
 }): JSX.Element {
   return (
     <>
-      <div aria-hidden="true" className="pt-2.5 pb-safe">
-        <div className="mb-2 h-13" />
+      <div aria-hidden="true" className="pb-dock">
+        <div className="h-13" />
       </div>
-      {/* Sem barra atrás: só a pílula flutua, com a borda dos cards e um degrau acima (contraste ao sol). */}
-      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pt-2.5 pb-safe">
-        <div className="pointer-events-auto mb-2 flex h-13 items-center gap-2.5 rounded-full bg-surface-raised pr-1 pl-2.5 shadow-raised outline-1 -outline-offset-1 outline-card-edge dark:bg-fill dark:outline-fill-pressed">
+      {/* Sem barra sólida: véu leve atrás da pílula (blur + aresta cromática no fim da tela). */}
+      <div className="dock-veil pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pb-dock">
+        <div className="pointer-events-auto flex h-13 items-center gap-2.5 rounded-full bg-surface-raised pr-1 pl-2.5 shadow-raised outline-1 -outline-offset-1 outline-card-edge dark:bg-fill dark:outline-fill-pressed">
           <button
             type="button"
             aria-label={copy.composer.open}
