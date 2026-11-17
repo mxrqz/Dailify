@@ -17,6 +17,7 @@
     "@clerk/hono": "^0.1.64",
     "@dailify/shared": "workspace:*",
     "@date-fns/tz": "^1.5.0",
+    "better-auth": "1.7.25",
     "hono": "^4.12.33",
     "luxon": "^3.6.1",
     "nanoid": "^6.0.0",
