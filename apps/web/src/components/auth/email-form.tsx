@@ -1,4 +1,4 @@
-import { ArrowRightIcon, Loader2Icon } from "lucide-react";
+import { Loader2Icon } from "lucide-react";
 import { Link, useLocation } from "react-router-dom";
 
 import type { AuthFailure } from "@/components/auth/auth-state";
@@ -14,12 +14,12 @@ function Offer({ mode }: { mode: "signIn" | "signUp" }): JSX.Element {
   // mais dói perder o `state` do ProtectedRoute — sem ele o deep link vira /dashboard.
   const location = useLocation();
   return (
-    <p className="text-sm text-muted-foreground">
+    <p className="text-subhead text-ink-secondary">
       {isSignUp ? copy.errors.offerSignUp : copy.errors.offerSignIn}{" "}
       <Link
         to={isSignUp ? "/signup" : "/login"}
         state={location.state}
-        className="text-brand-text underline-offset-4 hover:underline"
+        className="font-semibold text-ink hover:underline"
       >
         {isSignUp ? copy.errors.offerSignUpAction : copy.errors.offerSignInAction}
       </Link>
@@ -56,11 +56,8 @@ export function EmailForm({
         onSubmit(formString(new FormData(e.currentTarget), "email"));
       }}
     >
-      <div className="flex flex-col gap-1.5">
-        <label
-          htmlFor="email"
-          className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground"
-        >
+      <div className="flex flex-col gap-2">
+        <label htmlFor="email" className="px-1 text-subhead font-medium text-ink-secondary">
           {copy.shell.emailLabel}
         </label>
         <Input
@@ -71,13 +68,14 @@ export function EmailForm({
           autoComplete="email"
           defaultValue={defaultEmail}
           placeholder={copy.shell.emailPlaceholder}
+          className="h-13 rounded-md border-0 bg-fill px-4 text-body shadow-none placeholder:text-ink-tertiary md:text-body"
           aria-invalid={invalidValue}
           aria-describedby={failure?.kind === "message" ? "email-error" : undefined}
         />
       </div>
 
       {failure?.kind === "message" && (
-        <p id="email-error" className="text-sm text-destructive">
+        <p id="email-error" className="px-1 text-subhead text-destructive">
           {copy.errors[failure.key]}
           {failure.code && (
             <span className="ml-1 font-mono text-2xs uppercase tracking-[0.04em] opacity-70">
@@ -89,10 +87,9 @@ export function EmailForm({
 
       {failure?.kind === "offer" && <Offer mode={failure.mode} />}
 
-      <Button type="submit" disabled={disabled}>
+      <Button type="submit" size="lg" disabled={disabled}>
         {disabled ? <Loader2Icon className="animate-spin" /> : null}
         {submitLabel}
-        {disabled ? null : <ArrowRightIcon />}
       </Button>
     </form>
   );

@@ -46,37 +46,41 @@ export function CheckInbox({
   const remaining = useCooldown(sentAt);
 
   return (
-    <div className="flex flex-col items-center gap-4 text-center">
-      <div className="rounded-xl bg-accent-subtle p-4">
-        <MailIcon className="size-6 text-primary" />
-      </div>
-
+    <div className="flex flex-col items-center text-center">
       {/* `status` só neste bloco, que é estático: englobar o botão faria o `aria-atomic` implícito
           re-anunciar a tela inteira a cada segundo do contador do reenvio. */}
-      <div role="status" className="flex flex-col gap-1">
-        <h2 className="text-lg font-semibold text-foreground">{copy.inbox.title}</h2>
-        <p className="text-sm text-muted-foreground">{copy.inbox.sentTo}</p>
-        <p className="font-mono text-sm text-foreground">{email}</p>
+      <div role="status" className="flex max-w-full flex-col items-center">
+        <h1 className="mt-7 text-title-1">{copy.inbox.title}</h1>
+        <p className="mt-2 text-body leading-6 text-ink-secondary">{copy.inbox.sentTo}</p>
+        <p className="mt-3 inline-flex h-9 max-w-full items-center gap-2 rounded-sm bg-surface px-3.5 text-body font-semibold">
+          <MailIcon aria-hidden="true" className="size-4 flex-none text-ink-secondary" />
+          <span className="truncate">{email}</span>
+        </p>
       </div>
 
-      <p className="text-sm text-muted-foreground">{copy.inbox.hint}</p>
+      <p className="mt-5 max-w-75 text-subhead text-balance text-ink-secondary">
+        {copy.inbox.hint}
+      </p>
 
-      <Button
-        variant="outline"
-        className="w-full"
-        onClick={onResend}
-        disabled={remaining > 0 || busy}
-      >
-        <RotateCwIcon className={busy ? "animate-spin" : undefined} />
-        {remaining > 0
-          ? `${copy.inbox.resendIn} ${remaining}${copy.inbox.seconds}`
-          : copy.inbox.resend}
-      </Button>
+      <div className="mt-8 flex w-full flex-col gap-2">
+        <Button
+          size="lg"
+          variant="secondary"
+          className="tabular-nums"
+          onClick={onResend}
+          disabled={remaining > 0 || busy}
+        >
+          <RotateCwIcon className={busy ? "animate-spin" : undefined} />
+          {remaining > 0
+            ? `${copy.inbox.resendIn} ${remaining}${copy.inbox.seconds}`
+            : copy.inbox.resend}
+        </Button>
 
-      <Button variant="ghost" className="w-full" onClick={onBack}>
-        <ArrowLeftIcon />
-        {copy.inbox.back}
-      </Button>
+        <Button size="lg" variant="ghost" onClick={onBack}>
+          <ArrowLeftIcon />
+          {copy.inbox.back}
+        </Button>
+      </div>
     </div>
   );
 }

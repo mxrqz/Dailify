@@ -61,17 +61,17 @@ export default function Verify() {
   // Mesma casca de /login e /signup, sem título, cross-link ou rodapé legal — todos opcionais.
   return (
     <AuthShell>
-      <div className="flex flex-col items-center gap-4 text-center">
+      <div className="flex flex-col items-center gap-4 pt-24 text-center">
         {status === "loading" && <Loader2Icon className="size-6 animate-spin text-primary" />}
 
         {/* `status`: o desfecho substitui o spinner sem nenhuma navegação, então sem live region
             o leitor de tela não anuncia nada depois do carregamento inicial. */}
-        <p role="status" className="text-sm text-foreground">
+        <p role="status" className="text-body text-ink">
           {message}
         </p>
 
         {canRestart && (
-          <Button asChild variant="outline" className="w-full">
+          <Button asChild size="lg" variant="secondary" className="w-full">
             <Link to="/login">{copy.verify.restart}</Link>
           </Button>
         )}

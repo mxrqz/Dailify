@@ -1,7 +1,6 @@
 import { copy } from "@/components/auth/copy";
 import { GoogleLogo } from "@/components/logos";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 
 export function OAuthButtons({
   onGoogle,
@@ -12,16 +11,12 @@ export function OAuthButtons({
 }): JSX.Element {
   return (
     <>
-      <div className="inline-flex items-center gap-3">
-        <Separator className="shrink" />
-        <span className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
-          {copy.shell.dividerOr}
-        </span>
-        <Separator className="shrink" />
+      <div className="my-2 flex items-center gap-3 text-footnote text-ink-secondary before:h-px before:flex-1 before:bg-separator after:h-px after:flex-1 after:bg-separator">
+        {copy.shell.dividerOr}
       </div>
 
-      <Button type="button" variant="outline" onClick={onGoogle} disabled={disabled}>
-        <GoogleLogo className="fill-foreground" />
+      <Button type="button" size="lg" variant="secondary" onClick={onGoogle} disabled={disabled}>
+        <GoogleLogo className="fill-current" />
         {copy.shell.continueWithGoogle}
       </Button>
     </>

@@ -10,6 +10,7 @@
  */
 export const copy = {
   shell: {
+    back: "Voltar",
     dividerOr: "ou",
     emailLabel: "E-mail",
     emailPlaceholder: "voce@exemplo.com",
@@ -22,6 +23,8 @@ export const copy = {
   signIn: {
     pageTitle: "Mewki — Entrar",
     title: "Entrar",
+    subtitle: "Mandamos um link de acesso. Sem senha.",
+    bubble: "Oi! Qual é o seu e-mail?",
     submit: "Continuar com e-mail",
     crossLinkPrefix: "Novo por aqui?",
     crossLinkAction: "Criar conta",
@@ -31,6 +34,8 @@ export const copy = {
   signUp: {
     pageTitle: "Mewki — Criar conta",
     title: "Criar conta",
+    subtitle: "Só o e-mail. Mandamos um link de acesso, sem senha.",
+    bubble: "Oi! Vamos começar?",
     submit: "Continuar com e-mail",
     crossLinkPrefix: "Já tem conta?",
     crossLinkAction: "Entrar",
@@ -38,6 +43,7 @@ export const copy = {
   },
 
   inbox: {
+    bubble: "Prontinho, mandei o link!",
     title: "Confira seu e-mail",
     sentTo: "Enviamos um link de acesso para",
     // 10 minutos é a expiração padrão do Clerk. Se mudar no dashboard, mude aqui.
@@ -46,6 +52,7 @@ export const copy = {
     resendIn: "Reenviar em",
     seconds: "s",
     back: "Usar outro e-mail",
+    spam: "Não chegou? Olhe a caixa de spam ou promoções.",
   },
 
   verify: {

@@ -42,11 +42,22 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
 
   return (
     <AuthShell
-      title={text.title}
-      legalPrefix={text.legalPrefix}
-      crossLinkPrefix={text.crossLinkPrefix}
-      crossLinkAction={text.crossLinkAction}
-      crossLinkTo={mode === "signUp" ? "/login" : "/signup"}
+      {...(inbox
+        ? {
+            bubble: copy.inbox.bubble,
+            mood: "happy" as const,
+            footer: copy.inbox.spam,
+            onBack: reset,
+          }
+        : {
+            bubble: text.bubble,
+            title: text.title,
+            subtitle: text.subtitle,
+            legalPrefix: text.legalPrefix,
+            crossLinkPrefix: text.crossLinkPrefix,
+            crossLinkAction: text.crossLinkAction,
+            crossLinkTo: mode === "signUp" ? "/login" : "/signup",
+          })}
     >
       {inbox ? (
         <CheckInbox
