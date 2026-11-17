@@ -56,8 +56,8 @@ re-renders (the whole Home, measuring every swipe row).
   `tasks` with `mergeMonth` — a month never replaces the others. `loadMonth(month)` adds one more
   month on demand, idempotent (loaded or in flight → no refetch). `goToDay(day)` loads every month
   between today and `day`, then sets `selectedDay` and `targetDay` (the list scrolls to it).
-  Payment/invoices load once in the boot effect (keyed on `isLoaded`/`userId`; `getToken` and the
-  setters are stable); quotas load in their own effect keyed by TODAY's month (`useNow`), not
+  Payment/invoices are NOT loaded here — `pages/billing.tsx` fetches them on open into the context
+  setters. The tasks cache is written debounced, flushed on `pagehide`/hidden. Quotas load in their own effect keyed by TODAY's month (`useNow`), not
   `selectedDay`'s. `protected-route.render.test.tsx` pins "loads once".
 - **`dashboard/day-list.tsx`** is the continuous list: one `DaySection` per day with tasks (via
   `listDays`) up to the contiguous run of `loadedMonths`; a sentinel asks for the next month. The

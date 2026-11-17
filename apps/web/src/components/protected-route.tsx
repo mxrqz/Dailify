@@ -3,13 +3,7 @@ import { useAuth, useUser } from "@clerk/clerk-react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useDailify } from "./dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import {
-  getQuotas,
-  getPaymentDetails,
-  getInvoices,
-  getUndatedTasks,
-  getSettings,
-} from "@/functions/api";
+import { getQuotas, getUndatedTasks, getSettings } from "@/functions/api";
 import {
   cacheTasks,
   cacheUndated,
@@ -27,6 +21,8 @@ import { zoned, zonedAt } from "@/functions/zone";
 
 /** Piso entre revalidações: alternar de aba não pode virar rajada de fetch. */
 const REVALIDATE_AFTER_MS = 30_000;
+/** Cada `setTasks` serializava a agenda inteira na hora; agora só a última de uma rajada grava. */
+const CACHE_AFTER_MS = 1_000;
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const { isSignedIn, isLoaded, user } = useUser();
@@ -39,8 +35,6 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     loadedMonths,
     loadMonth,
     reloadMonths,
-    setInvoices,
-    setPaymentDetails,
     setQuotas,
     undatedTasks,
     setUndatedTasks,
@@ -75,30 +69,6 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       /* sem sessão utilizável */
     }
   };
-
-  // Depende de `isLoaded`/`userId`: com deps `[]` o efeito rodava uma vez só, antes do Clerk ficar
-  // pronto, e o `getToken()` nulo deixava os dados de cobrança undefined pelo resto da sessão.
-  useEffect(() => {
-    if (!isLoaded || !userId) return;
-
-    (async () => {
-      try {
-        const token = await getToken();
-        if (!token) return;
-
-        // allSettled: uma falha não derruba as vizinhas.
-        const [payment, invoices] = await Promise.allSettled([
-          getPaymentDetails(token),
-          getInvoices(token),
-        ]);
-
-        if (payment.status === "fulfilled") setPaymentDetails(payment.value);
-        if (invoices.status === "fulfilled") setInvoices(invoices.value);
-      } catch {
-        /* sem sessão utilizável */
-      }
-    })();
-  }, [isLoaded, userId, getToken, setPaymentDetails, setInvoices]);
 
   // Efeito próprio porque quota de escopo mensal vira com o mês de HOJE (não o do dia olhado: a
   // cota que bloqueia a criação é a do mês corrente); os outros dados, não.
@@ -165,9 +135,32 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
 
   // O cache acompanha a TELA, não só o que veio do servidor: uma tarefa criada offline vive no
   // estado e na fila, e sem isto ela sumia ao fechar o app — só voltava depois do sync.
+  // Adiado: o stringify síncrono da agenda inteira travava o quadro de cada toque. Sair da aba ou
+  // fechar grava o que estiver pendente, então o cache não perde a última escrita.
+  const pendingCache = useRef<(() => void) | null>(null);
   useEffect(() => {
-    if (userId && tasks) cacheTasks(userId, tasks);
+    if (!userId || !tasks) return;
+    const write = () => {
+      pendingCache.current = null;
+      cacheTasks(userId, tasks);
+    };
+    pendingCache.current = write;
+    const id = setTimeout(write, CACHE_AFTER_MS);
+    return () => clearTimeout(id);
   }, [userId, tasks]);
+  useEffect(() => {
+    const flush = () => pendingCache.current?.();
+    const onHidden = () => {
+      if (document.visibilityState === "hidden") flush();
+    };
+    window.addEventListener("pagehide", flush);
+    document.addEventListener("visibilitychange", onHidden);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      document.removeEventListener("visibilitychange", onHidden);
+      flush();
+    };
+  }, []);
 
   // 📅 Função principal para carregar as tasks
   const getTasks = useEffectEvent(async () => {

@@ -27,7 +27,7 @@ import { Button } from "@/components/ui/button";
 import GooglePayLogo from "@/components/ui/googlePayLogo";
 import { Progress } from "@/components/ui/progress";
 import { PLAN_ID, planMap } from "@/consts/conts";
-import { billingPortal } from "@/functions/api";
+import { billingPortal, getInvoices, getPaymentDetails } from "@/functions/api";
 import { billingSections } from "@/functions/billing-sections";
 import { quotaLabel } from "@/functions/quota-label";
 import { useQuotas } from "@/hooks/useQuotas";
@@ -242,8 +242,8 @@ export function BillingView({
 
 export default function BillingPage(): JSX.Element {
   const { user } = useUser();
-  const { getToken } = useAuth();
-  const { invoices, paymentDetails } = useDailify();
+  const { getToken, userId } = useAuth();
+  const { invoices, paymentDetails, setInvoices, setPaymentDetails } = useDailify();
   const [searchParams, setSearchParams] = useSearchParams();
   const checkoutStatus = searchParams.get("checkout");
   const quotas = useQuotas();
@@ -260,6 +260,29 @@ export default function BillingPage(): JSX.Element {
     }
     setSearchParams({}, { replace: true });
   }, [checkoutStatus, setSearchParams, user]);
+
+  // Só esta tela lê cobrança: buscar no boot de toda rota protegida custava duas idas ao Stripe
+  // por abertura do app. O contexto guarda o último valor, então voltar aqui pinta na hora.
+  useEffect(() => {
+    if (!userId) return;
+    (async () => {
+      try {
+        const token = await getToken();
+        if (!token) return;
+
+        // allSettled: uma falha não derruba a vizinha.
+        const [payment, list] = await Promise.allSettled([
+          getPaymentDetails(token),
+          getInvoices(token),
+        ]);
+
+        if (payment.status === "fulfilled") setPaymentDetails(payment.value);
+        if (list.status === "fulfilled") setInvoices(list.value);
+      } catch {
+        /* sem sessão utilizável */
+      }
+    })();
+  }, [userId, getToken, setPaymentDetails, setInvoices]);
 
   const getBillingPortalUrl = async () => {
     const token = await getToken();

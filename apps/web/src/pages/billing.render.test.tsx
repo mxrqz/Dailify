@@ -1,16 +1,22 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, within } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { limitsFor, type QuotaUsage } from "@dailify/shared";
 
-const { useUser, useAuth, dailify } = vi.hoisted(() => ({
+const { useUser, useAuth, dailify, api } = vi.hoisted(() => ({
   useUser: vi.fn(),
   useAuth: vi.fn(),
   dailify: vi.fn(),
+  api: {
+    billingPortal: vi.fn(),
+    getPaymentDetails: vi.fn(async () => null),
+    getInvoices: vi.fn(async () => []),
+  },
 }));
 
 vi.mock("@clerk/clerk-react", () => ({ useUser, useAuth }));
+vi.mock("@/functions/api", () => api);
 vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
 
 import BillingPage from "./billing";
@@ -29,13 +35,15 @@ function context(over: Record<string, unknown> = {}) {
     paymentDetails: undefined,
     quotas: undefined,
     tasks: [],
+    setInvoices: vi.fn(),
+    setPaymentDetails: vi.fn(),
     ...over,
   };
 }
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useAuth.mockReturnValue({ getToken: async () => "t" });
+  useAuth.mockReturnValue({ getToken: async () => "t", userId: "u1" });
   useUser.mockReturnValue({ user: { publicMetadata: {} } });
   dailify.mockReturnValue(context());
 });
@@ -127,6 +135,17 @@ describe("<BillingPage>", () => {
     // tarefas são ilimitadas no Max; os créditos de IA TÊM teto mesmo no plano de cima.
     expect(card.getByText(pricingCopy.account.unlimited.tasks)).toBeInTheDocument();
     expect(card.getByText(`0 de ${limitsFor("max").ai}`)).toBeInTheDocument();
+  });
+
+  // A cobrança saiu do boot de toda rota protegida: quem carrega é esta tela.
+  it("busca cobrança e faturas ao abrir e guarda no contexto", async () => {
+    const ctx = context({ quotas: FREE });
+    dailify.mockReturnValue(ctx);
+    renderPage();
+
+    await waitFor(() => expect(ctx.setInvoices).toHaveBeenCalledWith([]));
+    expect(ctx.setPaymentDetails).toHaveBeenCalledWith(null);
+    expect(api.getPaymentDetails).toHaveBeenCalledWith("t");
   });
 
   /**

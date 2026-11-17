@@ -7,8 +7,6 @@ const { api, offline, dailify, getToken } = vi.hoisted(() => ({
   api: {
     getTasksForMonth: vi.fn(async () => ({ tasks: [] })),
     getQuotas: vi.fn(async () => undefined),
-    getPaymentDetails: vi.fn(async () => undefined),
-    getInvoices: vi.fn(async () => []),
     getUndatedTasks: vi.fn(async () => ({ tasks: [] })),
     getSettings: vi.fn(async () => ({})),
   },
@@ -28,8 +26,6 @@ const { api, offline, dailify, getToken } = vi.hoisted(() => ({
     loadedMonths: [],
     loadMonth: vi.fn(async () => {}),
     reloadMonths: vi.fn(async () => undefined),
-    setInvoices: vi.fn(),
-    setPaymentDetails: vi.fn(),
     setQuotas: vi.fn(),
     undatedTasks: [],
     setUndatedTasks: vi.fn(),
@@ -96,7 +92,6 @@ describe("<ProtectedRoute>", () => {
     expect(dailify.reloadMonths).toHaveBeenCalledTimes(1);
     expect(offline.flushQueue).toHaveBeenCalledTimes(1);
     expect(api.getUndatedTasks).toHaveBeenCalledTimes(1);
-    expect(api.getPaymentDetails).toHaveBeenCalledTimes(1);
     expect(api.getQuotas).toHaveBeenCalledTimes(1);
     expect(dailify.loadMonth).not.toHaveBeenCalled();
   });
@@ -116,6 +111,21 @@ describe("<ProtectedRoute>", () => {
     await act(async () => window.dispatchEvent(new Event("online")));
     await waitFor(() => expect(dailify.reloadMonths).toHaveBeenCalledTimes(2));
     expect(dailify.reloadMonths).toHaveBeenLastCalledWith(expect.arrayContaining([later]));
+  });
+
+  // O cache da agenda não serializa a cada setTasks; sair da página grava o pendente.
+  it("grava o cache adiado e descarrega no pagehide", async () => {
+    render(app());
+    await act(async () => {});
+    expect(offline.cacheTasks).not.toHaveBeenCalled();
+
+    window.dispatchEvent(new Event("pagehide"));
+    expect(offline.cacheTasks).toHaveBeenCalledTimes(1);
+    expect(offline.cacheTasks).toHaveBeenCalledWith("u1", dailify.tasks);
+
+    // Já gravado: o timer e um segundo pagehide não regravam.
+    window.dispatchEvent(new Event("pagehide"));
+    expect(offline.cacheTasks).toHaveBeenCalledTimes(1);
   });
 
   // O splash só segura quem montou carregando: trocar de rota com tudo em mãos abre a rota direto.
