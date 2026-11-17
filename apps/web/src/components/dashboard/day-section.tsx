@@ -70,9 +70,9 @@ export function DaySection({
 }): JSX.Element {
   const { tasks, hour12 } = useDailify();
   const reduce = useReducedMotion();
-  const now = useNow(60_000);
-
   const isCurrentDay = isToday(day);
+  // Só hoje tem o fio do agora; os outros dias só mudam (rótulo) na virada do dia.
+  const now = useNow(isCurrentDay ? 60_000 : "day");
   const dayTasks = tasks ? getTasksForDay(tasks, day) : [];
   const nowAt = now.getHours() * 60 + now.getMinutes();
   // Tarefas e o fio do agora numa ordem só. O fio fica antes do que começa agora (-0.5): o que já

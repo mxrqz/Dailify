@@ -145,7 +145,7 @@ const weekdayLabel = (day: Date) => {
 /** A semana de hoje (respeitando o primeiro dia da config); muda só à meia-noite. */
 export function useWeek(): Date[] {
   const { weekStart } = useDailify();
-  const now = useNow(60_000);
+  const now = useNow("day");
   const opts = { weekStartsOn: weekStart };
   return eachDayOfInterval({ start: startOfWeek(now, opts), end: endOfWeek(now, opts) });
 }

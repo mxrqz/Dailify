@@ -59,7 +59,7 @@ export function DayList(): JSX.Element {
 
   // `useNow` e não `new Date()` solto: com o app aberto na virada do dia, a lista continuava
   // começando em ontem.
-  const today = startOfDay(useNow(60_000));
+  const today = useNow("day");
   const start = selectedDay < today ? startOfDay(selectedDay) : today;
   // Um mês longe de hoje pode estar carregado sozinho: a lista só vai até onde não há buraco.
   const nextMonth = nextMonthToLoad(loadedMonths, start);
