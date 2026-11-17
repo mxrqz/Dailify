@@ -20,7 +20,8 @@ vi.mock("@/components/edit-task", () => ({
   EditTaskContent: ({ open }: { open: boolean }) => (open ? <div>folha aberta</div> : null),
 }));
 
-import { DayTaskRow } from "./day-task-row";
+import { DayTaskRow, TaskRow, durationText } from "./day-task-row";
+import { copy } from "./copy";
 
 const day = new Date(2026, 9, 23);
 const task: Task = {
@@ -43,10 +44,24 @@ describe("DayTaskRow", () => {
       bumpUsage: vi.fn(),
     });
     api.completeTask.mockResolvedValue({});
-    const { container } = render(<DayTaskRow task={task} day={day} />);
+    render(<DayTaskRow task={task} day={day} />);
 
-    expect(container.querySelector("[data-dot]")?.getAttribute("cy")).not.toBe("10");
+    expect(screen.getByText("14:30")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("checkbox"));
     expect(screen.queryByText("folha aberta")).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: /Reunião/ }));
+    expect(screen.getByText("folha aberta")).toBeInTheDocument();
+  });
+
+  it("em curso ganha o Agora; feita sai riscada", () => {
+    const { rerender } = render(<TaskRow time="10:00" title="Proposta" live />);
+    expect(screen.getByText(copy.day.now)).toBeInTheDocument();
+    rerender(<TaskRow time="10:00" title="Proposta" done />);
+    expect(screen.queryByText(copy.day.now)).toBeNull();
+    expect(screen.getByText("Proposta").className).toContain("line-through");
+  });
+
+  it("duração: minutos, horas e horas com minutos", () => {
+    expect([15, 60, 90, 125].map(durationText)).toEqual(["15 min", "1h", "1h30", "2h05"]);
   });
 });

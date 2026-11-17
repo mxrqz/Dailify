@@ -1,4 +1,7 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
+import { format } from "date-fns";
+import { BellIcon, CheckIcon, RepeatIcon, VideoIcon } from "lucide-react";
+import { durationMinutes, videoLink } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { SwipeActions } from "@/components/dashboard/swipe-actions";
@@ -13,13 +16,15 @@ import {
 import { AddToCalendar } from "@/components/add-to-calendar";
 import { ClockCheck } from "@/components/clock-check";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
-import { TaskCard, TimeLabel } from "@/components/task-card";
+import { TaskCard } from "@/components/task-card";
 import { useDailify } from "@/components/dailifyContext";
 import { formatClock, taskToCardData } from "@/functions/functions";
+import { repeatLabel } from "@/functions/repeat-label";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import type { TaskProps } from "@/types/types";
 import { zoned } from "@/functions/zone";
+import { cn } from "@/lib/utils";
 
 /**
  * Sem hover não há como alcançar a toolbar do cartão nem os chips, então é aí — e só aí — que o
@@ -30,6 +35,204 @@ import { zoned } from "@/functions/zone";
  * pra editar em cima dela.
  */
 export const SHEET_EDITING = "(hover: none), (max-width: 639px)";
+
+/** 15 → "15 min", 60 → "1h", 90 → "1h30": a duração embaixo do horário. */
+export function durationText(minutes: number): string {
+  if (minutes < 60) return copy.day.minutes.replace("{n}", String(minutes));
+  const m = minutes % 60;
+  return copy.day.hours
+    .replace("{h}", String(Math.floor(minutes / 60)))
+    .replace("{m}", m ? String(m).padStart(2, "0") : "");
+}
+
+/** O círculo de concluir: 24px dentro de um alvo de 44, cheio de `brand` quando feito. */
+export function CheckCircle({
+  checked,
+  onCheckedChange,
+  label,
+}: {
+  checked: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  label: string;
+}): JSX.Element {
+  return (
+    <button
+      type="button"
+      role="checkbox"
+      aria-checked={checked}
+      aria-label={label}
+      onClick={() => onCheckedChange(!checked)}
+      className="group/check grid size-11 flex-none cursor-pointer place-items-center rounded-full outline-none"
+    >
+      <span
+        className={cn(
+          "grid size-6 place-items-center rounded-full border-2 text-on-brand transition-colors duration-base ease-out group-active/check:scale-90 group-focus-visible/check:outline-2 group-focus-visible/check:outline-offset-2 group-focus-visible/check:outline-brand-text",
+          checked ? "border-brand bg-brand" : "border-ink-secondary",
+        )}
+      >
+        <CheckIcon
+          aria-hidden="true"
+          strokeWidth={3}
+          className={cn(
+            "size-3.5 transition-[opacity,scale] duration-base ease-out",
+            checked ? "opacity-100" : "scale-60 opacity-0",
+          )}
+        />
+      </span>
+    </button>
+  );
+}
+
+/** O selo "G" dos eventos do Google: chip pequeno, então pode ter a cor do `meta-date`. */
+export function GoogleBadge(): JSX.Element {
+  return (
+    <span
+      aria-hidden="true"
+      className="grid size-3.5 flex-none place-items-center rounded-xs bg-meta-date text-2xs leading-none font-bold text-canvas"
+    >
+      G
+    </span>
+  );
+}
+
+/**
+ * A linha da agenda (props → markup): horário e duração à esquerda, título e meta no meio, e à
+ * direita o que vier (o círculo de concluir, a seta do Google). `live` é a tarefa em curso.
+ */
+export function TaskRow({
+  time,
+  duration,
+  title,
+  meta,
+  done,
+  live,
+  muted,
+  onOpen,
+  trailing,
+  className,
+  ...props
+}: {
+  time: ReactNode;
+  duration?: string;
+  title: string;
+  /** Ícones neutros e o texto curto ("Seg, Qua · Meet"). */
+  meta?: ReactNode;
+  done?: boolean;
+  live?: boolean;
+  /** Evento de fora: texto apagado, título sem peso. */
+  muted?: boolean;
+  onOpen?: () => void;
+  trailing?: ReactNode;
+  className?: string;
+  role?: string;
+  "aria-label"?: string;
+}): JSX.Element {
+  const body = (
+    <>
+      <span
+        className={cn(
+          "flex w-11 flex-none flex-col items-end text-subhead font-medium tabular-nums",
+          live ? "text-brand-text" : done || muted ? "text-ink-secondary" : "text-ink",
+        )}
+      >
+        {time}
+        {duration && (
+          <small className={cn("text-xs font-normal", !live && "text-ink-secondary")}>
+            {duration}
+          </small>
+        )}
+      </span>
+      <span className="flex min-w-0 flex-1 flex-col gap-0.5 pl-1">
+        <span
+          className={cn(
+            "truncate text-body",
+            muted ? "font-medium text-ink-secondary" : "font-semibold",
+            done && "text-ink-secondary line-through decoration-ink-tertiary",
+          )}
+        >
+          {title}
+        </span>
+        {(live || meta) && (
+          <span className="flex min-w-0 items-center gap-1.5 text-footnote text-ink-secondary tabular-nums [&_svg]:size-3.5 [&_svg]:flex-none">
+            {live && (
+              <span className="inline-flex h-5 flex-none items-center rounded-full bg-brand px-2 text-xs font-semibold text-on-brand">
+                {copy.day.now}
+              </span>
+            )}
+            {meta}
+          </span>
+        )}
+      </span>
+    </>
+  );
+
+  return (
+    <div
+      {...props}
+      className={cn(
+        "flex min-h-16 items-center gap-2 rounded-md py-1.5 pr-1.5 pl-3",
+        live ? "bg-brand-soft" : "card",
+        className,
+      )}
+    >
+      {onOpen ? (
+        <button
+          type="button"
+          onClick={onOpen}
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 self-stretch rounded-sm text-left outline-none focus-visible:outline-2 focus-visible:outline-brand-text"
+        >
+          {body}
+        </button>
+      ) : (
+        <span className="flex min-w-0 flex-1 items-center gap-2">{body}</span>
+      )}
+      {trailing}
+    </div>
+  );
+}
+
+/** A linha do agora entre as tarefas de hoje: hora em `brand-text`, fio com a bolinha. */
+export function NowLine({ time }: { time: string }): JSX.Element {
+  return (
+    <div
+      role="separator"
+      aria-label={copy.day.nowAt.replace("{time}", time)}
+      className="flex h-3 items-center gap-2 pr-1.5 pl-3"
+    >
+      <b className="w-11 flex-none text-right text-xs font-semibold text-brand-text tabular-nums">
+        {time}
+      </b>
+      <i className="relative ml-1 h-0.5 flex-1 rounded-full bg-brand before:absolute before:-top-0.75 before:-left-1 before:size-2 before:rounded-full before:bg-brand" />
+    </div>
+  );
+}
+
+/** "Seg, Qua · Lembrete 30 min antes · Meet" com os ícones neutros na frente. */
+function taskMeta(task: TaskProps, live: boolean, hour12: boolean): ReactNode {
+  const repeat = repeatLabel(task.repeat, task.repeatEvery);
+  const meet = videoLink(task.links);
+  const before =
+    task.alert === undefined ? undefined : Math.round((task.date - task.alert) / 60_000);
+  const end = task.date + durationMinutes(task.duration) * 60_000;
+  const text = [
+    live && copy.day.until.replace("{time}", formatClock(format(zoned(end), "HH:mm"), hour12)),
+    repeat,
+    before !== undefined &&
+      (before <= 0
+        ? copy.day.reminderOnTime
+        : copy.day.reminderBefore.replace("{n}", durationText(before))),
+    meet && copy.day.meet,
+  ].filter(Boolean);
+  if (!text.length) return undefined;
+  return (
+    <>
+      {repeat && <RepeatIcon aria-hidden="true" />}
+      {before !== undefined && <BellIcon aria-hidden="true" />}
+      {meet && <VideoIcon aria-hidden="true" />}
+      <span className="truncate">{text.join(" · ")}</span>
+    </>
+  );
+}
 
 /**
  * Uma linha da coluna do dia: o cartão + suas ações + a folha de edição, que no toque abre por
@@ -44,14 +247,14 @@ export function DayTaskRow({
   task,
   day,
   hour,
-  countdown,
+  live = false,
 }: {
   task: TaskProps;
   day: Date;
-  /** "16:00" acima do primeiro cartão da hora; os seguintes não repetem. */
+  /** "16:00" acima do primeiro cartão da hora (desktop); os seguintes não repetem. */
   hour?: string;
-  /** Substitui o horário no chip na próxima tarefa do dia ("EM 25 MIN"). */
-  countdown?: string;
+  /** Em curso agora: a linha acende e ganha o "Agora". */
+  live?: boolean;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const sheetEditing = useMediaQuery(SHEET_EDITING);
@@ -121,14 +324,32 @@ export function DayTaskRow({
         calendar: <AddToCalendar task={task} variant="toolbar" />,
       };
 
+  const toggle = () => void (data.completed ? onUncomplete() : onComplete());
   const time = hour ? formatClock(hour, hour12) : "";
-  const card = (
+  // ponytail: o desktop segue no TaskCard (edição nos chips, por hover); portar pra TaskRow pede
+  // levar os popovers de horário/duração/repetição pra dentro da meta.
+  const card = sheetEditing ? (
+    <TaskRow
+      time={formatClock(data.time, hour12)}
+      duration={task.duration ? durationText(durationMinutes(task.duration)) : undefined}
+      title={task.title}
+      meta={taskMeta(task, live && !data.completed, hour12)}
+      done={data.completed}
+      live={live && !data.completed}
+      onOpen={() => setOpen(true)}
+      trailing={
+        <CheckCircle
+          checked={data.completed}
+          onCheckedChange={toggle}
+          label={data.completed ? copy.task.uncomplete : copy.task.complete}
+        />
+      }
+    />
+  ) : (
     <TaskCard
       {...data}
-      // No toque o horário sai do cartão e fica fora da faixa que desliza (ver abaixo).
-      time={sheetEditing ? "" : time}
-      upcoming={Boolean(countdown)}
-      at={countdown ?? formatClock(data.time, hour12)}
+      time={time}
+      at={formatClock(data.time, hour12)}
       selected={open}
       check={
         <ClockCheck
@@ -138,8 +359,7 @@ export function DayTaskRow({
           label={data.completed ? copy.task.uncomplete : copy.task.complete}
         />
       }
-      onClick={sheetEditing ? () => setOpen(true) : undefined}
-      onTitleChange={sheetEditing ? undefined : onRename}
+      onTitleChange={onRename}
       edit={edit}
     />
   );
@@ -147,15 +367,9 @@ export function DayTaskRow({
   return (
     <EditTask open={open} onOpenChange={onOpenChange}>
       {sheetEditing ? (
-        <div className="flex flex-col gap-1.5">
-          {time && <TimeLabel time={time} />}
-          <SwipeActions
-            onComplete={() => void (data.completed ? onUncomplete() : onComplete())}
-            onDelete={() => void onDelete()}
-          >
-            {card}
-          </SwipeActions>
-        </div>
+        <SwipeActions onComplete={toggle} onDelete={() => void onDelete()}>
+          {card}
+        </SwipeActions>
       ) : (
         card
       )}

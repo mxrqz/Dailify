@@ -104,7 +104,6 @@ describe("<AnytimeBlock>", () => {
       "true",
     );
     expect(screen.getByText(copy.undated.doneWeekly)).toBeInTheDocument();
-    expect(screen.getByText(copy.undated.recurring)).toBeInTheDocument();
   });
 
   it("série marcada só na semana passada aparece desmarcada", () => {
@@ -137,7 +136,7 @@ describe("<AnytimeBlock>", () => {
     expect(screen.getByPlaceholderText(copy.undated.capture)).toBeInTheDocument();
   });
 
-  it("lembrete vira chip crimson", () => {
+  it("lembrete mostra o dia e a hora", () => {
     renderList([task({ id: "a", alert: new Date(2026, 9, 29, 9).getTime() })]);
     expect(screen.getByText(/qui 09:00/)).toBeInTheDocument();
   });
@@ -224,10 +223,10 @@ describe("<DayList> com tarefas sem data", () => {
     renderDayList([task({ id: "a", title: "Comprar presente" })]);
 
     const block = screen.getByRole("region", { name: copy.undated.title });
-    expect(block.closest("section[id]")).toHaveTextContent(copy.day.today);
+    expect(block.closest("section[id]")).toHaveTextContent(copy.day.agenda);
     expect(within(block).getByText("Comprar presente")).toBeInTheDocument();
     expect(screen.queryByText(copy.day.listFirstRun)).not.toBeInTheDocument();
-    expect(screen.queryByText(copy.day.noTasks)).not.toBeInTheDocument();
+    expect(screen.queryByText(copy.day.emptyDay)).not.toBeInTheDocument();
   });
 
   it("sem tarefa nenhuma mostra o primeiro uso", () => {

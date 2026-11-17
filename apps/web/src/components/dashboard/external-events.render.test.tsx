@@ -18,7 +18,8 @@ vi.mock("@clerk/clerk-react", () => ({ useAuth: () => ({ getToken: async () => "
 vi.mock("@/hooks/useOnline", () => ({ useOnline }));
 vi.mock("@/functions/api", () => api);
 vi.mock("sonner", () => ({ toast }));
-vi.mock("@/components/dashboard/day-task-row", () => ({
+vi.mock("@/components/dashboard/day-task-row", async (original) => ({
+  ...(await original<typeof import("@/components/dashboard/day-task-row")>()),
   DayTaskRow: ({ task }: { task: Task }) => <div data-testid="task">{task.title}</div>,
 }));
 vi.mock("@/components/dashboard/anytime-block", () => ({

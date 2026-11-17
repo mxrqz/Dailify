@@ -16,7 +16,7 @@ export function AppLayout(): JSX.Element {
 
   return (
     <div className="flex min-h-dvh flex-col bg-surface-page text-foreground">
-      <AppHeader className="pl-3 pr-gutter" />
+      <AppHeader className="px-2 md:pl-3 md:pr-gutter" />
 
       <div className="flex flex-1">
         <Sidebar />

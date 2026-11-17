@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import { useReducedMotion } from "motion/react";
+import { ArrowDownIcon, PencilIcon } from "lucide-react";
 import {
   addMonths,
   differenceInCalendarMonths,
@@ -12,6 +13,7 @@ import {
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { DaySection, TaskSkeletons, dayAnchorId } from "@/components/dashboard/day-section";
+import { Mew } from "@/components/mew/mew";
 import { listDays, nextMonthToLoad } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
@@ -20,6 +22,31 @@ import { zoned } from "@/functions/zone";
 
 // Sem tarefa em tantos meses seguidos, a sentinela desiste de pedir o próximo.
 const MAX_EMPTY_MONTHS = 12;
+
+/** Primeiro uso: a Mew dormindo e o empurrão pro composer, que mora embaixo (o dock). */
+export function FirstRun(): JSX.Element {
+  return (
+    <section
+      aria-label={copy.day.listFirstRun}
+      className="flex flex-col items-center px-4 py-16 text-center"
+    >
+      <Mew mood="sleepy" className="w-24" />
+      <h2 className="mt-5 text-title-3 font-semibold">{copy.day.listFirstRun}</h2>
+      <p className="mt-2 text-subhead text-balance text-ink-secondary">
+        {copy.day.listFirstRunHint}
+      </p>
+      <div className="mt-6 flex flex-col items-center gap-2">
+        <small className="text-footnote text-ink-secondary">{copy.day.listFirstRunTry}</small>
+        {/* ponytail: só o exemplo, sem tocar pra preencher — o campo é do composer. */}
+        <span className="card inline-flex h-11 items-center gap-2 rounded-sm px-4 text-subhead font-medium">
+          <PencilIcon aria-hidden="true" className="size-4 text-ink-secondary" />
+          {copy.day.listFirstRunExample}
+        </span>
+      </div>
+      <ArrowDownIcon aria-hidden="true" className="mt-5 size-5 text-ink-secondary" />
+    </section>
+  );
+}
 
 /**
  * A lista do dashboard: um bloco por dia COM TAREFA (ou escolhido por clique), de hoje (ou do dia
@@ -105,7 +132,7 @@ export function DayList(): JSX.Element {
     if (tasks?.length || undatedTasks?.length) {
       return (
         <>
-          <p className="py-6 text-sm text-content-secondary">{copy.day.listEmpty}</p>
+          <p className="px-1 py-6 text-subhead text-ink-secondary">{copy.day.listEmpty}</p>
           {sentinelEl}
         </>
       );
@@ -113,20 +140,14 @@ export function DayList(): JSX.Element {
 
     return (
       <>
-        <div className="flex flex-col items-center gap-2 rounded-xl border border-dashed border-surface-line px-6 py-10 text-center">
-          <p className="text-sm font-medium text-foreground">{copy.day.listFirstRun}</p>
-          <p className="max-w-xs text-sm text-content-secondary">{copy.day.listFirstRunHint}</p>
-          <p className="mt-1 rounded-md bg-surface-panel px-2 py-1 font-mono text-2xs text-muted-foreground">
-            {copy.day.listFirstRunExample}
-          </p>
-        </div>
+        <FirstRun />
         {sentinelEl}
       </>
     );
   }
 
   return (
-    <div className="flex flex-col gap-8">
+    <div className="flex flex-col gap-7">
       {days.map((day) => (
         <DaySection
           key={day.toISOString()}
