@@ -1,8 +1,6 @@
-import { duration } from "@/consts/motion";
 import { ReactNode, useEffect, useRef, useState } from "react";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { Navigate, useLocation } from "react-router-dom";
-import { Loader2Icon } from "lucide-react";
 import { useDailify } from "./dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import {
@@ -22,7 +20,8 @@ import {
 import { initialMonths } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
-import { motion } from "motion/react";
+import { AnimatePresence } from "motion/react";
+import { Splash, SPLASH_MIN_MS } from "@/components/splash";
 import { toast } from "sonner";
 import { zoned, zonedAt } from "@/functions/zone";
 
@@ -258,28 +257,26 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     };
   }, [isLoaded, userId]);
 
-  // 🧭 Redirecionar se não estiver logado
-  if (!isLoaded || (isLoading && !tasks)) {
-    return (
-      <div className="w-full h-dvh flex flex-col items-center justify-center gap-5 bg-background">
-        <Loader2Icon className="size-12 text-foreground animate-spin" />
-        <motion.span
-          key={isLoading}
-          initial={{ opacity: 0, y: 5 }}
-          animate={{ opacity: 1, y: 0 }}
-          exit={{ opacity: 0, y: -5 }}
-          transition={{ duration: duration.slow }}
-          className="text-lg text-muted-foreground font-medium"
-        >
-          {isLoading}
-        </motion.span>
-      </div>
-    );
-  }
+  // O splash sai assim que os dados chegam, mas não antes do pulinho de entrada da Mew (senão
+  // pisca). Só quem montou carregando segura: trocar de rota com tudo em mãos não ganha splash.
+  const loading = !isLoaded || Boolean(isLoading && !tasks);
+  const [held, setHeld] = useState(loading);
+  useEffect(() => {
+    if (!held) return;
+    const id = setTimeout(() => setHeld(false), SPLASH_MIN_MS);
+    return () => clearTimeout(id);
+  }, [held]);
+  const splash = loading || held;
 
-  if (!isSignedIn) {
+  // 🧭 Redirecionar se não estiver logado
+  if (!loading && !isSignedIn) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  return <>{children}</>;
+  return (
+    <>
+      {!splash && children}
+      <AnimatePresence>{splash && <Splash key="splash" />}</AnimatePresence>
+    </>
+  );
 }

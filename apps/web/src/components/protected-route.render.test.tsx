@@ -117,4 +117,19 @@ describe("<ProtectedRoute>", () => {
     await waitFor(() => expect(dailify.reloadMonths).toHaveBeenCalledTimes(2));
     expect(dailify.reloadMonths).toHaveBeenLastCalledWith(expect.arrayContaining([later]));
   });
+
+  // O splash só segura quem montou carregando: trocar de rota com tudo em mãos abre a rota direto.
+  it("carregando mostra o splash e não a rota; com os dados em mãos, a rota sem espera", () => {
+    Object.assign(dailify, { isLoading: "x", tasks: undefined });
+    try {
+      const loading = render(app());
+      expect(loading.queryByText("app")).toBeNull();
+      expect(loading.getByRole("status")).toBeInTheDocument();
+      loading.unmount();
+    } finally {
+      Object.assign(dailify, { isLoading: null, tasks: [] });
+    }
+
+    expect(render(app()).getByText("app")).toBeInTheDocument();
+  });
 });
