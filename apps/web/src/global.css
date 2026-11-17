@@ -520,14 +520,14 @@
  * landing — o hero é a exceção, com `pt-20` e altura fixa. Centralizar aqui torna o respiro da
  * página inteira ajustável numa linha. O valor é o mesmo de antes: refator, não mudança de layout.
  */
-/* Respiro do rodapé que cresce com a barra de gestos do iOS; sem ela, o p-1 de sempre. */
+/* Rodapé de painel: a área da barra de gestos (0 no desktop) mais 8px, somados e não o maior dos dois. */
 @utility pb-safe {
-  padding-bottom: max(--spacing(1), env(safe-area-inset-bottom));
+  padding-bottom: calc(--spacing(2) + env(safe-area-inset-bottom));
 }
 
-/* O mesmo pro dock do composer: a pílula nunca fica a menos de 16px do fim da tela. */
+/* Dock do composer: flutua 16px acima da barra de gestos, como o FAB do Material. */
 @utility pb-dock {
-  padding-bottom: max(--spacing(4), env(safe-area-inset-bottom));
+  padding-bottom: calc(--spacing(4) + env(safe-area-inset-bottom));
 }
 
 /* Barra sticky do topo: 52px de conteúdo abaixo da status bar/notch (0 fora do app edge-to-edge). */
