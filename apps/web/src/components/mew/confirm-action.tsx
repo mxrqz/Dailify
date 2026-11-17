@@ -29,7 +29,7 @@ export function ConfirmAction({
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  /** O texto da action ("Criar evento no Google Agenda · amanhã 15:00–15:30"). */
+  /** O texto da action ("Criar evento na Agenda · amanhã 15:00–15:30"). */
   preview: string;
   /** Um ajuste opcional antes de confirmar (ex.: "Criar link do Meet"). */
   option?: { label: string; checked: boolean; onChange: (checked: boolean) => void };

@@ -44,8 +44,8 @@ async function ensureOk(res: Response): Promise<void> {
   throw new ActionError(
     502,
     res.status === 403 || res.status === 429
-      ? "O Google Agenda está limitando os pedidos; tente de novo em alguns minutos"
-      : "O Google Agenda não respondeu; tente de novo",
+      ? "A Agenda está limitando os pedidos; tente de novo em alguns minutos"
+      : "A Agenda não respondeu; tente de novo",
   );
 }
 
@@ -74,7 +74,7 @@ async function saveEvent(ctx: Ctx, event: GoogleEvent, meet: boolean) {
   await ensureOk(res);
   const body: unknown = await res.json();
   const htmlLink = text(body, "htmlLink");
-  if (!htmlLink) throw new ActionError(502, "O Google Agenda não respondeu; tente de novo");
+  if (!htmlLink) throw new ActionError(502, "A Agenda não respondeu; tente de novo");
   return { htmlLink, hangoutLink: text(body, "hangoutLink") };
 }
 
@@ -106,7 +106,7 @@ export const createEvent: Action<CreateEventInput> = {
     const task = await ownTask(ctx, input.taskId);
     const existing = await getLink(ctx.env.DB, ctx.userId, "google-calendar", task.id);
     if (existing)
-      throw new ActionError(409, "Esta tarefa já está no Google Agenda", {
+      throw new ActionError(409, "Esta tarefa já está na Agenda", {
         code: INTEGRATION_ERROR.alreadyLinked,
         link: existing,
         task,
@@ -214,7 +214,7 @@ export async function linkEvent(
   const already = { code: INTEGRATION_ERROR.alreadyLinked };
   const existing = await getLink(DB, ctx.userId, "google-calendar", task.id);
   if (existing)
-    throw new ActionError(409, "Esta tarefa já está no Google Agenda", {
+    throw new ActionError(409, "Esta tarefa já está na Agenda", {
       ...already,
       link: existing,
       task,
@@ -227,10 +227,10 @@ export async function linkEvent(
   const url = `${EVENTS_API}/${encodeURIComponent(input.eventId)}`;
   const res = await ctx.api(url);
   if (res.status === 404 || res.status === 410)
-    throw new ActionError(404, "Evento não encontrado no Google Agenda");
+    throw new ActionError(404, "Evento não encontrado na Agenda");
   await ensureOk(res);
   const event = toExternal(await res.json(), input.timeZone);
-  if (!event) throw new ActionError(404, "Evento não encontrado no Google Agenda");
+  if (!event) throw new ActionError(404, "Evento não encontrado na Agenda");
   if (event.mewkiTaskId)
     throw new ActionError(409, "Este evento já está vinculado a outra tarefa", already);
   if (event.recurring)

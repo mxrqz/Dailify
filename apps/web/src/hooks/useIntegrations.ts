@@ -49,7 +49,7 @@ export function useIntegrations(): IntegrationStatus[] | undefined {
   return list;
 }
 
-/** O Google Agenda conectado e ativo — a condição pra oferecer "Adicionar ao Google Agenda". */
+/** O Google Agenda conectado e ativo — a condição pra oferecer "Adicionar à Agenda". */
 export const useCalendarReady = (): boolean =>
   useIntegrations()?.some(
     (s) => s.provider === "google-calendar" && s.connected && s.status === "active",

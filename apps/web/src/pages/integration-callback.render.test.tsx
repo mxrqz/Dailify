@@ -44,7 +44,7 @@ describe("<IntegrationCallback>", () => {
     expect(await screen.findByText("integrations")).toBeInTheDocument();
     expect(completeIntegration).toHaveBeenCalledTimes(1);
     expect(completeIntegration).toHaveBeenCalledWith("t", "google-calendar", "c", "s");
-    expect(toast.success).toHaveBeenCalledWith("Google Agenda conectado");
+    expect(toast.success).toHaveBeenCalledWith("Agenda conectada");
   });
 
   it("access_denied não chama o servidor", async () => {
@@ -52,7 +52,7 @@ describe("<IntegrationCallback>", () => {
 
     expect(await screen.findByText("integrations")).toBeInTheDocument();
     expect(completeIntegration).not.toHaveBeenCalled();
-    expect(toast.error).toHaveBeenCalledWith("Conexão com Google Agenda cancelada");
+    expect(toast.error).toHaveBeenCalledWith("Conexão com a Agenda cancelada");
   });
 
   it("escopo desmarcado vira o recado específico", async () => {
@@ -62,7 +62,7 @@ describe("<IntegrationCallback>", () => {
     renderAt("code=c&state=s");
 
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(t.missingScope.replace("{name}", "Google Agenda")),
+      expect(toast.error).toHaveBeenCalledWith(t.missingScope.replace("{name}", "Agenda")),
     );
     expect(screen.getByText("integrations")).toBeInTheDocument();
   });

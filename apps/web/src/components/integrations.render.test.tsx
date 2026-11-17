@@ -76,10 +76,10 @@ describe("<Integrations>", () => {
       expect(api.disconnectIntegration).toHaveBeenCalledWith("t", "google-calendar"),
     );
     expect(await screen.findByRole("button", { name: t.connect })).toBeInTheDocument();
-    expect(toast.success).toHaveBeenCalledWith("Google Agenda desconectado");
+    expect(toast.success).toHaveBeenCalledWith("Agenda desconectada");
   });
 
-  it("conectado: Mostrar eventos do Google nasce ligado e desligar fica no device", async () => {
+  it("conectado: Mostrar eventos da Agenda nasce ligado e desligar fica no device", async () => {
     localStorage.clear();
     renderWith({ connected: true, status: "active" });
     const toggle = await screen.findByRole("switch", { name: copy.calendar.showEvents });
@@ -126,7 +126,7 @@ describe("<Integrations>", () => {
     expect(api.getIntegrations).not.toHaveBeenCalled();
   });
 
-  it("conectado: Novas tarefas no Google Agenda nasce Nunca e Sempre fica no device", async () => {
+  it("conectado: Novas tarefas na Agenda nasce Nunca e Sempre fica no device", async () => {
     localStorage.clear();
     renderWith({ connected: true, status: "active" });
     const always = await screen.findByRole("radio", { name: t.always });

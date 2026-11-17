@@ -285,7 +285,7 @@ describe("POST /integrations/google-calendar/events", () => {
     const ctx = await loadCtx(env, userId, "google-calendar");
     if (!ctx) throw new Error("sem ctx");
     const text = await createEvent.preview(ctx, { taskId: tid, timeZone: TZ, meet: true });
-    expect(text).toMatch(/^Criar evento no Google Agenda · .* 15:00–16:30 · com Meet$/);
+    expect(text).toMatch(/^Criar evento na Agenda · .* 15:00–16:30 · com Meet$/);
   });
 });
 

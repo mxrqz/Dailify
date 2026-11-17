@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { INTEGRATIONS, type IntegrationStatus, type ProviderId } from "@dailify/shared";
+import { type IntegrationStatus, type ProviderId } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { ListGroup, ListRow } from "@/components/kit/list";
@@ -45,7 +45,7 @@ import { useOnline } from "@/hooks/useOnline";
 const t = copy.integrations;
 // ponytail: um provedor só no catálogo; com o segundo, o card vira um por `PROVIDER_IDS`.
 const GCAL: ProviderId = "google-calendar";
-const NAME = INTEGRATIONS[GCAL].name;
+const NAME = copy.calendar.name;
 const named = (text: string) => text.replace("{name}", NAME);
 const tag =
   "rounded-full bg-fill px-2.5 py-0.5 text-footnote font-medium whitespace-nowrap text-ink-secondary";

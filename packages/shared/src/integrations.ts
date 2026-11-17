@@ -159,7 +159,7 @@ function repeatText(task: Task, start: ZonedParts): string {
 }
 
 /**
- * O texto da confirmação ("Criar evento no Google Agenda · amanhã 15:00–15:30 · com Meet"). Mesmo
+ * O texto da confirmação ("Criar evento na Agenda · amanhã 15:00–15:30 · com Meet"). Mesmo
  * texto no cartão do web e no `preview` da action; `null` = a tarefa não tem dia. Série mostra a
  * regra e o início dela, que é onde o evento começa — não o dia da instância tocada.
  */
@@ -208,7 +208,7 @@ export function calendarEventPreview(
             }).format(at);
     when = slot.allDay ? `${day} · dia inteiro` : `${day} ${time}`;
   }
-  return ["Criar evento no Google Agenda", when, opts.meet && !videoLink(task.links) && "com Meet"]
+  return ["Criar evento na Agenda", when, opts.meet && !videoLink(task.links) && "com Meet"]
     .filter(Boolean)
     .join(" · ");
 }

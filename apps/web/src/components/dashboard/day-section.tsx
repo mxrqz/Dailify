@@ -8,14 +8,9 @@ import { durationMinutes, matchExternalEvent, type ExternalEvent } from "@dailif
 import { useDailify } from "@/components/dailifyContext";
 import { AnytimeBlock, ScheduleDrop } from "@/components/dashboard/anytime-block";
 import { copy } from "@/components/dashboard/copy";
-import {
-  DayTaskRow,
-  GoogleBadge,
-  NowLine,
-  TaskRow,
-  durationText,
-} from "@/components/dashboard/day-task-row";
+import { DayTaskRow, NowLine, TaskRow, durationText } from "@/components/dashboard/day-task-row";
 import { LinkToEvent } from "@/components/add-to-calendar";
+import { CalendarBadge } from "@/components/logos";
 import { TaskCard } from "@/components/task-card";
 import {
   formatClock,
@@ -58,8 +53,8 @@ export function ExternalEventRow({
       title={event.title || t.untitled}
       meta={
         <>
-          <GoogleBadge />
-          <span className="truncate">{t.chip}</span>
+          <CalendarBadge />
+          <span className="truncate">{t.name}</span>
           {event.meet && (
             <>
               <span aria-hidden="true">·</span>

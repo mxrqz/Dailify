@@ -83,18 +83,6 @@ export function CheckCircle({
   );
 }
 
-/** O selo "G" dos eventos do Google: chip pequeno, então pode ter a cor do `meta-date`. */
-export function GoogleBadge(): JSX.Element {
-  return (
-    <span
-      aria-hidden="true"
-      className="grid size-3.5 flex-none place-items-center rounded-xs bg-meta-date text-2xs leading-none font-bold text-canvas"
-    >
-      G
-    </span>
-  );
-}
-
 /**
  * A linha da agenda (props → markup): horário e duração à esquerda, título e meta no meio, e à
  * direita o que vier (o círculo de concluir, a seta do Google). `live` é a tarefa em curso.

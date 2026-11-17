@@ -1,3 +1,5 @@
+import { copy } from "@/components/dashboard/copy";
+
 const NAMES: Record<string, string> = {
   "meet.google.com": "Google Meet",
   "youtube.com": "YouTube",
@@ -6,7 +8,7 @@ const NAMES: Record<string, string> = {
   "github.com": "GitHub",
   "notion.so": "Notion",
   "www.notion.so": "Notion",
-  "calendar.google.com": "Google Agenda",
+  "calendar.google.com": copy.calendar.name,
   "docs.google.com": "Google Docs",
   "zoom.us": "Zoom",
 };

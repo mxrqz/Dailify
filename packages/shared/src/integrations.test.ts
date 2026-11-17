@@ -66,20 +66,20 @@ describe("calendário", () => {
 
   it("preview diz quando e se cria Meet", () => {
     expect(calendarEventPreview(task(), TZ, { meet: true, now })).toBe(
-      "Criar evento no Google Agenda · amanhã 15:00–15:30 · com Meet",
+      "Criar evento na Agenda · amanhã 15:00–15:30 · com Meet",
     );
     expect(
       calendarEventPreview(task({ links: ["https://meet.google.com/abc-defg-hij"] }), TZ, {
         meet: true,
         now,
       }),
-    ).toBe("Criar evento no Google Agenda · amanhã 15:00–15:30");
+    ).toBe("Criar evento na Agenda · amanhã 15:00–15:30");
     expect(
       calendarEventPreview(task({ undated: true, alert: at(15, 9), repeat: "Daily" }), TZ, {
         meet: false,
         now,
       }),
-    ).toBe("Criar evento no Google Agenda · todo dia, dia inteiro, desde 15/11");
+    ).toBe("Criar evento na Agenda · todo dia, dia inteiro, desde 15/11");
     expect(calendarEventPreview(task({ undated: true }), TZ, { meet: false, now })).toBeNull();
   });
 
@@ -87,7 +87,7 @@ describe("calendário", () => {
     const weekly = task({ date: at(16, 10), repeat: { Weekly: ["Monday"] } });
     const instance = { ...weekly, date: at(30, 10), seriesStart: weekly.date };
     expect(calendarEventPreview(instance, TZ, { meet: false, now })).toBe(
-      "Criar evento no Google Agenda · toda segunda 10:00–10:30, desde 16/11",
+      "Criar evento na Agenda · toda segunda 10:00–10:30, desde 16/11",
     );
     const rule = (over: Partial<Task>) =>
       calendarEventPreview(task(over), TZ, { meet: false, now })?.split(" · ")[1];

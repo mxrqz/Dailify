@@ -169,7 +169,7 @@ integrations.post("/integrations/:provider/callback", async (c) => {
   return c.json(statusOf(c.env, id, true, await getConnection(c.env.DB, userId, id)));
 });
 
-const RECONNECT = "Reconecte o Google Agenda para continuar";
+const RECONNECT = "Reconecte a Agenda para continuar";
 
 /** Plano + conexão ativa + os erros esperados do Google, iguais em toda rota que fala com ele. */
 async function withCalendar(c: Ctx, run: (ctx: ProviderCtx) => Promise<unknown>) {
@@ -234,7 +234,7 @@ integrations.post("/integrations/google-calendar/events/:taskId/sync", async (c)
   const link = (await listTaskLinks(c.env.DB, userId, taskId)).find(
     (l) => l.provider === "google-calendar",
   );
-  if (!link) return fail(c, 404, "Tarefa não está no Google Agenda");
+  if (!link) return fail(c, 404, "Tarefa não está na Agenda");
   const ctx = await loadCtx(c.env, userId, "google-calendar");
   if (!ctx) return fail(c, 409, RECONNECT, { code: INTEGRATION_ERROR.reconnect });
   try {
@@ -249,7 +249,7 @@ integrations.post("/integrations/google-calendar/events/:taskId/sync", async (c)
     if (err instanceof InvalidGrantError)
       return fail(c, 409, RECONNECT, { code: INTEGRATION_ERROR.reconnect });
     console.error(`Falha ao sincronizar ${taskId}`, err);
-    return fail(c, 502, "O Google Agenda não respondeu; tente de novo");
+    return fail(c, 502, "A Agenda não respondeu; tente de novo");
   }
   return c.json({ task: await getTask(c.env.DB, userId, taskId) });
 });

@@ -14,6 +14,7 @@ import {
 import { copy } from "@/components/dashboard/copy";
 import { ListGroup, ListRow } from "@/components/kit/list";
 import { ConfirmAction } from "@/components/mew/confirm-action";
+import { CalendarBadge } from "@/components/logos";
 import { ToolbarButton } from "@/components/task-card";
 import { createCalendarEvent, linkCalendarEvent, syncCalendarEvent } from "@/functions/api";
 import { appTimeZone } from "@/functions/zone";
@@ -26,8 +27,8 @@ import type { TaskProps } from "@/types/types";
 const t = copy.calendar;
 
 /**
- * "Adicionar ao Google Agenda": só com a agenda conectada e a tarefa com dia. Já vinculada (o
- * `htmlLink` está nos links) vira "No Google Agenda", que abre o evento; se a última edição não
+ * "Adicionar à Agenda": só com a agenda conectada e a tarefa com dia. Já vinculada (o
+ * `htmlLink` está nos links) vira "Na Agenda", que abre o evento; se a última edição não
  * chegou lá (`stale`), ganha o "não sincronizado" e o reenviar.
  */
 export function AddToCalendar({
@@ -106,7 +107,7 @@ export function AddToCalendar({
     setOpen(false);
 
     const { error } = res;
-    // `already_linked` devolve a tarefa como está no servidor: a lista já passa a "No Google Agenda".
+    // `already_linked` devolve a tarefa como está no servidor: a lista já passa a "Na Agenda".
     if (res.task && error?.code === INTEGRATION_ERROR.alreadyLinked) {
       applyTask(res.task);
       toast.info(t.alreadyLinked);
@@ -176,7 +177,7 @@ export function CalendarRows({
         <ListRow
           href={linked}
           accessory="external"
-          icon={<CalendarCheckIcon />}
+          icon={<CalendarBadge />}
           label={t.linked}
           sublabel={stale && t.unsynced}
           value={t.open}
@@ -187,7 +188,7 @@ export function CalendarRows({
           onClick={onAdd}
           disabled={pending}
           accessory="chevron"
-          icon={<CalendarPlusIcon />}
+          icon={<CalendarBadge />}
           label={t.add}
         />
       )}

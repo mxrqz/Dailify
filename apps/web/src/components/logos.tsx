@@ -1,5 +1,7 @@
 import type { SVGProps } from "react";
 
+import { cn } from "@/lib/utils";
+
 interface LogoProps {
   size?: number;
   className?: string;
@@ -47,4 +49,9 @@ export function GoogleCalendarLogo(props: SVGProps<SVGSVGElement>) {
       />
     </svg>
   );
+}
+
+/** O selo da Agenda em meta, chips e linhas: o logo de verdade, decorativo (o texto ao lado nomeia). */
+export function CalendarBadge({ className }: { className?: string }) {
+  return <GoogleCalendarLogo aria-hidden="true" className={cn("size-3.5 flex-none", className)} />;
 }

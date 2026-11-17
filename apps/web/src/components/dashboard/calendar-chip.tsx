@@ -4,6 +4,7 @@ import { videoLink, type ParsedTaskWire, type Task } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { Chip } from "@/components/kit/chip";
+import { CalendarBadge } from "@/components/logos";
 import { Switch } from "@/components/kit/switch";
 import { MewStatic } from "@/components/mew/mew-static";
 import type { CalendarPick } from "@/hooks/useCalendarPush";
@@ -19,7 +20,7 @@ type Draft = Pick<Task, "undated" | "alert" | "links">;
 type Picked = CalendarPick & { mew?: boolean };
 
 /**
- * A etiqueta Google Agenda do composer, por rascunho (`index`; a frase única é o 0). Nasce no padrão
+ * A etiqueta Agenda do composer, por rascunho (`index`; a frase única é o 0). Nasce no padrão
  * das Configurações (Sempre/Nunca) e volta a ele a cada envio. O pedido explícito à Mew ("coloca no
  * Google Agenda") chega ligado mas ainda espera o Enter.
  */
@@ -64,24 +65,8 @@ export function useCalendarChip() {
   };
 }
 
-/** O "G" do Google Agenda: quadradinho na cor de data (`ghost` apaga ele, como o resto do chip). */
-export function GDot({ ghost, className }: { ghost?: boolean; className?: string }): JSX.Element {
-  return (
-    <span
-      aria-hidden="true"
-      className={cn(
-        "grid size-3.5 flex-none place-items-center rounded-xs text-2xs leading-none font-bold",
-        ghost ? "bg-ink-secondary text-surface-raised" : "bg-meta-date text-canvas",
-        className,
-      )}
-    >
-      G
-    </span>
-  );
-}
-
 /**
- * A linha da frase única, presentacional: "Google Agenda" + liga/desliga e, ligada, o "+ Meet".
+ * A linha da frase única, presentacional: "Agenda" + liga/desliga e, ligada, o "+ Meet".
  * `disabled`: ainda sem dia (a linha fica, pra não pular quando o dia aparece no texto).
  */
 export function CalendarToggle({
@@ -103,8 +88,8 @@ export function CalendarToggle({
   return (
     <div className="flex min-h-11 items-center gap-3">
       <span className="flex items-center gap-2 text-subhead font-medium">
-        <GDot className="size-4.5" />
-        <span aria-hidden="true">{t.chip}</span>
+        <CalendarBadge className="size-5" />
+        <span aria-hidden="true">{t.name}</span>
         {mew && <MewStatic className="size-4" />}
         <Switch
           checked={checked}
@@ -150,10 +135,10 @@ export function CalendarChip({
       aria-label={t.chipLabel}
       title={pick?.mew ? t.mewPicked : undefined}
       onClick={() => state.set(index, pick ? undefined : { meet: false })}
-      icon={<GDot ghost={!pick} />}
+      icon={<CalendarBadge className={cn(!pick && "grayscale")} />}
       className={cn(!pick && "bg-transparent text-ink-secondary ring-1 ring-separator ring-inset")}
     >
-      {t.chip}
+      {t.name}
       {pick?.mew && <MewStatic className="size-3.5" />}
     </Chip>
   );

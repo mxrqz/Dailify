@@ -3,7 +3,7 @@ import { useAuth } from "@clerk/clerk-react";
 import { Loader2Icon } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { INTEGRATIONS, isProviderId, MISSING_SCOPE_ERROR } from "@dailify/shared";
+import { isProviderId, MISSING_SCOPE_ERROR } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { completeIntegration } from "@/functions/api";
@@ -17,7 +17,7 @@ export default function IntegrationCallback(): JSX.Element {
   const [params] = useSearchParams();
   const { getToken } = useAuth();
   const navigate = useNavigate();
-  const name = isProviderId(provider) ? INTEGRATIONS[provider].name : "";
+  const name = isProviderId(provider) ? copy.calendar.name : "";
   // O state é de uso único: o segundo efeito do StrictMode mandaria um POST que volta 400.
   const started = useRef(false);
 

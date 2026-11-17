@@ -76,7 +76,7 @@ describe("<ConfirmAction>", () => {
       <ConfirmAction
         open
         onOpenChange={onOpenChange}
-        preview="Criar evento no Google Agenda · amanhã 15:00–15:30"
+        preview="Criar evento na Agenda · amanhã 15:00–15:30"
         option={{ label: t.meet, checked: false, onChange }}
         onConfirm={onConfirm}
       />,
@@ -124,7 +124,7 @@ describe("<AddToCalendar>", () => {
 
     await userEvent.click(screen.getByRole("button", { name: t.add }));
     const dialog = await screen.findByRole("dialog");
-    expect(within(dialog).getByText(/^Criar evento no Google Agenda · amanhã/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/^Criar evento na Agenda · amanhã/)).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("switch", { name: t.meet }));
     expect(within(dialog).getByText(/com Meet$/)).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("button", { name: copy.confirmAction.confirm }));
