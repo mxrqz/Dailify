@@ -84,4 +84,7 @@ export const planMap: Record<string, "Free" | "Pro" | "Max"> = {
 };
 
 // Dev usa o proxy do vite.config (dev server é HTTPS, worker é HTTP = mixed content). bd Dailify-6aq
-export const apiURL = import.meta.env.DEV ? "/api" : import.meta.env.VITE_API_URL;
+// No dev do app mobile, `VITE_DEV_API` é a API real: lá o proxy do Tauri perde o corpo dos POSTs.
+export const apiURL = import.meta.env.DEV
+  ? import.meta.env.VITE_DEV_API
+  : import.meta.env.VITE_API_URL;

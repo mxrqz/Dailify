@@ -8,8 +8,9 @@ import mkcert from 'vite-plugin-mkcert'
 import { VitePWA } from 'vite-plugin-pwa'
 
 const host = process.env.TAURI_DEV_HOST;
-// `bun run android`: the phone reaches this server through `adb reverse` on 127.0.0.1 (a secure
-// context, so crypto.subtle works) and talks to the real API as the app would.
+// `bun run android`: the phone reaches this server through `adb reverse`. Tauri serves it as
+// http://tauri.localhost by intercepting requests, and Android's interception drops POST bodies, so
+// the app calls the real API directly (as the release build does) instead of the /api proxy.
 const mobileDev = /android|ios/.test(process.env.TAURI_ENV_PLATFORM ?? "");
 
 // Proxy de API em dev: HTTPS (mkcert) -> HTTP (wrangler :8787) seria mixed content. bd Dailify-6aq
@@ -85,6 +86,10 @@ export default defineConfig(async ({ mode }) => ({
     execArgv: ["--no-experimental-webstorage"],
   },
 
+  define: {
+    "import.meta.env.VITE_DEV_API": JSON.stringify(mobileDev ? "https://api.mewki.mxrqz.com" : "/api"),
+  },
+
   clearScreen: false,
   
   server: {
@@ -104,14 +109,10 @@ export default defineConfig(async ({ mode }) => ({
     },
     proxy: {
       "/api": {
-        target: mobileDev ? "https://api.mewki.mxrqz.com" : apiTarget(mode),
+        target: apiTarget(mode),
         changeOrigin: true,
         secure: false,
         rewrite: (p: string) => p.replace(/^\/api/, ""),
-        // Better Auth only trusts known origins; in mobile dev, speak as the installed app does.
-        configure: (proxy) => {
-          if (mobileDev) proxy.on("proxyReq", (req) => req.setHeader("origin", "http://tauri.localhost"));
-        },
       },
     },
   },
