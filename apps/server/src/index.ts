@@ -44,6 +44,8 @@ app.use("*", (c, next) =>
   cors({
     origin: (origin) => (allowedOrigins(c.env).includes(origin) ? origin : null),
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
+    // Sem isto cada request autenticado paga um preflight (o Bearer força). Chrome corta em 2h.
+    maxAge: 86400,
   })(c, next),
 );
 app.get("/health", (c) => c.json({ ok: true }));

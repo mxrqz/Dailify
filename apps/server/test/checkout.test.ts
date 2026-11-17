@@ -170,4 +170,10 @@ describe("CORS", () => {
       (await preflight("https://evil.example")).headers.get("access-control-allow-origin"),
     ).toBeNull();
   });
+
+  it("lets the browser cache the preflight", async () => {
+    expect((await preflight("https://mewki.mxrqz.com")).headers.get("access-control-max-age")).toBe(
+      "86400",
+    );
+  });
 });
