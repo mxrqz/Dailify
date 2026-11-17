@@ -15,6 +15,9 @@ const TOKEN_RE = /^[A-Za-z0-9_-]{16,128}$/;
 
 export const isTauri = (): boolean => Reflect.get(globalThis, "isTauri") === true;
 
+// The app has no landing page: signing out lands on the login screen.
+export const signedOutPath = (): string => (isTauri() ? "/login" : "/");
+
 export const base64url = (bytes: Uint8Array): string =>
   btoa(String.fromCharCode(...bytes))
     .replace(/\+/g, "-")

@@ -13,6 +13,8 @@ import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "./components/error-boundary";
 import { AppLayout } from "./components/app-layout";
 import { Refraction } from "@/components/kit/refraction";
+import { ScrollRestoration } from "@/components/scroll-restoration";
+import { isTauri } from "@/lib/native-auth";
 
 // Só o dashboard (start_url do PWA) vai no bundle de entrada; o resto baixa quando a rota abre.
 const LandingPage = lazy(() => import("./pages/landingPage"));
@@ -44,7 +46,11 @@ export default function App() {
                       a primeira carga de uma rota cai aqui; trocar de rota mantém a tela atual. */}
                   <Suspense fallback={null}>
                     <Routes>
-                      <Route path="/" element={<LandingPage />} />
+                      {/* The app has no landing: "/" is its start URL and every in-app link to it. */}
+                      <Route
+                        path="/"
+                        element={isTauri() ? <Navigate to="/dashboard" replace /> : <LandingPage />}
+                      />
 
                       {/* Tudo que é "o app" divide a mesma top bar (components/app-layout.tsx). */}
                       <Route element={<AppLayout />}>
@@ -192,6 +198,7 @@ export default function App() {
                   </Suspense>
                 </ErrorBoundary>
 
+                <ScrollRestoration />
                 <Toaster />
                 <Refraction />
               </MotionConfig>

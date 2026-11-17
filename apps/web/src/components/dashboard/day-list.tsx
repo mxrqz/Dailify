@@ -113,8 +113,12 @@ export function DayList(): JSX.Element {
       ?.scrollIntoView({ behavior: reduce ? "auto" : "smooth", block: "start" }),
   );
   // O alvo entrou na lista neste mesmo commit, então o elemento já existe quando o effect roda.
+  // Remount after back keeps the old target in context: the restored scroll wins, not a re-jump.
+  const seenTarget = useRef(targetDay);
   useEffect(() => {
-    if (targetDay) scrollTo(targetDay);
+    if (!targetDay || targetDay === seenTarget.current) return;
+    seenTarget.current = targetDay;
+    scrollTo(targetDay);
   }, [targetDay]);
 
   const sentinelEl = <div ref={sentinel} aria-hidden />;

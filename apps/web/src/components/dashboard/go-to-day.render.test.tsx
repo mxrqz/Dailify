@@ -27,12 +27,22 @@ describe("ir até o dia", () => {
       isLoading: null,
       loadedMonths: [startOfMonth(now), startOfMonth(addMonths(now, 1))],
       loadMonth: vi.fn(() => Promise.resolve()),
-      targetDay: target,
+      targetDay: undefined,
     };
-    render(<DayList />);
+    const { rerender } = render(<DayList />);
+    dailify.current = { ...dailify.current, targetDay: target };
+    rerender(<DayList />);
 
     expect(screen.getByText("Nada neste dia")).toBeInTheDocument();
     expect(document.getElementById(dayAnchorId(target))).not.toBeNull();
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
+  });
+
+  // Back to /dashboard remounts the list with the old target still in context.
+  it("não rola de novo ao remontar com o mesmo alvo", () => {
+    const now = new Date();
+    dailify.current = { ...dailify.current, selectedDay: now, targetDay: addDays(now, 2) };
+    render(<DayList />);
+    expect(scrollIntoView).not.toHaveBeenCalled();
   });
 });

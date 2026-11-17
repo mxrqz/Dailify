@@ -19,7 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { clearLocal } from "@/functions/offline";
 import { authClient, useSession } from "@/lib/auth";
-import { signOut } from "@/lib/native-auth";
+import { signOut, signedOutPath } from "@/lib/native-auth";
 
 /**
  * Excluir a conta. O trabalho pesado é do servidor: `deleteUser()` roda o `beforeDelete` /
@@ -62,7 +62,7 @@ export function DeleteAccount(): JSX.Element | null {
     clearLocal(user.id);
     // A sessão já morreu com a conta; o signOut só limpa o cookie, e a página inteira recarrega.
     await signOut().catch(() => undefined);
-    window.location.assign("/");
+    window.location.assign(signedOutPath());
   };
 
   // Uma linha do grupo Conta, com o nome em vermelho: marca o assunto sem transformar a página

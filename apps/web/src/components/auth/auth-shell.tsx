@@ -4,6 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 
 import { copy } from "@/components/auth/copy";
 import { Mew, type MewMood } from "@/components/mew/mew";
+import { isTauri } from "@/lib/native-auth";
 import { cn } from "@/lib/utils";
 
 const backClass =
@@ -83,9 +84,12 @@ export function AuthShell({
             <ChevronLeftIcon />
           </button>
         ) : (
-          <Link to="/" aria-label={copy.shell.back} className={backClass}>
-            <ChevronLeftIcon />
-          </Link>
+          // The app has no landing to go back to: login is its root.
+          !isTauri() && (
+            <Link to="/" aria-label={copy.shell.back} className={backClass}>
+              <ChevronLeftIcon />
+            </Link>
+          )
         )}
       </nav>
 
