@@ -391,6 +391,19 @@ export async function syncCalendarEvent(
   return { task: data?.task, error };
 }
 
+/** "Gerar novo Meet": o evento ganha uma sala nova e a tarefa volta com o link dela no lugar do antigo. */
+export async function replaceCalendarMeet(
+  token: string,
+  taskId: string,
+): Promise<{ task?: Task; error?: ApiError }> {
+  const { data, error } = await request<{ task: Task }>(
+    `/integrations/google-calendar/events/${encodeURIComponent(taskId)}/meet`,
+    token,
+    { method: "POST" },
+  );
+  return { task: data?.task, error };
+}
+
 /** Duplicata da importação: "merge" junta na tarefa própria (a importada some), "keep" mantém as duas. */
 export async function resolveDuplicate(
   token: string,

@@ -28,6 +28,7 @@ import {
   dayMap,
   durationMinutes,
   isCalendarEventLink,
+  meetLink,
   undatedReminder,
   videoLink,
   weekDays,
@@ -37,7 +38,7 @@ import {
 import { TASK_LIMITS } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
-import { LinksField } from "@/components/dashboard/links-field";
+import { LinksField, MeetEditor } from "@/components/dashboard/links-field";
 import { DURATIONS } from "@/components/dashboard/task-meta-menus";
 import { ListGroup, ListRow } from "@/components/kit/list";
 import { Switch } from "@/components/kit/switch";
@@ -74,7 +75,7 @@ export interface TaskFormValues {
  * celular sem espremer controle nenhum — e é por isso que cada página escolhe seu próprio formato
  * (lista pra escolha única, campo com busca pras tags).
  */
-export type FormView = "root" | "title" | "tags" | "links";
+export type FormView = "root" | "title" | "tags" | "links" | "meet";
 
 /** Título de cada página — quem desenha o cromo da folha lê daqui. */
 export const FORM_VIEWS: Record<FormView, { title: string }> = {
@@ -82,6 +83,7 @@ export const FORM_VIEWS: Record<FormView, { title: string }> = {
   title: { title: copy.form.title },
   tags: { title: copy.form.tags },
   links: { title: copy.form.links },
+  meet: { title: copy.form.meet },
 };
 
 const REPEAT_MODES = [
@@ -109,6 +111,11 @@ interface TaskFormProps {
   children?: ReactNode;
   /** Convite da Agenda que só o organizador muda: título, data, hora, duração e repetição travados. */
   locked?: boolean;
+  /**
+   * Tarefa na Agenda que a pessoa pode mudar: o Meet abre o editor da sala. Gera a sala nova já no
+   * Google e devolve os links da tarefa (undefined = falhou, o aviso é de quem chama).
+   */
+  onNewMeet?: () => Promise<string[] | undefined>;
 }
 
 /** O controle NATIVO invisível cobre a linha e recebe o toque: o sistema abre o próprio seletor. */
@@ -148,6 +155,7 @@ export function TaskForm({
   hour12 = false,
   children,
   locked = false,
+  onNewMeet,
 }: TaskFormProps) {
   const [title, setTitle] = useState(task?.title ?? "");
   const [undated, setUndated] = useState(task?.undated === true);
@@ -176,6 +184,8 @@ export function TaskForm({
   const calendarLinks = links?.filter(isCalendarEventLink) ?? [];
   const ownLinks = links?.filter((url) => !isCalendarEventLink(url)) ?? [];
   const link = ownLinks[0];
+  const meet = onNewMeet && link && meetLink([link]);
+  const [meetPending, setMeetPending] = useState(false);
 
   const repeatMode = typeof repeat === "string" ? repeat : "Weekly";
   const weekly = typeof repeat === "string" ? [] : repeat.Weekly;
@@ -201,10 +211,11 @@ export function TaskForm({
     repeat,
     every,
     tags,
-    links,
   ]);
   const [opened] = useState(values);
-  const dirty = values !== opened;
+  // Os links à parte: o Meet novo já foi salvo no servidor, e não pode acender o "Salvar".
+  const [savedLinks, setSavedLinks] = useState(task?.links);
+  const dirty = values !== opened || JSON.stringify(links) !== JSON.stringify(savedLinks);
   useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
 
   // Mostra o que o salvar grava: 09:00 passado avança na série e some na avulsa.
@@ -244,6 +255,16 @@ export function TaskForm({
 
   const toggleTag = (tag: string) =>
     setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
+
+  const generateMeet = async () => {
+    setMeetPending(true);
+    const next = await onNewMeet?.();
+    setMeetPending(false);
+    if (!next) return;
+    setLinks(next);
+    setSavedLinks(next);
+    onView("root");
+  };
 
   const toggleUndated = (next: boolean) => {
     setUndated(next);
@@ -550,7 +571,7 @@ export function TaskForm({
               aria-label={copy.form.links}
               value={linkHost && linkHost !== linkName ? linkHost : undefined}
               accessory="chevron"
-              onClick={() => onView("links")}
+              onClick={() => onView(meet ? "meet" : "links")}
             />
           </ListGroup>
 
@@ -624,6 +645,19 @@ export function TaskForm({
           />
           <Separator className="bg-separator peer-focus-visible:bg-brand" />
         </div>
+      )}
+
+      {view === "meet" && meet && (
+        <MeetEditor
+          value={meet}
+          pending={meetPending}
+          onChange={(next) => setLinks(links?.map((l) => (l === meet ? next : l)))}
+          onRemove={() => {
+            setLinks(links?.filter((l) => l !== meet));
+            onView("root");
+          }}
+          onNew={() => void generateMeet()}
+        />
       )}
 
       {view === "links" && (

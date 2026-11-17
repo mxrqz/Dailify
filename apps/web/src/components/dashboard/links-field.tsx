@@ -1,10 +1,11 @@
 import { useState } from "react";
-import { LinkIcon, XIcon } from "lucide-react";
+import { LinkIcon, Trash2Icon, VideoIcon, XIcon } from "lucide-react";
 
-import { TASK_LIMITS, parseLinks } from "@dailify/shared";
+import { TASK_LIMITS, meetLink, parseLinks } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { fieldClass } from "@/components/dashboard/styles";
+import { ListGroup, ListRow } from "@/components/kit/list";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
 
@@ -105,6 +106,75 @@ export function LinksField({
       >
         <XIcon className="size-4" />
       </button>
+    </div>
+  );
+}
+
+/**
+ * O Meet de uma tarefa da Agenda: colar outro link troca a sala (sobe a cada tecla válida, como o
+ * `LinksField`, e vai pro evento no salvar); gerar e remover são as linhas embaixo.
+ */
+export function MeetEditor({
+  value,
+  onChange,
+  onNew,
+  onRemove,
+  pending,
+}: {
+  value: string;
+  onChange: (url: string) => void;
+  onNew: () => void;
+  onRemove: () => void;
+  pending?: boolean;
+}): JSX.Element {
+  const [draft, setDraft] = useState(value);
+  const [invalid, setInvalid] = useState(false);
+
+  const change = (next: string) => {
+    setDraft(next);
+    const url = normalizeUrl(next);
+    const meet = url && meetLink([url]);
+    setInvalid(!meet);
+    if (meet) onChange(meet);
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <ListGroup compact footer={copy.form.meetHint}>
+        <div className="flex items-center gap-2 px-3.5 py-1.5">
+          <VideoIcon className="size-4 shrink-0 text-ink-secondary" aria-hidden="true" />
+          <Input
+            autoFocus
+            value={draft}
+            placeholder={copy.form.meetPlaceholder}
+            maxLength={MAX_URL_LEN}
+            onChange={(e) => change(e.target.value)}
+            aria-label={copy.form.meet}
+            aria-invalid={invalid}
+            title={invalid ? copy.form.meetInvalid : undefined}
+            className={cn(
+              "h-10 min-w-0 flex-1 truncate",
+              fieldClass,
+              invalid && "border-destructive focus-visible:border-destructive",
+            )}
+          />
+        </div>
+      </ListGroup>
+      <ListGroup compact>
+        <ListRow
+          icon={<VideoIcon />}
+          label={copy.form.meetNew}
+          onClick={onNew}
+          disabled={pending}
+        />
+        <ListRow
+          icon={<Trash2Icon />}
+          label={copy.form.meetRemove}
+          danger
+          onClick={onRemove}
+          disabled={pending}
+        />
+      </ListGroup>
     </div>
   );
 }

@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Task } from "@dailify/shared";
 
 import { copy } from "./copy";
@@ -77,5 +77,71 @@ describe("<TaskForm> convite (readonly)", () => {
       expect(screen.getByLabelText(name)).toBeDisabled();
     expect(screen.getByRole("button", { name: task.title })).toBeDisabled();
     expect(screen.getByRole("combobox", { name: copy.form.priority })).toBeEnabled();
+  });
+});
+
+describe("<TaskForm> Meet da Agenda", () => {
+  const event = "https://www.google.com/calendar/event?eid=abc";
+  const meet = "https://meet.google.com/abc-defg-hij";
+  const linked: Task = { ...task, links: [meet, event] };
+  const mount = (
+    onNewMeet?: () => Promise<string[] | undefined>,
+    view: "root" | "meet" = "meet",
+  ) => {
+    const onSubmit = vi.fn();
+    const onView = vi.fn();
+    render(
+      <TaskForm
+        id="f"
+        task={linked}
+        view={view}
+        onView={onView}
+        onSubmit={onSubmit}
+        onNewMeet={onNewMeet}
+      />,
+    );
+    const submit = () => {
+      const form = document.getElementById("f");
+      if (form) fireEvent.submit(form);
+      return onSubmit.mock.calls[0][0];
+    };
+    return { submit, onView };
+  };
+
+  it("a linha do Meet abre o editor só com a Agenda; sem ela, o campo de link", () => {
+    const withCalendar = mount(vi.fn(), "root");
+    fireEvent.click(screen.getByRole("button", { name: copy.form.links }));
+    expect(withCalendar.onView).toHaveBeenLastCalledWith("meet");
+    cleanup();
+    const without = mount(undefined, "root");
+    fireEvent.click(screen.getByRole("button", { name: copy.form.links }));
+    expect(without.onView).toHaveBeenLastCalledWith("links");
+  });
+
+  it("colar outro Meet troca só a sala; link que não é sala não sobe", () => {
+    const { submit } = mount(vi.fn());
+    const field = screen.getByRole("textbox", { name: copy.form.meet });
+    expect(field).toHaveValue(meet);
+    fireEvent.change(field, { target: { value: "https://zoom.us/j/1" } });
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    fireEvent.change(field, { target: { value: "meet.google.com/xyz-wxyz-xyz" } });
+    expect(submit()).toMatchObject({ links: ["https://meet.google.com/xyz-wxyz-xyz", event] });
+  });
+
+  it("remover tira o Meet e mantém o evento", () => {
+    const { submit, onView } = mount(vi.fn());
+    fireEvent.click(screen.getByRole("button", { name: copy.form.meetRemove }));
+    expect(onView).toHaveBeenLastCalledWith("root");
+    expect(submit()).toMatchObject({ links: [event] });
+  });
+
+  it("gerar novo Meet usa os links que o servidor devolveu", async () => {
+    const fresh = "https://meet.google.com/new-meet-abc";
+    const onNewMeet = vi.fn(async () => [event, fresh]);
+    const { submit, onView } = mount(onNewMeet);
+    fireEvent.click(screen.getByRole("button", { name: copy.form.meetNew }));
+    await waitFor(() => expect(onView).toHaveBeenLastCalledWith("root"));
+    expect(onNewMeet).toHaveBeenCalledOnce();
+    expect(submit()).toMatchObject({ links: [event, fresh] });
   });
 });

@@ -14,7 +14,7 @@ import { TaskProps } from "@/types/types";
 import { useAuth, useUser } from "@clerk/clerk-react";
 import { useDailify } from "./dailifyContext";
 import { Button } from "./ui/button";
-import { updateTask } from "@/functions/api";
+import { replaceCalendarMeet, updateTask } from "@/functions/api";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeftIcon, CheckIcon, Loader2, RotateCcwIcon } from "lucide-react";
@@ -27,7 +27,9 @@ import {
 } from "@/components/dashboard/task-form";
 import { copy } from "@/components/dashboard/copy";
 import { useTaskActions } from "@/hooks/useTaskActions";
-import { useIntegrations } from "@/hooks/useIntegrations";
+import { useCalendarReady, useIntegrations } from "@/hooks/useIntegrations";
+import { calendarRevoked, useApplyTask } from "@/hooks/useCalendarPush";
+import { INTEGRATION_ERROR, isCalendarEventLink } from "@dailify/shared";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
 import { editTaskInput } from "@/functions/edit-input";
 import { enqueue } from "@/functions/offline";
@@ -119,6 +121,22 @@ export function EditTaskContent({
     useIntegrations()
       ?.find((s) => s.provider === "google-calendar")
       ?.readonly?.includes(task.id) ?? false;
+  const calendarReady = useCalendarReady();
+  const applyTask = useApplyTask();
+
+  const newMeet = async () => {
+    const token = await getToken().catch(() => null);
+    const res = token
+      ? await replaceCalendarMeet(token, task.id)
+      : { error: { message: copy.form.authError, offline: false } };
+    if (res.task) {
+      applyTask(res.task);
+      toast.success(copy.form.meetReplaced);
+      return res.task.links ?? [];
+    }
+    if (res.error?.code === INTEGRATION_ERROR.reconnect) calendarRevoked(navigate);
+    else toast.error(copy.form.meetError, { description: res.error?.message });
+  };
 
   // Tarefa recorrente não tem um "salvar" óbvio: editar a série move todos os dias, editar o dia
   // clicado não é o que o PATCH fazia. Quem decide é o usuário, no diálogo abaixo.
@@ -292,6 +310,9 @@ export function EditTaskContent({
         knownTags={knownTags}
         hour12={hour12}
         locked={locked}
+        onNewMeet={
+          calendarReady && !locked && task.links?.some(isCalendarEventLink) ? newMeet : undefined
+        }
         className="min-h-0 flex-1 scrollbar-floating"
         onSubmit={handleSubmit}
       >
