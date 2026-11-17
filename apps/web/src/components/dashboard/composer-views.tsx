@@ -494,7 +494,7 @@ export function VoiceSheet({
 }
 
 /**
- * O dock do mobile: barra de material fixa embaixo com o "Ei Mewki, anota…" (abre a folha) e o mic
+ * O dock do mobile: pílula fixa embaixo com o "Ei Mewki, anota…" (abre a folha) e o mic
  * (abre já gravando). Um espaçador do mesmo tamanho no fluxo deixa a última tarefa rolar acima dele.
  */
 export function CreateDock({
@@ -509,8 +509,9 @@ export function CreateDock({
       <div aria-hidden="true" className="pt-2.5 pb-safe">
         <div className="mb-2 h-13" />
       </div>
-      <div className="fixed inset-x-0 bottom-0 z-40 bg-material-bar px-4 pt-2.5 pb-safe backdrop-blur-xl backdrop-saturate-180">
-        <div className="mb-2 flex h-13 items-center gap-2.5 rounded-full bg-fill pr-1 pl-2.5">
+      {/* Sem barra atrás: só a pílula flutua, com a borda dos cards e um degrau acima (contraste ao sol). */}
+      <div className="pointer-events-none fixed inset-x-0 bottom-0 z-40 px-4 pt-2.5 pb-safe">
+        <div className="pointer-events-auto mb-2 flex h-13 items-center gap-2.5 rounded-full bg-surface-raised pr-1 pl-2.5 shadow-raised outline-1 -outline-offset-1 outline-card-edge dark:bg-fill dark:outline-fill-pressed">
           <button
             type="button"
             aria-label={copy.composer.open}
@@ -518,7 +519,7 @@ export function CreateDock({
             className="flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left outline-none"
           >
             <MewStatic className="ml-0.5 w-7 flex-none" />
-            <span className="truncate text-body text-ink-tertiary">{copy.composer.dock}</span>
+            <span className="truncate text-body text-ink-secondary">{copy.composer.dock}</span>
           </button>
           {onVoice && (
             <button
