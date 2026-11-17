@@ -39,7 +39,7 @@ export function LegalPage({
         <title>{pageTitle}</title>
       </Helmet>
 
-      <nav className="sticky top-0 z-20 grid h-13 grid-cols-[2.75rem_1fr_2.75rem] items-center bg-material-bar px-2 backdrop-blur-xl backdrop-saturate-180">
+      <nav className="sticky top-0 z-20 grid h-13 grid-cols-[2.75rem_1fr_2.75rem] items-center bg-material-bar-solid px-2">
         <Link
           to="/"
           aria-label={copy.legal.back}
