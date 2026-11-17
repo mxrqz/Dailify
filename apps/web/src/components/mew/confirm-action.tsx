@@ -38,7 +38,7 @@ export function ConfirmAction({
 }): JSX.Element {
   return (
     <Dialog open={open} onOpenChange={(next) => !pending && onOpenChange(next)}>
-      <DialogContent className="rounded-panel border-surface-line bg-surface-card sm:max-w-sm">
+      <DialogContent className="sm:max-w-sm">
         <DialogHeader className="flex-row items-start gap-3 text-left">
           <MewStatic className="w-8 flex-none" />
           <div className="flex flex-col gap-1.5">
