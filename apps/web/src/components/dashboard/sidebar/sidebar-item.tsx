@@ -4,11 +4,13 @@ import { Link, useLocation } from "react-router-dom";
 import { cn } from "@/lib/utils";
 
 // Separada do `<Link>` porque "Sair" é ação, não destino, e precisa das mesmas
-// classes num `<button>`.
+// classes num `<button>`. No celular a gaveta fecha ao tocar: nada fica aceso, só o toque.
 export function sidebarItemClass(active: boolean): string {
   return cn(
-    "flex h-12 w-full cursor-pointer items-center gap-3.5 rounded-md px-3 text-left text-body text-ink outline-none transition-colors duration-fast focus-visible:bg-fill [&_svg]:size-5 [&_svg]:shrink-0",
-    active ? "bg-fill-pressed font-semibold" : "hover:bg-fill [&_svg]:text-ink-secondary",
+    "flex h-12 w-full cursor-pointer items-center gap-3.5 rounded-md px-3 text-left text-body text-ink outline-none transition-colors duration-fast active:bg-fill-pressed md:focus-visible:bg-fill [&_svg]:size-5 [&_svg]:shrink-0",
+    active
+      ? "md:bg-fill-pressed md:font-semibold max-md:[&_svg]:text-ink-secondary"
+      : "hover:bg-fill [&_svg]:text-ink-secondary",
   );
 }
 
