@@ -1,11 +1,12 @@
-import { useAuth, useUser } from "@clerk/clerk-react";
 import { LogOutIcon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 
 import { copy } from "@/components/dashboard/copy";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PLAN_ID, planMap } from "@/consts/conts";
 import { useQuotas } from "@/hooks/useQuotas";
-import { cn, toText } from "@/lib/utils";
+import { authClient, planOf, useSession } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 import { DashboardButton } from "./dashboard-button";
 import { PremiumButton } from "./premium-button";
 import { ProfileButton } from "./profile-button";
@@ -107,23 +108,23 @@ export function NavMenu({
   );
 }
 
-/** O `NavMenu` ligado ao Clerk e às quotas. */
+/** O `NavMenu` ligado à sessão e às quotas. */
 export function NavItems(): JSX.Element {
-  const { user, isSignedIn } = useUser();
-  const { signOut } = useAuth();
+  const user = useSession().data?.user;
+  const navigate = useNavigate();
   const { loading, states } = useQuotas();
   const ai = states.ai;
-  const name =
-    [user?.firstName, user?.lastName].filter(Boolean).join(" ") ||
-    user?.primaryEmailAddress?.emailAddress ||
-    "";
-  const plan = planMap[toText(user?.publicMetadata?.plan, PLAN_ID.free)] ?? planMap[PLAN_ID.free];
+  const plan = planMap[planOf(user)] ?? planMap[PLAN_ID.free];
 
   return (
     <NavMenu
-      account={isSignedIn ? { name, imageUrl: user?.imageUrl, plan } : undefined}
+      account={
+        user
+          ? { name: user.name || user.email, imageUrl: user.image ?? undefined, plan }
+          : undefined
+      }
       credits={loading || ai.unlimited ? undefined : { used: ai.used, limit: ai.limit }}
-      onSignOut={() => void signOut()}
+      onSignOut={() => void authClient.signOut().then(() => navigate("/"))}
     />
   );
 }

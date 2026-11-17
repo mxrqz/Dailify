@@ -1,8 +1,8 @@
 import { useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
 import { toast } from "sonner";
 
 import { useDailify } from "@/components/dailifyContext";
+import { useSession } from "@/lib/auth";
 import { copy } from "@/components/dashboard/copy";
 import { RecurrenceScopeDialog } from "@/components/dashboard/recurrence-scope-dialog";
 import { ActionSheet } from "@/components/kit/action-sheet";
@@ -27,24 +27,13 @@ export function useTaskActions(
   { onDeleted }: { onDeleted?: () => void } = {},
 ) {
   const { tasks, setTasks, loadedMonths } = useDailify();
-  const { getToken, userId } = useAuth();
+  const userId = useSession().data?.user.id;
   const [scopeOpen, setScopeOpen] = useState(false);
   // Ligada à Agenda: excluir apaga o evento lá também, e não há desfazer que o traga de volta.
   const linked = task.links?.some(isCalendarEventLink) ?? false;
   const [confirmOpen, setConfirmOpen] = useState(false);
 
   const rollback = (previous: TaskProps[]) => setTasks(previous);
-
-  /** Sem rede o Clerk também não renova o token — e isso não pode custar a escrita. */
-  const authToken = async (): Promise<{ token?: string; error: ApiError | undefined }> => {
-    const token = await getToken().catch(() => null);
-    if (token) return { token, error: undefined };
-    return {
-      error: navigator.onLine
-        ? { message: copy.form.authError, offline: false }
-        : { message: copy.task.queued, offline: true },
-    };
-  };
 
   const settle = (
     error: ApiError | undefined,
@@ -54,7 +43,8 @@ export function useTaskActions(
   ): boolean => {
     if (!error) return true;
 
-    if (error.offline && userId) {
+    // 401: a sessão caiu (aba velha, troca de conta), não a edição — espera na fila pelo login.
+    if ((error.offline || error.status === 401) && userId) {
       enqueue(userId, mutation);
       return true;
     }
@@ -71,13 +61,7 @@ export function useTaskActions(
     setTasks(upsertTaskWithRecurrence(previous, done, loadedMonths));
 
     const mutation: Mutation = { op: "complete", taskId: task.id, at };
-    const { token, error: authError } = await authToken();
-    if (!token) {
-      settle(authError, previous, mutation, copy.task.completeError);
-      return;
-    }
-
-    const { error } = await completeTask(token, task.id, at);
+    const { error } = await completeTask(task.id, at);
     settle(error, previous, mutation, copy.task.completeError);
   };
 
@@ -95,13 +79,7 @@ export function useTaskActions(
     setTasks(upsertTaskWithRecurrence(previous, reopened, loadedMonths));
 
     const mutation: Mutation = { op: "uncomplete", taskId: task.id, day: from, at };
-    const { token, error: authError } = await authToken();
-    if (!token) {
-      settle(authError, previous, mutation, copy.task.uncompleteError);
-      return;
-    }
-
-    const { error } = await uncompleteTask(token, task.id, day);
+    const { error } = await uncompleteTask(task.id, day);
     settle(error, previous, mutation, copy.task.uncompleteError);
   };
 
@@ -113,13 +91,7 @@ export function useTaskActions(
     setTasks(previous);
 
     const mutation: Mutation = { op: "create", taskId: task.id, input, at };
-    const { token, error: authError } = await authToken();
-    if (!token) {
-      settle(authError, withoutTask, mutation, copy.task.undoError);
-      return;
-    }
-
-    const { error } = await createTask(token, input);
+    const { error } = await createTask(input);
     if (settle(error, withoutTask, mutation, copy.task.undoError))
       toast.success(copy.task.restored);
   };
@@ -130,14 +102,8 @@ export function useTaskActions(
     setTasks(previous.filter((t) => t.id !== task.id));
 
     const mutation: Mutation = { op: "delete", taskId: task.id, at };
-    const { token, error: authError } = await authToken();
-    if (!token) {
-      settle(authError, previous, mutation, copy.task.deleteError);
-      return;
-    }
-
     // Um 500 aqui não pode passar por sucesso: antes o cartão sumia da tela com a tarefa viva.
-    const { error } = await deleteTask(token, task.id);
+    const { error } = await deleteTask(task.id);
     if (!settle(error, previous, mutation, copy.task.deleteError)) return;
     onDeleted?.();
 
@@ -170,13 +136,7 @@ export function useTaskActions(
       occurrence: task.date,
       at,
     };
-    const { token, error: authError } = await authToken();
-    if (!token) {
-      settle(authError, previous, mutation, copy.task.deleteError);
-      return;
-    }
-
-    const { series, error } = await deleteTask(token, task.id, task.date);
+    const { series, error } = await deleteTask(task.id, task.date);
     if (!settle(error, previous, mutation, copy.task.deleteError)) return;
     // Reexpandir a série com o `exdates` novo é mais fiel que o filtro otimista acima: é o servidor
     // dizendo quais dias sobraram.
@@ -247,10 +207,7 @@ export function useTaskActions(
     );
 
     const mutation: Mutation = { op: "patch", taskId: task.id, patch: stamped, at, occurrence };
-    const { token, error: authError } = await authToken();
-    if (!token) return settle(authError, previous, mutation, copy.task.patchError);
-
-    const { task: updated, series, error } = await updateTask(token, task.id, stamped, occurrence);
+    const { task: updated, series, error } = await updateTask(task.id, stamped, occurrence);
     if (!settle(error, previous, mutation, copy.task.patchError)) return false;
     if (!updated) return true; // foi pra fila: o que está na tela já é o estado bom
 

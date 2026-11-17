@@ -13,7 +13,6 @@ const { dailify, useOnline, api, toast, navigate } = vi.hoisted(() => ({
   navigate: vi.fn(),
 }));
 vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
-vi.mock("@clerk/clerk-react", () => ({ useAuth: () => ({ getToken: async () => "t" }) }));
 vi.mock("@/hooks/useOnline", () => ({ useOnline }));
 vi.mock("@/functions/api", () => api);
 vi.mock("sonner", () => ({ toast }));
@@ -130,7 +129,7 @@ describe("<AddToCalendar>", () => {
     await userEvent.click(within(dialog).getByRole("button", { name: copy.confirmAction.confirm }));
 
     await waitFor(() => expect(toast.success).toHaveBeenCalled());
-    expect(api.createCalendarEvent).toHaveBeenCalledWith("t", "task01", true);
+    expect(api.createCalendarEvent).toHaveBeenCalledWith("task01", true);
     expect(setTasks).toHaveBeenCalledWith([updated]);
   });
 
@@ -198,7 +197,7 @@ describe("<AddToCalendar>", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: t.retry }));
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t.synced));
-    expect(api.syncCalendarEvent).toHaveBeenCalledWith("t", "task01");
+    expect(api.syncCalendarEvent).toHaveBeenCalledWith("task01");
     await waitFor(() =>
       expect(screen.queryByRole("button", { name: t.retry })).not.toBeInTheDocument(),
     );

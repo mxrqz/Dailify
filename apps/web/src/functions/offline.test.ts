@@ -140,8 +140,8 @@ describe("flushQueue", () => {
     api.uncompleteTaskRange.mockResolvedValue({});
     enqueue("u", { op: "uncomplete", taskId: "a", day: 100, until: 200, at: 200 });
 
-    await expect(flushQueue("u", "tk")).resolves.toEqual({ sent: 1, dropped: 0, offline: false });
-    expect(api.uncompleteTaskRange).toHaveBeenCalledWith("tk", "a", 100, 200);
+    await expect(flushQueue("u")).resolves.toEqual({ sent: 1, dropped: 0, offline: false });
+    expect(api.uncompleteTaskRange).toHaveBeenCalledWith("a", 100, 200);
     expect(api.uncompleteTask).not.toHaveBeenCalled();
     expect(readQueue("u")).toEqual([]);
   });
@@ -150,7 +150,7 @@ describe("flushQueue", () => {
     api.completeTask.mockResolvedValue({});
     enqueue("u", { op: "complete", taskId: "a", at: 1 });
 
-    const [first, second] = await Promise.all([flushQueue("u", "tk"), flushQueue("u", "tk")]);
+    const [first, second] = await Promise.all([flushQueue("u"), flushQueue("u")]);
     expect(first).toBe(second);
     expect(api.completeTask).toHaveBeenCalledTimes(1);
   });
@@ -162,8 +162,8 @@ describe("flushQueue", () => {
     });
     enqueue("u", { op: "complete", taskId: "a", at: 1 });
 
-    await expect(flushQueue("u", "tk")).resolves.toMatchObject({ sent: 2, offline: false });
-    expect(api.completeTask.mock.calls.map((c) => c[1])).toEqual(["a", "b"]);
+    await expect(flushQueue("u")).resolves.toMatchObject({ sent: 2, offline: false });
+    expect(api.completeTask.mock.calls.map((c) => c[0])).toEqual(["a", "b"]);
     expect(readQueue("u")).toEqual([]);
   });
 
@@ -175,8 +175,8 @@ describe("flushQueue", () => {
     api.deleteTask.mockResolvedValue({});
     enqueue("u", create("a"));
 
-    await flushQueue("u", "tk");
-    expect(api.deleteTask).toHaveBeenCalledWith("tk", "a");
+    await flushQueue("u");
+    expect(api.deleteTask).toHaveBeenCalledWith("a");
     expect(readQueue("u")).toEqual([]);
   });
 
@@ -190,7 +190,7 @@ describe("flushQueue", () => {
     enqueue("u", { op: "complete", taskId: "a", at: 1 });
     enqueue("u", { op: "complete", taskId: "b", at: 2 });
 
-    await flushQueue("u", "tk");
+    await flushQueue("u");
     expect(readQueue("u").map((m) => m.taskId)).toEqual(["b"]);
   });
 
@@ -202,8 +202,19 @@ describe("flushQueue", () => {
     enqueue("u", { op: "complete", taskId: "b", at: 2 });
     enqueue("u", { op: "complete", taskId: "c", at: 3 });
 
-    await expect(flushQueue("u", "tk")).resolves.toEqual({ sent: 1, dropped: 0, offline: true });
+    await expect(flushQueue("u")).resolves.toEqual({ sent: 1, dropped: 0, offline: true });
     expect(readQueue("u").map((m) => m.taskId)).toEqual(["b", "c"]);
+  });
+
+  // Sessão caída (aba velha na troca de conta) não é recusa da edição: descartar perderia o trabalho.
+  test("401 mantém a entrada na fila, como rede", async () => {
+    api.completeTask.mockResolvedValueOnce({
+      error: { message: "não autenticado", offline: false, status: 401 },
+    });
+    enqueue("u", { op: "complete", taskId: "a", at: 1 });
+
+    await expect(flushQueue("u")).resolves.toEqual({ sent: 0, dropped: 0, offline: true });
+    expect(readQueue("u").map((m) => m.taskId)).toEqual(["a"]);
   });
 
   test("patch com alert: null dobrado na criação vira criação sem lembrete", () => {

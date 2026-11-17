@@ -1,7 +1,8 @@
 # `src/pages/` — routes
 
 Routes are declared in `src/App.tsx` (react-router). Provider nesting (from `main.tsx`):
-`ClerkProvider → HelmetProvider → DailifyProvider → Router → ThemeProvider`.
+`HelmetProvider → DailifyProvider → Router → ThemeProvider` (no auth provider: the session is
+`useSession()` from `@/lib/auth`).
 
 Every page except `home.tsx` is `React.lazy` (one chunk per route; the landing and its Mew/scenes
 stay out of the dashboard entry). A new page gets a `lazy()` import too, unless it's the PWA's
@@ -19,7 +20,6 @@ stay out of the dashboard entry). A new page gets a `lazy()` import too, unless 
 | `/integrations/:provider/callback` | `integration-callback.tsx` | **protected**; OAuth `redirect_uri`: POSTs `{code,state}` once (StrictMode-safe), toasts, back to `/integrations` |
 | `/login`                           | `login.tsx`                | Clerk sign-in — `AuthPage mode="signIn"` (`components/auth/`)                                                     |
 | `/signup`                          | `signup.tsx`               | same machinery, `mode="signUp"` — only the copy differs                                                           |
-| `/sso-callback`                    | Clerk                      | `AuthenticateWithRedirectCallback`, declared inline in `App.tsx`                                                  |
 | `/verify`                          | `verify.tsx`               | where the emailed magic link lands                                                                                |
 | `/task/:id`                        | `[id]/taskPreview.tsx`     | public, shareable task rendered as an image (`html-to-image`)                                                     |
 | `/premium`                         | `premium.tsx`              | pricing + Stripe checkout                                                                                         |
@@ -29,12 +29,13 @@ to paths listed above (this caused the `/prices` vs `/premium` bug).
 
 ## Auth
 
-Clerk (`main.tsx`). Protected pages are wrapped in `ProtectedRoute` (`src/components/`), which gates
-on Clerk (`isLoaded`/`userId`) and loads tasks/quotas from `apps/server` before rendering.
+Better Auth (`@/lib/auth`; Google returns straight to its `callbackURL`, no callback route). Protected
+pages are wrapped in `ProtectedRoute` (`src/components/`), which gates on `useSession()`
+(`isPending`/`data.user.id`) and loads tasks/quotas from `apps/server` before rendering.
 
 ## Billing (premium.tsx)
 
-`handleSelectPlan(planId)` calls `checkout(token, productName)` (`@/functions/api`) with
+`handleSelectPlan(planId)` calls `checkout(productName)` (`@/functions/api`) with
 `productName` (yearly appends `-year`); the server returns a Stripe URL and we redirect. Plan ids
 come from `PLAN_ID` (`consts`); copy that references limits reads from `@dailify/shared`'s
 `limitsFor` instead of hard-coding numbers. The billing portal (`pages/billing.tsx`) is

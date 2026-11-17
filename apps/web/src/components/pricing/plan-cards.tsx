@@ -40,7 +40,7 @@ export function PlanCards({
   recommended?: PlanRole;
   /**
    * O plano que o usuário assina, pra marcar o card. `string` e não `PlanRole` de propósito: o valor
-   * vem do `publicMetadata` do Clerk, que é texto livre — quem escreve lá é o webhook do Stripe, e
+   * vem do `user.plan` da sessão, que é texto livre — quem escreve lá é o webhook do Stripe, e
    * um id desconhecido tem que simplesmente não casar com card nenhum, não virar erro de tipo aqui.
    */
   currentPlan?: string;

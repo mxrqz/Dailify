@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import type { AiParse } from "@dailify/shared";
@@ -14,7 +13,6 @@ import { useQuotas } from "@/hooks/useQuotas";
  * quem cria é o composer, depois do Enter ou da confirmação. Nunca chamado sozinho.
  */
 export function useMewParse() {
-  const { getToken } = useAuth();
   const { bumpUsage } = useDailify();
   const ai = useQuotas().states.ai;
   const navigate = useNavigate();
@@ -27,9 +25,7 @@ export function useMewParse() {
   const ask = async (text: string): Promise<AiParse | null> => {
     setPending(true);
     try {
-      const token = await getToken();
-      if (!token) return null;
-      const { result: read, error } = await parseTaskAi(token, text);
+      const { result: read, error } = await parseTaskAi(text);
       if (error?.status === 429 || error?.status === 403) {
         setRefused(true);
         toast(copy.mew.exhausted, {

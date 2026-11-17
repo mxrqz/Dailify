@@ -45,7 +45,7 @@ export async function pushState(): Promise<PushState> {
  * Liga as notificações neste device. Cada browser/aparelho tem a sua inscrição — ligar no celular
  * não liga no desktop, e é por isso que o servidor guarda uma linha por endpoint.
  */
-export async function enablePush(token: string): Promise<PushState> {
+export async function enablePush(): Promise<PushState> {
   if (!pushSupported()) return "unsupported";
   if ((await Notification.requestPermission()) !== "granted") {
     return Notification.permission === "denied" ? "denied" : "off";
@@ -63,7 +63,7 @@ export async function enablePush(token: string): Promise<PushState> {
       applicationServerKey: base64urlToBytes(key),
     }));
 
-  const saved = await savePushSubscription(token, {
+  const saved = await savePushSubscription({
     endpoint: subscription.endpoint,
     p256dh: bytesToBase64url(subscription.getKey("p256dh")),
     auth: bytesToBase64url(subscription.getKey("auth")),
@@ -76,11 +76,11 @@ export async function enablePush(token: string): Promise<PushState> {
   return "on";
 }
 
-export async function disablePush(token: string): Promise<PushState> {
+export async function disablePush(): Promise<PushState> {
   const subscription = await currentSubscription();
   if (!subscription) return "off";
 
-  await removePushSubscription(token, subscription.endpoint);
+  await removePushSubscription(subscription.endpoint);
   await subscription.unsubscribe();
   return "off";
 }

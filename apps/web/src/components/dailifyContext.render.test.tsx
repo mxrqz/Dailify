@@ -6,7 +6,6 @@ import { addMonths, startOfMonth } from "date-fns";
 
 const { api } = vi.hoisted(() => ({ api: { getTasksForMonth: vi.fn() } }));
 vi.mock("@/functions/api", () => api);
-vi.mock("@clerk/clerk-react", () => ({ useAuth: () => ({ getToken: async () => "token" }) }));
 
 import { DailifyProvider, useDailify } from "./dailifyContext";
 
@@ -79,7 +78,7 @@ describe("<DailifyProvider>", () => {
       // De hoje ao dia, inclusive: 4 meses, nenhum ainda pedido.
       await vi.waitFor(() => expect(replies).toHaveLength(4));
     });
-    const asked = api.getTasksForMonth.mock.calls.map(([, m]) => m.getTime());
+    const asked = api.getTasksForMonth.mock.calls.map(([m]) => m.getTime());
     const from = startOfMonth(n < 0 ? day : new Date());
     expect(asked).toEqual([0, 1, 2, 3].map((i) => addMonths(from, i).getTime()));
     expect(get().targetDay).toBeUndefined();

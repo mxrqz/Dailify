@@ -22,8 +22,8 @@ const toast = vi.hoisted(() =>
 );
 const ctx = vi.hoisted(() => ({ setTasks: vi.fn() }));
 
-vi.mock("@clerk/clerk-react", () => ({
-  useAuth: () => ({ getToken: async () => "token", userId: "u1" }),
+vi.mock("@/lib/auth", () => ({
+  useSession: () => ({ data: { user: { id: "u1" } }, isPending: false }),
 }));
 vi.mock("@/components/dailifyContext", () => ({
   useDailify: () => ({
@@ -109,10 +109,10 @@ beforeEach(() => {
   localStorage.clear();
   connect(true);
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
-  api.createTask.mockImplementation(async (_token, input) => ({
+  api.createTask.mockImplementation(async (input) => ({
     task: { ...input, completed: [] },
   }));
-  api.createCalendarEvent.mockImplementation(async (_token, id: string) => linked(id));
+  api.createCalendarEvent.mockImplementation(async (id: string) => linked(id));
 });
 
 describe("<TaskComposer> etiqueta Google Agenda", () => {
@@ -167,8 +167,8 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
     await send(user);
 
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t.createdAdded));
-    const id = api.createTask.mock.calls[0][1].id;
-    expect(api.createCalendarEvent).toHaveBeenCalledWith("token", id, false);
+    const id = api.createTask.mock.calls[0][0].id;
+    expect(api.createCalendarEvent).toHaveBeenCalledWith(id, false);
     expect(ctx.setTasks).toHaveBeenLastCalledWith([expect.objectContaining({ links: [EVENT] })]);
 
     await user.type(screen.getByRole("textbox"), "outra amanhã às 9h");
@@ -183,7 +183,7 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
     expect(meet()).toHaveAttribute("aria-pressed", "true");
     await send(user);
     await waitFor(() =>
-      expect(api.createCalendarEvent).toHaveBeenCalledWith("token", expect.any(String), true),
+      expect(api.createCalendarEvent).toHaveBeenCalledWith(expect.any(String), true),
     );
 
     await user.type(screen.getByRole("textbox"), "call amanhã às 15h https://meet.google.com/abc");
@@ -261,8 +261,8 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
     await user.click(screen.getByRole("button", { name: "Criar 3 tarefas" }));
 
     await waitFor(() => expect(toast.error).toHaveBeenCalled());
-    const ids = api.createTask.mock.calls.map((call) => call[1].id);
-    expect(api.createCalendarEvent.mock.calls.map((call) => call[1])).toEqual([ids[0], ids[2]]);
+    const ids = api.createTask.mock.calls.map((call) => call[0].id);
+    expect(api.createCalendarEvent.mock.calls.map((call) => call[0])).toEqual([ids[0], ids[2]]);
     const [title, opts] = toast.error.mock.calls[0];
     expect(title).toBe(t.notAddedMany.replace("{n}", "2"));
 
@@ -299,7 +299,7 @@ describe("<TaskComposer> destino sugerido pela Mew", () => {
 
     await send(user);
     await waitFor(() =>
-      expect(api.createCalendarEvent).toHaveBeenCalledWith("token", expect.any(String), true),
+      expect(api.createCalendarEvent).toHaveBeenCalledWith(expect.any(String), true),
     );
   });
 

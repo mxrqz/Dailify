@@ -1,4 +1,3 @@
-import { useAuth } from "@clerk/clerk-react";
 import { isWeekStart } from "@dailify/shared";
 import { toast } from "sonner";
 
@@ -10,16 +9,14 @@ import { saveSettings } from "@/functions/api";
 /** Otimista: aplica já e volta ao anterior se a API falhar. */
 export function WeekStartSelect(): JSX.Element {
   const { weekStart, setWeekStart } = useDailify();
-  const { getToken } = useAuth();
 
   const choose = async (value: string) => {
     const next = Number(value);
     if (!isWeekStart(next) || next === weekStart) return;
     const previous = weekStart;
     setWeekStart(next);
-    const token = await getToken();
-    const result = token ? await saveSettings(token, { weekStart: next }) : undefined;
-    if (!result || result.error) {
+    const result = await saveSettings({ weekStart: next });
+    if (result.error) {
       setWeekStart(previous);
       toast.error(copy.profile.weekStartError);
     }

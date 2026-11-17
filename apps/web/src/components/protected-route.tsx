@@ -1,5 +1,4 @@
 import { ReactNode, useEffect, useRef, useState } from "react";
-import { useAuth, useUser } from "@clerk/clerk-react";
 import { Navigate, useLocation } from "react-router-dom";
 import { useDailify } from "./dailifyContext";
 import { copy } from "@/components/dashboard/copy";
@@ -18,6 +17,7 @@ import { AnimatePresence } from "motion/react";
 import { Splash, SPLASH_MIN_MS } from "@/components/splash";
 import { toast } from "sonner";
 import { zoned, zonedAt } from "@/functions/zone";
+import { useSession } from "@/lib/auth";
 
 /** Piso entre revalidações: alternar de aba não pode virar rajada de fetch. */
 const REVALIDATE_AFTER_MS = 30_000;
@@ -25,7 +25,9 @@ const REVALIDATE_AFTER_MS = 30_000;
 const CACHE_AFTER_MS = 1_000;
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
-  const { isSignedIn, isLoaded, user } = useUser();
+  const session = useSession();
+  const isLoaded = !session.isPending;
+  const userId = session.data?.user.id;
   const {
     tasks,
     selectedDay,
@@ -44,18 +46,12 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   } = useDailify();
 
   const location = useLocation();
-  const { getToken, userId } = useAuth();
 
   // Sem dependência de mês: Sem data e preferências valem para a conta toda.
   const loadUndated = async () => {
     if (!userId) return;
     try {
-      const token = await getToken();
-      if (!token) return;
-      const [undated, settings] = await Promise.allSettled([
-        getUndatedTasks(token),
-        getSettings(token),
-      ]);
+      const [undated, settings] = await Promise.allSettled([getUndatedTasks(), getSettings()]);
       if (undated.status === "fulfilled" && !undated.value.error) {
         setUndatedTasks(undated.value.tasks);
       }
@@ -86,9 +82,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     let current = true;
     (async () => {
       try {
-        const token = await getToken();
-        if (!token) return;
-        const snapshot = await getQuotas(token, zonedAt(quotaYear, quotaMonth));
+        const snapshot = await getQuotas(zonedAt(quotaYear, quotaMonth));
         if (current && snapshot) setQuotas(snapshot);
       } catch {
         /* sem sessão utilizável */
@@ -97,20 +91,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     return () => {
       current = false;
     };
-  }, [isLoaded, userId, getToken, setQuotas, quotaYear, quotaMonth, quotaNonce]);
-
-  // 🌐 Salvar timezone no metadata do usuário
-  useEffect(() => {
-    if (!user) return;
-    const currentTimezone = Intl.DateTimeFormat().resolvedOptions().timeZone;
-    const savedTimezone = user.unsafeMetadata?.timezone;
-
-    if (!savedTimezone) {
-      user.update({
-        unsafeMetadata: { timezone: currentTimezone },
-      });
-    }
-  }, [user]);
+  }, [isLoaded, userId, setQuotas, quotaYear, quotaMonth, quotaNonce]);
 
   // O boot pinta o que estava salvo antes de tocar na rede: sem isso, abrir sem conexão dá tela
   // vazia mesmo com a agenda inteira em mãos.
@@ -164,22 +145,17 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
 
   // 📅 Função principal para carregar as tasks
   const getTasks = useEffectEvent(async () => {
-    if (!userId || !user) return;
+    if (!userId) return;
 
     setIsLoading(copy.loading.tasks);
     try {
-      const token = await getToken();
-      if (!token) return;
-
       // A fila sobe ANTES da leitura: sem isso o servidor devolveria o estado velho e a tela
       // andaria pra trás por um instante.
-      if (userId) {
-        const { dropped } = await flushQueue(userId, token);
-        // Descartada = o servidor recusou (quota, tarefa que já não existe). A tarefa vai sumir da
-        // tela no fetch logo abaixo, e sumir sem explicação parece perda de dado.
-        if (dropped) {
-          toast.error(copy.sync.dropped.replace("{n}", String(dropped)));
-        }
+      const { dropped } = await flushQueue(userId);
+      // Descartada = o servidor recusou (quota, tarefa que já não existe). A tarefa vai sumir da
+      // tela no fetch logo abaixo, e sumir sem explicação parece perda de dado.
+      if (dropped) {
+        toast.error(copy.sync.dropped.replace("{n}", String(dropped)));
       }
       // Depois da fila, nunca junto: lida antes, a Sem data voltava sem o que foi feito offline.
       loadUndated();
@@ -201,8 +177,8 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     } catch {
       // Sem isto o app trava no spinner para sempre: a exceção pulava o `setIsLoading(null)` e o
       // gate lá embaixo (`isLoading && !tasks`) nunca liberava. `setTasks([])` é o que destrava.
-      // Mas só quando NÃO há nada na tela: offline o Clerk falha ao renovar o token e cai aqui —
-      // zerar ali apagaria a agenda que o cache tinha acabado de pintar.
+      // Mas só quando NÃO há nada na tela: zerar ali apagaria a agenda que o cache tinha acabado de
+      // pintar.
       if (!tasks?.length) setTasks([]);
       toast.error(copy.loading.tasksError, { id: "tasks-load-error" });
     } finally {
@@ -262,7 +238,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const splash = loading || held;
 
   // 🧭 Redirecionar se não estiver logado
-  if (!loading && !isSignedIn) {
+  if (!loading && !userId) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
 

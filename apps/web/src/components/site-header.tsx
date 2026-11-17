@@ -1,10 +1,10 @@
-import { useUser } from "@clerk/clerk-react";
 import { Link } from "react-router-dom";
 
 import { Brand } from "@/components/brand";
 import { copy } from "@/components/dashboard/copy";
 import { ModeToggle } from "@/components/mode-toggle";
 import { Button } from "@/components/ui/button";
+import { useSession } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 /**
@@ -12,7 +12,7 @@ import { cn } from "@/lib/utils";
  * contra a regra de cores sólidas do bd k00).
  */
 export function SiteHeader({ className }: { className?: string }): JSX.Element {
-  const { user } = useUser();
+  const user = useSession().data?.user;
 
   return (
     <header

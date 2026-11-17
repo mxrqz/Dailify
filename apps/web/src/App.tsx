@@ -1,9 +1,6 @@
-import { AuthenticateWithRedirectCallback } from "@clerk/clerk-react";
-import { Loader2Icon } from "lucide-react";
 import { MotionConfig } from "motion/react";
 import { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Navigate, Routes, Route } from "react-router-dom";
-import { AuthShell } from "@/components/auth/auth-shell";
 import { ThemeProvider } from "./components/theme-provider";
 import "./global.css";
 import Home from "./pages/home";
@@ -164,20 +161,6 @@ export default function App() {
 
                             <SignUp />
                           </>
-                        }
-                      />
-
-                      {/* O round-trip do Google não pode ser uma página branca: a mesma casca das
-                      outras telas de auth, com o spinner, enquanto o Clerk resolve. */}
-                      <Route
-                        path="/sso-callback"
-                        element={
-                          <AuthShell>
-                            <div className="flex justify-center">
-                              <Loader2Icon className="size-6 animate-spin text-primary" />
-                            </div>
-                            <AuthenticateWithRedirectCallback />
-                          </AuthShell>
                         }
                       />
 

@@ -1,5 +1,4 @@
 import { useEffect, useState } from "react";
-import { useAuth } from "@clerk/clerk-react";
 import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 import { copy } from "@/components/dashboard/copy";
@@ -13,7 +12,6 @@ import { disablePush, enablePush, pushState, type PushState } from "@/functions/
  * do contexto.
  */
 export function PushToggle(): JSX.Element {
-  const { getToken } = useAuth();
   const [state, setState] = useState<PushState | null>(null);
   const [busy, setBusy] = useState(false);
 
@@ -24,9 +22,7 @@ export function PushToggle(): JSX.Element {
   const toggle = async () => {
     setBusy(true);
     try {
-      const token = await getToken();
-      if (!token) return;
-      const next = state === "on" ? await disablePush(token) : await enablePush(token);
+      const next = state === "on" ? await disablePush() : await enablePush();
       setState(next);
       if (next === "off" && state !== "on") toast.error(copy.form.notificationsError);
     } catch {

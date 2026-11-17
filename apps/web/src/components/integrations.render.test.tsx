@@ -5,8 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import type { IntegrationStatus } from "@dailify/shared";
 
-const { useAuth, useOnline, api, toast } = vi.hoisted(() => ({
-  useAuth: vi.fn(),
+const { useOnline, api, toast } = vi.hoisted(() => ({
   useOnline: vi.fn(),
   api: {
     getIntegrations: vi.fn(),
@@ -15,7 +14,6 @@ const { useAuth, useOnline, api, toast } = vi.hoisted(() => ({
   },
   toast: { error: vi.fn(), success: vi.fn() },
 }));
-vi.mock("@clerk/clerk-react", () => ({ useAuth }));
 vi.mock("@/hooks/useOnline", () => ({ useOnline }));
 vi.mock("@/functions/api", () => api);
 vi.mock("sonner", () => ({ toast }));
@@ -35,7 +33,6 @@ const GCAL: IntegrationStatus = {
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useAuth.mockReturnValue({ getToken: async () => "t" });
   useOnline.mockReturnValue(true);
 });
 
@@ -56,7 +53,7 @@ describe("<Integrations>", () => {
     renderWith();
 
     await userEvent.click(await screen.findByRole("button", { name: t.connect }));
-    expect(api.connectIntegration).toHaveBeenCalledWith("t", "google-calendar");
+    expect(api.connectIntegration).toHaveBeenCalledWith("google-calendar");
     expect(assign).toHaveBeenCalledWith("https://accounts.google.com/x");
     vi.unstubAllGlobals();
   });
@@ -72,9 +69,7 @@ describe("<Integrations>", () => {
     const dialog = await screen.findByRole("dialog");
     expect(within(dialog).getByText(/continuam na Mewki/)).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("button", { name: t.disconnect }));
-    await waitFor(() =>
-      expect(api.disconnectIntegration).toHaveBeenCalledWith("t", "google-calendar"),
-    );
+    await waitFor(() => expect(api.disconnectIntegration).toHaveBeenCalledWith("google-calendar"));
     expect(await screen.findByRole("button", { name: t.connect })).toBeInTheDocument();
     expect(toast.success).toHaveBeenCalledWith("Agenda desconectada");
   });

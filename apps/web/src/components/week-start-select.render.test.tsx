@@ -3,13 +3,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-const { useDailify, useAuth, saveSettings, toastError } = vi.hoisted(() => ({
+const { useDailify, saveSettings, toastError } = vi.hoisted(() => ({
   useDailify: vi.fn(),
-  useAuth: vi.fn(),
   saveSettings: vi.fn(),
   toastError: vi.fn(),
 }));
-vi.mock("@clerk/clerk-react", () => ({ useAuth }));
 vi.mock("@/components/dailifyContext", () => ({ useDailify }));
 vi.mock("@/functions/api", () => ({ saveSettings }));
 vi.mock("sonner", () => ({ toast: { error: toastError } }));
@@ -22,7 +20,6 @@ const setWeekStart = vi.fn();
 beforeEach(() => {
   vi.clearAllMocks();
   useDailify.mockReturnValue({ weekStart: 1, setWeekStart });
-  useAuth.mockReturnValue({ getToken: async () => "t" });
 });
 
 describe("<WeekStartSelect>", () => {
@@ -37,7 +34,7 @@ describe("<WeekStartSelect>", () => {
     await userEvent.click(screen.getByRole("radio", { name: copy.form.repeatDays[0] }));
 
     expect(setWeekStart).toHaveBeenCalledWith(0);
-    await waitFor(() => expect(saveSettings).toHaveBeenCalledWith("t", { weekStart: 0 }));
+    await waitFor(() => expect(saveSettings).toHaveBeenCalledWith({ weekStart: 0 }));
     expect(toastError).not.toHaveBeenCalled();
   });
 

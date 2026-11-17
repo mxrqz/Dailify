@@ -11,7 +11,7 @@ import {
 import { AddToCalendar } from "@/components/add-to-calendar";
 import { RecurrenceScopeDialog } from "@/components/dashboard/recurrence-scope-dialog";
 import { TaskProps } from "@/types/types";
-import { useAuth, useUser } from "@clerk/clerk-react";
+import { useSession } from "@/lib/auth";
 import { useDailify } from "./dailifyContext";
 import { Button } from "./ui/button";
 import { replaceCalendarMeet, updateTask } from "@/functions/api";
@@ -106,8 +106,8 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
     () => [...new Set((tasks ?? []).flatMap((t) => t.tags ?? []))],
     [tasks],
   );
-  const { getToken, userId } = useAuth();
-  const { user } = useUser();
+  const user = useSession().data?.user;
+  const userId = user?.id;
   const navigate = useNavigate();
   const formId = useId();
   const [loading, setLoading] = useState<boolean>(false);
@@ -133,10 +133,7 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
   const applyTask = useApplyTask();
 
   const newMeet = async () => {
-    const token = await getToken().catch(() => null);
-    const res = token
-      ? await replaceCalendarMeet(token, task.id)
-      : { error: { message: copy.form.authError, offline: false } };
+    const res = await replaceCalendarMeet(task.id);
     if (res.task) {
       applyTask(res.task);
       toast.success(copy.form.meetReplaced);
@@ -201,24 +198,15 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
       return;
     }
 
-    // Sem rede o Clerk também não renova o token — e isso não pode custar a edição.
-    const token = await getToken().catch(() => null);
-    if (!token && navigator.onLine) {
-      toast.error(copy.form.authError);
-      setLoading(false);
-      return;
-    }
-
     // `alert: null` limpa o lembrete no servidor; ausente ele manteria o antigo. `updatedAt` é a
     // hora da edição (LWW), não a do envio — vale também quando ela sobe pela fila.
     const patch = { ...input, date, alert: alert ?? null, updatedAt: at };
-    const result: Awaited<ReturnType<typeof updateTask>> = token
-      ? await updateTask(token, task.id, patch, occurrence)
-      : { error: { message: copy.task.queued, offline: true } };
+    const result = await updateTask(task.id, patch, occurrence);
     const { series, error } = result;
     let updated = result.task;
 
-    if (error?.offline && userId) {
+    // 401: a sessão caiu (aba velha, troca de conta), não a edição — espera na fila pelo login.
+    if ((error?.offline || error?.status === 401) && userId) {
       enqueue(userId, { op: "patch", taskId: task.id, patch, at, occurrence });
       toast(copy.task.queued);
       if (occurrence !== undefined) {

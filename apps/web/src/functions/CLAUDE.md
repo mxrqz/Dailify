@@ -13,11 +13,13 @@ Several very different files live here — keep them separate:
 
 ## The read/write split
 
-`apps/server` (Hono/Workers + D1 + Clerk, same repo) serves everything now — tasks CRUD, the month
-read (recurring already expanded server-side), billing, voice. Every call in `api.ts` takes a Clerk
-JWT (`getToken()`) and hits `apiURL` (`VITE_API_URL`, `consts`). There is **no** direct Firestore
-access anymore — `functions/firebase.ts` and the Clerk→Firebase custom-token bridge are gone
-(migration phase 6).
+`apps/server` (Hono/Workers + D1 + Better Auth, same repo) serves everything now — tasks CRUD, the
+month read (recurring already expanded server-side), billing, voice. No call in `api.ts` takes a
+token: `request` sends `credentials: "include"` (the web's session cookie) plus `authHeaders()` from
+`@/lib/auth` (the native app's bearer), and hits `apiURL` (`VITE_API_URL`, `consts`). A dead session
+comes back as `ApiError.status === 401`; the offline queue (`offline.ts`) and the optimistic writes
+treat it like a network error and keep the mutation queued, so an old tab doesn't lose edits across
+a re-login. There is **no** direct Firestore access anymore.
 
 ## Dates: epoch-ms numbers, not `Date | Timestamp`
 

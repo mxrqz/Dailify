@@ -14,8 +14,8 @@ const toast = vi.hoisted(() =>
 const ctx = vi.hoisted(() => ({ aiUsed: 0 }));
 const prefs = vi.hoisted(() => ({ reduce: false }));
 
-vi.mock("@clerk/clerk-react", () => ({
-  useAuth: () => ({ getToken: async () => "token", userId: "u1" }),
+vi.mock("@/lib/auth", () => ({
+  useSession: () => ({ data: { user: { id: "u1" } }, isPending: false }),
 }));
 vi.mock("@/components/dailifyContext", () => ({
   useDailify: () => ({

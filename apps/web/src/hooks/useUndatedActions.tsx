@@ -1,4 +1,3 @@
-import { useAuth } from "@clerk/clerk-react";
 import { toast } from "sonner";
 import { doneThisPeriod, periodStart, type Task } from "@dailify/shared";
 
@@ -16,6 +15,7 @@ import { upsertTaskWithRecurrence } from "@/functions/functions";
 import { enqueue, type Mutation } from "@/functions/offline";
 import { removeUndated, upsertUndated } from "@/functions/undated";
 import { appTimeZone } from "@/functions/zone";
+import { useSession } from "@/lib/auth";
 
 /**
  * Marcar/desmarcar/excluir/agendar na lista Sem data. Mesmo contrato de `useTaskActions` (otimista; erro de
@@ -24,36 +24,25 @@ import { appTimeZone } from "@/functions/zone";
  */
 export function useUndatedActions(task: Task) {
   const { undatedTasks, setUndatedTasks, tasks, setTasks, loadedMonths, weekStart } = useDailify();
-  const { getToken, userId } = useAuth();
+  const userId = useSession().data?.user.id;
 
   const done =
     task.repeat === "Off"
       ? task.completed.length > 0
       : doneThisPeriod(task, Date.now(), weekStart, appTimeZone());
 
-  /** Sem rede o Clerk também não renova o token — e isso não pode custar a escrita. */
-  const authToken = async (): Promise<{ token?: string; error: ApiError | undefined }> => {
-    const token = await getToken().catch(() => null);
-    if (token) return { token, error: undefined };
-    return {
-      error: navigator.onLine
-        ? { message: copy.form.authError, offline: false }
-        : { message: copy.task.queued, offline: true },
-    };
-  };
-
   /** Roda a chamada e decide o desfecho: ok, fila (rede) ou rollback + toast (servidor). */
   const run = async (
     previous: Task[],
     mutation: Mutation,
     message: string,
-    call: (token: string) => Promise<{ error?: ApiError }>,
+    call: () => Promise<{ error?: ApiError }>,
   ): Promise<boolean> => {
-    const { token, error: authError } = await authToken();
-    const error = token ? (await call(token)).error : authError;
+    const { error } = await call();
     if (!error) return true;
 
-    if (error.offline && userId) {
+    // 401: a sessão caiu (aba velha, troca de conta), não a edição — espera na fila pelo login.
+    if ((error.offline || error.status === 401) && userId) {
       enqueue(userId, mutation);
       return true;
     }
@@ -88,7 +77,7 @@ export function useUndatedActions(task: Task) {
       list,
       { op: "uncomplete", taskId: current.id, day: from, until: at, at },
       copy.task.uncompleteError,
-      (t) => uncompleteTaskRange(t, current.id, from, at),
+      () => uncompleteTaskRange(current.id, from, at),
     );
   };
 
@@ -104,7 +93,7 @@ export function useUndatedActions(task: Task) {
       previous,
       { op: "complete", taskId: task.id, at },
       copy.task.completeError,
-      (t) => completeTask(t, task.id, at),
+      () => completeTask(task.id, at),
     );
     // Avulsa concluída some da lista: sem o desfazer, um toque errado não tem volta.
     if (ok && task.repeat === "Off") {
@@ -125,7 +114,7 @@ export function useUndatedActions(task: Task) {
       removeUndated(previous, task.id),
       { op: "create", taskId: task.id, input, at },
       copy.task.undoError,
-      (t) => createTask(t, input),
+      () => createTask(input),
     );
     if (ok) toast.success(copy.task.restored);
   };
@@ -139,7 +128,7 @@ export function useUndatedActions(task: Task) {
       previous,
       { op: "delete", taskId: task.id, at },
       copy.task.deleteError,
-      (t) => deleteTask(t, task.id),
+      () => deleteTask(task.id),
     );
     if (!ok) return;
 
@@ -163,7 +152,7 @@ export function useUndatedActions(task: Task) {
       previous,
       { op: "patch", taskId: task.id, patch, at: now },
       copy.task.patchError,
-      (t) => updateTask(t, task.id, patch),
+      () => updateTask(task.id, patch),
     );
     if (!ok) setTasks(agenda);
   };

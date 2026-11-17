@@ -1,4 +1,3 @@
-import { useAuth } from "@clerk/clerk-react";
 import { toast } from "sonner";
 
 import { useDailify } from "@/components/dailifyContext";
@@ -9,15 +8,13 @@ import { saveSettings } from "@/functions/api";
 /** 24h ou 12h (AM/PM) em todo horário do app. Otimista, como o início da semana. */
 export function HourFormatSelect(): JSX.Element {
   const { hour12, setHour12 } = useDailify();
-  const { getToken } = useAuth();
 
   const choose = async (value: "24" | "12") => {
     const next = value === "12";
     if (next === hour12) return;
     setHour12(next);
-    const token = await getToken();
-    const result = token ? await saveSettings(token, { hour12: next }) : undefined;
-    if (!result || result.error) {
+    const result = await saveSettings({ hour12: next });
+    if (result.error) {
       setHour12(!next);
       toast.error(copy.profile.hourFormatError);
     }
