@@ -2,17 +2,17 @@ import { TaskProps } from "@/types/types";
 import {
   addMonths,
   eachDayOfInterval,
+  endOfMonth,
   format,
-  isSameDay,
   isSameMonth,
   startOfMonth,
 } from "date-fns";
 import { enUS, ptBR } from "date-fns/locale";
 import type { TaskCardData } from "@/components/task-card";
-import { expandRecurringTask } from "@dailify/shared";
+import { expandRecurringTask, zonedParts } from "@dailify/shared";
 
 import { repeatLabel } from "@/functions/repeat-label";
-import { appTimeZone, zoned } from "@/functions/zone";
+import { appTimeZone, zoned, zonedAt } from "@/functions/zone";
 
 export const returnFractedDate = (date: Date) => {
   const day = date.getDate();
@@ -45,19 +45,42 @@ export const formatDateByLocale = (date: Date, locale: string) => {
   return format(date, "PPPP", { locale: dateLocale });
 };
 
+/** Concluída no dia do calendário de `selectedDay`: faixa numérica, sem formatar cada `completed`. */
 export function getCompletionDate(task: TaskProps, selectedDay: Date) {
   if (!Array.isArray(task.completed)) return;
-  const haveBeenCompletedToday = task.completed.some(
-    (completedAt) => format(zoned(completedAt), "P") === format(selectedDay, "P"),
-  )
-    ? true
-    : false;
-
-  return haveBeenCompletedToday;
+  const [y, m, d] = [selectedDay.getFullYear(), selectedDay.getMonth(), selectedDay.getDate()];
+  const from = +zonedAt(y, m, d);
+  const to = +zonedAt(y, m, d + 1);
+  return task.completed.some((completedAt) => completedAt >= from && completedAt < to);
 }
 
-export function getTasksForDay(tasks: TaskProps[], day: Date): TaskProps[] {
-  return tasks.filter((task) => isSameDay(zoned(task.date), day));
+const dayKey = (ms: number, zone: string) => {
+  const p = zonedParts(ms, zone);
+  return `${p.year}-${p.month}-${p.day}`;
+};
+const NO_TASKS: readonly TaskProps[] = [];
+// O array de tarefas é imutável (todo setTasks troca a referência), então o índice vale enquanto ele viver.
+const dayIndex = new WeakMap<TaskProps[], { zone: string; byDay: Map<string, TaskProps[]> }>();
+
+/**
+ * As tarefas do dia (no fuso do app). Chamado dias × renders: um índice por array troca o
+ * `isSameDay` por tarefa por uma consulta. Devolve arrays compartilhados — não mutar.
+ */
+export function getTasksForDay(tasks: TaskProps[], day: Date): readonly TaskProps[] {
+  const zone = appTimeZone();
+  let index = dayIndex.get(tasks);
+  if (index?.zone !== zone) {
+    const byDay = new Map<string, TaskProps[]>();
+    for (const task of tasks) {
+      const key = dayKey(task.date, zone);
+      const bucket = byDay.get(key);
+      if (bucket) bucket.push(task);
+      else byDay.set(key, [task]);
+    }
+    index = { zone, byDay };
+    dayIndex.set(tasks, index);
+  }
+  return index.byDay.get(dayKey(+day, zone)) ?? NO_TASKS;
 }
 
 /** Append `task` to the list, or replace the existing entry with the same id. */
@@ -130,7 +153,9 @@ export function monthsBetween(from: Date, to: Date): Date[] {
 
 /** Troca as tarefas de `month` pelas que o servidor devolveu; os outros meses ficam como estão. */
 export function mergeMonth(tasks: TaskProps[], month: Date, fetched: TaskProps[]): TaskProps[] {
-  return [...tasks.filter((t) => !isSameMonth(t.date, month)), ...fetched];
+  const from = +startOfMonth(month);
+  const to = +endOfMonth(month);
+  return [...tasks.filter((t) => t.date < from || t.date > to), ...fetched];
 }
 
 export function getNextTask(currentMonthTasks: TaskProps[]) {

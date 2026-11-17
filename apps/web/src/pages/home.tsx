@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
-import { startOfDay } from "date-fns";
 
 import { useDailify } from "@/components/dailifyContext";
 import { DayList } from "@/components/dashboard/day-list";
@@ -55,7 +54,7 @@ export function TodayHeader({
 export default function Home() {
   const { create, submitting } = useCreateTask();
   const { tasks } = useDailify();
-  const today = startOfDay(useNow(60_000));
+  const today = useNow("day");
   const todays = tasks ? getTasksForDay(tasks, today) : [];
   const done = todays.filter((task) => getCompletionDate(task, today) === true).length;
 

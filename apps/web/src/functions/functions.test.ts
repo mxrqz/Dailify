@@ -1,4 +1,5 @@
-import { describe, test, expect } from "vitest";
+import { afterEach, describe, test, expect } from "vitest";
+import { addDays, endOfMonth, format, isSameDay, isSameMonth, startOfMonth } from "date-fns";
 import {
   getNextTask,
   isTaskModified,
@@ -19,6 +20,7 @@ import {
   nextMonthToLoad,
   monthsBetween,
 } from "./functions";
+import { setAppTimeZone, zoned, zonedAt } from "./zone";
 import type { TaskProps } from "@/types/types";
 
 function makeTask(over: Partial<TaskProps> = {}): TaskProps {
@@ -142,6 +144,43 @@ describe("getTasksForDay", () => {
     const otherMonth = makeTask({ id: "m", date: new Date(2026, 6, 1).getTime() });
     const otherYear = makeTask({ id: "y", date: new Date(2025, 7, 1).getTime() });
     expect(getTasksForDay([otherMonth, otherYear], day)).toEqual([]);
+  });
+});
+
+describe("índice por dia e faixas numéricas ≡ comparação por TZDate", () => {
+  afterEach(() => setAppTimeZone(null));
+  // Mês com virada de horário de verão (NY, nov), tarefas perto da meia-noite e históricos longos.
+  const start = Date.UTC(2026, 9, 1);
+  const tasks: TaskProps[] = Array.from({ length: 120 }, (_, i) => {
+    const date = start + ((i * 7919 * 60_000) % (92 * 86_400_000));
+    return makeTask({
+      id: String(i),
+      date,
+      completed: Array.from(
+        { length: i % 7 },
+        (_, k) => date - k * 86_400_000 + (k % 2) * 3_600_000,
+      ),
+    });
+  });
+
+  test.each(["America/Sao_Paulo", "America/New_York", "Asia/Tokyo", "UTC"])("%s", (tz) => {
+    setAppTimeZone(tz);
+    for (let i = 0; i < 95; i += 3) {
+      for (const day of [addDays(zonedAt(2026, 9, 1), i), new Date(2026, 9, 1 + i)]) {
+        const before = tasks.filter((t) => isSameDay(zoned(t.date), day));
+        expect(getTasksForDay(tasks, day)).toEqual(before);
+        for (const t of before.concat(tasks.slice(i, i + 3))) {
+          const was = t.completed.some((c) => format(zoned(c), "P") === format(day, "P"));
+          expect(getCompletionDate(t, day)).toBe(was);
+        }
+      }
+    }
+    for (const month of [zonedAt(2026, 9), zonedAt(2026, 10), zonedAt(2026, 11)]) {
+      expect(mergeMonth(tasks, month, [])).toEqual(
+        tasks.filter((t) => !isSameMonth(t.date, month)),
+      );
+      expect(+endOfMonth(month)).toBe(+startOfMonth(addDays(endOfMonth(month), 1)) - 1);
+    }
   });
 });
 

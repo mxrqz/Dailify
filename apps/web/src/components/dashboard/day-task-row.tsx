@@ -21,7 +21,6 @@ import { TaskCard } from "@/components/task-card";
 import { useDailify } from "@/components/dailifyContext";
 import { formatClock, taskToCardData } from "@/functions/functions";
 import { repeatLabel } from "@/functions/repeat-label";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import type { TaskProps } from "@/types/types";
 import { zoned } from "@/functions/zone";
@@ -240,16 +239,18 @@ export function DayTaskRow({
   day,
   hour,
   live = false,
+  sheetEditing,
 }: {
   task: TaskProps;
   day: Date;
+  /** `SHEET_EDITING`, lido uma vez pela seção e não um matchMedia por linha. */
+  sheetEditing: boolean;
   /** "16:00" acima do primeiro cartão da hora (desktop); os seguintes não repetem. */
   hour?: string;
   /** Em curso agora: a linha acende e ganha o "Agora". */
   live?: boolean;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
-  const sheetEditing = useMediaQuery(SHEET_EDITING);
   const { hour12 } = useDailify();
   const data = taskToCardData(task, day);
   const { onPatch, onRename, onComplete, onUncomplete, onDelete, deleteDialog } = useTaskActions(
@@ -260,6 +261,16 @@ export function DayTaskRow({
   const onOpenChange = (next: boolean) => setOpen(next);
   // Remarcar uma recorrente espera a escolha entre esta ocorrência e a série.
   const [moveTo, setMoveTo] = useState<Date | null>(null);
+  // Os diálogos montam no primeiro uso e ficam (animação de saída): fechados, custavam por linha.
+  const [dialogs, setDialogs] = useState(false);
+  const askScope = (to: Date) => {
+    setDialogs(true);
+    setMoveTo(to);
+  };
+  const remove = () => {
+    setDialogs(true);
+    void onDelete();
+  };
   const move = (to: Date, occurrence?: number) => {
     const shift = to.getTime() - task.date;
     // O alerta anda junto: remarcar não pode deixar o lembrete no horário antigo.
@@ -276,7 +287,7 @@ export function DayTaskRow({
         time: (chip: JSX.Element) => (
           <DateTimePopover
             value={zoned(task.date)}
-            onChange={(to) => (task.repeat === "Off" ? move(to) : setMoveTo(to))}
+            onChange={(to) => (task.repeat === "Off" ? move(to) : askScope(to))}
           >
             {chip}
           </DateTimePopover>
@@ -312,7 +323,7 @@ export function DayTaskRow({
           done: data.completed,
           toggle: () => void (data.completed ? onUncomplete() : onComplete()),
         },
-        remove: () => void onDelete(),
+        remove,
         calendar: <AddToCalendar task={task} variant="toolbar" />,
       };
 
@@ -359,7 +370,7 @@ export function DayTaskRow({
   return (
     <EditTask open={open} onOpenChange={onOpenChange}>
       {sheetEditing ? (
-        <SwipeActions onComplete={toggle} onDelete={() => void onDelete()}>
+        <SwipeActions onComplete={toggle} onDelete={remove}>
           {card}
         </SwipeActions>
       ) : (
@@ -367,20 +378,24 @@ export function DayTaskRow({
       )}
 
       <EditTaskContent task={task} day={day} open={open} onClose={() => setOpen(false)} />
-      {deleteDialog}
-      <RecurrenceScopeDialog
-        open={moveTo !== null}
-        onOpenChange={(next) => !next && setMoveTo(null)}
-        description={copy.form.scopeDescription}
-        onOccurrence={() => {
-          if (moveTo) move(moveTo, task.date);
-          setMoveTo(null);
-        }}
-        onSeries={() => {
-          if (moveTo) move(moveTo);
-          setMoveTo(null);
-        }}
-      />
+      {dialogs && (
+        <>
+          {deleteDialog}
+          <RecurrenceScopeDialog
+            open={moveTo !== null}
+            onOpenChange={(next) => !next && setMoveTo(null)}
+            description={copy.form.scopeDescription}
+            onOccurrence={() => {
+              if (moveTo) move(moveTo, task.date);
+              setMoveTo(null);
+            }}
+            onSeries={() => {
+              if (moveTo) move(moveTo);
+              setMoveTo(null);
+            }}
+          />
+        </>
+      )}
     </EditTask>
   );
 }

@@ -7,7 +7,7 @@ import { durationMinutes } from "@dailify/shared";
 import { useDailify } from "@/components/dailifyContext";
 import { AnytimeBlock, ScheduleDrop } from "@/components/dashboard/anytime-block";
 import { copy } from "@/components/dashboard/copy";
-import { DayTaskRow, NowLine } from "@/components/dashboard/day-task-row";
+import { DayTaskRow, NowLine, SHEET_EDITING } from "@/components/dashboard/day-task-row";
 import { TaskCard } from "@/components/task-card";
 import {
   formatClock,
@@ -16,6 +16,7 @@ import {
   groupTasksByHour,
   timeToMinutes,
 } from "@/functions/functions";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNow } from "@/hooks/useNow";
 import type { TaskProps } from "@/types/types";
 
@@ -70,9 +71,10 @@ export function DaySection({
 }): JSX.Element {
   const { tasks, hour12 } = useDailify();
   const reduce = useReducedMotion();
-  const now = useNow(60_000);
-
+  const sheetEditing = useMediaQuery(SHEET_EDITING);
   const isCurrentDay = isToday(day);
+  // Só hoje tem o fio do agora; os outros dias só mudam (rótulo) na virada do dia.
+  const now = useNow(isCurrentDay ? 60_000 : "day");
   const dayTasks = tasks ? getTasksForDay(tasks, day) : [];
   const nowAt = now.getHours() * 60 + now.getMinutes();
   // Tarefas e o fio do agora numa ordem só. O fio fica antes do que começa agora (-0.5): o que já
@@ -109,9 +111,10 @@ export function DaySection({
 
   return (
     <ScheduleDrop day={day}>
+      {/* content-visibility só no mobile: no desktop cortaria o contorno de soltar (outline-offset). */}
       <section
         id={calendar ? undefined : dayAnchorId(day)}
-        className="flex scroll-mt-16 flex-col gap-2 rounded-lg outline-offset-4 data-drop-over:outline-2 data-drop-over:outline-dashed data-drop-over:outline-brand"
+        className="flex scroll-mt-16 max-md:[contain-intrinsic-size:auto_20rem] max-md:[content-visibility:auto] flex-col gap-2 rounded-lg outline-offset-4 data-drop-over:outline-2 data-drop-over:outline-dashed data-drop-over:outline-brand"
       >
         <header className="flex items-baseline justify-between gap-3 px-1 pb-1">
           <h2 className="text-title-3 font-semibold">
@@ -130,13 +133,21 @@ export function DaySection({
           <motion.ul
             className="flex flex-col gap-2"
             variants={listVariants}
-            initial={reduce ? "visible" : "hidden"}
+            // Só hoje (e o dia do calendário) entra escalonado: meses que chegam no meio da rolagem
+            // não animam linha por linha.
+            initial={reduce || (!isCurrentDay && !calendar) ? false : "hidden"}
             animate="visible"
           >
             {rows.map((row) =>
               "task" in row ? (
                 <motion.li key={row.task.id} variants={rowVariants}>
-                  <DayTaskRow task={row.task} day={day} hour={row.hour} live={live(row)} />
+                  <DayTaskRow
+                    task={row.task}
+                    day={day}
+                    hour={row.hour}
+                    live={live(row)}
+                    sheetEditing={sheetEditing}
+                  />
                 </motion.li>
               ) : (
                 <li key="now">

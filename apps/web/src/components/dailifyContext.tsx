@@ -1,7 +1,7 @@
 import { InvoicesProps, PaymentDetailsProps, TaskProps } from "@/types/types";
 import { createContext, useContext, useRef, useState, ReactNode } from "react";
 import { useAuth } from "@clerk/clerk-react";
-import { addDays, startOfDay, startOfMonth } from "date-fns";
+import { addDays, endOfMonth, startOfDay, startOfMonth } from "date-fns";
 import { toast } from "sonner";
 import { DEFAULT_WEEK_START } from "@dailify/shared";
 import type { QuotaKey, WeekStart } from "@dailify/shared";
@@ -114,9 +114,13 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
     const error = errors.find(Boolean);
     // O cache traz meses que ninguém rebusca e ficariam velhos pra sempre; só poda com tudo em mãos.
     if (!error && keys.every((key) => monthRequests.current.has(key))) {
-      setTasks((prev) =>
-        prev?.filter((t) => monthRequests.current.has(startOfMonth(zoned(t.date)).getTime())),
-      );
+      setTasks((prev) => {
+        const months = [...monthRequests.current.keys()].map((key) => [
+          key,
+          +endOfMonth(zoned(key)),
+        ]);
+        return prev?.filter((t) => months.some(([from, to]) => t.date >= from && t.date <= to));
+      });
     }
     return error;
   };
