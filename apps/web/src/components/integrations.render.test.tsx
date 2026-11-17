@@ -23,7 +23,6 @@ vi.mock("sonner", () => ({ toast }));
 import { Integrations, IntegrationsSummary } from "./integrations";
 import { copy } from "@/components/dashboard/copy";
 import { CALENDAR_DEFAULT_KEY } from "@/hooks/useCalendarDefault";
-import { HIDE_EVENTS_KEY } from "@/hooks/useExternalEvents";
 import { setIntegrations } from "@/hooks/useIntegrations";
 
 const t = copy.integrations;
@@ -71,6 +70,7 @@ describe("<Integrations>", () => {
     expect(api.disconnectIntegration).not.toHaveBeenCalled();
 
     const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(/continuam na Mewki/)).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("button", { name: t.disconnect }));
     await waitFor(() =>
       expect(api.disconnectIntegration).toHaveBeenCalledWith("t", "google-calendar"),
@@ -79,14 +79,9 @@ describe("<Integrations>", () => {
     expect(toast.success).toHaveBeenCalledWith("Agenda desconectada");
   });
 
-  it("conectado: Mostrar eventos da Agenda nasce ligado e desligar fica no device", async () => {
-    localStorage.clear();
-    renderWith({ connected: true, status: "active" });
-    const toggle = await screen.findByRole("switch", { name: copy.calendar.showEvents });
-    expect(toggle).toBeChecked();
-    await userEvent.click(toggle);
-    expect(toggle).not.toBeChecked();
-    expect(localStorage.getItem(HIDE_EVENTS_KEY)).toBe("1");
+  it("conectado: o que ficou só na Agenda vira recado no card", async () => {
+    renderWith({ connected: true, status: "active", skipped: 3 });
+    expect(await screen.findByText("3 eventos ficaram só na Agenda")).toBeInTheDocument();
   });
 
   it("revogado pede pra reconectar", async () => {
@@ -139,7 +134,7 @@ describe("<Integrations>", () => {
   it("desconectado não mostra os ajustes da agenda", async () => {
     renderWith();
     await screen.findByRole("button", { name: t.connect });
-    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+    expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
     expect(screen.queryByRole("radio", { name: t.always })).not.toBeInTheDocument();
   });
 });
@@ -156,7 +151,7 @@ describe("<IntegrationsSummary>", () => {
     setIntegrations([{ ...GCAL, connected: true, status: "active", account: "a@b.com" }]);
     summary();
     expect(screen.getByText("a@b.com")).toBeInTheDocument();
-    expect(screen.getByRole("switch", { name: copy.calendar.showEvents })).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: t.calendarDefault })).toBeInTheDocument();
     for (const link of screen.getAllByRole("link"))
       expect(link).toHaveAttribute("href", "/integrations");
   });
@@ -164,7 +159,7 @@ describe("<IntegrationsSummary>", () => {
   it("desconectado: só o caminho pra conectar, sem ajustes", () => {
     setIntegrations([GCAL]);
     summary();
-    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+    expect(screen.queryByRole("radiogroup")).not.toBeInTheDocument();
     expect(screen.getByRole("link", { name: t.all })).toHaveAttribute("href", "/integrations");
   });
 });

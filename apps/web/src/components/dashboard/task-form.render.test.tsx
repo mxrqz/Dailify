@@ -68,3 +68,14 @@ describe("<TaskForm> raiz", () => {
     expect(submit()).toMatchObject({ links: ["https://zoom.us/j/1", event] });
   });
 });
+
+describe("<TaskForm> convite (readonly)", () => {
+  it("trava título, data, hora, duração e repetição; prioridade segue editável", () => {
+    render(<TaskForm id="f" task={task} view="root" onView={vi.fn()} onSubmit={vi.fn()} locked />);
+    expect(screen.getByText(copy.calendar.readonly)).toBeInTheDocument();
+    for (const name of [copy.form.date, copy.form.time, copy.form.duration, copy.form.repeat])
+      expect(screen.getByLabelText(name)).toBeDisabled();
+    expect(screen.getByRole("button", { name: task.title })).toBeDisabled();
+    expect(screen.getByRole("combobox", { name: copy.form.priority })).toBeEnabled();
+  });
+});

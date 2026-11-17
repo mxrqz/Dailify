@@ -22,7 +22,6 @@ import { Button } from "@/components/ui/button";
 import { getTasksForDay } from "@/functions/functions";
 import { zoned } from "@/functions/zone";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
-import { useExternalEvents } from "@/hooks/useExternalEvents";
 import { cn } from "@/lib/utils";
 
 const iconButton =
@@ -121,11 +120,8 @@ export function MonthCalendar({
   onClose: () => void;
   onCreateOn: (day: Date) => void;
 }): JSX.Element {
-  const { tasks, selectedDay, goToDay, loadMonth, loadedMonths, weekStart } = useDailify();
+  const { tasks, selectedDay, goToDay, loadMonth, weekStart } = useDailify();
   const [month, setMonth] = useState(() => startOfMonth(selectedDay));
-  // ponytail: desmontar o calendário aborta os GETs do Google em voo (o hook aborta tudo); a
-  // lista refaz o pedido quando mudar de novo. Contar consumidores no hook resolveria.
-  const events = useExternalEvents(loadedMonths);
   const monthKey = month.getTime();
 
   const loadMonthOf = useEffectEvent(loadMonth);
@@ -134,9 +130,7 @@ export function MonthCalendar({
   }, [monthKey]);
 
   const pick = (day: Date) => void goToDay(day);
-  const marked = (day: Date) =>
-    (tasks ? getTasksForDay(tasks, day).length > 0 : false) ||
-    events.some((e) => isSameDay(zoned(e.start), day));
+  const marked = (day: Date) => (tasks ? getTasksForDay(tasks, day).length > 0 : false);
   const title = format(month, "MMMM", { locale: ptBR });
 
   return (
@@ -203,11 +197,7 @@ export function MonthCalendar({
       <hr className="mx-5 mt-3 border-separator" />
 
       <div className="flex flex-col gap-3 px-4 pt-7">
-        <DaySection
-          calendar
-          day={startOfDay(selectedDay)}
-          events={events.filter((e) => isSameDay(zoned(e.start), selectedDay))}
-        />
+        <DaySection calendar day={startOfDay(selectedDay)} />
         <Button variant="secondary" className="w-full" onClick={() => onCreateOn(selectedDay)}>
           <PlusIcon aria-hidden="true" />
           {copy.day.createOn.replace("{day}", format(selectedDay, "EEE, d MMM", { locale: ptBR }))}

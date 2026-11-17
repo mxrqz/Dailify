@@ -7,7 +7,6 @@ import { DayList } from "./day-list";
 
 const dailify = vi.hoisted((): { current: Record<string, unknown> } => ({ current: {} }));
 vi.mock("@/components/dailifyContext", () => ({ useDailify: () => dailify.current }));
-vi.mock("@/hooks/useExternalEvents", () => ({ useExternalEvents: () => [] }));
 // A Mew do primeiro uso observa a própria visibilidade: sairia no lugar da sentinela.
 vi.mock("@/components/mew/mew", () => ({ Mew: () => null }));
 vi.mock("@/components/dashboard/day-section", () => ({

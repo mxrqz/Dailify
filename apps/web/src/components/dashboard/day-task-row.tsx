@@ -1,7 +1,7 @@
 import { useState, type ReactNode } from "react";
 import { format } from "date-fns";
 import { BellIcon, CheckIcon, RepeatIcon, VideoIcon } from "lucide-react";
-import { durationMinutes, videoLink } from "@dailify/shared";
+import { durationMinutes, isCalendarEventLink, videoLink } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { SwipeActions } from "@/components/dashboard/swipe-actions";
@@ -15,6 +15,7 @@ import {
 } from "@/components/dashboard/task-meta-menus";
 import { AddToCalendar } from "@/components/add-to-calendar";
 import { ClockCheck } from "@/components/clock-check";
+import { CalendarBadge } from "@/components/logos";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
 import { TaskCard } from "@/components/task-card";
 import { useDailify } from "@/components/dailifyContext";
@@ -195,8 +196,9 @@ export function NowLine({ time }: { time: string }): JSX.Element {
   );
 }
 
-/** "Seg, Qua · Lembrete 30 min antes · Meet" com os ícones neutros na frente. */
+/** "Agenda · Seg, Qua · Lembrete 30 min antes · Meet" com os ícones neutros na frente. */
 function taskMeta(task: TaskProps, live: boolean, hour12: boolean): ReactNode {
+  const calendar = task.links?.some(isCalendarEventLink);
   const repeat = repeatLabel(task.repeat, task.repeatEvery);
   const meet = videoLink(task.links);
   const before =
@@ -204,6 +206,7 @@ function taskMeta(task: TaskProps, live: boolean, hour12: boolean): ReactNode {
   const end = task.date + durationMinutes(task.duration) * 60_000;
   const text = [
     live && copy.day.until.replace("{time}", formatClock(format(zoned(end), "HH:mm"), hour12)),
+    calendar && copy.calendar.name,
     repeat,
     before !== undefined &&
       (before <= 0
@@ -214,6 +217,7 @@ function taskMeta(task: TaskProps, live: boolean, hour12: boolean): ReactNode {
   if (!text.length) return undefined;
   return (
     <>
+      {calendar && <CalendarBadge />}
       {repeat && <RepeatIcon aria-hidden="true" />}
       {before !== undefined && <BellIcon aria-hidden="true" />}
       {meet && <VideoIcon aria-hidden="true" />}

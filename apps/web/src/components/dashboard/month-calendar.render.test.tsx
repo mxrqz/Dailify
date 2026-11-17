@@ -8,7 +8,6 @@ import { copy } from "./copy";
 
 const dailify = vi.hoisted(() => vi.fn());
 vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
-vi.mock("@/hooks/useExternalEvents", () => ({ useExternalEvents: () => [] }));
 vi.mock("@/components/dashboard/day-section", async (original) => ({
   ...(await original<typeof import("./day-section")>()),
   DaySection: ({ day }: { day: Date }) => <section data-testid="day">{day.getDate()}</section>,

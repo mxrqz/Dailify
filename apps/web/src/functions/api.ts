@@ -7,7 +7,6 @@ import type {
   PaymentDetails,
   Invoice,
   WeekStart,
-  ExternalEvent,
   IntegrationLink,
   IntegrationStatus,
   ProviderId,
@@ -346,8 +345,9 @@ export async function completeIntegration(
   provider: ProviderId,
   code: string,
   state: string,
-): Promise<{ integration?: IntegrationStatus; error?: ApiError }> {
-  const { data, error } = await request<IntegrationStatus>(
+): Promise<{ integration?: IntegrationStatus & { imported?: number }; error?: ApiError }> {
+  // `imported`: quantos eventos da Agenda viraram tarefa no sync inicial.
+  const { data, error } = await request<IntegrationStatus & { imported?: number }>(
     `/integrations/${provider}/callback`,
     token,
     { method: "POST", body: JSON.stringify({ code, state }) },
@@ -391,33 +391,16 @@ export async function syncCalendarEvent(
   return { task: data?.task, error };
 }
 
-/** Eventos do Google na janela `[from, to)`, lidos na hora; o servidor não guarda nada. */
-export async function getCalendarEvents(
+/** Duplicata da importação: "merge" junta na tarefa própria (a importada some), "keep" mantém as duas. */
+export async function resolveDuplicate(
   token: string,
-  from: number,
-  to: number,
-  signal?: AbortSignal,
-): Promise<{ events?: ExternalEvent[]; error?: ApiError }> {
-  const tz = encodeURIComponent(appTimeZone());
-  const { data, error } = await request<{ events: ExternalEvent[] }>(
-    `/integrations/google-calendar/events?from=${from}&to=${to}&tz=${tz}`,
+  importedId: string,
+  action: "merge" | "keep",
+): Promise<{ task?: Task; removedId?: string; error?: ApiError }> {
+  const { data, error } = await request<{ task?: Task; removedId?: string }>(
+    `/integrations/google-calendar/duplicates/${encodeURIComponent(importedId)}`,
     token,
-    { signal },
+    { method: "POST", body: JSON.stringify({ action }) },
   );
-  return { events: data?.events, error };
-}
-
-/** "Vincular": a tarefa passa a ser o evento que já existia. 409 `already_linked` traz a tarefa. */
-export async function linkCalendarEvent(
-  token: string,
-  taskId: string,
-  eventId: string,
-): Promise<{ link?: IntegrationLink; task?: Task; error?: ApiError }> {
-  const { data, error, errorBody } = await request<{ link: IntegrationLink; task: Task }>(
-    "/integrations/google-calendar/links",
-    token,
-    { method: "POST", body: JSON.stringify({ taskId, eventId, timezone: appTimeZone() }) },
-  );
-  const body = data ?? errorBody;
-  return { link: body?.link, task: body?.task, error };
+  return { task: data?.task, removedId: data?.removedId, error };
 }

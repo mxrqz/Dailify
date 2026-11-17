@@ -291,7 +291,7 @@ export const copy = {
     offlineHint: "Sem conexão",
     disconnectTitle: "Desconectar {name}?",
     disconnectDescription:
-      "A Mewki perde o acesso a esta conta. Você pode conectar de novo quando quiser.",
+      "Suas tarefas continuam na Mewki, só param de sincronizar com a {name}. Você pode conectar de novo quando quiser.",
     connecting: "Conectando {name}…",
     // ponytail: artigo e gênero de "a Agenda", o único provedor; um segundo (o Gmail) pede a frase por provedor.
     connected: "{name} conectada",
@@ -338,19 +338,25 @@ export const copy = {
     notAdded: "Tarefa criada, mas não foi pra Agenda",
     notAddedMany: "{n} tarefas não foram pra Agenda",
     tryAgain: "Tentar de novo",
-    // Eventos do Google na agenda (0xp.8): só leitura.
-    event: "Evento da Agenda",
-    allDay: "Dia todo",
-    untitled: "(sem título)",
-    openInGoogle: "Abrir na Agenda",
-    meetLink: "Meet",
-    showEvents: "Mostrar eventos da Agenda",
-    // O dedupe: a tarefa parece ser um evento que já existe lá.
-    looksLinked: "Parece que isso já está na Agenda",
-    link: "Vincular",
-    linkPreview: "Vincular a tarefa ao evento “{title}”?",
-    linkDone: "Tarefa vinculada ao evento da Agenda",
-    linkError: "Não foi possível vincular",
+    // Convite de outra pessoa (readonly): a agenda é de quem convidou.
+    readonly: "Só quem convidou pode mudar",
+    // Excluir uma tarefa ligada à Agenda apaga o evento lá também, sem desfazer.
+    deleteTitle: "Excluir “{title}” da Mewki e da Agenda?",
+    deleteSeries: "A série inteira some das duas agendas.",
+    deleteConfirm: "Excluir",
+    // As duplicatas da importação: o evento da Agenda parece uma tarefa que você já tinha.
+    duplicateTitle: "Encontramos uma duplicata",
+    duplicatesTitle: "Encontramos {n} duplicatas",
+    duplicateHint: "Juntar mantém a sua tarefa, agora ligada à Agenda.",
+    mewki: "Mewki",
+    noDate: "Sem data",
+    merge: "Juntar",
+    keep: "Manter as duas",
+    merged: "Tarefas juntadas",
+    resolveError: "Não foi possível resolver a duplicata",
+    // O que a Mewki não sabe representar (recorrência exótica, dia todo repetido) fica lá.
+    skippedOne: "1 evento ficou só na Agenda",
+    skippedMany: "{n} eventos ficaram só na Agenda",
   },
 
   composer: {
