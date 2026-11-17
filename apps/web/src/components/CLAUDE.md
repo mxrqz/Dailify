@@ -91,11 +91,18 @@ There is **no** `newTask` mechanism anymore (it only mutated a local copy and de
 with a `mode` ("signIn" | "signUp").
 
 - **`auth-state.ts` is the only place logic goes**, and the tested file of the folder
-  (`auth-state.test.ts`). `use-email-link-auth.ts` is just the wire to Clerk: if you're
-  writing an `if` that isn't about Clerk's API, it belongs in the reducer.
+  (`auth-state.test.ts`). `use-email-link-auth.ts` is just the wire to Better Auth
+  (`authClient.signIn.magicLink` / `.social`): if you're writing an `if` that isn't about its API,
+  it belongs in the reducer. `classifyAuthError` maps the client's `{ status, code }` (429, zod
+  `VALIDATION_ERROR`, captcha codes, `null` = network).
+- No polling: after sending, the inbox screen only offers resend (cooldown). The e-mail link opens
+  `/verify` (or `/auth/app` for the app), which finishes the sign-in.
+- `turnstile.ts`: Cloudflare Turnstile, `interaction-only`, script loaded only on the auth page
+  (`VITE_TURNSTILE_SITE_KEY`; empty = no captcha). Each send takes a fresh single-use token into the
+  `x-captcha-response` header.
 - Every visible string comes from `auth/copy.ts` (pt-BR) — no literals in JSX.
 - `auth-shell.tsx` owns the whole layout; the body components are `email-form.tsx` and
-  `check-inbox.tsx`. `/verify` reuses the shell with all its props omitted.
+  `check-inbox.tsx`. `/verify` and `/auth/app` reuse the shell with all its props omitted.
 
 ## Dark mode & colors
 

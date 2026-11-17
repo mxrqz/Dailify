@@ -4,7 +4,15 @@ import { copy } from "./copy";
 
 describe("auth copy", () => {
   it("tem todas as seções", () => {
-    for (const section of ["shell", "signIn", "signUp", "inbox", "verify", "errors"] as const) {
+    for (const section of [
+      "shell",
+      "signIn",
+      "signUp",
+      "inbox",
+      "verify",
+      "app",
+      "errors",
+    ] as const) {
       expect(copy[section]).toBeTruthy();
     }
   });
@@ -16,10 +24,9 @@ describe("auth copy", () => {
   it("cobre toda AuthErrorKey", () => {
     for (const key of [
       "invalidEmail",
-      "blockedEmail",
       "captcha",
       "tooManyRequests",
-      "expiredLink",
+      "network",
       "generic",
     ] as const) {
       expect(copy.errors[key]).toBeTruthy();

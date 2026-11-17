@@ -1,78 +1,83 @@
-import { useClerk } from "@clerk/clerk-react";
-import { EmailLinkErrorCodeStatus, isEmailLinkError } from "@clerk/clerk-react/errors";
 import { Loader2Icon } from "lucide-react";
-import { useEffect, useRef, useState } from "react";
-import { Link } from "react-router-dom";
+import { useEffect, useState } from "react";
+import { Link, useNavigate } from "react-router-dom";
 
+import type { AuthErrorKey } from "@/components/auth/auth-state";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { copy } from "@/components/auth/copy";
 import { Button } from "@/components/ui/button";
+import { authClient } from "@/lib/auth";
 
-type Status =
-  "loading" | "verified" | "verified_switch_tab" | "expired" | "client_mismatch" | "failed";
+type Status = "ready" | "verifying" | "invalid" | AuthErrorKey;
 
 /**
- * A aba que o link do e-mail abre.
- *
- * A versão anterior era estática: dizia "Authentication Successful" sempre, inclusive com o link
- * expirado ou aberto em outro dispositivo, e chamava `window.close()` — que o navegador ignora em
- * abas que o script não abriu. Agora ela chama de fato o Clerk e mostra o que aconteceu.
+ * Onde o link do e-mail cai: `/verify#token=…`. O token vem no hash (não chega a servidor nenhum)
+ * e só é gasto no clique em "Entrar" — scanner de e-mail (Safe Links) abre a página mas não clica.
  */
 export default function Verify() {
-  const { handleEmailLinkVerification, loaded } = useClerk();
-  const [status, setStatus] = useState<Status>("loading");
-  // StrictMode (main.tsx) double-invokes effects with no cleanup. Sem essa trava, o ticket de
-  // verificação (uso único) seria consumido duas vezes em paralelo em dev, e um `catch` tardio da
-  // segunda chamada podia sobrescrever um `verified` real com `failed`.
-  const startedRef = useRef(false);
+  const navigate = useNavigate();
+  const [token] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get("token"));
+  const [status, setStatus] = useState<Status>(token ? "ready" : "invalid");
 
+  // Tira o token da barra de endereço (histórico, print, compartilhar a aba).
   useEffect(() => {
-    if (!loaded || startedRef.current) return;
-    startedRef.current = true;
+    if (window.location.hash) {
+      window.history.replaceState(window.history.state, "", window.location.pathname);
+    }
+  }, []);
 
-    handleEmailLinkVerification({
-      onVerifiedOnOtherDevice: () => setStatus("verified_switch_tab"),
-    })
-      .then(() => setStatus((prev) => (prev === "loading" ? "verified" : prev)))
-      .catch((err: unknown) => {
-        // `isEmailLinkError` faz `err.name` sem guarda — uma rejeição que não é `Error` (string,
-        // `undefined`, objeto solto) a derrubaria. `instanceof Error` filtra antes do acesso.
-        if (err instanceof Error && isEmailLinkError(err)) {
-          if (err.code === EmailLinkErrorCodeStatus.Expired) return setStatus("expired");
-          if (err.code === EmailLinkErrorCodeStatus.ClientMismatch) {
-            return setStatus("client_mismatch");
-          }
-        }
-        setStatus("failed");
+  const verify = async () => {
+    if (!token) return;
+    setStatus("verifying");
+    try {
+      // `manual`: sem `callbackURL`, sucesso é 200 com JSON; token ruim é um 302 pro
+      // `errorCallbackURL`, que aqui vira resposta opaca (status 0) em vez de seguir pra API.
+      const { error } = await authClient.magicLink.verify({
+        query: { token },
+        fetchOptions: { redirect: "manual" },
       });
-  }, [handleEmailLinkVerification, loaded]);
+      if (!error) {
+        // O verify não está entre as rotas que avisam o átomo da sessão: avisa na mão.
+        authClient.$store.notify("$sessionSignal");
+        navigate("/dashboard", { replace: true });
+        return;
+      }
+      setStatus(error.status === 429 ? "tooManyRequests" : "invalid");
+    } catch {
+      setStatus("network");
+    }
+  };
 
-  const message = {
-    loading: copy.verify.loading,
-    verified: copy.verify.verified,
-    verified_switch_tab: copy.verify.switchTab,
-    expired: copy.verify.expired,
-    client_mismatch: copy.verify.clientMismatch,
-    failed: copy.verify.failed,
-  }[status];
-
-  const canRestart = status === "expired" || status === "failed";
+  const message =
+    status === "ready" || status === "verifying"
+      ? copy.verify.ready
+      : status === "invalid"
+        ? copy.verify.invalid
+        : copy.errors[status];
 
   // Mesma casca de /login e /signup, sem título, cross-link ou rodapé legal — todos opcionais.
   return (
     <AuthShell>
       <div className="flex flex-col items-center gap-4 pt-24 text-center">
-        {status === "loading" && <Loader2Icon className="size-6 animate-spin text-primary" />}
-
-        {/* `status`: o desfecho substitui o spinner sem nenhuma navegação, então sem live region
-            o leitor de tela não anuncia nada depois do carregamento inicial. */}
+        {/* `status`: o desfecho troca o texto sem navegação, então sem live region o leitor de
+            tela não anuncia nada. */}
         <p role="status" className="text-body text-ink">
           {message}
         </p>
 
-        {canRestart && (
+        {status === "invalid" ? (
           <Button asChild size="lg" variant="secondary" className="w-full">
             <Link to="/login">{copy.verify.restart}</Link>
+          </Button>
+        ) : (
+          <Button
+            size="lg"
+            className="w-full"
+            disabled={status === "verifying"}
+            onClick={() => void verify()}
+          >
+            {status === "verifying" && <Loader2Icon className="animate-spin" />}
+            {copy.verify.submit}
           </Button>
         )}
       </div>

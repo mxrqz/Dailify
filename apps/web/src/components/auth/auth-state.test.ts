@@ -3,7 +3,7 @@ import { describe, it, expect } from "vitest";
 import {
   authReducer,
   canResend,
-  classifyClerkError,
+  classifyAuthError,
   initialAuthState,
   redirectTarget,
   RESEND_COOLDOWN_MS,
@@ -63,32 +63,10 @@ describe("authReducer", () => {
     );
   });
 
-  it("expired só vale vindo de awaitingLink, e preserva o e-mail", () => {
-    const awaiting = authReducer(authReducer(initialAuthState, { type: "submit" }), {
-      type: "linkSent",
-      email: "a@b.com",
-      at: 1000,
-    });
-    expect(authReducer(awaiting, { type: "expired" })).toEqual({
-      status: "expired",
-      email: "a@b.com",
-    });
-    expect(authReducer(initialAuthState, { type: "expired" })).toBe(initialAuthState);
-  });
-
-  it("failed com mensagem vira error", () => {
+  it("failed vira error com a falha", () => {
     expect(
-      authReducer(initialAuthState, {
-        type: "failed",
-        failure: { kind: "message", key: "invalidEmail" },
-      }),
-    ).toEqual({ status: "error", failure: { kind: "message", key: "invalidEmail" } });
-  });
-
-  it("failed com oferta guarda o modo oferecido", () => {
-    expect(
-      authReducer(initialAuthState, { type: "failed", failure: { kind: "offer", mode: "signUp" } }),
-    ).toEqual({ status: "error", failure: { kind: "offer", mode: "signUp" } });
+      authReducer(initialAuthState, { type: "failed", failure: { key: "invalidEmail" } }),
+    ).toEqual({ status: "error", failure: { key: "invalidEmail" } });
   });
 
   it("failed vindo de awaitingLink preserva o e-mail (reenvio não zera o formulário)", () => {
@@ -100,11 +78,11 @@ describe("authReducer", () => {
     expect(
       authReducer(awaiting, {
         type: "failed",
-        failure: { kind: "message", key: "tooManyRequests" },
+        failure: { key: "tooManyRequests" },
       }),
     ).toEqual({
       status: "error",
-      failure: { kind: "message", key: "tooManyRequests" },
+      failure: { key: "tooManyRequests" },
       email: "a@b.com",
     });
   });
@@ -121,11 +99,11 @@ describe("authReducer", () => {
     expect(
       authReducer(resending, {
         type: "failed",
-        failure: { kind: "message", key: "tooManyRequests" },
+        failure: { key: "tooManyRequests" },
       }),
     ).toEqual({
       status: "error",
-      failure: { kind: "message", key: "tooManyRequests" },
+      failure: { key: "tooManyRequests" },
       email: "a@b.com",
     });
   });
@@ -133,13 +111,10 @@ describe("authReducer", () => {
   it("failed no primeiro envio não inventa e-mail nenhum", () => {
     const sending = authReducer(initialAuthState, { type: "submit" });
     // `toEqual` ignora chave com valor `undefined`, então isto falha se um e-mail aparecer.
-    expect(
-      authReducer(sending, { type: "failed", failure: { kind: "message", key: "invalidEmail" } }),
-    ).toEqual({ status: "error", failure: { kind: "message", key: "invalidEmail" } });
-  });
-
-  it("verified é terminal e alcançável de qualquer estado", () => {
-    expect(authReducer(initialAuthState, { type: "verified" })).toEqual({ status: "verified" });
+    expect(authReducer(sending, { type: "failed", failure: { key: "invalidEmail" } })).toEqual({
+      status: "error",
+      failure: { key: "invalidEmail" },
+    });
   });
 
   it("reset volta pra idle", () => {
@@ -148,58 +123,39 @@ describe("authReducer", () => {
   });
 });
 
-describe("classifyClerkError", () => {
-  it("no /login, e-mail desconhecido oferece o cadastro", () => {
-    expect(classifyClerkError("form_identifier_not_found", "signIn")).toEqual({
-      kind: "offer",
-      mode: "signUp",
-    });
+describe("classifyAuthError", () => {
+  it("fetch que lançou (sem resposta) é rede", () => {
+    expect(classifyAuthError(null)).toEqual({ key: "network" });
   });
 
-  it("no /signup, e-mail conhecido oferece o login", () => {
-    expect(classifyClerkError("form_identifier_exists", "signUp")).toEqual({
-      kind: "offer",
-      mode: "signIn",
-    });
-  });
-
-  it("e-mail desconhecido no /signup não é oferta — é erro genérico", () => {
-    expect(classifyClerkError("form_identifier_not_found", "signUp")).toEqual({
-      kind: "message",
-      key: "generic",
-      code: "form_identifier_not_found",
-    });
-  });
-
-  it("mapeia formato inválido, e-mail descartável, captcha e rate limit", () => {
-    expect(classifyClerkError("form_param_format_invalid", "signIn")).toEqual({
-      kind: "message",
-      key: "invalidEmail",
-    });
-    expect(classifyClerkError("form_email_address_blocked", "signUp")).toEqual({
-      kind: "message",
-      key: "blockedEmail",
-    });
-    expect(classifyClerkError("captcha_invalid", "signUp")).toEqual({
-      kind: "message",
-      key: "captcha",
-    });
-    expect(classifyClerkError("captcha_unavailable", "signUp")).toEqual({
-      kind: "message",
-      key: "captcha",
-    });
-    expect(classifyClerkError("too_many_requests", "signIn")).toEqual({
-      kind: "message",
+  it("429 é rate limit, venha o código que vier", () => {
+    expect(classifyAuthError({ status: 429 })).toEqual({ key: "tooManyRequests" });
+    expect(classifyAuthError({ status: 429, code: "TOO_MANY_REQUESTS" })).toEqual({
       key: "tooManyRequests",
     });
   });
 
-  it("código desconhecido cai no genérico e carrega o code pro relato de bug", () => {
-    expect(classifyClerkError("some_new_clerk_code", "signIn")).toEqual({
-      kind: "message",
-      key: "generic",
-      code: "some_new_clerk_code",
+  it("validação do corpo é e-mail inválido", () => {
+    expect(classifyAuthError({ status: 400, code: "VALIDATION_ERROR" })).toEqual({
+      key: "invalidEmail",
     });
+  });
+
+  it("token do Turnstile ausente ou recusado é captcha", () => {
+    expect(classifyAuthError({ status: 400, code: "MISSING_RESPONSE" })).toEqual({
+      key: "captcha",
+    });
+    expect(classifyAuthError({ status: 403, code: "VERIFICATION_FAILED" })).toEqual({
+      key: "captcha",
+    });
+  });
+
+  it("o resto cai no genérico e carrega o código (ou o status) pro relato de bug", () => {
+    expect(classifyAuthError({ status: 500, code: "SOMETHING_NEW" })).toEqual({
+      key: "generic",
+      code: "SOMETHING_NEW",
+    });
+    expect(classifyAuthError({ status: 502 })).toEqual({ key: "generic", code: "502" });
   });
 });
 

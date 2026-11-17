@@ -12,15 +12,16 @@ stay out of the dashboard entry). A new page gets a `lazy()` import too, unless 
 | ---------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
 | `/`                                | `landingPage.tsx`          | public marketing page                                                                                             |
 | `/dashboard`                       | `home.tsx`                 | **protected**; the app (Hoje list + month calendar, `?view=calendar`)                                             |
-| `/profile`                         | `profile.tsx`              | **protected**; personal data, photo, phone, timezone                                                              |
-| `/security`                        | `security.tsx`             | **protected**; active sessions and account security                                                               |
+| `/profile`                         | `profile.tsx`              | **protected**; name (editable), Google photo or initial, read-only e-mail, sign out, delete account               |
+| `/security`                        | `security.tsx`             | **protected**; Better Auth sessions (browser/OS from `functions/user-agent.ts`, IP, last use), revoke             |
 | `/billing`                         | `billing.tsx`              | **protected**; plan, usage, invoices. Free sees usage + CTA                                                       |
 | `/settings`                        | `settings.tsx`             | **protected**; theme, date/time, notifications, Google Agenda summary                                             |
 | `/integrations`                    | `integrations.tsx`         | **protected**; Google Agenda card (connect, settings, disconnect) + "Em breve"                                    |
 | `/integrations/:provider/callback` | `integration-callback.tsx` | **protected**; OAuth `redirect_uri`: POSTs `{code,state}` once (StrictMode-safe), toasts, back to `/integrations` |
-| `/login`                           | `login.tsx`                | Clerk sign-in — `AuthPage mode="signIn"` (`components/auth/`)                                                     |
+| `/login`                           | `login.tsx`                | magic link + Google — `AuthPage mode="signIn"` (`components/auth/`)                                               |
 | `/signup`                          | `signup.tsx`               | same machinery, `mode="signUp"` — only the copy differs                                                           |
-| `/verify`                          | `verify.tsx`               | where the emailed magic link lands                                                                                |
+| `/verify`                          | `verify.tsx`               | web magic link `#token=…`; spends it only on the "Entrar" click (mail scanners don't click)                       |
+| `/auth/app`                        | `auth-app.tsx`             | app magic link `?token=…`; tries `mewki://auth` once, NEVER calls verify (token bound to the app)                 |
 | `/task/:id`                        | `[id]/taskPreview.tsx`     | public, shareable task rendered as an image (`html-to-image`)                                                     |
 | `/premium`                         | `premium.tsx`              | pricing + Stripe checkout                                                                                         |
 

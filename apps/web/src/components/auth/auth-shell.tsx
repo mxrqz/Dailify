@@ -55,10 +55,10 @@ export function AuthShell({
   onBack,
   children,
 }: {
-  /** Sem balão, sem Mew (o callback do Google). */
+  /** Sem balão, sem Mew (a /verify). */
   bubble?: string;
   mood?: MewMood;
-  /** Ausentes na /verify, que usa a mesma casca sem título, cross-link ou rodapé legal. */
+  /** Ausentes na /verify e na /auth/app, que usam a casca sem título, cross-link ou rodapé legal. */
   title?: string;
   subtitle?: string;
   legalPrefix?: string;
@@ -141,9 +141,6 @@ export function AuthShell({
           )}
         </p>
       )}
-
-      {/* Obrigatório: a proteção anti-bot do Clerk é ligada por padrão no sign-up. */}
-      <div id="clerk-captcha" />
     </div>
   );
 }

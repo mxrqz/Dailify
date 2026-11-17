@@ -1,170 +1,90 @@
-import { useSignIn, useSignUp } from "@clerk/clerk-react";
-import { isClerkAPIResponseError } from "@clerk/clerk-react/errors";
-import type { EmailLinkFactor, OAuthStrategy } from "@clerk/types";
-import { useCallback, useEffect, useReducer, useRef } from "react";
-import { useLocation, useNavigate } from "react-router-dom";
+import { useCallback, useReducer, useRef } from "react";
+import { useLocation } from "react-router-dom";
 
 import {
   authReducer,
-  classifyClerkError,
+  classifyAuthError,
   initialAuthState,
   redirectTarget,
-  type AuthMode,
 } from "@/components/auth/auth-state";
+import { useTurnstile } from "@/components/auth/turnstile";
+import { authClient } from "@/lib/auth";
 
 /**
- * Liga o Clerk ao reducer de `auth-state.ts`. Nada de lógica mora aqui — se você for escrever um
- * `if` que não seja sobre a API do Clerk, ele pertence ao reducer, onde dá pra testar.
+ * Liga o Better Auth ao reducer de `auth-state.ts`. Nada de lógica mora aqui — se você for escrever
+ * um `if` que não seja sobre a API do Better Auth, ele pertence ao reducer, onde dá pra testar.
  *
- * O `redirectUrl` sai de `window.location.origin`: uma URL de produção fixa fazia o link do e-mail
- * em dev apontar pra prod.
+ * Login e cadastro são a mesma chamada (o magic link cria a conta no primeiro verify); o `mode` só
+ * muda a copy. Não há polling: o link do e-mail abre a /verify, que termina o login.
+ *
+ * As URLs saem de `window.location.origin`: uma URL de produção fixa fazia o link em dev apontar
+ * pra prod.
  */
-export function useEmailLinkAuth(mode: AuthMode) {
-  const { signIn, setActive, isLoaded } = useSignIn();
-  const { signUp } = useSignUp();
-  const navigate = useNavigate();
+export function useEmailLinkAuth() {
   const location = useLocation();
   const from = redirectTarget(location.state);
+  const { ref: captchaRef, token: captchaToken } = useTurnstile();
 
   const [state, dispatch] = useReducer(authReducer, initialAuthState);
 
   // Guardado num ref porque o `resend` precisa do último e-mail sem virar dependência do callback.
   const lastEmail = useRef("");
 
-  // Cada `start` (e cada `reset`) ganha um número. Um run que resolve depois de outro começar é
-  // fóssil e não pode mais despachar: sem isso, um `create` lento que o usuário abandonou pelo
-  // "usar outro e-mail" volta atrasado e sequestra a tela do envio novo — a caixa de entrada
-  // passaria a mostrar o e-mail ANTIGO enquanto o poller vivo é o do novo.
+  // Cada envio (e cada `reset`) ganha um número. Um envio que resolve depois de outro começar é
+  // fóssil e não pode mais despachar: sem isso, um envio lento que o usuário abandonou pelo
+  // "usar outro e-mail" volta atrasado e sequestra a tela.
   const runId = useRef(0);
-
-  // Cancela o poller do link anterior antes de iniciar outro — senão o antigo resolve por conta
-  // própria mais tarde (unmount, ou um resend que gerou um novo link) e despacha em cima da
-  // máquina atual, incluindo um `verified` roubado que navegaria a partir de qualquer estado.
-  const cancelRef = useRef<(() => void) | null>(null);
-
-  const fail = useCallback(
-    (err: unknown) => {
-      const code = isClerkAPIResponseError(err) ? err.errors[0]?.code : undefined;
-      // Sem código do Clerk (queda de rede, por exemplo) o genérico vai SEM `code`: a tela mostra
-      // o code em mono pra virar relato de bug, e um "UNKNOWN" inventado só faz o relato apontar
-      // pra um código que o Clerk não tem.
-      dispatch({
-        type: "failed",
-        failure: code ? classifyClerkError(code, mode) : { kind: "message", key: "generic" },
-      });
-    },
-    [mode],
-  );
 
   const start = useCallback(
     async (email: string) => {
-      if (!isLoaded || !signIn || !signUp) return;
-
       lastEmail.current = email;
       const run = ++runId.current;
-      const stale = () => run !== runId.current;
       dispatch({ type: "submit" });
 
-      const redirectUrl = `${window.location.origin}/verify`;
-
       try {
-        if (mode === "signUp") {
-          await signUp.create({
-            emailAddress: email,
-            unsafeMetadata: { timezone: Intl.DateTimeFormat().resolvedOptions().timeZone },
-          });
-          // Antes do `cancelRef`, não só do dispatch: um fóssil aqui mataria o poller do run vivo.
-          if (stale()) return;
-
-          cancelRef.current?.();
-          const { startEmailLinkFlow, cancelEmailLinkFlow } = signUp.createEmailLinkFlow();
-          cancelRef.current = cancelEmailLinkFlow;
-          dispatch({ type: "linkSent", email, at: Date.now() });
-
-          const attempt = await startEmailLinkFlow({ redirectUrl });
-          if (stale()) return;
-          const verification = attempt.verifications.emailAddress;
-
-          if (verification.status === "expired") return dispatch({ type: "expired" });
-          // Genérico SEM `code`: não veio código nenhum do Clerk, e inventar um "UNKNOWN" na tela
-          // só faz o relato de bug apontar pra um código que não existe.
-          if (attempt.status !== "complete" || !attempt.createdSessionId) {
-            return dispatch({ type: "failed", failure: { kind: "message", key: "generic" } });
-          }
-
-          await setActive?.({ session: attempt.createdSessionId });
-          dispatch({ type: "verified" });
-          navigate(from, { replace: true });
-          return;
-        }
-
-        const { supportedFirstFactors } = await signIn.create({ identifier: email });
-        if (stale()) return;
-
-        const factor = supportedFirstFactors?.find(
-          (f): f is EmailLinkFactor => f.strategy === "email_link",
-        );
-        if (!factor)
-          return dispatch({ type: "failed", failure: { kind: "message", key: "generic" } });
-
-        cancelRef.current?.();
-        const { startEmailLinkFlow, cancelEmailLinkFlow } = signIn.createEmailLinkFlow();
-        cancelRef.current = cancelEmailLinkFlow;
-        dispatch({ type: "linkSent", email, at: Date.now() });
-
-        const attempt = await startEmailLinkFlow({
-          emailAddressId: factor.emailAddressId,
-          redirectUrl,
+        const token = await captchaToken();
+        const { error } = await authClient.signIn.magicLink({
+          email,
+          callbackURL: window.location.origin + from,
+          fetchOptions: { headers: { "x-captcha-response": token } },
         });
-        if (stale()) return;
-
-        if (attempt.firstFactorVerification.status === "expired") {
-          return dispatch({ type: "expired" });
-        }
-        if (attempt.status !== "complete" || !attempt.createdSessionId) {
-          return dispatch({ type: "failed", failure: { kind: "message", key: "generic" } });
-        }
-
-        await setActive?.({ session: attempt.createdSessionId });
-        dispatch({ type: "verified" });
-        navigate(from, { replace: true });
-      } catch (err) {
-        if (stale()) return;
-        fail(err);
+        if (run !== runId.current) return;
+        dispatch(
+          error
+            ? { type: "failed", failure: classifyAuthError(error) }
+            : { type: "linkSent", email, at: Date.now() },
+        );
+      } catch {
+        if (run !== runId.current) return;
+        dispatch({ type: "failed", failure: classifyAuthError(null) });
       }
     },
-    [isLoaded, signIn, signUp, mode, setActive, navigate, from, fail],
+    [captchaToken, from],
   );
-
-  // Cancela o poller pendente ao desmontar — senão ele segue rodando até o TTL do link e
-  // despacha (ou navega) numa árvore que já saiu de cena.
-  useEffect(() => () => cancelRef.current?.(), []);
 
   return {
     state,
-    isLoaded,
     from,
+    captchaRef,
     submit: start,
     resend: useCallback(() => start(lastEmail.current), [start]),
-    // Incrementa a geração E mata o poller: sem o cancel, "usar outro e-mail" deixaria o
-    // startEmailLinkFlow anterior batendo no Clerk até o TTL do link se o usuário parar no
-    // formulário. O runId sozinho só protege o estado, não o tráfego.
     reset: useCallback(() => {
       runId.current++;
-      cancelRef.current?.();
-      cancelRef.current = null;
       dispatch({ type: "reset" });
     }, []),
     signInWithGoogle: useCallback(() => {
-      if (!signIn) return;
-      const strategy: OAuthStrategy = "oauth_google";
-      signIn
-        .authenticateWithRedirect({
-          strategy,
-          redirectUrl: "/sso-callback",
-          redirectUrlComplete: from,
+      const origin = window.location.origin;
+      // Sucesso navega a página inteira pro Google; só um erro antes disso volta pra cá.
+      authClient.signIn
+        .social({
+          provider: "google",
+          callbackURL: origin + from,
+          errorCallbackURL: `${origin}/login`,
         })
-        .catch(fail);
-    }, [signIn, from, fail]),
+        .then(({ error }) => {
+          if (error) dispatch({ type: "failed", failure: classifyAuthError(error) });
+        })
+        .catch(() => dispatch({ type: "failed", failure: classifyAuthError(null) }));
+    }, [from]),
   };
 }

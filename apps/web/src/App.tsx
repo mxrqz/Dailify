@@ -19,6 +19,7 @@ const LandingPage = lazy(() => import("./pages/landingPage"));
 const Login = lazy(() => import("./pages/login"));
 const SignUp = lazy(() => import("./pages/signup"));
 const Verify = lazy(() => import("./pages/verify"));
+const AuthApp = lazy(() => import("./pages/auth-app"));
 const BillingPage = lazy(() => import("./pages/billing"));
 const PremiumPage = lazy(() => import("./pages/premium"));
 const ProfilePage = lazy(() => import("./pages/profile"));
@@ -176,6 +177,8 @@ export default function App() {
                           </>
                         }
                       />
+
+                      <Route path="/auth/app" element={<AuthApp />} />
 
                       <Route path="/task/:id" element={<TaskPreview />} />
 
