@@ -88,6 +88,8 @@ export const copy = {
 
   loading: {
     tasks: "Carregando tarefas",
+    /** Legenda do splash, só depois de 2s: antes disso a Mew caçando o laser já basta. */
+    slow: "Buscando suas tarefas…",
     tasksError: "Não foi possível carregar suas tarefas",
   },
 
@@ -452,6 +454,19 @@ export const copy = {
     undoError: "Não foi possível restaurar a tarefa",
     restored: "Tarefa restaurada",
     queued: "Sem conexão — guardado pra sincronizar depois",
+  },
+
+  /** A moldura de `/privacidade` e `/termos`; o texto legal em si fica nas páginas, como foi revisado. */
+  legal: {
+    back: "Voltar",
+    toc: "Nesta página",
+    questions: "Dúvidas?",
+    home: "Voltar ao início",
+    privacy: {
+      bar: "Privacidade",
+      contact: "Fale com a gente sobre seus dados e direitos pela LGPD.",
+    },
+    terms: { bar: "Termos", contact: "Fale com a gente sobre sua conta, plano ou estes Termos." },
   },
 } as const;
 
