@@ -5,8 +5,8 @@ import { copy } from "@/components/dashboard/copy";
 import { Mew } from "@/components/mew/mew";
 import { duration, ease } from "@/consts/motion";
 
-/** Piso do splash: o pulinho de entrada da Mew. Sair antes disso é só um piscar. */
-export const SPLASH_MIN_MS = 700;
+/** Piso do splash: menos que isso parece um piscar, mesmo com os dados já em mãos. */
+export const SPLASH_MIN_MS = 1500;
 /** A legenda só aparece se a carga demorar: antes disso a Mew caçando o laser já basta. */
 const SLOW_AFTER_MS = 2000;
 
