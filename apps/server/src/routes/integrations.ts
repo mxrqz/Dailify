@@ -79,6 +79,7 @@ function statusOf(
     ...(flags.stale?.length && { stale: flags.stale }),
     ...(flags.duplicates?.length && { duplicates: flags.duplicates }),
     ...(flags.readonly?.length && { readonly: flags.readonly }),
+    ...(row.skipped > 0 && { skipped: row.skipped }),
   };
 }
 

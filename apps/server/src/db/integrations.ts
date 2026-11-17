@@ -14,12 +14,13 @@ export interface ConnectionRow {
   scopes: string;
   tokens: string;
   status: string;
+  skipped: number;
 }
 
 export async function listConnections(db: D1Database, userId: string): Promise<ConnectionRow[]> {
   const { results } = await db
     .prepare(
-      `SELECT provider, account_id, account_email, scopes, tokens, status
+      `SELECT provider, account_id, account_email, scopes, tokens, status, skipped
        FROM integration_connections WHERE user_id=?`,
     )
     .bind(userId)
@@ -34,7 +35,7 @@ export async function getConnection(
 ): Promise<ConnectionRow | null> {
   return db
     .prepare(
-      `SELECT provider, account_id, account_email, scopes, tokens, status
+      `SELECT provider, account_id, account_email, scopes, tokens, status, skipped
        FROM integration_connections WHERE user_id=? AND provider=?`,
     )
     .bind(userId, provider)
