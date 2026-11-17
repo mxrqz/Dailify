@@ -1,40 +1,51 @@
 import { useState } from "react";
-import { CalendarCheckIcon, CalendarPlusIcon, VideoIcon } from "lucide-react";
+import { VideoIcon } from "lucide-react";
 import { videoLink, type ParsedTaskWire, type Task } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
-import { chip, chipGhost } from "@/components/dashboard/styles";
+import { Chip } from "@/components/kit/chip";
+import { Switch } from "@/components/kit/switch";
 import { MewStatic } from "@/components/mew/mew-static";
 import type { CalendarPick } from "@/hooks/useCalendarPush";
+import { useCalendarDefault } from "@/hooks/useCalendarDefault";
 import { useCalendarReady } from "@/hooks/useIntegrations";
 import { useOnline } from "@/hooks/useOnline";
 import { cn } from "@/lib/utils";
 
 const t = copy.calendar;
-const chipOn = "border-accent-line bg-accent-subtle text-brand-text";
 
 type Draft = Pick<Task, "undated" | "alert" | "links">;
 /** `mew`: quem ligou foi a sugestão da Mew, não a pessoa — só muda a marca no chip. */
 type Picked = CalendarPick & { mew?: boolean };
 
 /**
- * A etiqueta Google Agenda do composer, por rascunho (`index`; a frase única é o 0). Desligada por
- * padrão e esquecida a cada envio: ligar é a confirmação. A única exceção é o pedido explícito à Mew
- * ("coloca no Google Agenda"), que chega ligado mas ainda espera o Enter.
+ * A etiqueta Google Agenda do composer, por rascunho (`index`; a frase única é o 0). Nasce no padrão
+ * das Configurações (Sempre/Nunca) e volta a ele a cada envio. O pedido explícito à Mew ("coloca no
+ * Google Agenda") chega ligado mas ainda espera o Enter.
  */
 export function useCalendarChip() {
   const ready = useCalendarReady();
   const online = useOnline();
-  const [picks, setPicks] = useState<(Picked | undefined)[]>([]);
+  const [always] = useCalendarDefault();
+  // `undefined` = ninguém mexeu (vale o padrão); `null` = desligada à mão.
+  const [picks, setPicks] = useState<(Picked | null | undefined)[]>([]);
 
   // Precisa de dia: com data, ou Sem data com lembrete (vira evento de dia inteiro).
   const applies = (task: Draft) => ready && online && (!task.undated || task.alert !== undefined);
-  const set = (index: number, pick: Picked | undefined) =>
-    setPicks((current) => Object.assign([...current], { [index]: pick }));
+  const pick = (index: number): Picked | undefined =>
+    picks[index] === undefined
+      ? always
+        ? { meet: false }
+        : undefined
+      : (picks[index] ?? undefined);
+  const set = (index: number, next: Picked | undefined) =>
+    setPicks((current) => Object.assign([...current], { [index]: next ?? null }));
 
   return {
+    /** Conectado e online: a linha da etiqueta existe, mesmo antes de a frase ter dia. */
+    available: ready && online,
     applies,
-    picks,
+    pick,
     set,
     reset: () => setPicks([]),
     /** Os `targets` da Mew, por rascunho. Desconectado ou offline agora = ignorados. */
@@ -47,54 +58,103 @@ export function useCalendarChip() {
       ),
     /** O que vai pro Google no envio; `undefined` se a etiqueta está desligada ou não se aplica. */
     value: (index: number, task: Draft): CalendarPick | undefined => {
-      const pick = picks[index];
-      return pick && applies(task) ? { meet: pick.meet && !videoLink(task.links) } : undefined;
+      const on = pick(index);
+      return on && applies(task) ? { meet: on.meet && !videoLink(task.links) } : undefined;
     },
   };
 }
 
+/** O "G" do Google Agenda: quadradinho na cor de data (`ghost` apaga ele, como o resto do chip). */
+export function GDot({ ghost, className }: { ghost?: boolean; className?: string }): JSX.Element {
+  return (
+    <span
+      aria-hidden="true"
+      className={cn(
+        "grid size-3.5 flex-none place-items-center rounded-xs text-2xs leading-none font-bold",
+        ghost ? "bg-ink-secondary text-surface-raised" : "bg-meta-date text-canvas",
+        className,
+      )}
+    >
+      G
+    </span>
+  );
+}
+
+/**
+ * A linha da frase única, presentacional: "Google Agenda" + liga/desliga e, ligada, o "+ Meet".
+ * `disabled`: ainda sem dia (a linha fica, pra não pular quando o dia aparece no texto).
+ */
+export function CalendarToggle({
+  checked,
+  disabled,
+  mew,
+  onCheckedChange,
+  meet,
+  onMeetChange,
+}: {
+  checked: boolean;
+  disabled?: boolean;
+  mew?: boolean;
+  onCheckedChange: (checked: boolean) => void;
+  /** `undefined`: sem botão do Meet (desligada, ou já tem link de vídeo no texto). */
+  meet?: boolean;
+  onMeetChange: (meet: boolean) => void;
+}): JSX.Element {
+  return (
+    <div className="flex min-h-11 items-center gap-3">
+      <span className="flex items-center gap-2 text-subhead font-medium">
+        <GDot className="size-4.5" />
+        <span aria-hidden="true">{t.chip}</span>
+        {mew && <MewStatic className="size-4" />}
+        <Switch
+          checked={checked}
+          disabled={disabled}
+          onCheckedChange={onCheckedChange}
+          aria-label={t.chipLabel}
+          title={mew ? t.mewPicked : undefined}
+          className="ml-1"
+        />
+      </span>
+      {meet !== undefined && (
+        <Chip
+          pressed={meet}
+          aria-label={t.meet}
+          onClick={() => onMeetChange(!meet)}
+          icon={<VideoIcon aria-hidden="true" className="size-4.5" />}
+          className="ml-auto h-11"
+        >
+          {meet ? t.meetOn : t.meetChip}
+        </Chip>
+      )}
+    </div>
+  );
+}
+
+/** A etiqueta de um rascunho da Mew (vários de uma vez): chip pequeno de liga/desliga. */
 export function CalendarChip({
   state,
   index,
   task,
-  large,
 }: {
   state: ReturnType<typeof useCalendarChip>;
   index: number;
   task: Draft;
-  large?: boolean;
 }): JSX.Element | null {
   if (!state.applies(task)) return null;
-  const pick = state.picks[index];
-  const size = large ? "py-1.5" : "py-0.5";
-  const Icon = pick ? CalendarCheckIcon : CalendarPlusIcon;
+  const pick = state.pick(index);
 
   return (
-    <>
-      <button
-        type="button"
-        aria-pressed={Boolean(pick)}
-        aria-label={t.chipLabel}
-        title={pick?.mew ? t.mewPicked : undefined}
-        onClick={() => state.set(index, pick ? undefined : { meet: false })}
-        className={cn(chip, size, "shrink-0 transition-colors", pick ? chipOn : chipGhost)}
-      >
-        <Icon className="size-3" aria-hidden="true" />
-        {t.chip}
-        {pick?.mew && <MewStatic className="size-3" />}
-      </button>
-      {pick && !videoLink(task.links) && (
-        <button
-          type="button"
-          aria-pressed={pick.meet}
-          aria-label={t.meet}
-          onClick={() => state.set(index, { ...pick, meet: !pick.meet })}
-          className={cn(chip, size, "shrink-0 transition-colors", pick.meet ? chipOn : chipGhost)}
-        >
-          <VideoIcon className="size-3" aria-hidden="true" />
-          {t.meetChip}
-        </button>
-      )}
-    </>
+    <Chip
+      size="sm"
+      pressed={Boolean(pick)}
+      aria-label={t.chipLabel}
+      title={pick?.mew ? t.mewPicked : undefined}
+      onClick={() => state.set(index, pick ? undefined : { meet: false })}
+      icon={<GDot ghost={!pick} />}
+      className={cn(!pick && "bg-transparent text-ink-secondary ring-1 ring-separator ring-inset")}
+    >
+      {t.chip}
+      {pick?.mew && <MewStatic className="size-3.5" />}
+    </Chip>
   );
 }

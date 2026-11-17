@@ -298,6 +298,7 @@ export const copy = {
     chip: "Google Agenda",
     chipLabel: "Enviar ao Google Agenda",
     meetChip: "+ Meet",
+    meetOn: "Com Meet",
     mewPicked: "A Mew marcou: você pediu pra pôr no Google Agenda",
     createdAdded: "Tarefa criada e no Google Agenda",
     createdAddedMany: "{n} tarefas criadas e no Google Agenda",
@@ -349,6 +350,11 @@ export const copy = {
     toRecurring: "A qualquer hora · Recorrentes",
     hintCreate: "⏎ criar",
     hintContinue: "criar e continuar",
+    understood: "O que a Mewki entendeu",
+    // O dock do mobile: abre a folha de criação, ou já gravando pelo mic.
+    dock: "Ei Mewki, anota…",
+    dockVoice: "Falar com a Mewki",
+    reminderAt: "Lembrete {value}",
   },
 
   // Puxador da coluna lateral do desktop, vazia desde que a Sem data foi para o topo de hoje.
@@ -389,6 +395,8 @@ export const copy = {
     listening: "Ouvindo…",
     cancel: "Cancelar gravação",
     wave: "Microfone captando",
+    hint: "Fale a tarefa e quando ela acontece.",
+    timerOf: "de {max}",
     maxLength: "Gravação encerrada no limite de 60 segundos.",
     createdOne: "Tarefa criada pela voz",
     createdMany: "{n} tarefas criadas pela voz",
@@ -413,6 +421,8 @@ export const copy = {
     draft: "Lido pela Mew",
     drafts: "Tarefas lidas pela Mew",
     confirmMany: "Criar {n} tarefas",
+    found: "Achei {n} tarefas nessa frase. Confere antes de eu criar?",
+    credits: "Créditos de IA · {left}",
     createdMany: "{n} tarefas criadas",
     /** A Mew com `onPet` vira botão: tocar faz carinho. */
     pet: "Fazer carinho na Mew",

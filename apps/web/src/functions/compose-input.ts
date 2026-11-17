@@ -1,5 +1,6 @@
 import {
   quotedSpans,
+  type Field,
   type ParsedTask,
   type ParsedTaskWire,
   type Repeat,
@@ -25,10 +26,12 @@ export const fromWire = (wire: ParsedTaskWire): ParsedTask => ({
   fields: { day: [], time: [], duration: [], repeat: [], links: [] },
 });
 
+const FIELDS: Field[] = ["day", "time", "duration", "repeat", "links"];
+
 export interface Segment {
   text: string;
-  /** Deu um campo (dia, hora, duração, série, link). */
-  field: boolean;
+  /** O campo que o trecho deu (dia, hora, duração, série, link) — cada um sublinha na sua cor. */
+  field: Field | null;
   /** Disparou um motivo de dúvida. */
   unsure: boolean;
 }
@@ -43,7 +46,7 @@ export function markSegments(
   ignore: Span[],
 ): Segment[] {
   const skip = [...ignore, ...quotedSpans(text)];
-  const read = Object.values(fields).flat();
+  const read = FIELDS.flatMap((field) => fields[field].map((span): [Field, Span] => [field, span]));
   // A pergunta de "o que tenho" dispara em "o que t": a marca vai até o fim da palavra.
   const doubt = unsure.flatMap(({ span }): Span[] =>
     span
@@ -54,7 +57,7 @@ export function markSegments(
   const out: Segment[] = [];
   text.split("").forEach((char, i) => {
     const kept = at(skip, i);
-    const field = !kept && at(read, i);
+    const field = kept ? null : (read.find(([, [s, e]]) => i >= s && i < e)?.[0] ?? null);
     const flagged = !kept && at(doubt, i);
     const last = out.at(-1);
     if (last && last.field === field && last.unsure === flagged) last.text += char;

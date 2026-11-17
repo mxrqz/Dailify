@@ -3,11 +3,14 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
+const env = vi.hoisted(() => ({ desktop: true, voice: false, start: vi.fn() }));
+
 vi.mock("@/components/dailifyContext", () => ({ useDailify: () => ({ hour12: false }) }));
-// A voz fala com Clerk, rota e quotas; aqui só importa o composer de texto.
+// A voz fala com Clerk, rota e quotas; aqui só importa quem a liga.
 vi.mock("@/hooks/useVoiceCreate", () => ({
-  useVoiceCreate: () => ({ state: "idle", start: vi.fn(), stop: vi.fn() }),
-  voiceSupported: () => false,
+  MAX_RECORDING_MS: 60_000,
+  useVoiceCreate: () => ({ state: "idle", start: env.start, stop: vi.fn() }),
+  voiceSupported: () => env.voice,
 }));
 vi.mock("@/hooks/useMewParse", () => ({
   useMewParse: () => ({
@@ -33,9 +36,68 @@ const setup = () => {
   return { onSubmit, user: userEvent.setup({ pointerEventsCheck: 0 }) };
 };
 
-describe("<CreateFab>", () => {
-  beforeEach(() => localStorage.clear());
+beforeEach(() => {
+  localStorage.clear();
+  env.desktop = true;
+  env.voice = false;
+  env.start.mockClear();
+  vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+  vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
+    matches: env.desktop,
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  }));
+});
 
+describe("<CreateFab> mobile", () => {
+  beforeEach(() => {
+    env.desktop = false;
+  });
+
+  it("o dock abre a folha com o campo focado; Cancelar fecha", async () => {
+    const { user } = setup();
+
+    await user.click(screen.getByRole("button", { name: "Nova tarefa" }));
+    expect(screen.getByRole("dialog", { name: "Nova tarefa" })).toBeInTheDocument();
+    expect(screen.getByRole("textbox")).toHaveFocus();
+
+    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("⏎ cria e fecha; o modo fixo do desktop não vale aqui", async () => {
+    localStorage.setItem("dailify:composer-docked", "1");
+    const { user, onSubmit } = setup();
+    expect(screen.queryByRole("region", { name: "Nova tarefa" })).not.toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: "Nova tarefa" }));
+    await user.keyboard("Comprar pão{Enter}");
+
+    expect(onSubmit).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("o mic do dock abre a folha já gravando; sem voz, ele nem aparece", async () => {
+    env.voice = true;
+    const { user } = setup();
+
+    await user.click(screen.getByRole("button", { name: "Falar com a Mewki" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(env.start).toHaveBeenCalledTimes(1);
+
+    cleanup();
+    env.voice = false;
+    setup();
+    expect(screen.queryByRole("button", { name: "Falar com a Mewki" })).not.toBeInTheDocument();
+  });
+});
+
+describe("<CreateFab> desktop", () => {
   it("Manter aberto fixa o campo, e o modo sobrevive a remontar", async () => {
     const { user } = setup();
 

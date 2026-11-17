@@ -85,26 +85,26 @@ describe("markSegments", () => {
     unsure: [{ code: "ambiguous-number", span: [start, end] }],
   });
 
-  it("corta o input nos campos lidos, e a dúvida vai até o fim da palavra", () => {
+  it("corta o input nos campos lidos, cada trecho com o seu campo, e a dúvida vai até o fim da palavra", () => {
     expect(markSegments("pagar luz amanhã às 15h", parse("pagar luz amanhã às 15h"), [])).toEqual([
-      { text: "pagar luz ", field: false, unsure: false },
-      { text: "amanhã", field: true, unsure: false },
-      { text: " ", field: false, unsure: false },
-      { text: "às 15h", field: true, unsure: false },
+      { text: "pagar luz ", field: null, unsure: false },
+      { text: "amanhã", field: "day", unsure: false },
+      { text: " ", field: null, unsure: false },
+      { text: "às 15h", field: "time", unsure: false },
     ]);
     expect(marked("o que tenho amanhã?")).toEqual([
-      { text: "o que tenho", field: false, unsure: true },
-      { text: "amanhã", field: true, unsure: false },
+      { text: "o que tenho", field: null, unsure: true },
+      { text: "amanhã", field: "day", unsure: false },
     ]);
-    expect(marked("ligar 1430")).toEqual([{ text: "1430", field: false, unsure: true }]);
+    expect(marked("ligar 1430")).toEqual([{ text: "1430", field: null, unsure: true }]);
   });
 
   it("trecho ignorado e entre aspas não marcam, nem com dúvida em cima", () => {
     expect(markSegments("ligar 1430", doubt(6, 10), [[6, 10]])).toEqual([
-      { text: "ligar 1430", field: false, unsure: false },
+      { text: "ligar 1430", field: null, unsure: false },
     ]);
     expect(markSegments('ligar "14"', doubt(7, 9), [])).toEqual([
-      { text: 'ligar "14"', field: false, unsure: false },
+      { text: 'ligar "14"', field: null, unsure: false },
     ]);
   });
 });

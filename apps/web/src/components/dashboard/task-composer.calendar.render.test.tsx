@@ -6,6 +6,7 @@ import { MemoryRouter } from "react-router-dom";
 import type { ParsedTaskWire, Task } from "@dailify/shared";
 
 import { zonedAt } from "@/functions/zone";
+import { CALENDAR_DEFAULT_KEY } from "@/hooks/useCalendarDefault";
 import { setIntegrations } from "@/hooks/useIntegrations";
 import { copy } from "./copy";
 
@@ -77,7 +78,8 @@ const connect = (connected: boolean) =>
 
 const send = (user: ReturnType<typeof userEvent.setup>) =>
   user.click(screen.getByRole("button", { name: copy.composer.submit }));
-const chip = () => screen.queryByRole("button", { name: t.chipLabel });
+// A frase única liga num switch; os rascunhos da Mew, num chip por linha.
+const chip = () => screen.queryByRole("switch", { name: t.chipLabel });
 const meet = () => screen.queryByRole("button", { name: t.meet });
 const linked = (id: string): { task: Task } => ({
   task: {
@@ -104,6 +106,7 @@ const draft = (text: string, hour: number): ParsedTaskWire => ({
 
 beforeEach(() => {
   vi.resetAllMocks();
+  localStorage.clear();
   connect(true);
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
   api.createTask.mockImplementation(async (_token, input) => ({
@@ -113,17 +116,30 @@ beforeEach(() => {
 });
 
 describe("<TaskComposer> etiqueta Google Agenda", () => {
-  it("escondida sem conexão, offline ou sem dia", async () => {
+  it("escondida sem conexão; sem dia fica desativada (a linha não pula ao digitar)", async () => {
     connect(false);
     const user = setup();
     await user.type(screen.getByRole("textbox"), "dentista amanhã às 15h");
     expect(chip()).not.toBeInTheDocument();
 
     connect(true);
-    expect(await screen.findByRole("button", { name: t.chipLabel })).toBeInTheDocument();
+    expect(await screen.findByRole("switch", { name: t.chipLabel })).toBeEnabled();
     await user.clear(screen.getByRole("textbox"));
     await user.type(screen.getByRole("textbox"), "comprar pão");
-    expect(chip()).not.toBeInTheDocument();
+    expect(chip()).toBeDisabled();
+  });
+
+  it("padrão Sempre (Configurações): já vem ligada e volta ligada depois do envio", async () => {
+    localStorage.setItem(CALENDAR_DEFAULT_KEY, "1");
+    const user = setup();
+    await user.type(screen.getByRole("textbox"), "dentista amanhã às 15h");
+    expect(chip()).toHaveAttribute("aria-checked", "true");
+    await user.click(chip()!);
+    expect(chip()).toHaveAttribute("aria-checked", "false");
+    await send(user);
+    await waitFor(() => expect(api.createTask).toHaveBeenCalled());
+    expect(api.createCalendarEvent).not.toHaveBeenCalled();
+    expect(chip()).toHaveAttribute("aria-checked", "true");
   });
 
   it("offline, não aparece", async () => {
@@ -136,7 +152,7 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
   it("desligada por padrão: criar não chama o Google", async () => {
     const user = setup();
     await user.type(screen.getByRole("textbox"), "dentista amanhã às 15h");
-    expect(chip()).toHaveAttribute("aria-pressed", "false");
+    expect(chip()).toHaveAttribute("aria-checked", "false");
     expect(meet()).not.toBeInTheDocument();
     await user.keyboard("{Enter}");
     await waitFor(() => expect(api.createTask).toHaveBeenCalled());
@@ -147,7 +163,7 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
     const user = setup();
     await user.type(screen.getByRole("textbox"), "dentista amanhã às 15h");
     await user.click(chip()!);
-    expect(chip()).toHaveAttribute("aria-pressed", "true");
+    expect(chip()).toHaveAttribute("aria-checked", "true");
     await send(user);
 
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t.createdAdded));
@@ -156,7 +172,7 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
     expect(ctx.setTasks).toHaveBeenLastCalledWith([expect.objectContaining({ links: [EVENT] })]);
 
     await user.type(screen.getByRole("textbox"), "outra amanhã às 9h");
-    expect(chip()).toHaveAttribute("aria-pressed", "false");
+    expect(chip()).toHaveAttribute("aria-checked", "false");
   });
 
   it("+ Meet manda meet: true; com link de vídeo no texto, some", async () => {
@@ -273,8 +289,8 @@ describe("<TaskComposer> destino sugerido pela Mew", () => {
     const user = setup();
     await ask(user, "call amanhã 15h coloca no Google Agenda com meet");
 
-    expect(await screen.findByRole("button", { name: t.chipLabel })).toHaveAttribute(
-      "aria-pressed",
+    expect(await screen.findByRole("switch", { name: t.chipLabel })).toHaveAttribute(
+      "aria-checked",
       "true",
     );
     expect(chip()).toHaveAttribute("title", t.mewPicked);
@@ -291,8 +307,8 @@ describe("<TaskComposer> destino sugerido pela Mew", () => {
     mewReads({ ...draft("Call", 15), targets: gcal(false) });
     const user = setup();
     await ask(user, "call amanhã 15h no google agenda");
-    await user.click(await screen.findByRole("button", { name: t.chipLabel, pressed: true }));
-    expect(chip()).toHaveAttribute("aria-pressed", "false");
+    await user.click(await screen.findByRole("switch", { name: t.chipLabel, checked: true }));
+    expect(chip()).toHaveAttribute("aria-checked", "false");
     expect(chip()).not.toHaveAttribute("title");
     await send(user);
     await waitFor(() => expect(api.createTask).toHaveBeenCalled());
@@ -306,8 +322,8 @@ describe("<TaskComposer> destino sugerido pela Mew", () => {
     await ask(user, "call amanhã 15h no google agenda");
     await screen.findByRole("img", { name: copy.mew.draft });
     connect(true);
-    expect(await screen.findByRole("button", { name: t.chipLabel })).toHaveAttribute(
-      "aria-pressed",
+    expect(await screen.findByRole("switch", { name: t.chipLabel })).toHaveAttribute(
+      "aria-checked",
       "false",
     );
   });

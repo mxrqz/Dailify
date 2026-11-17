@@ -4,10 +4,14 @@ import { LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { Minimize2, Pin, PlusIcon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
+import { CreateDock } from "@/components/dashboard/composer-views";
 import { TaskComposer, type ComposerValues } from "@/components/dashboard/task-composer";
 import { Dialog, DialogTitle } from "@/components/ui/dialog";
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { duration, reveal, spring } from "@/consts/motion";
+import { useOnline } from "@/hooks/useOnline";
+import { voiceSupported } from "@/hooks/useVoiceCreate";
+import { reveal, spring } from "@/consts/motion";
 import { useStoredFlag } from "@/hooks/useStoredFlag";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { cn } from "@/lib/utils";
@@ -34,18 +38,23 @@ interface CreateFabProps {
 }
 
 /**
- * A criação, em dois modos lembrados por device: só o "+" que abre a folha, ou o campo sempre
- * aberto no rodapé do painel (largura toda). Sem portal de propósito: no desktop a folha se ancora
- * no próprio botão, que mora no painel da agenda e desliza com ele.
+ * A criação. No mobile, o dock fixo embaixo ("Ei Mewki, anota…" + mic) abre a folha de vidro. No
+ * desktop, dois modos lembrados por device: só o "+" que abre a folha, ou o campo sempre aberto no
+ * rodapé do painel. Sem portal de propósito: lá a folha se ancora no próprio botão, que mora no
+ * painel da agenda e desliza com ele.
  */
 export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabProps): JSX.Element {
   const [open, setOpen] = useState(false);
-  const [docked, setDocked] = useStoredFlag(DOCKED_KEY);
+  const desktop = useMediaQuery("(min-width: 768px)");
+  const [pinned, setDocked] = useStoredFlag(DOCKED_KEY);
+  const docked = pinned && desktop;
+  // Aberta pelo mic do dock: a folha já nasce gravando.
+  const [listen, setListen] = useState(false);
+  const online = useOnline();
   // Desfixou: a folha fica aberta e some quando o mouse sai dela.
   const [closeOnLeave, setCloseOnLeave] = useState(false);
   // A folha fecha no ⏎ (a tarefa já entrou otimista); se o servidor recusar, reabre com o texto.
   const [retry, setRetry] = useState<string>();
-  const desktop = useMediaQuery("(min-width: 768px)");
   const reduce = useReducedMotion();
   const fabRef = useRef<HTMLButtonElement>(null);
   const label = copy.composer.open;
@@ -106,15 +115,74 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
     setOpen(next);
     if (!next) {
       setRetry(undefined);
+      setListen(false);
       setCloseOnLeave(false);
       onDayDone?.();
     }
   };
 
+  // A folha fecha no ⏎ (a tarefa já entrou otimista); ⇧⏎ a mantém aberta pra próxima.
+  const sheetComposer = (
+    <TaskComposer
+      large={!desktop}
+      listen={listen}
+      initialText={retry}
+      day={day}
+      onCreated={() => changeOpen(false)}
+      onCancel={() => changeOpen(false)}
+      submitting={submitting}
+      onSubmit={(values, again) => {
+        const created = onSubmit(values);
+        if (!again) {
+          changeOpen(false);
+          void created.then((ok) => {
+            if (ok) return;
+            setRetry(values.text);
+            setOpen(true);
+          });
+        }
+        return created;
+      }}
+    />
+  );
+
+  if (!desktop)
+    return (
+      <>
+        <CreateDock
+          onOpen={() => changeOpen(true)}
+          onVoice={
+            online && voiceSupported()
+              ? () => {
+                  setListen(true);
+                  setOpen(true);
+                }
+              : undefined
+          }
+        />
+        <Sheet open={open} onOpenChange={changeOpen}>
+          <SheetContent
+            side="bottom"
+            showCloseButton={false}
+            aria-describedby={undefined}
+            // Pelo mic, sem teclado: o foco fica na folha. Senão, direto no campo.
+            onOpenAutoFocus={(event) => {
+              event.preventDefault();
+              if (!listen) document.getElementById("composer-text")?.focus();
+            }}
+            className="px-5"
+          >
+            <SheetTitle className="sr-only">{label}</SheetTitle>
+            {sheetComposer}
+          </SheetContent>
+        </Sheet>
+      </>
+    );
+
   return (
     <LayoutGroup id="composer">
       {docked ? (
-        <div className="sticky bottom-0 z-40 mt-auto px-4 pb-4 md:px-6 md:pb-6">
+        <div className="sticky bottom-0 z-40 mt-auto px-6 pb-6">
           <motion.section
             layoutId={SURFACE}
             transition={morph}
@@ -145,7 +213,7 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
           </motion.section>
         </div>
       ) : (
-        <div className="fixed inset-x-0 bottom-0 z-40 h-0 md:sticky md:mt-auto">
+        <div className="sticky bottom-0 z-40 mt-auto h-0">
           {!open && (
             <motion.button
               ref={fabRef}
@@ -156,7 +224,7 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
               aria-label={label}
               onClick={() => changeOpen(true)}
               whileTap={reduce ? undefined : { scale: 0.96 }}
-              className="absolute right-4 bottom-4 flex size-12 cursor-pointer items-center justify-center bg-accent-primary text-primary-foreground transition-colors hover:bg-accent-hover md:right-6 md:bottom-6"
+              className="absolute right-6 bottom-6 flex size-12 cursor-pointer items-center justify-center bg-brand text-on-brand transition-colors hover:bg-brand-pressed"
             >
               <motion.span {...content} className="flex">
                 <PlusIcon className="size-5" strokeWidth={2.2} aria-hidden="true" />
@@ -165,14 +233,6 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
           )}
 
           <Dialog open={open} onOpenChange={changeOpen}>
-            <DialogPrimitive.Overlay asChild>
-              <motion.div
-                initial={{ opacity: 0 }}
-                animate={{ opacity: 1 }}
-                transition={{ duration: reduce ? 0 : duration.base }}
-                className="fixed inset-0 bg-surface-scrim md:hidden"
-              />
-            </DialogPrimitive.Overlay>
             <DialogPrimitive.Content
               asChild
               aria-describedby={undefined}
@@ -189,50 +249,14 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
                 onPointerLeave={(event) => {
                   if (!closeOnLeave || event.pointerType !== "mouse") return;
                   const field = document.getElementById("composer-text");
-                  if (field instanceof HTMLInputElement && field.value) return;
+                  if (field instanceof HTMLTextAreaElement && field.value) return;
                   changeOpen(false);
                 }}
-                style={
-                  desktop
-                    ? { borderRadius: RADIUS_PANEL }
-                    : {
-                        borderTopLeftRadius: RADIUS_PANEL,
-                        borderTopRightRadius: RADIUS_PANEL,
-                        borderBottomLeftRadius: 0,
-                        borderBottomRightRadius: 0,
-                      }
-                }
-                className={cn(
-                  "fixed inset-x-0 bottom-0 border-t border-highlight bg-surface-panel px-2 pt-2 pb-safe shadow-panel",
-                  "md:absolute md:inset-x-auto md:right-6 md:bottom-6 md:w-sheet md:border md:p-1",
-                )}
+                style={{ borderRadius: RADIUS_PANEL }}
+                className="absolute right-6 bottom-6 w-sheet border border-highlight bg-surface-panel p-1 shadow-panel"
               >
                 <DialogTitle className="sr-only">{label}</DialogTitle>
-                <div
-                  className="mx-auto mb-1 h-1 w-9 rounded-full bg-surface-line md:hidden"
-                  aria-hidden="true"
-                />
-                <motion.div {...content}>
-                  <TaskComposer
-                    large={!desktop}
-                    initialText={retry}
-                    day={day}
-                    onCreated={() => changeOpen(false)}
-                    submitting={submitting}
-                    onSubmit={(values, again) => {
-                      const created = onSubmit(values);
-                      if (!again) {
-                        changeOpen(false);
-                        void created.then((ok) => {
-                          if (ok) return;
-                          setRetry(values.text);
-                          setOpen(true);
-                        });
-                      }
-                      return created;
-                    }}
-                  />
-                </motion.div>
+                <motion.div {...content}>{sheetComposer}</motion.div>
                 <motion.button
                   {...content}
                   type="button"

@@ -11,7 +11,7 @@ import { useQuotas } from "@/hooks/useQuotas";
 
 // Cortesia, não controle: quem limita o custo é o cap de 512 KB no servidor. Parar aqui só evita
 // que uma fala longa vire um 413 com a gravação perdida.
-const MAX_RECORDING_MS = 60_000;
+export const MAX_RECORDING_MS = 60_000;
 // Opus é minúsculo pra fala; o Safari cai no mp4/AAC.
 const MIME_TYPES = ["audio/webm;codecs=opus", "audio/ogg;codecs=opus", "audio/mp4"];
 
