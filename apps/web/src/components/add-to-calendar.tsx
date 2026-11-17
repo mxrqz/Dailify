@@ -8,7 +8,6 @@ import {
   INTEGRATION_ERROR,
   isCalendarEventLink,
   videoLink,
-  type ExternalEvent,
 } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
@@ -16,10 +15,9 @@ import { ListGroup, ListRow } from "@/components/kit/list";
 import { ConfirmAction } from "@/components/mew/confirm-action";
 import { CalendarBadge } from "@/components/logos";
 import { ToolbarButton } from "@/components/task-card";
-import { createCalendarEvent, linkCalendarEvent, syncCalendarEvent } from "@/functions/api";
+import { createCalendarEvent, syncCalendarEvent } from "@/functions/api";
 import { appTimeZone } from "@/functions/zone";
 import { calendarRevoked, useApplyTask } from "@/hooks/useCalendarPush";
-import { tagExternalEvent } from "@/hooks/useExternalEvents";
 import { patchIntegration, useCalendarReady, useIntegrations } from "@/hooks/useIntegrations";
 import { useOnline } from "@/hooks/useOnline";
 import type { TaskProps } from "@/types/types";
@@ -196,70 +194,5 @@ export function CalendarRows({
         <ListRow onClick={onRetry} disabled={pending} icon={<CalendarSyncIcon />} label={t.retry} />
       )}
     </ListGroup>
-  );
-}
-
-/**
- * O dedupe (0xp.8): a tarefa parece ser um evento que já está no Google. "Vincular" amarra os dois
- * sem criar outro evento; depois de confirmado o evento some da agenda (ganhou o `mewkiTaskId`).
- */
-export function LinkToEvent({
-  task,
-  event,
-}: {
-  task: TaskProps;
-  event: ExternalEvent;
-}): JSX.Element {
-  const applyTask = useApplyTask();
-  const { getToken } = useAuth();
-  const navigate = useNavigate();
-  const [open, setOpen] = useState(false);
-  const [pending, setPending] = useState(false);
-
-  const confirm = async () => {
-    setPending(true);
-    const token = await getToken().catch(() => null);
-    const res = token
-      ? await linkCalendarEvent(token, task.id, event.id)
-      : { error: { message: copy.form.authError, offline: false } };
-    setPending(false);
-    setOpen(false);
-
-    const { error } = res;
-    if (res.task && !error) {
-      applyTask(res.task);
-      tagExternalEvent(event.id, task.id);
-      toast.success(t.linkDone);
-    } else if (res.task && error?.code === INTEGRATION_ERROR.alreadyLinked) {
-      applyTask(res.task);
-      toast.info(t.alreadyLinked);
-    } else if (error?.code === INTEGRATION_ERROR.reconnect) {
-      calendarRevoked(navigate);
-    } else {
-      toast.error(t.linkError, { description: error?.message });
-    }
-  };
-
-  return (
-    <>
-      <p className="mt-1.5 px-1 text-xs text-muted-foreground">
-        {t.looksLinked} ·{" "}
-        <button
-          type="button"
-          className="cursor-pointer text-brand-text underline-offset-2 hover:underline"
-          onClick={() => setOpen(true)}
-          disabled={pending}
-        >
-          {t.link}
-        </button>
-      </p>
-      <ConfirmAction
-        open={open}
-        onOpenChange={setOpen}
-        preview={t.linkPreview.replace("{title}", event.title || t.untitled)}
-        pending={pending}
-        onConfirm={() => void confirm()}
-      />
-    </>
   );
 }

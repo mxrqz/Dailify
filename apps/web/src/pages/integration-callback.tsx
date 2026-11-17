@@ -5,6 +5,7 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { isProviderId, MISSING_SCOPE_ERROR } from "@dailify/shared";
 
+import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { completeIntegration } from "@/functions/api";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
@@ -17,6 +18,7 @@ export default function IntegrationCallback(): JSX.Element {
   const [params] = useSearchParams();
   const { getToken } = useAuth();
   const navigate = useNavigate();
+  const { reloadMonths, loadedMonths } = useDailify();
   const name = isProviderId(provider) ? copy.calendar.name : "";
   // O state é de uso único: o segundo efeito do StrictMode mandaria um POST que volta 400.
   const started = useRef(false);
@@ -39,6 +41,8 @@ export default function IntegrationCallback(): JSX.Element {
     if (error?.status === 403) return fail(t.wrongUser);
     if (error) return fail(t.failed);
 
+    // O servidor já importou os eventos da Agenda: a lista relê os meses pra eles aparecerem.
+    void reloadMonths(loadedMonths);
     toast.success(t.connected.replace("{name}", name));
     navigate("/integrations", { replace: true });
   });

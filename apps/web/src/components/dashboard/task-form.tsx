@@ -107,6 +107,8 @@ interface TaskFormProps {
   hour12?: boolean;
   /** Grupos extras no fim da raiz (o do Google Agenda), dentro da mesma rolagem. */
   children?: ReactNode;
+  /** Convite da Agenda que só o organizador muda: título, data, hora, duração e repetição travados. */
+  locked?: boolean;
 }
 
 /** O controle NATIVO invisível cobre a linha e recebe o toque: o sistema abre o próprio seletor. */
@@ -121,10 +123,11 @@ const shortDay = (day: Date) => capitalize(format(day, "EEEEEE, d MMM", { locale
 /** Uma linha da lista com o controle nativo por cima: a linha mostra o valor, o sistema escolhe. */
 function NativeRow({
   control,
+  disabled,
   ...row
 }: Omit<ComponentProps<typeof ListRow>, "asChild" | "children"> & { control: ReactNode }) {
   return (
-    <ListRow asChild accessory="chevron" {...row}>
+    <ListRow asChild accessory={disabled ? undefined : "chevron"} {...row}>
       <div className="relative focus-within:bg-fill">{control}</div>
     </ListRow>
   );
@@ -144,6 +147,7 @@ export function TaskForm({
   knownTags: otherTags = NO_TAGS,
   hour12 = false,
   children,
+  locked = false,
 }: TaskFormProps) {
   const [title, setTitle] = useState(task?.title ?? "");
   const [undated, setUndated] = useState(task?.undated === true);
@@ -287,6 +291,7 @@ export function TaskForm({
             <button
               type="button"
               onClick={() => onView("title")}
+              disabled={locked}
               className={cn(
                 "self-start rounded-xs text-left text-title-3 font-semibold outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
                 !title && "text-ink-secondary",
@@ -295,6 +300,7 @@ export function TaskForm({
               {title || copy.form.titlePlaceholder}
             </button>
             <p className="text-subhead text-ink-secondary tabular-nums">{when}</p>
+            {locked && <p className="text-footnote text-ink-secondary">{copy.calendar.readonly}</p>}
           </div>
 
           <ListGroup compact>
@@ -303,11 +309,13 @@ export function TaskForm({
                 <NativeRow
                   icon={<CalendarIcon />}
                   label={copy.form.date}
+                  disabled={locked}
                   value={shortDay(date)}
                   control={
                     <input
                       type="date"
                       aria-label={copy.form.date}
+                      disabled={locked}
                       value={format(date, "yyyy-MM-dd")}
                       onChange={(e) => {
                         const next = fromDateInput(e.target.value);
@@ -322,11 +330,13 @@ export function TaskForm({
                 <NativeRow
                   icon={<ClockIcon />}
                   label={copy.form.time}
+                  disabled={locked}
                   value={clock(date)}
                   control={
                     <input
                       type="time"
                       aria-label={copy.form.time}
+                      disabled={locked}
                       value={format(date, "HH:mm")}
                       onChange={(e) => {
                         const [hours, minutes] = e.target.value.split(":").map(Number);
@@ -344,10 +354,12 @@ export function TaskForm({
             <NativeRow
               icon={<TimerIcon />}
               label={copy.form.duration}
+              disabled={locked}
               value={duration}
               control={
                 <select
                   aria-label={copy.form.duration}
+                  disabled={locked}
                   value={duration}
                   onChange={(e) => setDuration(e.target.value)}
                   className={nativeControlClass}
@@ -368,6 +380,7 @@ export function TaskForm({
                   aria-label={copy.form.undated}
                   checked={undated}
                   onCheckedChange={toggleUndated}
+                  disabled={locked}
                 />
               }
             />
@@ -402,10 +415,12 @@ export function TaskForm({
             <NativeRow
               icon={<RepeatIcon />}
               label={copy.form.repeat}
+              disabled={locked}
               value={repeatValue}
               control={
                 <select
                   aria-label={copy.form.repeat}
+                  disabled={locked}
                   value={repeatMode}
                   onChange={(e) => {
                     const next = e.target.value;
@@ -432,10 +447,12 @@ export function TaskForm({
               <NativeRow
                 icon={<Repeat2Icon />}
                 label={copy.form.repeatEvery}
+                disabled={locked}
                 value={everyLabel(repeat, every)}
                 control={
                   <select
                     aria-label={copy.form.repeatEvery}
+                    disabled={locked}
                     value={String(every)}
                     onChange={(e) => setEvery(Number(e.target.value))}
                     className={nativeControlClass}
@@ -463,6 +480,7 @@ export function TaskForm({
                       key={day}
                       type="button"
                       aria-pressed={on}
+                      disabled={locked}
                       onClick={() =>
                         setRepeat({
                           Weekly: on ? weekly.filter((d) => d !== day) : [...weekly, day],

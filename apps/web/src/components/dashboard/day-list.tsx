@@ -5,7 +5,6 @@ import {
   addMonths,
   differenceInCalendarMonths,
   endOfMonth,
-  isSameDay,
   startOfDay,
   startOfMonth,
 } from "date-fns";
@@ -17,7 +16,6 @@ import { Mew } from "@/components/mew/mew";
 import { listDays, nextMonthToLoad } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
-import { useExternalEvents } from "@/hooks/useExternalEvents";
 import { zoned } from "@/functions/zone";
 
 // Sem tarefa em tantos meses seguidos, a sentinela desiste de pedir o próximo.
@@ -58,8 +56,6 @@ export function DayList(): JSX.Element {
     useDailify();
   const sentinel = useRef<HTMLDivElement>(null);
   const reduce = useReducedMotion();
-  // ponytail: evento de vários dias aparece só no dia em que começa.
-  const events = useExternalEvents(loadedMonths);
 
   // `useNow` e não `new Date()` solto: com o app aberto na virada do dia, a lista continuava
   // começando em ontem.
@@ -88,11 +84,10 @@ export function DayList(): JSX.Element {
         start: zoned(startKey),
         end: endOfMonth(addMonths(zoned(nextKey), -1)),
         tasks: tasks ?? [],
-        // Dia só com evento do Google também entra.
-        extra: [...(targetDay ? [targetDay] : []), ...events.map((e) => zoned(e.start))],
+        extra: targetDay ? [targetDay] : [],
         keepStart,
       }),
-    [startKey, nextKey, tasks, targetDay, keepStart, events],
+    [startKey, nextKey, tasks, targetDay, keepStart],
   );
 
   const loadMonthOf = useEffectEvent(loadMonth);
@@ -149,11 +144,7 @@ export function DayList(): JSX.Element {
   return (
     <div className="flex flex-col gap-7">
       {days.map((day) => (
-        <DaySection
-          key={day.toISOString()}
-          day={day}
-          events={events.filter((e) => isSameDay(zoned(e.start), day))}
-        />
+        <DaySection key={day.toISOString()} day={day} />
       ))}
       {sentinelEl}
     </div>

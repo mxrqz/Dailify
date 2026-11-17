@@ -5,14 +5,18 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { MISSING_SCOPE_ERROR } from "@dailify/shared";
 
-const { useAuth, completeIntegration, toast } = vi.hoisted(() => ({
+const { useAuth, completeIntegration, toast, reloadMonths } = vi.hoisted(() => ({
   useAuth: vi.fn(),
+  reloadMonths: vi.fn(),
   completeIntegration: vi.fn(),
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 vi.mock("@clerk/clerk-react", () => ({ useAuth }));
 vi.mock("@/functions/api", () => ({ completeIntegration }));
 vi.mock("sonner", () => ({ toast }));
+vi.mock("@/components/dailifyContext", () => ({
+  useDailify: () => ({ reloadMonths, loadedMonths: [] }),
+}));
 
 import IntegrationCallback from "./integration-callback";
 import { copy } from "@/components/dashboard/copy";
@@ -45,6 +49,7 @@ describe("<IntegrationCallback>", () => {
     expect(completeIntegration).toHaveBeenCalledTimes(1);
     expect(completeIntegration).toHaveBeenCalledWith("t", "google-calendar", "c", "s");
     expect(toast.success).toHaveBeenCalledWith("Agenda conectada");
+    expect(reloadMonths).toHaveBeenCalledTimes(1);
   });
 
   it("access_denied não chama o servidor", async () => {

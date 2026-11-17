@@ -5,11 +5,12 @@ import { toast } from "sonner";
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { RecurrenceScopeDialog } from "@/components/dashboard/recurrence-scope-dialog";
+import { ActionSheet } from "@/components/kit/action-sheet";
 import { completeTask, createTask, deleteTask, uncompleteTask, updateTask } from "@/functions/api";
 import type { ApiError } from "@/functions/api";
 import { upsertTaskWithRecurrence } from "@/functions/functions";
 import { enqueue, type Mutation } from "@/functions/offline";
-import type { TaskInput } from "@dailify/shared";
+import { isCalendarEventLink, type TaskInput } from "@dailify/shared";
 import type { TaskProps } from "@/types/types";
 import { zoned } from "@/functions/zone";
 
@@ -28,6 +29,9 @@ export function useTaskActions(
   const { tasks, setTasks, loadedMonths } = useDailify();
   const { getToken, userId } = useAuth();
   const [scopeOpen, setScopeOpen] = useState(false);
+  // Ligada à Agenda: excluir apaga o evento lá também, e não há desfazer que o traga de volta.
+  const linked = task.links?.some(isCalendarEventLink) ?? false;
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const rollback = (previous: TaskProps[]) => setTasks(previous);
 
@@ -137,6 +141,10 @@ export function useTaskActions(
     if (!settle(error, previous, mutation, copy.task.deleteError)) return;
     onDeleted?.();
 
+    if (linked) {
+      toast.success(copy.task.deleted, { description: task.title });
+      return;
+    }
     // Desfazer no lugar de um diálogo de confirmação: não cobra um toque a mais das exclusões
     // certas, e cobre a errada.
     toast.success(copy.task.deleted, {
@@ -177,32 +185,46 @@ export function useTaskActions(
     toast.success(copy.task.occurrenceDeleted, { description: task.title });
   };
 
-  /** Recorrente pergunta o escopo antes; o resto apaga direto. */
+  /** Recorrente pergunta o escopo antes; ligada à Agenda confirma; o resto apaga direto. */
   const onDelete = async () => {
-    if (task.repeat !== "Off") {
-      setScopeOpen(true);
-      return;
-    }
-    await removeSeries();
+    if (task.repeat !== "Off") setScopeOpen(true);
+    else if (linked) setConfirmOpen(true);
+    else await removeSeries();
   };
 
   // Renderizado por quem usa o hook: os três pontos que excluem (menu ⋮, swipe e folha de edição)
   // precisam do diálogo, e duplicar a UI em cada um é que seria o erro.
   const deleteDialog = (
-    <RecurrenceScopeDialog
-      open={scopeOpen}
-      onOpenChange={setScopeOpen}
-      description={copy.form.scopeDeleteDescription}
-      destructive
-      onOccurrence={() => {
-        setScopeOpen(false);
-        void removeOccurrence();
-      }}
-      onSeries={() => {
-        setScopeOpen(false);
-        void removeSeries();
-      }}
-    />
+    <>
+      <RecurrenceScopeDialog
+        open={scopeOpen}
+        onOpenChange={setScopeOpen}
+        description={copy.form.scopeDeleteDescription}
+        destructive
+        onOccurrence={() => {
+          setScopeOpen(false);
+          void removeOccurrence();
+        }}
+        onSeries={() => {
+          setScopeOpen(false);
+          if (linked) setConfirmOpen(true);
+          else void removeSeries();
+        }}
+      />
+      <ActionSheet
+        open={confirmOpen}
+        onOpenChange={setConfirmOpen}
+        title={copy.calendar.deleteTitle.replace("{title}", task.title)}
+        description={task.repeat === "Off" ? undefined : copy.calendar.deleteSeries}
+        actions={[
+          {
+            label: copy.calendar.deleteConfirm,
+            destructive: true,
+            onSelect: () => void removeSeries(),
+          },
+        ]}
+      />
+    </>
   );
 
   /**

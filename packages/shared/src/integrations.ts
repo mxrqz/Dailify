@@ -36,6 +36,8 @@ export interface IntegrationStatus {
   duplicates?: { taskId: string; importedId: string }[];
   /** Tarefas de convite que só o organizador muda: título, data e recorrência travados na UI. */
   readonly?: string[];
+  /** Eventos que a Mewki não sabe representar (recorrência exótica, dia inteiro repetido). */
+  skipped?: number;
 }
 
 /** Tarefa <-> objeto externo (`integration_links`). */

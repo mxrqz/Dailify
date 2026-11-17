@@ -2,15 +2,12 @@ import { duration, ease } from "@/consts/motion";
 import { format, isSameWeek, isToday, isTomorrow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, useReducedMotion, type Variants } from "motion/react";
-import { ArrowUpRightIcon } from "lucide-react";
-import { durationMinutes, matchExternalEvent, type ExternalEvent } from "@dailify/shared";
+import { durationMinutes } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { AnytimeBlock, ScheduleDrop } from "@/components/dashboard/anytime-block";
 import { copy } from "@/components/dashboard/copy";
-import { DayTaskRow, NowLine, TaskRow, durationText } from "@/components/dashboard/day-task-row";
-import { LinkToEvent } from "@/components/add-to-calendar";
-import { CalendarBadge } from "@/components/logos";
+import { DayTaskRow, NowLine } from "@/components/dashboard/day-task-row";
 import { TaskCard } from "@/components/task-card";
 import {
   formatClock,
@@ -26,64 +23,6 @@ const SKELETON_ROWS = 3;
 
 /** Id da seção de um dia — a `DayList` usa isto pra rolar até ele. */
 export const dayAnchorId = (day: Date) => `day-${format(day, "yyyy-MM-dd")}`;
-
-/** Um evento do Google na agenda: só leitura — sem concluir, editar nem arrastar. */
-export function ExternalEventRow({
-  event,
-  hour12,
-}: {
-  event: ExternalEvent;
-  hour12: boolean;
-}): JSX.Element {
-  const t = copy.calendar;
-  const minutes = Math.round((event.end - event.start) / 60_000);
-  return (
-    <TaskRow
-      role="group"
-      aria-label={t.event}
-      muted
-      time={
-        event.allDay ? (
-          <span className="text-xs">{t.allDay}</span>
-        ) : (
-          formatClock(getTime(event.start, "HH:MM"), hour12)
-        )
-      }
-      duration={event.allDay ? undefined : durationText(minutes)}
-      title={event.title || t.untitled}
-      meta={
-        <>
-          <CalendarBadge />
-          <span className="truncate">{t.name}</span>
-          {event.meet && (
-            <>
-              <span aria-hidden="true">·</span>
-              <a
-                href={event.meet}
-                target="_blank"
-                rel="noreferrer"
-                className="underline-offset-2 hover:text-ink hover:underline"
-              >
-                {t.meetLink}
-              </a>
-            </>
-          )}
-        </>
-      }
-      trailing={
-        <a
-          href={event.url}
-          target="_blank"
-          rel="noreferrer"
-          aria-label={t.openInGoogle}
-          className="grid size-11 flex-none place-items-center rounded-full text-ink-secondary transition-colors hover:text-ink"
-        >
-          <ArrowUpRightIcon aria-hidden="true" className="size-4.5" />
-        </a>
-      }
-    />
-  );
-}
 
 export function TaskSkeletons(): JSX.Element {
   return (
@@ -116,23 +55,16 @@ function dayLabel(day: Date, now: Date): string {
 const itemCount = (count: number): string =>
   count === 1 ? copy.day.oneItem : copy.day.manyItems.replace("{n}", String(count));
 
-type Row =
-  | { at: number; task: TaskProps; hour?: string }
-  | { at: number; event: ExternalEvent }
-  | { at: number; now: true };
+type Row = { at: number; task: TaskProps; hour?: string } | { at: number; now: true };
 
 /**
- * Um dia: cabeçalho (rótulo + contagem) e as linhas embaixo — tarefas, eventos do Google e, hoje, o
- * fio do agora. É o bloco que a `DayList` empilha; o scroll é da página, não daqui.
+ * Um dia: cabeçalho (rótulo + contagem) e as linhas embaixo — tarefas e, hoje, o fio do agora. É o bloco que a `DayList` empilha; o scroll é da página, não daqui.
  */
 export function DaySection({
   day,
-  events = [],
   calendar,
 }: {
   day: Date;
-  /** Os eventos do Google deste dia (`useExternalEvents`), já sem os da Mewki. */
-  events?: ExternalEvent[];
   /** O dia escolhido no calendário: título "Terça, 17", sem o bloco A qualquer hora. */
   calendar?: boolean;
 }): JSX.Element {
@@ -143,8 +75,8 @@ export function DaySection({
   const isCurrentDay = isToday(day);
   const dayTasks = tasks ? getTasksForDay(tasks, day) : [];
   const nowAt = now.getHours() * 60 + now.getMinutes();
-  // Tarefas, eventos e o fio do agora numa ordem só; dia inteiro no topo. O fio fica antes do que
-  // começa agora (-0.5): o que já começou fica acima dele.
+  // Tarefas e o fio do agora numa ordem só. O fio fica antes do que começa agora (-0.5): o que já
+  // começou fica acima dele.
   const rows: Row[] = [
     ...groupTasksByHour(dayTasks).flatMap((group) =>
       group.tasks.map((task, index) => ({
@@ -153,16 +85,12 @@ export function DaySection({
         hour: index === 0 ? group.time : undefined,
       })),
     ),
-    ...events.map((event) => {
-      const { hours, minutes } = getTime(event.start, "{hours, minutes}");
-      return { at: event.allDay ? -1 : hours * 60 + minutes, event };
-    }),
   ];
   if (isCurrentDay && rows.length) rows.push({ at: nowAt - 0.5, now: true });
   rows.sort((a, b) => a.at - b.at);
   const live = (row: { at: number; task: TaskProps }) =>
     isCurrentDay && row.at <= nowAt && nowAt < row.at + durationMinutes(row.task.duration);
-  const count = dayTasks.length + events.length;
+  const count = dayTasks.length;
   const sub =
     isTomorrow(day) && !calendar ? weekdayDate(day, "EEEE, d MMM") : count > 0 && itemCount(count);
 
@@ -209,11 +137,6 @@ export function DaySection({
               "task" in row ? (
                 <motion.li key={row.task.id} variants={rowVariants}>
                   <DayTaskRow task={row.task} day={day} hour={row.hour} live={live(row)} />
-                  {events.length > 0 && <MatchEvent task={row.task} events={events} />}
-                </motion.li>
-              ) : "event" in row ? (
-                <motion.li key={`g-${row.event.id}`} variants={rowVariants}>
-                  <ExternalEventRow event={row.event} hour12={hour12} />
                 </motion.li>
               ) : (
                 <li key="now">
@@ -226,10 +149,4 @@ export function DaySection({
       </section>
     </ScheduleDrop>
   );
-}
-
-/** A sugestão de Vincular, quando a tarefa parece um evento que já está no Google. */
-function MatchEvent({ task, events }: { task: TaskProps; events: ExternalEvent[] }) {
-  const match = matchExternalEvent(task, events);
-  return match ? <LinkToEvent task={task} event={match} /> : null;
 }

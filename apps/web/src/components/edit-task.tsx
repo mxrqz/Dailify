@@ -27,6 +27,7 @@ import {
 } from "@/components/dashboard/task-form";
 import { copy } from "@/components/dashboard/copy";
 import { useTaskActions } from "@/hooks/useTaskActions";
+import { useIntegrations } from "@/hooks/useIntegrations";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
 import { editTaskInput } from "@/functions/edit-input";
 import { enqueue } from "@/functions/offline";
@@ -114,6 +115,10 @@ export function EditTaskContent({
     onDeleted: onClose,
   });
   const wasUndated = task.undated === true;
+  const locked =
+    useIntegrations()
+      ?.find((s) => s.provider === "google-calendar")
+      ?.readonly?.includes(task.id) ?? false;
 
   // Tarefa recorrente não tem um "salvar" óbvio: editar a série move todos os dias, editar o dia
   // clicado não é o que o PATCH fazia. Quem decide é o usuário, no diálogo abaixo.
@@ -286,6 +291,7 @@ export function EditTaskContent({
         onDirtyChange={setDirty}
         knownTags={knownTags}
         hour12={hour12}
+        locked={locked}
         className="min-h-0 flex-1 scrollbar-floating"
         onSubmit={handleSubmit}
       >

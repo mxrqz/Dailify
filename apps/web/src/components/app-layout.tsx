@@ -2,6 +2,7 @@ import { Outlet, useMatch } from "react-router-dom";
 
 import { AppHeader } from "@/components/app-header";
 import { Sidebar } from "@/components/dashboard/sidebar";
+import { Duplicates } from "@/components/duplicates-sheet";
 import { cn } from "@/lib/utils";
 
 /**
@@ -25,6 +26,7 @@ export function AppLayout(): JSX.Element {
           <Outlet />
         </div>
       </div>
+      <Duplicates />
     </div>
   );
 }

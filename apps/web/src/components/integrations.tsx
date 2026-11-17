@@ -1,7 +1,6 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { useAuth } from "@clerk/clerk-react";
 import {
-  CalendarIcon,
   CalendarPlusIcon,
   CheckIcon,
   LayoutGridIcon,
@@ -17,7 +16,6 @@ import { type IntegrationStatus, type ProviderId } from "@dailify/shared";
 import { copy } from "@/components/dashboard/copy";
 import { ListGroup, ListRow } from "@/components/kit/list";
 import { SegmentedControl } from "@/components/kit/segmented-control";
-import { Switch } from "@/components/kit/switch";
 import {
   GitHubLogo,
   GmailLogo,
@@ -38,7 +36,6 @@ import {
 } from "@/components/ui/dialog";
 import { connectIntegration, disconnectIntegration, getIntegrations } from "@/functions/api";
 import { useCalendarDefault } from "@/hooks/useCalendarDefault";
-import { useHideExternalEvents } from "@/hooks/useExternalEvents";
 import { patchIntegration, setIntegrations, useIntegrations } from "@/hooks/useIntegrations";
 import { useOnline } from "@/hooks/useOnline";
 
@@ -51,24 +48,6 @@ const tag =
   "rounded-full bg-fill px-2.5 py-0.5 text-footnote font-medium whitespace-nowrap text-ink-secondary";
 
 const active = (s?: IntegrationStatus) => !!s?.connected && s.status !== "revoked";
-
-/** Por device (localStorage), como o modo do composer: é preferência de tela, não da conta. */
-export function ShowEventsRow({ icon }: { icon?: boolean }): JSX.Element {
-  const [hidden, setHidden] = useHideExternalEvents();
-  return (
-    <ListRow
-      icon={icon && <CalendarIcon />}
-      label={copy.calendar.showEvents}
-      trailing={
-        <Switch
-          aria-label={copy.calendar.showEvents}
-          checked={!hidden}
-          onCheckedChange={(on) => setHidden(!on)}
-        />
-      }
-    />
-  );
-}
 
 /** O padrão da etiqueta Google Agenda do composer (Sempre/Nunca), também por device. */
 export function CalendarDefaultRow({ icon }: { icon?: boolean }): JSX.Element {
@@ -104,6 +83,7 @@ export function IntegrationCard({
   connected,
   does,
   action,
+  note,
   children,
 }: {
   logo: ReactNode;
@@ -112,6 +92,8 @@ export function IntegrationCard({
   connected?: boolean;
   does: readonly string[];
   action: ReactNode;
+  /** Recado curto embaixo da ação ("3 eventos ficaram só na Agenda"). */
+  note?: string;
   children?: ReactNode;
 }): JSX.Element {
   const icons = [PlusIcon, Repeat2Icon];
@@ -145,6 +127,7 @@ export function IntegrationCard({
       </ul>
       {children}
       <div className="flex flex-col gap-2 px-4 pt-2 *:w-full">{action}</div>
+      {note && <p className="px-4 pt-3 text-footnote text-ink-secondary">{note}</p>}
     </div>
   );
 }
@@ -226,6 +209,7 @@ export function Integrations(): JSX.Element {
   const disabled = !online || !status || busy;
   const spinner = busy && <Loader2Icon className="size-4 animate-spin" />;
 
+  const skipped = status?.skipped ?? 0;
   let account: ReactNode = status?.account;
   let action: ReactNode;
   if (statuses === undefined && online) {
@@ -247,7 +231,7 @@ export function Integrations(): JSX.Element {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{named(t.disconnectTitle)}</DialogTitle>
-            <DialogDescription>{t.disconnectDescription}</DialogDescription>
+            <DialogDescription>{named(t.disconnectDescription)}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
             <DialogClose asChild>
@@ -297,13 +281,15 @@ export function Integrations(): JSX.Element {
           connected={connected}
           does={t.does}
           action={action}
+          note={
+            connected && skipped > 0
+              ? skipped === 1
+                ? copy.calendar.skippedOne
+                : copy.calendar.skippedMany.replace("{n}", String(skipped))
+              : undefined
+          }
         >
-          {connected && (
-            <>
-              <ShowEventsRow />
-              <CalendarDefaultRow />
-            </>
-          )}
+          {connected && <CalendarDefaultRow />}
         </IntegrationCard>
       </ListGroup>
       <UpcomingIntegrations />
@@ -330,7 +316,6 @@ export function IntegrationsSummary(): JSX.Element {
       >
         <Link to="/integrations" />
       </ListRow>
-      {connected && <ShowEventsRow icon />}
       {connected && <CalendarDefaultRow icon />}
       <ListRow asChild icon={<LayoutGridIcon />} label={t.all} accessory="chevron">
         <Link to="/integrations" />
