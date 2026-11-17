@@ -4,7 +4,7 @@
     "target": {
       "namespace": "android_app",
       "package_name": "com.mewki.app",
-      "sha256_cert_fingerprints": ["SHA256_FINGERPRINT_DA_KEYSTORE_DE_RELEASE"]
+      "sha256_cert_fingerprints": ["3C:0E:60:7E:C8:92:38:31:92:C1:0B:61:2D:5A:E7:8D:39:7C:99:17:E6:2B:E0:EA:04:61:66:E5:8C:74:9F:3F"]
     }
   }
 ]
