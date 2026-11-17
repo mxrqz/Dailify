@@ -57,18 +57,25 @@ function SheetPortal({ ...props }: React.ComponentProps<typeof SheetPrimitive.Po
   return <SheetPrimitive.Portal data-slot="sheet-portal" {...props} />;
 }
 
-/** A opacidade acompanha o arrasto da folha: é do próprio scrim, nunca de um ancestral do vidro. */
-function SheetOverlay({ opacity }: { opacity: MotionValue<number> }) {
-  return (
-    <SheetPrimitive.Overlay asChild>
-      <motion.div
-        data-slot="sheet-overlay"
-        style={{ opacity }}
-        className="scrim data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50"
-      />
-    </SheetPrimitive.Overlay>
-  );
-}
+/**
+ * A opacidade acompanha o arrasto da folha: é do próprio scrim, nunca de um ancestral do vidro. O
+ * ref é do Presence do portal: sem ele o scrim sumia num quadro em vez de sair junto do painel.
+ */
+const SheetOverlay = React.forwardRef<
+  HTMLDivElement,
+  { opacity: MotionValue<number>; className: string }
+>(({ opacity, className }, ref) => (
+  <SheetPrimitive.Overlay ref={ref} asChild>
+    <motion.div
+      data-slot="sheet-overlay"
+      style={{ opacity }}
+      className={cn(
+        "scrim data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:duration-base fixed inset-0 z-50",
+        className,
+      )}
+    />
+  </SheetPrimitive.Overlay>
+));
 
 /**
  * Vidro que entra pela borda: `bottom` é a folha do iOS (topo de 32px + puxador), `left` a gaveta
@@ -76,7 +83,8 @@ function SheetOverlay({ opacity }: { opacity: MotionValue<number> }) {
  * luz da borda de cima).
  *
  * A de baixo fecha puxada pra baixo de qualquer ponto (`canDragSheet`). O `y` fica onde o dedo
- * largou e a saída do CSS (`slide-out`, só com o `to`) parte dali, sem salto.
+ * largou e a saída do CSS (`slide-out`, só com o `to`) parte dali, sem salto; solta já andando, a
+ * saída é `ease-out` (a `ease-exit` arrancaria do zero e o painel engasgaria).
  */
 function SheetContent({
   className,
@@ -97,15 +105,18 @@ function SheetContent({
   const scrim = useTransform(y, (value) => (value > 0 ? 1 - value / height.current : 1));
   // O fechar do próprio Radix: passa pelo onOpenChange de quem abriu, como o Esc e o X.
   const close = React.useRef<HTMLButtonElement>(null);
+  const [flung, setFlung] = React.useState(false);
+  const exit = flung ? "data-[state=closed]:ease-out" : "data-[state=closed]:ease-exit";
 
   return (
     <SheetPortal>
-      <SheetOverlay opacity={scrim} />
+      <SheetOverlay opacity={scrim} className={exit} />
       <SheetPrimitive.Content
         asChild
         // Depois que a folha saiu de vez: zera o y que o arrasto deixou, pra próxima abrir no lugar.
         onCloseAutoFocus={(event) => {
           y.jump(0);
+          setFlung(false);
           onCloseAutoFocus?.(event);
         }}
         {...props}
@@ -128,11 +139,14 @@ function SheetContent({
           }}
           // ponytail: quem recusar o fechamento deixa a folha onde o dedo largou; aí, animate(y, 0).
           onDragEnd={(_, { offset, velocity }) => {
-            if (shouldCloseSheet(offset.y, velocity.y, height.current)) close.current?.click();
-            else void animate(y, 0, reduce ? { duration: 0 } : spring.snappy);
+            if (shouldCloseSheet(offset.y, velocity.y, height.current)) {
+              setFlung(true);
+              close.current?.click();
+            } else void animate(y, 0, reduce ? { duration: 0 } : spring.snappy);
           }}
           className={cn(
-            "glass text-ink fixed z-50 flex flex-col data-[state=open]:animate-in data-[state=open]:duration-slow data-[state=open]:ease-out data-[state=closed]:animate-out data-[state=closed]:duration-base data-[state=closed]:ease-exit",
+            "glass text-ink fixed z-50 flex flex-col data-[state=open]:animate-in data-[state=open]:duration-slow data-[state=open]:ease-out data-[state=closed]:animate-out data-[state=closed]:duration-base",
+            exit,
             side === "right" &&
               "data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-right-full inset-y-0 right-0 h-full w-3/4 rounded-l-sheet sm:max-w-sm",
             side === "left" &&
