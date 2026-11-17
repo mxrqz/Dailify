@@ -13,6 +13,7 @@ export interface Row {
   repeat_kind: string;
   repeat_days: string | null;
   repeat_every: number | null;
+  repeat_until: number | null;
   tags: string | null;
   links: string | null;
   completed: string;
@@ -29,6 +30,8 @@ function repeatToCols(repeat: Repeat): { kind: string; days: string | null } {
 /** Sem série não há intervalo: um `repeatEvery` órfão voltaria se a tarefa ganhasse série de novo. */
 const everyCol = (task: Task): number | null =>
   task.repeat !== "Off" && task.repeatEvery && task.repeatEvery > 1 ? task.repeatEvery : null;
+const untilCol = (task: Task): number | null =>
+  task.repeat !== "Off" && task.repeatUntil !== undefined ? task.repeatUntil : null;
 
 // Linha corrompida no D1 (por qualquer caminho) tem que virar campo vazio na leitura, nao crash.
 function safeParse(json: string | null): unknown {
@@ -68,6 +71,7 @@ export function rowToTask(r: Row): Task {
     priority: r.priority,
     repeat: colsToRepeat(r.repeat_kind, r.repeat_days),
     repeatEvery: r.repeat_every && r.repeat_every > 1 ? r.repeat_every : undefined,
+    repeatUntil: r.repeat_until ?? undefined,
     tags: stringArray(r.tags),
     links: stringArray(r.links),
     completed: numberArray(r.completed),
@@ -86,12 +90,12 @@ function insertStatement(db: D1Database, userId: string, task: Task): D1Prepared
   // OUTRO usuário (a PK é global) e deixar uma escrita velha sobrescrever uma nova (LWW).
   return db
     .prepare(
-      `INSERT INTO tasks (id,user_id,title,date,alert,duration,priority,repeat_kind,repeat_days,repeat_every,tags,links,completed,updated_at,undated)
-     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
+      `INSERT INTO tasks (id,user_id,title,date,alert,duration,priority,repeat_kind,repeat_days,repeat_every,repeat_until,tags,links,completed,updated_at,undated)
+     VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)
      ON CONFLICT(id) DO UPDATE SET
        title=excluded.title, date=excluded.date, alert=excluded.alert, duration=excluded.duration,
        priority=excluded.priority, repeat_kind=excluded.repeat_kind, repeat_days=excluded.repeat_days,
-       repeat_every=excluded.repeat_every, tags=excluded.tags, links=excluded.links, completed=excluded.completed,
+       repeat_every=excluded.repeat_every, repeat_until=excluded.repeat_until, tags=excluded.tags, links=excluded.links, completed=excluded.completed,
        updated_at=excluded.updated_at, undated=excluded.undated
      WHERE tasks.user_id=excluded.user_id AND tasks.updated_at<=excluded.updated_at`,
     )
@@ -106,6 +110,7 @@ function insertStatement(db: D1Database, userId: string, task: Task): D1Prepared
       kind,
       days,
       everyCol(task),
+      untilCol(task),
       task.tags ? JSON.stringify(task.tags) : null,
       task.links ? JSON.stringify(task.links) : null,
       JSON.stringify(task.completed),
@@ -244,7 +249,7 @@ function exdatesWith(master: Task, occurrence: number): number[] {
   return [...new Set([...(master.exdates ?? []), occurrence])];
 }
 
-function setExdatesStatement(
+export function setExdatesStatement(
   db: D1Database,
   userId: string,
   id: string,
@@ -296,6 +301,7 @@ export async function detachOccurrence(
     date: fields.date ?? occurrence,
     repeat: "Off",
     repeatEvery: undefined,
+    repeatUntil: undefined,
     exdates: undefined,
     completed: [],
   };
@@ -331,14 +337,18 @@ export async function updateTask(
     completed: cur.completed,
     updatedAt,
   };
-  const next: Task = { ...merged, repeatEvery: everyCol(merged) ?? undefined };
+  const next: Task = {
+    ...merged,
+    repeatEvery: everyCol(merged) ?? undefined,
+    repeatUntil: untilCol(merged) ?? undefined,
+  };
   // Mesmo conteúdo: não gasta escrita nem carimbo novo.
   if (taskHash(next) === taskHash(cur)) return cur;
   const { kind, days } = repeatToCols(next.repeat);
   await db
     .prepare(
       // Lembrete novo/mudado precisa poder disparar: o envio avulso exige `alert_sent IS NULL`.
-      `UPDATE tasks SET title=?,date=?,alert=?,duration=?,priority=?,repeat_kind=?,repeat_days=?,repeat_every=?,tags=?,links=?,updated_at=?,undated=?,alert_sent=CASE WHEN ? THEN NULL ELSE alert_sent END WHERE user_id=? AND id=?`,
+      `UPDATE tasks SET title=?,date=?,alert=?,duration=?,priority=?,repeat_kind=?,repeat_days=?,repeat_every=?,repeat_until=?,tags=?,links=?,updated_at=?,undated=?,alert_sent=CASE WHEN ? THEN NULL ELSE alert_sent END WHERE user_id=? AND id=?`,
     )
     .bind(
       next.title,
@@ -349,6 +359,7 @@ export async function updateTask(
       kind,
       days,
       everyCol(next),
+      untilCol(next),
       next.tags ? JSON.stringify(next.tags) : null,
       next.links ? JSON.stringify(next.links) : null,
       updatedAt,

@@ -40,6 +40,12 @@ describe("taskHash", () => {
     expect(taskHash(a)).toBe(taskHash(b));
   });
 
+  it("counts repeatUntil only when present, apart from repeatEvery", () => {
+    expect(taskHash({ ...base, repeatUntil: undefined })).toBe(taskHash(base));
+    expect(taskHash({ ...base, repeatUntil: 5 })).not.toBe(taskHash(base));
+    expect(taskHash({ ...base, repeatUntil: 5 })).not.toBe(taskHash({ ...base, repeatEvery: 5 }));
+  });
+
   it("separates tags absent from tags empty", () => {
     expect(taskHash({ ...base, tags: [] })).not.toBe(taskHash(base));
   });

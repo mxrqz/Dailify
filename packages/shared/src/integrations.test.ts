@@ -4,6 +4,7 @@ import {
   calendarSlot,
   canUseIntegration,
   durationMinutes,
+  minutesToDuration,
   isCalendarEventLink,
   isProviderId,
   matchExternalEvent,
@@ -49,6 +50,8 @@ describe("calendário", () => {
     expect(durationMinutes("2h")).toBe(120);
     expect(durationMinutes("45m")).toBe(45);
     expect(durationMinutes("")).toBe(10);
+    for (const m of [90, 120, 45, 5]) expect(durationMinutes(minutesToDuration(m))).toBe(m);
+    expect(minutesToDuration(60)).toBe("1h");
   });
 
   it("slot: horário, dia inteiro pelo lembrete, e Sem data sem dia", () => {

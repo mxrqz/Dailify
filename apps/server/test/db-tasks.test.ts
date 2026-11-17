@@ -33,6 +33,21 @@ describe("db/tasks", () => {
     expect((await getTask(env.DB, "u2", "a2"))?.repeat).toEqual({ Weekly: ["Monday"] });
   });
 
+  it("repeatUntil é gravado, atualizado e some quando a série acaba", async () => {
+    const until = new Date(2026, 5, 1).getTime();
+    const saved = await insertTask(
+      env.DB,
+      "u4",
+      t({ id: "a4", repeat: "Daily", repeatUntil: until }),
+    );
+    expect(saved?.repeatUntil).toBe(until);
+    expect((await updateTask(env.DB, "u4", "a4", { repeatUntil: until + 1 }))?.repeatUntil).toBe(
+      until + 1,
+    );
+    await updateTask(env.DB, "u4", "a4", { repeat: "Off" });
+    expect((await getTask(env.DB, "u4", "a4"))?.repeatUntil).toBeUndefined();
+  });
+
   it("updateTask never touches completion history", async () => {
     const completedAt = new Date(2026, 0, 16, 9).getTime();
     await insertTask(env.DB, "u3", t({ id: "a3", completed: [completedAt] }));

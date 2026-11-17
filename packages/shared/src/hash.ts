@@ -27,6 +27,8 @@ export function taskHash(task: Omit<Task, "id" | "updatedAt" | "hash">): string 
     task.undated === true,
     // Só entra quando não é 1: assim o hash de toda tarefa anterior ao campo continua o mesmo.
     ...(task.repeatEvery && task.repeatEvery !== 1 ? [task.repeatEvery] : []),
+    // Idem, com rótulo: sem ele um `repeatUntil` sozinho colidiria com um `repeatEvery`.
+    ...(task.repeatUntil !== undefined ? [["until", task.repeatUntil]] : []),
   ]);
 
   let hash = 0x811c9dc5;

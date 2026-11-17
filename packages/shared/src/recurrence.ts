@@ -84,7 +84,10 @@ export function normalizeRepeat(value: unknown): Repeat {
  */
 export function expandRecurringTask(task: Task, month: Date, timeZone?: string): Task[] {
   const detached = new Set(task.exdates ?? []);
-  return expandAll(task, month, timeZone).filter((instance) => !detached.has(instance.date));
+  const until = task.repeatUntil ?? Infinity;
+  return expandAll(task, month, timeZone).filter(
+    (instance) => instance.date <= until && !detached.has(instance.date),
+  );
 }
 
 function expandAll(task: Task, month: Date, timeZone?: string): Task[] {

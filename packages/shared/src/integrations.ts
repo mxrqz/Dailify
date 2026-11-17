@@ -32,6 +32,10 @@ export interface IntegrationStatus {
   account?: string;
   /** Tarefas cuja última propagação falhou: o web mostra "não sincronizado" e oferece reenviar. */
   stale?: string[];
+  /** Importadas que parecem uma tarefa própria: o web oferece juntar ou manter as duas. */
+  duplicates?: { taskId: string; importedId: string }[];
+  /** Tarefas de convite que só o organizador muda: título, data e recorrência travados na UI. */
+  readonly?: string[];
 }
 
 /** Tarefa <-> objeto externo (`integration_links`). */
@@ -53,6 +57,14 @@ export function durationMinutes(duration: string): number {
   const h = /(\d+)\s*h/.exec(duration);
   const m = /(\d+)\s*m/.exec(duration);
   return (h ? Number(h[1]) * 60 : 0) + (m ? Number(m[1]) : 0) || 10;
+}
+
+/** 90 → "1h30m", 60 → "1h", 45 → "45m": o inverso de `durationMinutes` (fim − início do evento). */
+export function minutesToDuration(minutes: number): string {
+  const total = Math.max(0, Math.round(minutes));
+  const h = Math.floor(total / 60);
+  const m = total % 60;
+  return `${h ? `${h}h` : ""}${m || !h ? `${m}m` : ""}`;
 }
 
 /**
@@ -136,6 +148,17 @@ export function matchExternalEvent(task: Task, events: ExternalEvent[]): Externa
           Math.abs(e.start - task.date) <= MATCH_WINDOW)),
   );
 }
+
+/**
+ * A tarefa própria que parece ser esta importada da Agenda (o par que o web oferece juntar). A
+ * regra — mesmo Meet, ou mesmo título ±15 min; série também com a mesma regra e hora de parede no
+ * fuso — chega na Fase 1B do sync; até lá nada é duplicata.
+ */
+export const matchDuplicate: (
+  imported: Task,
+  own: Task[],
+  timeZone: string,
+) => Task | undefined = () => undefined;
 
 const WEEKDAYS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 const list = (items: string[]) =>

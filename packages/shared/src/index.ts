@@ -4,6 +4,7 @@ export * from "./limits";
 export * from "./pricing";
 export * from "./quotas";
 export * from "./recurrence";
+export * from "./rrule";
 export * from "./dates";
 export * from "./timezone";
 export * from "./period";

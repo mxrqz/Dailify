@@ -12,6 +12,8 @@ export interface Task {
   repeat: Repeat;
   /** A cada N períodos do `repeat` (inteiro 2..365), com a fase na `date`; ausente = 1. */
   repeatEvery?: number;
+  /** Fim da série (UNTIL do Google): a expansão para depois desta data. Só o servidor escreve. */
+  repeatUntil?: number; // epoch ms
   tags?: string[];
   links?: string[]; // URLs absolutas http(s), validadas na rota
   completed: number[]; // epoch ms
@@ -27,7 +29,7 @@ export interface Task {
   seriesStart?: number;
 }
 
-export type TaskInput = Omit<Task, "id" | "completed" | "hash" | "repeatEvery"> & {
+export type TaskInput = Omit<Task, "id" | "completed" | "hash" | "repeatEvery" | "repeatUntil"> & {
   id?: string;
   completed?: number[];
   /** `null` volta a 1 — `undefined` some no JSON, e o PATCH (e a fila offline) manteria o antigo. */
