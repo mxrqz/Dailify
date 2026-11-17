@@ -29,7 +29,7 @@ describe("<PlanCards>", () => {
 
   it("o toggle troca para os preços anuais", async () => {
     renderCards();
-    await userEvent.click(screen.getByRole("button", { name: new RegExp(copy.billing.yearly) }));
+    await userEvent.click(screen.getByRole("radio", { name: new RegExp(copy.billing.yearly) }));
 
     expect(screen.getByText(price(PLAN_PRICING.pro.yearly))).toBeInTheDocument();
     expect(screen.getByText(price(PLAN_PRICING.max.yearly))).toBeInTheDocument();

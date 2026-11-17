@@ -15,6 +15,7 @@ vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
 
 import BillingPage from "./billing";
 import { copy } from "@/components/dashboard/copy";
+import { copy as pricingCopy } from "@/components/pricing/copy";
 
 const NO_USAGE: QuotaUsage = { tasks: 0, ai: 0 };
 
@@ -47,12 +48,10 @@ const renderPage = () =>
   );
 
 /**
- * O cartão do plano atual. Escopo importa: a tabela de planos logo abaixo também diz "Tarefas
- * ilimitadas" (é o bullet do Max), e um assert na página inteira leria o anúncio como se fosse
- * o estado da conta.
+ * O cartão do plano atual. Escopo importa: o resto da página (cobrança, histórico) não pode
+ * emprestar texto pro assert do estado da conta.
  */
 function currentPlanCard(): HTMLElement {
-  // `/^Plano (Free|Pro|Max)/` e não `/^Plano/`: o título do card é "Plano e assinatura" e casaria também.
   const heading = screen.getByRole("heading", { name: /^Plano (Free|Pro|Max)/ });
   const card = heading.closest("section");
   if (!card) throw new Error("cartão do plano atual não encontrado");
@@ -65,10 +64,12 @@ describe("<BillingPage>", () => {
     dailify.mockReturnValue(context({ quotas: FREE }));
     renderPage();
 
-    expect(screen.getByText(copy.profile.billingTitle)).toBeInTheDocument();
+    expect(screen.getByText(pricingCopy.account.title)).toBeInTheDocument();
     expect(screen.getByRole("heading", { name: "Plano Free" })).toBeInTheDocument();
     // sem assinatura não há botão de gerenciar plano
-    expect(screen.queryByText(copy.profile.billingManage)).not.toBeInTheDocument();
+    expect(screen.queryByText(pricingCopy.account.manage)).not.toBeInTheDocument();
+    // ...mas o Free tem o caminho pros planos
+    expect(screen.getByRole("link", { name: pricingCopy.account.seePlans })).toBeInTheDocument();
   });
 
   // O segundo bug: a derivação sem dados devolvia unlimited, e quem tinha limite lia "ilimitado".
@@ -78,9 +79,10 @@ describe("<BillingPage>", () => {
 
     const card = within(currentPlanCard());
     expect(card.getByText(copy.quota.names.tasks)).toBeInTheDocument();
-    expect(card.getByText(`0 / ${limitsFor("free").ai}`)).toBeInTheDocument();
+    expect(card.getByText(`0 de ${limitsFor("free").ai}`)).toBeInTheDocument();
     // só tarefas é ilimitada no Free
-    expect(card.getAllByText(`0 / ${copy.quota.unlimited}`)).toHaveLength(1);
+    expect(card.getByText(pricingCopy.account.unlimited.tasks)).toBeInTheDocument();
+    expect(card.queryByText(pricingCopy.account.unlimited.ai)).not.toBeInTheDocument();
   });
 
   it("os créditos de IA aparecem, não só tarefas — e recorrência não é medida", () => {
@@ -97,9 +99,9 @@ describe("<BillingPage>", () => {
     renderPage();
 
     const card = within(currentPlanCard());
-    expect(screen.getByText(copy.profile.billingTitle)).toBeInTheDocument();
+    expect(screen.getByText(pricingCopy.account.title)).toBeInTheDocument();
     expect(card.queryByText(copy.quota.names.tasks)).not.toBeInTheDocument();
-    expect(card.queryByText(new RegExp(copy.quota.unlimited))).not.toBeInTheDocument();
+    expect(card.queryByText(pricingCopy.account.unlimited.tasks)).not.toBeInTheDocument();
   });
 
   it("assinante vê o plano, a próxima cobrança e o botão de gerenciar", () => {
@@ -118,12 +120,13 @@ describe("<BillingPage>", () => {
     renderPage();
 
     expect(screen.getByRole("heading", { name: "Plano Max" })).toBeInTheDocument();
-    expect(screen.getByText(copy.profile.billingManage)).toBeInTheDocument();
+    expect(screen.getByText(pricingCopy.account.manage)).toBeInTheDocument();
+    expect(screen.getByText(pricingCopy.account.nextCharge)).toBeInTheDocument();
 
     const card = within(currentPlanCard());
     // tarefas são ilimitadas no Max; os créditos de IA TÊM teto mesmo no plano de cima.
-    expect(card.getAllByText(`0 / ${copy.quota.unlimited}`)).toHaveLength(1);
-    expect(card.getByText(`0 / ${limitsFor("max").ai}`)).toBeInTheDocument();
+    expect(card.getByText(pricingCopy.account.unlimited.tasks)).toBeInTheDocument();
+    expect(card.getByText(`0 de ${limitsFor("max").ai}`)).toBeInTheDocument();
   });
 
   /**

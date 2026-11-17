@@ -51,10 +51,11 @@ export const copy = {
 
   /** Página `/premium` (escolher plano, pública). */
   page: {
-    eyebrow: "// PLANOS",
-    title: "Escolha o plano perfeito para você",
-    subtitle: "Todos os planos têm tudo. O que muda é quanto cabe.",
-    choosePlan: "Assinar",
+    title: "Planos",
+    subtitle: "Comece grátis. Mude de plano quando quiser.",
+    cycleLabel: "Cobrança",
+    choosePlan: "Assinar {plan}",
+    startFree: "Começar grátis",
     currentPlan: "Seu plano atual",
     signInFirst: "Entre na sua conta pra assinar.",
     checkoutFailed: "Não foi possível abrir o checkout. Tente de novo.",
@@ -62,39 +63,40 @@ export const copy = {
     checkoutCanceled: "Checkout cancelado — nada foi cobrado.",
     haveAccount: "Já tem uma conta?",
     signIn: "Faça login",
-    faqTitle: "Perguntas frequentes",
+    creditsTitle: "O que gasta crédito de IA?",
+    creditsBody:
+      "Áudios, pedidos mais elaborados e ações nas integrações. Tarefas simples, como “comprar pão” ou “reunião toda segunda às 10h30”, não gastam crédito.",
+    /** Só afirmação que o produto cumpre: o checkout roda `payment_method_types: ["card"]`, sem trial. */
+    fine: "Cartão de crédito (Visa, Mastercard e American Express). Cancele quando quiser e use até o fim do período pago.",
   },
 
-  /**
-   * FAQ — só afirmação que o produto cumpre. O checkout roda `payment_method_types: ["card"]` e
-   * `subscription_data` sem `trial_period_days`, então nada de trial nem de Pix/PayPal aqui.
-   */
-  faqs: [
-    {
-      question: "Posso mudar de plano depois?",
-      answer:
-        "Pode, a qualquer momento. Upgrade ou downgrade entram em vigor no próximo ciclo de cobrança.",
-    },
-    {
-      question: "Quais formas de pagamento são aceitas?",
-      answer: "Cartão de crédito (Visa, Mastercard e American Express).",
-    },
-    {
-      question: "Posso cancelar quando quiser?",
-      answer:
-        "Sim. O cancelamento é feito em Premium › Gerenciar plano, e você continua com acesso até o fim do período já pago.",
-    },
-    {
-      question: "O que acontece se eu passar do limite de tarefas?",
-      answer:
-        "Suas tarefas continuam lá e você segue gerenciando elas normalmente — só a criação de novas fica bloqueada até o próximo ciclo ou até você mudar de plano.",
-    },
-  ],
-
-  /** Bloco de planos dentro de `/billing`. */
-  billingSection: {
-    titleFree: "Escolha um plano",
-    titleSubscribed: "Trocar de plano",
-    description: "A cobrança é ajustada proporcionalmente no próximo ciclo.",
+  /** Página `/billing` (assinatura). */
+  account: {
+    title: "Assinatura",
+    currentPlan: "Plano {plan}",
+    freePrice: "Grátis, pra sempre",
+    price: { month: "{amount} por mês", year: "{amount} por ano" },
+    cycle: { month: "Mensal", year: "Anual" },
+    meter: "{used} de {limit}",
+    remaining: "Restam {n}. Renovam em 1º de {month}.",
+    /** O valor da linha de quota sem teto; o gênero segue o nome da quota. */
+    unlimited: {
+      tasks: "Ilimitadas",
+      ai: "Ilimitados",
+    } satisfies Record<QuotaKey, string>,
+    billingTitle: "Cobrança",
+    nextCharge: "Próxima cobrança",
+    paymentMethod: "Forma de pagamento",
+    changePlan: "Trocar de plano",
+    changePlanValue: "Free, Pro ou Max",
+    manage: "Gerenciar assinatura",
+    manageNote:
+      "Troque o cartão, mude o ciclo ou cancele. Você continua com acesso até o fim do período pago.",
+    seePlans: "Ver planos",
+    seePlansNote: "Assine o Pro ou o Max pra ter mais créditos de IA.",
+    history: "Histórico de pagamentos",
+    noInvoices: "Nenhuma fatura ainda.",
+    paid: "Pago",
+    viewInvoice: "Ver fatura de {date}",
   },
 } as const;

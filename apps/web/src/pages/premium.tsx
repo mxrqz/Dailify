@@ -1,14 +1,10 @@
 import { useAuth, useUser } from "@clerk/clerk-react";
+import { InfoIcon } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
 
+import { PageHeader } from "@/components/kit/page-header";
 import { PlanCards, type Cycle } from "@/components/pricing/plan-cards";
-import {
-  Accordion,
-  AccordionContent,
-  AccordionItem,
-  AccordionTrigger,
-} from "@/components/ui/accordion";
 import { Button } from "@/components/ui/button";
 import { PLAN_ID } from "@/consts/conts";
 import type { PlanRole } from "@/consts/pricing";
@@ -16,18 +12,86 @@ import { copy } from "@/components/pricing/copy";
 import { checkout } from "@/functions/api";
 import { toText } from "@/lib/utils";
 
-const PAID_ROLES: readonly PlanRole[] = [PLAN_ID.pro, PLAN_ID.max];
+const ROLES: readonly PlanRole[] = [PLAN_ID.free, PLAN_ID.pro, PLAN_ID.max];
 
 /**
- * Escolher plano — pública, fica fora do `ProtectedRoute` de propósito (é a página de venda). Os
- * cards são o `PlanCards` compartilhado com a landing e o `/billing`.
+ * A tela de Planos, sem Clerk: `currentPlan` indefinido = deslogado (ninguém marcado, o Free vira
+ * "Começar grátis"). O recomendado é o Max (`PLAN_ID.max`), o das orelhinhas.
  */
+export function PlansView({
+  currentPlan,
+  onSelect,
+}: {
+  currentPlan?: string;
+  onSelect: (role: PlanRole, cycle: Cycle) => void;
+}): JSX.Element {
+  return (
+    <main className="mx-auto flex w-full max-w-5xl flex-col pb-10">
+      <PageHeader title={copy.page.title} subtitle={copy.page.subtitle} className="pt-2" />
+
+      <PlanCards
+        className="mt-6 px-4 md:px-0"
+        roles={ROLES}
+        recommended={PLAN_ID.max}
+        currentPlan={currentPlan}
+        renderCta={(role, cycle) => {
+          const name = copy.plans[role].name;
+          if (role === currentPlan) {
+            return (
+              <Button size="lg" variant="secondary" className="w-full" disabled>
+                {copy.page.currentPlan}
+              </Button>
+            );
+          }
+          // Free não tem checkout: deslogado cria a conta; assinante desce de plano pelo portal.
+          if (role === PLAN_ID.free) {
+            return currentPlan ? null : (
+              <Button size="lg" variant="secondary" className="w-full" asChild>
+                <Link to="/signup">{copy.page.startFree}</Link>
+              </Button>
+            );
+          }
+          return (
+            <Button
+              size="lg"
+              variant={role === PLAN_ID.max ? "default" : "secondary"}
+              className="w-full"
+              onClick={() => onSelect(role, cycle)}
+            >
+              {copy.page.choosePlan.replace("{plan}", name)}
+            </Button>
+          );
+        }}
+      />
+
+      <aside className="card mx-4 mt-6 flex gap-3 rounded-lg p-4 md:mx-0">
+        <InfoIcon aria-hidden="true" className="mt-0.5 size-5 flex-none text-ink-secondary" />
+        <div>
+          <h2 className="text-body font-semibold">{copy.page.creditsTitle}</h2>
+          <p className="mt-1 text-subhead text-ink-secondary">{copy.page.creditsBody}</p>
+        </div>
+      </aside>
+
+      <p className="mx-8 mt-5 text-center text-footnote text-balance text-ink-secondary">
+        {copy.page.fine}
+      </p>
+
+      {!currentPlan && (
+        <p className="mt-4 text-center text-subhead text-ink-secondary">
+          {copy.page.haveAccount}{" "}
+          <Link to="/login" className="font-semibold text-ink hover:underline">
+            {copy.page.signIn}
+          </Link>
+        </p>
+      )}
+    </main>
+  );
+}
+
+/** Escolher plano — pública, fica fora do `ProtectedRoute` de propósito (é a página de venda). */
 export default function PremiumPage(): JSX.Element {
   const { getToken } = useAuth();
   const { user } = useUser();
-  // Deslogado cai em "free", que não é um dos cards aqui — então ninguém fica marcado, que é o certo
-  // pra uma página de venda pública.
-  const currentPlan = toText(user?.publicMetadata?.plan, PLAN_ID.free);
 
   const handleSelectPlan = async (role: PlanRole, cycle: Cycle) => {
     const token = await getToken();
@@ -42,59 +106,9 @@ export default function PremiumPage(): JSX.Element {
   };
 
   return (
-    <main className="flex w-full flex-col gap-16 py-12">
-      <header className="mx-auto flex max-w-2xl flex-col items-center gap-4 text-center">
-        <p className="font-mono text-xs uppercase tracking-[0.12em] text-muted-foreground">
-          {copy.page.eyebrow}
-        </p>
-        <h1 className="text-balance text-3xl font-semibold tracking-[-0.02em] text-foreground md:text-4xl">
-          {copy.page.title}
-        </h1>
-        <p className="text-balance text-content-secondary">{copy.page.subtitle}</p>
-      </header>
-
-      <PlanCards
-        roles={PAID_ROLES}
-        recommended={PLAN_ID.max}
-        currentPlan={currentPlan}
-        renderCta={(role, cycle) =>
-          role === currentPlan ? (
-            <Button className="w-full" variant="outline" disabled>
-              {copy.page.currentPlan}
-            </Button>
-          ) : (
-            <Button
-              className="w-full"
-              variant={role === PLAN_ID.max ? "default" : "outline"}
-              onClick={() => handleSelectPlan(role, cycle)}
-            >
-              {copy.page.choosePlan}
-            </Button>
-          )
-        }
-      />
-
-      <section className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-        <h2 className="text-center text-xl font-semibold tracking-[-0.01em] text-foreground">
-          {copy.page.faqTitle}
-        </h2>
-
-        <Accordion type="single" collapsible className="w-full">
-          {copy.faqs.map((faq) => (
-            <AccordionItem key={faq.question} value={faq.question}>
-              <AccordionTrigger className="text-left">{faq.question}</AccordionTrigger>
-              <AccordionContent className="text-content-secondary">{faq.answer}</AccordionContent>
-            </AccordionItem>
-          ))}
-        </Accordion>
-
-        <p className="text-center text-sm text-muted-foreground">
-          {copy.page.haveAccount}{" "}
-          <Link to="/login" className="text-brand-text hover:underline">
-            {copy.page.signIn}
-          </Link>
-        </p>
-      </section>
-    </main>
+    <PlansView
+      currentPlan={user ? toText(user.publicMetadata?.plan, PLAN_ID.free) : undefined}
+      onSelect={handleSelectPlan}
+    />
   );
 }
