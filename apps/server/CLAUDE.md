@@ -14,7 +14,8 @@ through here with a Better Auth session (cookie on the web, bearer in the Tauri 
   testes usam): magic link (`sendMagicLink` monta o link, limite por e-mail, challenge do app),
   Google, `bearer`, `oneTimeToken`, captcha Turnstile só em `/sign-in/magic-link`, `plan` e
   `stripeCustomerId` como `user.additionalFields` (`input: false`), `deleteUser` com
-  `beforeDelete` (cancela Stripe, `revokeAll`) e `afterDelete` (`deleteUserData`). `src/auth.ts` =
+  `beforeDelete` (cancela Stripe, `revokeAll`) e `afterDelete` (`deleteUserData` + `forgetEmail`:
+  `verification`/`magic_link_*` do e-mail e os `verification` vencidos). `src/auth.ts` =
   a instância de módulo (`cloudflare:workers`, e-mail no `waitUntil`). Schema em
   `migrations/0015_better_auth.sql`, gerado por `scripts/auth-schema.ts` (comando no arquivo).
   `scripts/clerk-to-d1.ts` = import único dos usuários do Clerk (`--check` valida contra as
@@ -42,8 +43,8 @@ through here with a Better Auth session (cookie on the web, bearer in the Tauri 
   `openai.ts` (`transcribe` = `gpt-4o-mini-transcribe`; `interpretText` = texto → `AiParse`, o prompt da Mew), `errors.ts` (`fail`),
   `task-input.ts` (validação do body), `push.ts` (Web Push), `email/` (`sendEmail` → um provedor
   por arquivo em `providers/`, hoje o binding `EMAIL` do Cloudflare; `templates/magic-link.ts`).
-- **`src/middleware/auth.ts`** — `requireAuth`: `auth.api.getSession` → `c.get("userId")` e
-  `c.get("plan")`, 401 sem sessão. **`rate-limit.ts`** — `rateLimit("API_LIMITER" |
+- **`src/middleware/auth.ts`** — `requireAuth`: `auth.api.getSession` → `c.get("userId")`;
+  `c.get("plan")` sai de um SELECT no D1 (não do `cookieCache`); 401 sem sessão. **`rate-limit.ts`** — `rateLimit("API_LIMITER" |
   "VOICE_LIMITER")` chaveado por usuário; `"AUTH_LIMITER"` por IP (`cf-connecting-ip`).
 - **`migrations/`** — D1 SQL. `test/` — the vitest suite.
 
@@ -54,14 +55,16 @@ through here with a Better Auth session (cookie on the web, bearer in the Tauri 
 - **Auth**: mount `requireAuth` on a route group, then read `c.get("userId")` / `c.get("plan")` —
   never trust a user id from the request body. IDs `user_…` do Clerk foram preservados no import:
   todas as tabelas e a metadata `clerkUserId` das assinaturas Stripe seguem valendo (não renomear
-  essa chave — assinaturas vivas a carregam). `plan` na web vem do `cookieCache` (5 min): depois
-  do checkout o web precisa de `getSession({ query: { disableCookieCache: true } })`.
+  essa chave — assinaturas vivas a carregam). O gate do servidor lê `plan` do D1; a sessão que o
+  web vê vem do `cookieCache` (5 min): depois do checkout ele precisa de
+  `getSession({ query: { disableCookieCache: true } })`.
 - **Magic link**: o link do e-mail nunca é o GET de verify (scanner de e-mail queimaria o token):
-  web = `${WEB_URL}/verify#token=`, app (`metadata.challenge`) = `${WEB_URL}/auth/app?token=`;
+  web = `${WEB_URL}/verify#token=…[&next=]`, app (`metadata.challenge`) = `${WEB_URL}/auth/app?token=`;
   `WEB_URL` = primeira origem de `ALLOWED_ORIGIN`. Pedido do app grava
   `magic_link_challenge` e o `hooks.before` de `/magic-link/verify` exige `x-mewki-verifier`
-  (S256) **antes** de consumir o token. Limite por e-mail (1/min) conta os `verification` recentes;
-  estourou = não envia e responde igual. Rate limit embutido do Better Auth fica desligado
+  (S256) **antes** de consumir o token. Limite por e-mail (1/min) em `magic_link_sent` (só e-mails
+  que saíram; falha de envio devolve a vaga); estourou = não envia e responde igual. `callbackURL`
+  da `WEB_URL` vira `&next=<path+search>` no hash do link web. Rate limit embutido do Better Auth fica desligado
   (memória por isolate).
 - **Tiering is enforced here, not on the client.** `enforce`/`enforceCreate` (`db/limits.ts`) read
   `limitsFor(c.get("plan"))` (`@dailify/shared`) and count through `COUNTERS`, one per quota; `-1` = unlimited,
@@ -164,6 +167,7 @@ dois passos — aditiva + deploy primeiro, destrutiva depois que o novo estiver 
 against a real D1 (migrations applied in `beforeAll` via `applyD1Migrations`). Stripe/OpenAI/e-mail
 are `vi.mock`ed. Teste de rota troca a sessão por `test/session.ts`
 (`vi.mock("../src/auth", () => import("./session"))` + `mockSession(() => ({ id, plan }))`;
-`seedUser` grava a linha `"user"`). `magic-link.test.ts` e `account-delete.test.ts` usam o Better
+`seedUser` grava a linha `"user"`; com `plan`, o mock grava antes de cada request, porque o
+`requireAuth` lê o plano do D1). `magic-link.test.ts` e `account-delete.test.ts` usam o Better
 Auth de verdade (`auth.api.*`, sem captcha — ele só roda no handler HTTP). Add a test with every route/query change; assert the tier gate and the epoch-ms
 shape. No `as` assertions; see root `CLAUDE.md`.

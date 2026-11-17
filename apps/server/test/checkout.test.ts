@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 
 const { stripeMock, profileMock } = vi.hoisted(() => {
   const stripeMock = {
@@ -31,8 +31,13 @@ vi.mock("../src/lib/user", async (importOriginal) => {
   return { ...actual, billingProfile: profileMock };
 });
 
-import { env } from "cloudflare:test";
+import { env, applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
+
+// O `requireAuth` lê o `plan` do D1.
+beforeAll(async () => {
+  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+});
 
 const post = (body: unknown, headers: Record<string, string> = {}) =>
   app.request(
