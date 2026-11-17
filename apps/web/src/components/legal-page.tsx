@@ -81,7 +81,7 @@ export function LegalPage({
         </nav>
 
         {sections.map((section, i) => (
-          <section key={section.title} id={`s${i + 1}`} className="scroll-mt-15 px-5 pt-8">
+          <section key={section.title} id={`s${i + 1}`} className="scroll-mt-bar px-5 pt-8">
             <h2 className="mb-2 text-title-3 font-semibold text-balance">
               {i + 1}. {section.title}
             </h2>

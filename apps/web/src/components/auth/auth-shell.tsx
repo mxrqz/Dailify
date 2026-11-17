@@ -78,7 +78,7 @@ export function AuthShell({
 
   return (
     <div className="flex min-h-dvh flex-col bg-canvas text-ink">
-      <nav className="flex h-13 items-center px-2">
+      <nav className="flex h-bar items-center px-2">
         {onBack ? (
           <button type="button" onClick={onBack} aria-label={copy.shell.back} className={backClass}>
             <ChevronLeftIcon />

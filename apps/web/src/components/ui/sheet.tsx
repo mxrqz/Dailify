@@ -159,7 +159,7 @@ function SheetContent({
             side === "right" &&
               "data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-right-full inset-y-0 right-0 h-full w-3/4 rounded-l-sheet sm:max-w-sm",
             side === "left" &&
-              "data-[state=closed]:slide-out-to-left-full data-[state=open]:slide-in-from-left-full inset-y-0 left-0 h-full w-76 max-w-5/6 touch-pan-y transition-none rounded-r-sheet px-3 pt-4 pb-safe",
+              "data-[state=closed]:slide-out-to-left-full data-[state=open]:slide-in-from-left-full inset-y-0 left-0 h-full w-76 max-w-5/6 touch-pan-y transition-none rounded-r-sheet px-3 pt-safe pb-safe",
             side === "top" &&
               "data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full inset-x-0 top-0 h-auto rounded-b-sheet",
             // pan-x: o que o motion poria sozinho com `drag="y"` (o `dragListener={false}` tira).
@@ -180,7 +180,7 @@ function SheetContent({
           {showCloseButton && (
             <OverlayClose
               plain={!bottom}
-              className={bottom ? "top-4.5 right-3" : "top-4 right-3"}
+              className={bottom ? "top-4.5 right-3" : "top-safe right-3"}
             />
           )}
           {(bottom || left) && <SheetPrimitive.Close ref={close} hidden />}

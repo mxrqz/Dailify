@@ -536,6 +536,17 @@
   padding-top: env(safe-area-inset-top);
 }
 
+/* Topo de painel de altura cheia (gaveta, folha lateral) e o que rola até debaixo da barra. */
+@utility pt-safe {
+  padding-top: calc(--spacing(4) + env(safe-area-inset-top));
+}
+@utility top-safe {
+  top: calc(--spacing(4) + env(safe-area-inset-top));
+}
+@utility scroll-mt-bar {
+  scroll-margin-top: calc(--spacing(16) + env(safe-area-inset-top));
+}
+
 @utility section-y {
   padding-block: --spacing(20);
   @variant md {

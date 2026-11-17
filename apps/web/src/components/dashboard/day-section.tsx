@@ -114,7 +114,7 @@ export function DaySection({
       {/* content-visibility só no mobile: no desktop cortaria o contorno de soltar (outline-offset). */}
       <section
         id={calendar ? undefined : dayAnchorId(day)}
-        className="flex scroll-mt-16 max-md:[contain-intrinsic-size:auto_20rem] max-md:[content-visibility:auto] flex-col gap-2 rounded-lg outline-offset-4 data-drop-over:outline-2 data-drop-over:outline-dashed data-drop-over:outline-brand"
+        className="flex scroll-mt-bar max-md:[contain-intrinsic-size:auto_20rem] max-md:[content-visibility:auto] flex-col gap-2 rounded-lg outline-offset-4 data-drop-over:outline-2 data-drop-over:outline-dashed data-drop-over:outline-brand"
       >
         <header className="flex items-baseline justify-between gap-3 px-1 pb-1">
           <h2 className="text-title-3 font-semibold">
