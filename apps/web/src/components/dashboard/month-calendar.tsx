@@ -132,7 +132,7 @@ export function MonthCalendar({
   const title = format(month, "MMMM", { locale: ptBR });
 
   return (
-    <div className="fixed inset-0 z-30 overflow-y-auto bg-canvas pb-30 md:static md:z-auto md:overflow-visible md:pb-10">
+    <div className="fixed inset-0 z-30 overflow-y-auto overscroll-contain bg-canvas pb-30 md:static md:z-auto md:overflow-visible md:pb-10">
       <nav
         aria-label={copy.profile.navLabel}
         className="sticky top-0 z-10 flex h-13 items-center justify-between bg-material-bar px-2 backdrop-blur-xl backdrop-saturate-180 md:top-10"

@@ -111,9 +111,10 @@ export function DaySection({
 
   return (
     <ScheduleDrop day={day}>
+      {/* content-visibility só no mobile: no desktop cortaria o contorno de soltar (outline-offset). */}
       <section
         id={calendar ? undefined : dayAnchorId(day)}
-        className="flex scroll-mt-16 flex-col gap-2 rounded-lg outline-offset-4 data-drop-over:outline-2 data-drop-over:outline-dashed data-drop-over:outline-brand"
+        className="flex scroll-mt-16 max-md:[contain-intrinsic-size:auto_20rem] max-md:[content-visibility:auto] flex-col gap-2 rounded-lg outline-offset-4 data-drop-over:outline-2 data-drop-over:outline-dashed data-drop-over:outline-brand"
       >
         <header className="flex items-baseline justify-between gap-3 px-1 pb-1">
           <h2 className="text-title-3 font-semibold">
@@ -132,7 +133,9 @@ export function DaySection({
           <motion.ul
             className="flex flex-col gap-2"
             variants={listVariants}
-            initial={reduce ? "visible" : "hidden"}
+            // Só hoje (e o dia do calendário) entra escalonado: meses que chegam no meio da rolagem
+            // não animam linha por linha.
+            initial={reduce || (!isCurrentDay && !calendar) ? false : "hidden"}
             animate="visible"
           >
             {rows.map((row) =>

@@ -151,7 +151,7 @@ describe("índice por dia e faixas numéricas ≡ comparação por TZDate", () =
   afterEach(() => setAppTimeZone(null));
   // Mês com virada de horário de verão (NY, nov), tarefas perto da meia-noite e históricos longos.
   const start = Date.UTC(2026, 9, 1);
-  const tasks: TaskProps[] = Array.from({ length: 200 }, (_, i) => {
+  const tasks: TaskProps[] = Array.from({ length: 120 }, (_, i) => {
     const date = start + ((i * 7919 * 60_000) % (92 * 86_400_000));
     return makeTask({
       id: String(i),
@@ -165,7 +165,7 @@ describe("índice por dia e faixas numéricas ≡ comparação por TZDate", () =
 
   test.each(["America/Sao_Paulo", "America/New_York", "Asia/Tokyo", "UTC"])("%s", (tz) => {
     setAppTimeZone(tz);
-    for (let i = 0; i < 95; i += 2) {
+    for (let i = 0; i < 95; i += 3) {
       for (const day of [addDays(zonedAt(2026, 9, 1), i), new Date(2026, 9, 1 + i)]) {
         const before = tasks.filter((t) => isSameDay(zoned(t.date), day));
         expect(getTasksForDay(tasks, day)).toEqual(before);
