@@ -23,3 +23,9 @@ CREATE TABLE magic_link_challenge (
   challenge TEXT NOT NULL,
   expires_at INTEGER NOT NULL
 );
+
+-- Último e-mail de magic link que de fato saiu por endereço (minúsculo): o limite de um por minuto.
+CREATE TABLE magic_link_sent (
+  email TEXT PRIMARY KEY,
+  sent_at INTEGER NOT NULL
+);

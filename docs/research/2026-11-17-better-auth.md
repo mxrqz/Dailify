@@ -83,11 +83,17 @@ secret `1x0000000000000000000000000000000AA`.
 
 ## Migração dos usuários (o dono roda, não agente)
 
+A ordem importa: o import (passo 3) roda ANTES do deploy que liga o Better Auth (passo 4). Um login
+depois do deploy cria um `"user"` novo com o mesmo e-mail, e o import falha no `UNIQUE(email)` — de
+propósito (o script não usa `ON CONFLICT DO NOTHING`: pular a linha orfanaria as tarefas do id do
+Clerk em silêncio). Se falhar mesmo assim, juntar o duplicado à mão antes de reaplicar. O SQL gerado
+abre com esse aviso.
+
 1. `wrangler d1 migrations apply dailify --remote` (cria `user/session/account/verification` +
    `magic_link_challenge`).
 2. `CLERK_SECRET_KEY=… bun apps/server/scripts/clerk-to-d1.ts > clerk-import.sql` (gitignored), revisar.
-3. `wrangler d1 execute dailify --remote --file clerk-import.sql`.
-4. Deploy server + web juntos. Clerk fica read-only algumas semanas, depois rotaciona e apaga.
+3. `wrangler d1 execute dailify --remote --file clerk-import.sql` — antes do passo 4.
+4. Só agora: deploy server + web juntos. Clerk fica read-only algumas semanas, depois rotaciona e apaga.
 
 ## Fontes
 

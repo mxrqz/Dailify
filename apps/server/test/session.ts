@@ -1,3 +1,4 @@
+import { env } from "cloudflare:workers";
 import type { Role } from "@dailify/shared";
 
 type Who = { id: string; plan?: Role } | null;
@@ -6,6 +7,7 @@ type Who = { id: string; plan?: Role } | null;
  * Sessão falsa para teste de rota: o `requireAuth` de verdade roda, só o `getSession` sai daqui.
  *   vi.mock("../src/auth", () => import("./session"));
  *   mockSession(() => ({ id: userId, plan: role })); // lido a cada request; `null` = 401
+ * O `requireAuth` lê o `plan` do D1: com `plan`, a linha do usuário é gravada antes (como o webhook).
  */
 let who: () => Who = () => null;
 
@@ -33,7 +35,8 @@ export const auth = {
   api: {
     getSession: async () => {
       const user = who();
-      return user && { user: { plan: "free", ...user }, session: { userId: user.id } };
+      if (user?.plan) await seedUser(env.DB, user.id, { plan: user.plan });
+      return user && { user: { id: user.id }, session: { userId: user.id } };
     },
   },
   handler: () => new Response(null, { status: 404 }),

@@ -66,6 +66,33 @@ describe("auth.api.deleteUser", () => {
     expect(await env.DB.prepare(`SELECT 1 FROM "user" WHERE id=?`).bind(id).first()).toBeNull();
   });
 
+  it("esquece o e-mail: links pendentes, challenges, a vaga do limite e os vencidos", async () => {
+    stripeMock.subscriptions.search.mockResolvedValue({ data: [] });
+    const { headers } = await signedIn("forget@test.local");
+    // Link do app pedido e não usado (passa do limite de um por minuto pela vaga apagada).
+    await env.DB.prepare(`DELETE FROM magic_link_sent`).run();
+    await auth.api.signInMagicLink({
+      body: { email: "forget@test.local", metadata: { challenge: "c".repeat(43) } },
+      headers: new Headers(),
+    });
+    await env.DB.prepare(
+      `INSERT INTO verification (id, identifier, value, expiresAt, createdAt, updatedAt)
+       VALUES ('old', 'x', 'y', '2000-01-01T00:00:00.000Z', '', '')`,
+    ).run();
+
+    await auth.api.deleteUser({ body: {}, headers });
+
+    const count = (sql: string) => env.DB.prepare(sql).first<{ n: number }>();
+    expect(
+      await count(`SELECT COUNT(*) AS n FROM verification WHERE value LIKE '%forget@test.local%'`),
+    ).toEqual({ n: 0 });
+    expect(await count(`SELECT COUNT(*) AS n FROM verification WHERE id='old'`)).toEqual({ n: 0 });
+    expect(await count(`SELECT COUNT(*) AS n FROM magic_link_challenge`)).toEqual({ n: 0 });
+    expect(
+      await count(`SELECT COUNT(*) AS n FROM magic_link_sent WHERE email='forget@test.local'`),
+    ).toEqual({ n: 0 });
+  });
+
   it("apaga os dados mesmo se o cancelamento falhar", async () => {
     stripeMock.subscriptions.search.mockRejectedValue(new Error("stripe down"));
     const { id, headers } = await signedIn("unlucky@test.local");

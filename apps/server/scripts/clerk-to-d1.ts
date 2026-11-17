@@ -45,7 +45,11 @@ const iso = (ms: number) => q(new Date(ms).toISOString());
 const PLANS = ["pro", "max", "admin"];
 
 export function toSql(users: ClerkUser[]): string {
-  const out: string[] = [];
+  const out: string[] = [
+    "-- Apply BEFORE deploying the Better Auth server: a sign-in after that deploy creates a fresh",
+    '-- "user" row for the same email and this import then fails on UNIQUE(email). On that error,',
+    "-- do not skip the row (its tasks would be orphaned): merge the duplicate by hand first.",
+  ];
   for (const u of users) {
     const primary = u.email_addresses.find((e) => e.id === u.primary_email_address_id);
     if (!primary) {
@@ -167,6 +171,7 @@ if (import.meta.main) {
     assert.ok(sql.includes(`'eac_1','1234','google','user_a','email,profile'`), "google account");
     assert.ok(sql.includes("America/Sao_Paulo"), "timezone");
     assert.ok(sql.includes("-- SKIP user_b"), "skip no-email");
+    assert.ok(sql.startsWith("-- Apply BEFORE deploying"), "rollout warning");
     const { Database } = await import("bun:sqlite");
     const db = new Database(":memory:");
     const dir = path.join(import.meta.dir, "../migrations");

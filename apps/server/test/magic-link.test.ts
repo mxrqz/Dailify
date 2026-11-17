@@ -19,8 +19,15 @@ beforeEach(() => sendEmail.mockClear());
 const web = env.ALLOWED_ORIGIN.split(",")[0];
 
 /** Pede o link como o cliente pediria e devolve a URL que foi no e-mail (ou null se não saiu). */
-async function requestLink(email: string, metadata?: Record<string, unknown>) {
-  const res = await auth.api.signInMagicLink({ body: { email, metadata }, headers: new Headers() });
+async function requestLink(
+  email: string,
+  metadata?: Record<string, unknown>,
+  callbackURL?: string,
+) {
+  const res = await auth.api.signInMagicLink({
+    body: { email, metadata, callbackURL },
+    headers: new Headers(),
+  });
   expect(res).toEqual({ status: true });
   const mail = sendEmail.mock.calls.at(-1)?.[1];
   return mail?.to === email ? (/https:\S+/.exec(mail.text)?.[0] ?? null) : null;
@@ -43,11 +50,27 @@ describe("magic link", () => {
     expect(token).toBeTruthy();
   });
 
-  it("um e-mail por endereço por minuto; a resposta não muda", async () => {
-    expect(await requestLink("spam@test.local")).not.toBeNull();
-    sendEmail.mockClear();
-    expect(await requestLink("SPAM@test.local")).toBeNull();
-    expect(sendEmail).not.toHaveBeenCalled();
+  it("um e-mail por endereço por minuto, contado só nos enviados; a resposta não muda", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const t0 = Date.now();
+      expect(await requestLink("spam@test.local")).not.toBeNull();
+      vi.setSystemTime(t0 + 30_000);
+      expect(await requestLink("SPAM@test.local")).toBeNull();
+      // 70 s depois do primeiro (40 s do suprimido): o suprimido não reinicia a contagem.
+      vi.setSystemTime(t0 + 70_000);
+      expect(await requestLink("spam@test.local")).not.toBeNull();
+      expect(sendEmail).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("callbackURL da WEB_URL vira `next` (só path+search); de outra origem é ignorado", async () => {
+    const url = await requestLink("next@test.local", undefined, `${web}/settings?tab=plan`);
+    expect(url).toMatch(/#token=[A-Za-z]{32}&next=%2Fsettings%3Ftab%3Dplan$/);
+    const evil = await requestLink("evil@test.local", undefined, "https://evil.example/settings");
+    expect(evil).toMatch(/#token=[A-Za-z]{32}$/);
   });
 
   describe("pedido pelo app (challenge S256)", () => {
