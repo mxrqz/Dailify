@@ -18,8 +18,11 @@ export default defineConfig(async ({ mode }) => ({
   plugins: [
     react(),
     tailwindcss(),
-    // mkcert installs a local CA (needs sudo) — skip under vitest
-    ...(process.env.VITEST ? [] : [mkcert()]),
+    // mkcert installs a local CA (needs sudo) — skip under vitest. A phone doesn't trust that CA,
+    // so `tauri android|ios dev` serves plain http (devUrl in tauri.android.conf.json).
+    ...(process.env.VITEST || /android|ios/.test(process.env.TAURI_ENV_PLATFORM ?? "")
+      ? []
+      : [mkcert()]),
 
     // Sem service worker o app nem abre sem rede, e todo o cache local do `functions/offline.ts`
     // ficaria inalcançável. `autoUpdate`: versão nova entra sozinha, sem prompt — o app é de uso

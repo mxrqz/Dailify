@@ -1,4 +1,7 @@
 {
+  "build": {
+    "devUrl": "http://localhost:1420"
+  },
   "app": {
     "windows": [
       {
