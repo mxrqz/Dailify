@@ -118,6 +118,8 @@ export const copy = {
     undatedOn: "Sim · A qualquer hora",
     undatedOff: "Não",
     undatedChip: "A qualquer hora",
+    // Subtítulo da tarefa aberta: "Amanhã, 15:00 às 16:00".
+    when: "{day}, {start} às {end}",
     reminder: "Lembrete",
     noReminder: "Sem lembrete",
     duration: "Duração",
