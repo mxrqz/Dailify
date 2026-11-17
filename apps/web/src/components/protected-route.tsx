@@ -76,7 +76,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   // que é o comportamento seguro: a UI se esconde e a criação não é bloqueada.
   // Relê também no `quotaNonce`, que a revalidação lá embaixo incrementa: `bumpUsage` só sobe,
   // então sem uma releitura quem cria 30 tarefas e apaga 20 fica travado no 30 a sessão inteira.
-  const now = useNow(60_000);
+  const now = useNow("day");
   const quotaYear = now.getFullYear();
   const quotaMonth = now.getMonth();
   const [quotaNonce, setQuotaNonce] = useState(0);
