@@ -9,3 +9,6 @@ Generated components (shadcn, config in root `components.json`). Treat as vendor
 - Focus rings and `aria-invalid` states use `/opacity` (shadcn defaults); leave them unless the
   solid-color task (`k00`) says otherwise.
 - App-specific components belong one level up in `src/components/`, not here.
+- Editados à mão pelo redesign mobile (não regenere sem refazer): `dialog.tsx` e `sheet.tsx` (vidro
+  com scrim, `OverlayClose`, `showCloseButton`, folha de baixo com puxador) e `button.tsx` (variantes
+  e tamanhos do DS). As peças que não são shadcn moram em `../kit/` (ver `../CLAUDE.md`).

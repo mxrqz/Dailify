@@ -3,6 +3,42 @@
 React 18 + Vite + TypeScript. App components live here at the top level; `ui/` holds shadcn
 primitives (see `ui/CLAUDE.md`). `@/` resolves to `src/`.
 
+## Kit do redesign mobile — `kit/`
+
+Peças apresentacionais (props → markup, sem `useDailify`/Clerk): o container busca os dados e passa.
+Toda string visível vem de `copy` (os defaults "Fechar"/"Cancelar"/"Remover" estão em `copy.kit`).
+
+- `ListGroup({ title?, footer?, compact? })` e `ListRow({ icon?, label, sublabel?, value?, trailing?, below?, accessory?, danger?, href?, onClick?, asChild? })`
+  — lista agrupada do iOS. A linha vira `<a>` com `href`, `<button>` com `onClick` (funciona sob
+  um `DialogTrigger asChild`), `<div>` sem nenhum; `asChild` pra um `<Link>`. `accessory` é
+  `"chevron"` ou `"external"`. Separador só entre linhas. `compact` é o grupo de dentro de folha
+  (raio 14, linhas de 48). Espaço entre grupos é de quem usa (`gap-7`).
+- `SegmentedControl({ value, onValueChange, options, aria-label })` — radiogroup em cápsula, thumb
+  `ink`; já ignora o `""` do Radix. `className="w-32 flex-none"` pra versão estreita ao lado do rótulo.
+- `Switch({ checked, onCheckedChange, aria-label })` — `role="switch"`, `ink` ligado.
+- `Chip({ icon?, variant?: "action" | "select", size?: "default" | "sm", pressed?, onRemove? })` —
+  raio 10 pra ação/toggle, cápsula (`select`) só pra escolha; ref/props vão pro botão principal.
+- `PageHeader({ title, subtitle?, bar?, trailing? })` — barra de material sticky + Large Title.
+- `ProgressRing({ value, max, label })` — anel de 40px com "feitas/total".
+- `ActionSheet({ open, onOpenChange, title, description?, actions, cancelLabel? })` — pergunta do
+  iOS (opções + Cancelar em vidro). `RecurrenceScopeDialog` já usa.
+- `Button` (`ui/button`): `default` (brand), `secondary` (fill), `ghost`, `soft-danger` (brand-soft +
+  brand-text, o "Encerrar"), `link`; `outline` é legado. Tamanhos `sm` 32 / `default` 44 / `lg` 52 /
+  `icon` 44, raio pela altura.
+
+**Superfícies** (utilities do `global.css`): `card` = surface + contorno de 1px (`--card-edge`);
+`glass` = vidro de overlay (sheet, gaveta, sidebar, dialog, action sheet — popover não); `scrim` =
+fundo atrás do overlay. Dentro do `glass`, `fill`/`fill-pressed`/`surface` sobem um tom sozinhos.
+Regras do vidro: nenhum ancestral com `opacity<1`/`filter`/`mask`/`mix-blend-mode` (o fade de um
+wrapper do `AnimatePresence` mata o blur: anime o próprio painel), só transform/opacity, no máximo
+duas camadas, e sem `overflow-hidden` no próprio vidro (corta o fio de luz do topo; role um filho).
+`Sheet side="bottom"` (topo de 32px + puxador) e `side="left"` (gaveta de 304px) e `DialogContent`
+já são vidro sobre scrim — não passe `bg-*`/`border-*` pra eles. Texto: `text-title-1` (34),
+`text-title-3` (22), `text-body` (17), `text-subhead` (15), `text-footnote` (13), `text-xs` (12).
+
+Conferir visualmente sem dev server: o harness de preview (`SCRATCH/preview/README.md` do
+orquestrador) builda stories e tira screenshot a 390px nos dois temas.
+
 ## Shared state — `dailifyContext.tsx`
 
 Single source of truth via `useDailify()`: `tasks`, `selectedDay`, `targetDay`, `loadedMonths`,

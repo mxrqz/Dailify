@@ -101,7 +101,7 @@ export function DeleteAccount(): JSX.Element | null {
           </Button>
 
           <Button
-            variant="destructive"
+            variant="soft-danger"
             disabled={!confirmed || deleting}
             onClick={() => void handleDelete()}
           >

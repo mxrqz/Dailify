@@ -138,7 +138,7 @@ export function IntegrationsGroup(): JSX.Element {
                     <Button variant="outline">{copy.form.cancel}</Button>
                   </DialogClose>
                   <DialogClose asChild>
-                    <Button variant="destructive" onClick={() => void disconnect(id)}>
+                    <Button variant="soft-danger" onClick={() => void disconnect(id)}>
                       {t.disconnect}
                     </Button>
                   </DialogClose>
@@ -163,7 +163,7 @@ export function IntegrationsGroup(): JSX.Element {
           control = (
             <Button
               size="sm"
-              variant={revoked ? "destructive" : "default"}
+              variant={revoked ? "soft-danger" : "default"}
               disabled={disabled}
               onClick={() => void connect(id)}
               className={button}
