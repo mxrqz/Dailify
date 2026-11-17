@@ -29,8 +29,8 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
   return (
     <header
       className={cn(
-        "sticky top-0 z-20 flex h-13 w-full shrink-0 items-center gap-3 bg-material-bar backdrop-blur-xl backdrop-saturate-180",
-        "md:h-10 md:border-b md:border-surface-line md:bg-surface-page md:backdrop-blur-none",
+        "sticky top-0 z-20 flex h-13 w-full shrink-0 items-center gap-3 bg-material-bar-solid",
+        "md:h-10 md:border-b md:border-surface-line md:bg-surface-page",
         className,
       )}
     >

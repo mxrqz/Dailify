@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
@@ -71,6 +71,32 @@ describe("<SheetContent side='bottom'>", () => {
     expect(screen.getByRole("dialog", { name: "Dentista" })).toBeInTheDocument();
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
+  });
+
+  // O jsdom não tem animação CSS: aqui o `animate-out` vira o animationName que o Presence lê.
+  it("o scrim sai junto do painel, não some num quadro", async () => {
+    const real = window.getComputedStyle;
+    const spy = vi.spyOn(window, "getComputedStyle").mockImplementation((el) => {
+      const style = real(el);
+      return new Proxy(style, {
+        get: (target, key) => {
+          if (key === "animationName")
+            return el.getAttribute("data-state") === "closed" ? "exit" : "enter";
+          const value: unknown = Reflect.get(target, key);
+          return typeof value === "function" ? value.bind(target) : value;
+        },
+      });
+    });
+    try {
+      render(<Controlled />);
+      await userEvent.keyboard("{Escape}");
+      expect(document.querySelector("[data-slot=sheet-overlay]")).toHaveAttribute(
+        "data-state",
+        "closed",
+      );
+    } finally {
+      spy.mockRestore();
+    }
   });
 
   it("nem o X (o fechar escondido do arrasto não aparece pra ninguém)", async () => {
