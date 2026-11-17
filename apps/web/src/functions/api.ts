@@ -12,7 +12,7 @@ import type {
   ProviderId,
 } from "@dailify/shared";
 import { apiURL } from "@/consts/conts";
-import { authHeaders } from "@/lib/auth";
+import { authClient, authHeaders } from "@/lib/auth";
 import { appTimeZone, zoned } from "./zone";
 
 /**
@@ -75,6 +75,8 @@ async function request<T>(
   const body = await res.json().catch(() => undefined);
 
   if (!res.ok) {
+    // Sessão morta no servidor: o gate relê o get-session e decide; a escrita segue na fila.
+    if (res.status === 401) authClient.$store.notify("$sessionSignal");
     return {
       error: {
         message: serverMessage(body) ?? `O servidor falhou (${res.status}).`,

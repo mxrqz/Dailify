@@ -9,6 +9,8 @@ import {
   flushQueue,
   readCachedTasks,
   readCachedUndated,
+  readLastUser,
+  rememberUser,
 } from "@/functions/offline";
 import { initialMonths } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
@@ -27,7 +29,11 @@ const CACHE_AFTER_MS = 1_000;
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const session = useSession();
   const isLoaded = !session.isPending;
-  const userId = session.data?.user.id;
+  const user = session.data?.user;
+  // Rede ou 5xx no get-session não é sair: segue com quem estava logado e pinta o cache. Só um
+  // 401 (ou resposta sem sessão) manda pro /login.
+  const unreachable = !user && session.error && session.error.status !== 401;
+  const userId = user?.id ?? (unreachable ? readLastUser()?.id : undefined);
   const {
     tasks,
     selectedDay,
@@ -46,6 +52,10 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   } = useDailify();
 
   const location = useLocation();
+
+  useEffect(() => {
+    if (user) rememberUser(user);
+  }, [user]);
 
   // Sem dependência de mês: Sem data e preferências valem para a conta toda.
   const loadUndated = async () => {

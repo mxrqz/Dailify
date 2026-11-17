@@ -5,7 +5,8 @@ import { copy } from "@/components/dashboard/copy";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PLAN_ID, planMap } from "@/consts/conts";
 import { useQuotas } from "@/hooks/useQuotas";
-import { authClient, planOf, useSession } from "@/lib/auth";
+import { planOf, useSession } from "@/lib/auth";
+import { signOut } from "@/lib/native-auth";
 import { cn } from "@/lib/utils";
 import { DashboardButton } from "./dashboard-button";
 import { PremiumButton } from "./premium-button";
@@ -124,7 +125,7 @@ export function NavItems(): JSX.Element {
           : undefined
       }
       credits={loading || ai.unlimited ? undefined : { used: ai.used, limit: ai.limit }}
-      onSignOut={() => void authClient.signOut().then(() => navigate("/"))}
+      onSignOut={() => void signOut().then(() => navigate("/"))}
     />
   );
 }

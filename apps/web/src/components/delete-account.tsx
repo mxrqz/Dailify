@@ -19,6 +19,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { clearLocal } from "@/functions/offline";
 import { authClient, useSession } from "@/lib/auth";
+import { signOut } from "@/lib/native-auth";
 
 /**
  * Excluir a conta. O trabalho pesado é do servidor: `deleteUser()` roda o `beforeDelete` /
@@ -50,7 +51,7 @@ export function DeleteAccount(): JSX.Element | null {
       // Sessão mais velha que o `freshAge` do servidor: só uma entrada nova autoriza excluir.
       if (error.code === "SESSION_EXPIRED") {
         toast.error(copy.profile.deleteReauth);
-        await authClient.signOut().catch(() => undefined);
+        await signOut().catch(() => undefined);
         navigate("/login");
         return;
       }
@@ -60,7 +61,7 @@ export function DeleteAccount(): JSX.Element | null {
 
     clearLocal(user.id);
     // A sessão já morreu com a conta; o signOut só limpa o cookie, e a página inteira recarrega.
-    await authClient.signOut().catch(() => undefined);
+    await signOut().catch(() => undefined);
     window.location.assign("/");
   };
 
