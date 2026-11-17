@@ -1,6 +1,6 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
 
-const { stripeMock, getUserMock } = vi.hoisted(() => {
+const { stripeMock } = vi.hoisted(() => {
   const stripeMock = {
     checkout: { sessions: { create: vi.fn() } },
     billingPortal: { sessions: { create: vi.fn() } },
@@ -8,7 +8,7 @@ const { stripeMock, getUserMock } = vi.hoisted(() => {
     invoices: { createPreview: vi.fn(), list: vi.fn() },
     webhooks: { constructEventAsync: vi.fn() },
   };
-  return { stripeMock, getUserMock: vi.fn() };
+  return { stripeMock };
 });
 
 vi.mock("stripe", () => {
@@ -19,18 +19,16 @@ vi.mock("stripe", () => {
   return { default: MockStripe };
 });
 
-vi.mock("@clerk/hono", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@clerk/hono")>();
-  return { ...actual, getAuth: vi.fn(() => ({ userId: "u1" })) };
-});
+vi.mock("../src/auth", () => import("./session"));
+import { mockSession, seedUser } from "./session";
+mockSession(() => ({ id: "u1" }));
 
-vi.mock("../src/lib/clerk", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/lib/clerk")>();
-  return { ...actual, clerk: vi.fn(() => ({ users: { getUser: getUserMock } })) };
-});
-
-import { env } from "cloudflare:test";
+import { env, applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
+
+beforeAll(async () => {
+  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+});
 
 describe("GET /billing/payment-details", () => {
   beforeEach(() => {
@@ -38,13 +36,13 @@ describe("GET /billing/payment-details", () => {
   });
 
   it("400s when the user has no Stripe customer id", async () => {
-    getUserMock.mockResolvedValue({ privateMetadata: {} });
+    await seedUser(env.DB, "u1");
     const res = await app.request("/billing/payment-details", {}, env);
     expect(res.status).toBe(400);
   });
 
   it("returns null when there's no active subscription", async () => {
-    getUserMock.mockResolvedValue({ privateMetadata: { stripeCustomerId: "cus_1" } });
+    await seedUser(env.DB, "u1", { stripeCustomerId: "cus_1" });
     stripeMock.subscriptions.list.mockResolvedValue({ data: [] });
     const res = await app.request("/billing/payment-details", {}, env);
     expect(res.status).toBe(200);
@@ -52,7 +50,7 @@ describe("GET /billing/payment-details", () => {
   });
 
   it("maps the Stripe invoice preview to the PaymentDetails DTO", async () => {
-    getUserMock.mockResolvedValue({ privateMetadata: { stripeCustomerId: "cus_1" } });
+    await seedUser(env.DB, "u1", { stripeCustomerId: "cus_1" });
     stripeMock.subscriptions.list.mockResolvedValue({ data: [{ id: "sub_1" }] });
     stripeMock.invoices.createPreview.mockResolvedValue({
       lines: {
@@ -88,13 +86,13 @@ describe("GET /billing/invoices", () => {
   });
 
   it("400s when the user has no Stripe customer id", async () => {
-    getUserMock.mockResolvedValue({ privateMetadata: {} });
+    await seedUser(env.DB, "u1");
     const res = await app.request("/billing/invoices", {}, env);
     expect(res.status).toBe(400);
   });
 
   it("maps Stripe invoices + their subscription's payment method to the Invoice DTO", async () => {
-    getUserMock.mockResolvedValue({ privateMetadata: { stripeCustomerId: "cus_1" } });
+    await seedUser(env.DB, "u1", { stripeCustomerId: "cus_1" });
     stripeMock.invoices.list.mockResolvedValue({
       data: [
         {

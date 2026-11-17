@@ -14,15 +14,9 @@ vi.mock("openai", () => {
   return { default: MockOpenAI };
 });
 
-vi.mock("@clerk/hono", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@clerk/hono")>();
-  return { ...actual, getAuth: vi.fn(() => ({ userId })) };
-});
-
-vi.mock("../src/lib/clerk", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/lib/clerk")>();
-  return { ...actual, getUserRole: vi.fn(async () => role) };
-});
+vi.mock("../src/auth", () => import("./session"));
+import { mockSession } from "./session";
+mockSession(() => ({ id: userId, plan: role }));
 
 import { env, applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";

@@ -1,9 +1,8 @@
 import { describe, it, expect, vi, beforeAll } from "vitest";
 
-vi.mock("@clerk/hono", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@clerk/hono")>();
-  return { ...actual, getAuth: vi.fn(() => ({ userId: "u4" })) };
-});
+vi.mock("../src/auth", () => import("./session"));
+import { mockSession } from "./session";
+mockSession(() => ({ id: "u4" }));
 
 import { env } from "cloudflare:test";
 import { applyD1Migrations } from "cloudflare:test";

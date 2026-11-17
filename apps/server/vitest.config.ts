@@ -55,12 +55,11 @@ export default defineConfig({
             TEST_MIGRATIONS: migrations,
             // Fixo: senão o .env local (localhost) vaza pros testes de CORS/redirect do Stripe.
             ALLOWED_ORIGIN: "https://dailify.mxrqz.com,https://mewki.mxrqz.com",
-            // Dummy, syntactically-valid Clerk keys so clerkMiddleware() initializes in tests.
-            // No token is ever sent in this phase's tests, so no real Clerk network call happens.
-            CLERK_SECRET_KEY: "sk_test_00000000000000000000000000000000000000000000",
-            CLERK_PUBLISHABLE_KEY: "pk_test_ZXhhbXBsZS5jbGVyay5hY2NvdW50cy5kZXYk",
-            // Svix secret de teste — o webhook do Clerk é assinado com ele em clerk-webhook.test.ts.
-            CLERK_WEBHOOK_SECRET: "whsec_dGVzdHNlY3JldA==",
+            // Better Auth de verdade sobre o D1 de teste (magic-link.test.ts). O e-mail é mockado
+            // (vi.mock de lib/email) e o captcha só roda no handler HTTP, não no `auth.api`.
+            BETTER_AUTH_SECRET: "test-secret-0123456789abcdefghijklmnopqrstuvwxyz",
+            BETTER_AUTH_URL: "https://api.mewki.mxrqz.com",
+            TURNSTILE_SECRET_KEY: "1x0000000000000000000000000000000AA",
             // Par VAPID do exemplo da RFC 8291: chaves P-256 reais, mas de domínio público. O envio
             // em si é mockado nos testes; elas só precisam existir e ter o formato certo.
             VAPID_PUBLIC_KEY:

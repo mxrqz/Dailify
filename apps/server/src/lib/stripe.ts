@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import type { Invoice, PaymentDetails, Role } from "@dailify/shared";
 import type { Env } from "../index";
-import { updateUserBillingDetails, updateUserRole } from "./clerk";
+import { updateUserRole } from "./user";
 
 export const stripeClient = (env: Env): Stripe =>
   new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() });
@@ -89,47 +89,27 @@ function knownInvoiceStatus(status: Stripe.Invoice.Status | null): KnownInvoiceS
   return status !== null && isKnownInvoiceStatus(status) ? status : null;
 }
 
-/** Handles the `invoice.paid` webhook event: resolves the paying user and syncs their Clerk metadata. */
-export async function handleInvoicePaid(
-  env: Env,
-  stripe: Stripe,
-  invoice: Stripe.Invoice,
-): Promise<void> {
-  const clerkUserId = invoice.parent?.subscription_details?.metadata?.clerkUserId;
+/**
+ * `invoice.paid`: grava o plano e o customer de quem pagou. A chave `clerkUserId` na metadata da
+ * assinatura é histórica (gravada no checkout desde o Clerk) e segue sendo o id do usuário.
+ */
+export async function handleInvoicePaid(env: Env, invoice: Stripe.Invoice): Promise<void> {
+  const userId = invoice.parent?.subscription_details?.metadata?.clerkUserId;
   const subId = subscriptionId(invoice.parent?.subscription_details?.subscription);
-  if (typeof clerkUserId !== "string" || !subId) return;
+  if (typeof userId !== "string" || !subId) return;
 
-  const subscription = await stripe.subscriptions.retrieve(subId, {
-    expand: ["default_payment_method"],
-  });
-  const paymentMethod = paymentMethodOf(subscription.default_payment_method);
-  const card = paymentMethod?.card;
-  const info = priceInfo(env, priceIdOf(invoice.lines.data[0]) ?? "");
-
-  await updateUserRole(env, {
-    clerkUserId,
-    role: info?.role ?? "free",
+  await updateUserRole(env.DB, {
+    userId,
+    role: priceInfo(env, priceIdOf(invoice.lines.data[0]) ?? "")?.role ?? "free",
     stripeCustomerId: customerId(invoice.customer),
-  });
-  await updateUserBillingDetails(env, clerkUserId, {
-    nextPaymentDate: new Date(subscription.items.data[0].current_period_end * 1000).toISOString(),
-    cardBrand: card?.brand,
-    cardLast4: card?.last4 ?? undefined,
-    expMonth: card?.exp_month,
-    expYear: card?.exp_year,
-    walletType: card?.wallet?.type,
-    nextAmount: invoice.amount_due,
-    recurring: info?.recurring ?? "month",
-    currency: invoice.currency,
-    paymentMethodType: paymentMethod?.type,
   });
 }
 
 /**
- * Cancela o que o usuário apagado ainda tem ativo. A busca é por `metadata.clerkUserId` porque
- * quando o webhook chega o usuário já não existe no Clerk — o `stripeCustomerId` que ficava no
- * `privateMetadata` foi embora com ele, e a metadata da própria assinatura (gravada no checkout)
- * é a única trilha que sobra. Devolve quantas cancelou.
+ * Cancela o que o usuário apagado ainda tem ativo. A busca é por `metadata.clerkUserId` (o id do
+ * usuário, gravado no checkout) e não pelo customer: conta importada do Clerk pode não ter o
+ * `stripeCustomerId` gravado, e a metadata da assinatura é a trilha que sempre existe. Devolve
+ * quantas cancelou.
  */
 export async function cancelSubscriptionsOf(stripe: Stripe, clerkUserId: string): Promise<number> {
   const found = await stripe.subscriptions.search({

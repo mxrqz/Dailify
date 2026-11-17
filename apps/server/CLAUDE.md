@@ -1,16 +1,27 @@
 # `apps/server` — Hono backend (Cloudflare Workers + D1)
 
 The only writer of app data. The web app never touches D1/Stripe/OpenAI directly — everything goes
-through here with a Clerk bearer token. Deployed as the `dailify-server` Worker (api.mewki.mxrqz.com; api.dailify.mxrqz.com still routes).
+through here with a Better Auth session (cookie on the web, bearer in the Tauri app). Deployed as the `dailify-server` Worker (api.mewki.mxrqz.com; api.dailify.mxrqz.com still routes).
 
 ## Layout
 
-- **`src/index.ts`** — app root: CORS (`ALLOWED_ORIGIN`), `/health` (before auth), `clerkMiddleware`,
-  route mounts, and the `app.onError` JSON envelope (`{ error }`, 500). `Env` (the bindings +
-  secrets interface) lives here — import `Env` from `../index`, don't redeclare it.
+- **`src/index.ts`** — app root: CORS (`ALLOWED_ORIGIN`, `credentials`, expõe `set-auth-token`),
+  `/health` (before auth), Better Auth montado em `/auth/*` (`AUTH_LIMITER` por IP em
+  `/auth/sign-in/*` e `/auth/magic-link/*`), route mounts, and the `app.onError` JSON envelope
+  (`{ error }`, 500). `Env` (the bindings + secrets interface) lives here — import `Env` from
+  `../index`, don't redeclare it. `src/env.d.ts` dá o mesmo tipo ao `env` de `cloudflare:workers`.
+- **Auth (Better Auth)** — `src/auth-options.ts` = `authOptions(env)` pura (a CLI do schema e os
+  testes usam): magic link (`sendMagicLink` monta o link, limite por e-mail, challenge do app),
+  Google, `bearer`, `oneTimeToken`, captcha Turnstile só em `/sign-in/magic-link`, `plan` e
+  `stripeCustomerId` como `user.additionalFields` (`input: false`), `deleteUser` com
+  `beforeDelete` (cancela Stripe, `revokeAll`) e `afterDelete` (`deleteUserData`). `src/auth.ts` =
+  a instância de módulo (`cloudflare:workers`, e-mail no `waitUntil`). Schema em
+  `migrations/0015_better_auth.sql`, gerado por `scripts/auth-schema.ts` (comando no arquivo).
+  `scripts/clerk-to-d1.ts` = import único dos usuários do Clerk (`--check` valida contra as
+  migrations).
 - **`src/routes/`** — `tasks.ts` (CRUD + month read + `GET /tasks/undated`), `settings.ts` (`GET`/`PUT /settings`, `weekStart`), `voice.ts` (`POST /tasks/voice` + `POST /tasks/parse`, the AI routes),
   `billing.ts` (checkout, portal, payment details, invoices, `POST /webhooks/stripe`),
-  `push.ts` (VAPID key + subscriptions), `clerk-webhook.ts` (`user.deleted` → wipe),
+  `push.ts` (VAPID key + subscriptions),
   `integrations.ts` (`GET /integrations`, `POST /:p/connect`, `POST /:p/callback`, `DELETE /:p`,
   `POST /integrations/google-calendar/events` = a action `create-event`, `POST …/events/:taskId/sync`
   = o retry do "não sincronizado", `POST …/duplicates/:importedId {action: merge|keep}` = resolve
@@ -27,22 +38,33 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
   tarefas (full 30 dias ou incremental pelo syncToken; 410 = full). Roda no `waitUntil` do `GET /tasks`
   e no cron (25 conexões mais antigas); o `UPDATE … RETURNING` do `synced_at` é throttle de 60 s e
   lock. LWW por `updated` × `updatedAt`, eco por `remote_updated`; nunca chama a propagação.
-- **`src/lib/`** — `clerk.ts` (client + `getUserRole` from `privateMetadata.plan`), `stripe.ts`,
+- **`src/lib/`** — `user.ts` (`roleOf`, `billingProfile`, `updateUserRole` sobre a tabela `"user"`), `stripe.ts`,
   `openai.ts` (`transcribe` = `gpt-4o-mini-transcribe`; `interpretText` = texto → `AiParse`, o prompt da Mew), `errors.ts` (`fail`),
-  `task-input.ts` (validação do body), `push.ts` (Web Push), `svix.ts` (assinatura do webhook Clerk).
-- **`src/middleware/auth.ts`** — `requireAuth` sets `c.get("userId")`; re-exports `clerkMiddleware`.
-  **`rate-limit.ts`** — `rateLimit("API_LIMITER" | "VOICE_LIMITER")`, chaveado por usuário.
+  `task-input.ts` (validação do body), `push.ts` (Web Push), `email/` (`sendEmail` → um provedor
+  por arquivo em `providers/`, hoje o binding `EMAIL` do Cloudflare; `templates/magic-link.ts`).
+- **`src/middleware/auth.ts`** — `requireAuth`: `auth.api.getSession` → `c.get("userId")` e
+  `c.get("plan")`, 401 sem sessão. **`rate-limit.ts`** — `rateLimit("API_LIMITER" |
+  "VOICE_LIMITER")` chaveado por usuário; `"AUTH_LIMITER"` por IP (`cf-connecting-ip`).
 - **`migrations/`** — D1 SQL. `test/` — the vitest suite.
 
 ## Non-obvious invariants
 
 - **Every route returns errors via `fail(c, status, msg)`** → `{ error: string }`. The web client
   checks `res.ok`; a non-ok body is always this shape. Don't hand-roll error JSON.
-- **Auth**: mount `requireAuth` on a route group, then read `c.get("userId")` — never trust a
-  user id from the request body. `getUserRole` does a **direct** `getUser(id)` (the old server's
-  `getUserList().find()` silently broke past 10 users — don't reintroduce that).
+- **Auth**: mount `requireAuth` on a route group, then read `c.get("userId")` / `c.get("plan")` —
+  never trust a user id from the request body. IDs `user_…` do Clerk foram preservados no import:
+  todas as tabelas e a metadata `clerkUserId` das assinaturas Stripe seguem valendo (não renomear
+  essa chave — assinaturas vivas a carregam). `plan` na web vem do `cookieCache` (5 min): depois
+  do checkout o web precisa de `getSession({ query: { disableCookieCache: true } })`.
+- **Magic link**: o link do e-mail nunca é o GET de verify (scanner de e-mail queimaria o token):
+  web = `${WEB_URL}/verify#token=`, app (`metadata.challenge`) = `${WEB_URL}/auth/app?token=`;
+  `WEB_URL` = primeira origem de `ALLOWED_ORIGIN`. Pedido do app grava
+  `magic_link_challenge` e o `hooks.before` de `/magic-link/verify` exige `x-mewki-verifier`
+  (S256) **antes** de consumir o token. Limite por e-mail (1/min) conta os `verification` recentes;
+  estourou = não envia e responde igual. Rate limit embutido do Better Auth fica desligado
+  (memória por isolate).
 - **Tiering is enforced here, not on the client.** `enforce`/`enforceCreate` (`db/limits.ts`) read
-  `limitsFor(role)` (`@dailify/shared`) and count through `COUNTERS`, one per quota; `-1` = unlimited,
+  `limitsFor(c.get("plan"))` (`@dailify/shared`) and count through `COUNTERS`, one per quota; `-1` = unlimited,
   `0` = blocked. The client gate is cosmetic — this is the real one (epic `d69`).
 - **Todo body de tarefa passa por `lib/task-input.ts`** (`parseNewTask` / `parseTaskFields`) — não
   validar campo solto na rota. O `id` do POST **pode** vir do cliente (`parseClientId` valida só o
@@ -73,7 +95,7 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
   Node-only. `test/push.test.ts` valida contra o vetor da própria RFC — se mexer na derivação de
   chave, esse teste é o que avisa.
 - **IA**: voz e `POST /tasks/parse` passam pelo mesmo `interpretText`. GPT recebe **hora local
-  ingênua** e as datas voltam reinterpretadas no fuso do cliente (Clerk `unsafeMetadata` é só
+  ingênua** e as datas voltam reinterpretadas no fuso do cliente (`user_settings.time_zone` é só
   fallback da voz). `/parse` só devolve rascunhos (`{ reply, intent, drafts }`); a voz cria.
   **`targets` (F6)**: o `/parse` passa as conexões `active` que o plano libera; elas viram o enum
   do schema e a linha "Integrações conectadas" do prompt (nenhuma = `maxItems: 0`), e `toDraft`
@@ -111,14 +133,15 @@ through here with a Clerk bearer token. Deployed as the `dailify-server` Worker 
 ## Secrets & local dev
 
 `Env` fields beyond `DB`/`ALLOWED_ORIGIN`/limiters are secrets (`wrangler secret put`, or `.env`
-locally — see `.env.example`). O par VAPID sai de `bun run vapid`; o `CLERK_WEBHOOK_SECRET` sai do
-endpoint de webhook criado no dashboard do Clerk (evento `user.deleted`, URL `/webhooks/clerk`).
-`GOOGLE_CLIENT_ID`/`_SECRET` saem do OAuth client do Google Cloud; `TOKEN_KEY_V1` = `openssl rand
+locally — see `.env.example`). O par VAPID sai de `bun run vapid`; `BETTER_AUTH_SECRET` = `openssl
+rand -base64 32`, `BETTER_AUTH_URL` = origem pública do worker, `TURNSTILE_SECRET_KEY` do widget
+Turnstile. `GOOGLE_CLIENT_ID`/`_SECRET` saem do OAuth client do Google Cloud (login e Agenda; redirect
+do login = `<BETTER_AUTH_URL>/auth/callback/google`); `TOKEN_KEY_V1` = `openssl rand
 -base64 32` e **nunca muda** (rotação = `TOKEN_KEY_V2` em `integrations/crypto.ts`). `wrangler.toml` holds the D1 `database_id` and
-`[vars] ALLOWED_ORIGIN` — the **prod** origins, comma-separated (`lib/origin.ts`: CORS accepts any of them, Stripe redirects return to the caller's), so `.env` must override it locally
+`[vars] ALLOWED_ORIGIN` — the **prod** origins, comma-separated (a primeira é a `WEB_URL`; as
+`tauri://`/`tauri.localhost` são a webview do app) (`lib/origin.ts`: CORS accepts any of them, Stripe redirects return to the caller's), so `.env` must override it locally
 (`https://localhost:1420`; vite uses mkcert + `strictPort`). Wrangler doesn't hot-reload `.env`.
-`bun run dev` applies pending D1 migrations locally (`CI=1` skips the prompt) before `wrangler dev`. Clerk + Stripe keys are **paired per instance**: a `pk_live` front end
-must match an `sk_live` worker or all auth 401s.
+`bun run dev` applies pending D1 migrations locally (`CI=1` skips the prompt) before `wrangler dev`.
 
 ## Deploy & migrations
 
@@ -138,6 +161,9 @@ dois passos — aditiva + deploy primeiro, destrutiva depois que o novo estiver 
 ## Tests
 
 `bun run test` (or `bun --filter @dailify/server test`) — `@cloudflare/vitest-pool-workers` runs
-against a real D1 (migrations applied in `beforeAll` via `applyD1Migrations`). Clerk/Stripe/OpenAI
-are `vi.mock`ed. Add a test with every route/query change; assert the tier gate and the epoch-ms
+against a real D1 (migrations applied in `beforeAll` via `applyD1Migrations`). Stripe/OpenAI/e-mail
+are `vi.mock`ed. Teste de rota troca a sessão por `test/session.ts`
+(`vi.mock("../src/auth", () => import("./session"))` + `mockSession(() => ({ id, plan }))`;
+`seedUser` grava a linha `"user"`). `magic-link.test.ts` e `account-delete.test.ts` usam o Better
+Auth de verdade (`auth.api.*`, sem captcha — ele só roda no handler HTTP). Add a test with every route/query change; assert the tier gate and the epoch-ms
 shape. No `as` assertions; see root `CLAUDE.md`.

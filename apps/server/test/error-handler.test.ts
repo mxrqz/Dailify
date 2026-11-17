@@ -1,15 +1,14 @@
 import { describe, it, expect, vi } from "vitest";
 
-vi.mock("@clerk/hono", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@clerk/hono")>();
-  return { ...actual, getAuth: vi.fn(() => ({ userId: "u1" })) };
-});
+vi.mock("../src/auth", () => import("./session"));
+import { mockSession } from "./session";
+mockSession(() => ({ id: "u1" }));
 
-vi.mock("../src/lib/clerk", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/lib/clerk")>();
+vi.mock("../src/db/limits", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/db/limits")>();
   return {
     ...actual,
-    getUserRole: vi.fn(async () => {
+    readAllUsage: vi.fn(async () => {
       throw new Error("boom");
     }),
   };

@@ -2,15 +2,9 @@ import { describe, it, expect, vi, beforeAll } from "vitest";
 
 let role: "free" | "pro" | "max" = "free";
 
-vi.mock("@clerk/hono", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("@clerk/hono")>();
-  return { ...actual, getAuth: vi.fn(() => ({ userId: "u2" })) };
-});
-
-vi.mock("../src/lib/clerk", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/lib/clerk")>();
-  return { ...actual, getUserRole: vi.fn(async () => role) };
-});
+vi.mock("../src/auth", () => import("./session"));
+import { mockSession } from "./session";
+mockSession(() => ({ id: "u2", plan: role }));
 
 import { env } from "cloudflare:test";
 import { applyD1Migrations } from "cloudflare:test";
