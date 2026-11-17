@@ -67,12 +67,12 @@ export function LinksField({
           target="_blank"
           rel="noopener noreferrer"
           aria-label={copy.form.linkOpen}
-          className="flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground"
+          className="flex size-8 shrink-0 items-center justify-center rounded-md text-ink-secondary transition-colors hover:bg-fill hover:text-ink"
         >
           <LinkIcon className="size-4" />
         </a>
       ) : (
-        <span className="flex size-8 shrink-0 items-center justify-center text-muted-foreground">
+        <span className="flex size-8 shrink-0 items-center justify-center text-ink-secondary">
           <LinkIcon className="size-4" aria-hidden="true" />
         </span>
       )}
@@ -99,7 +99,7 @@ export function LinksField({
         aria-label={copy.form.linkRemove}
         onClick={() => change("")}
         className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground",
+          "flex size-8 shrink-0 items-center justify-center rounded-md text-ink-secondary transition-colors hover:bg-fill hover:text-ink",
           !draft && "invisible",
         )}
       >
