@@ -11,7 +11,7 @@ import {
 } from "@/components/ui/sheet";
 import { NavItems } from "./index";
 
-/** O acesso à navegação abaixo de `md`, onde a `Sidebar` é `hidden`. */
+/** O acesso à navegação abaixo de `md`, onde a `Sidebar` é `hidden`: a gaveta de vidro da esquerda. */
 export function MobileNav(): JSX.Element {
   const [open, setOpen] = useState(false);
 
@@ -19,20 +19,20 @@ export function MobileNav(): JSX.Element {
     <Sheet open={open} onOpenChange={setOpen}>
       <SheetTrigger
         aria-label={copy.header.openNav}
-        className="flex size-11 shrink-0 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground md:hidden"
+        className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-ink transition-colors duration-fast hover:bg-fill md:hidden [&_svg]:size-5.5"
       >
-        <MenuIcon className="size-5" />
+        <MenuIcon aria-hidden="true" />
       </SheetTrigger>
 
       <SheetContent side="left">
         <SheetTitle className="sr-only">{copy.profile.navLabel}</SheetTitle>
         <SheetDescription className="sr-only">{copy.header.openNav}</SheetDescription>
 
-        {/* pt-8 deixa o X da folha sozinho na primeira linha; o clique em qualquer item fecha. */}
+        {/* O clique em qualquer item fecha; o X da folha divide a linha com a conta (pr-10). */}
         <nav
           aria-label={copy.profile.navLabel}
           onClick={() => setOpen(false)}
-          className="flex flex-1 flex-col gap-0.5 pt-8 pb-5"
+          className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-5"
         >
           <NavItems />
         </nav>

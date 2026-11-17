@@ -4,8 +4,7 @@ import { toast } from "sonner";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { segmented, segmentedItem } from "@/components/settings-list";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { SegmentedControl } from "@/components/kit/segmented-control";
 import { saveSettings } from "@/functions/api";
 
 /** Otimista: aplica já e volta ao anterior se a API falhar. */
@@ -14,9 +13,8 @@ export function WeekStartSelect(): JSX.Element {
   const { getToken } = useAuth();
 
   const choose = async (value: string) => {
-    // Clicar no item ativo emite "": Number("") é 0 e viraria domingo sem querer.
-    const next = value === "" ? undefined : Number(value);
-    if (!isWeekStart(next)) return;
+    const next = Number(value);
+    if (!isWeekStart(next) || next === weekStart) return;
     const previous = weekStart;
     setWeekStart(next);
     const token = await getToken();
@@ -28,18 +26,11 @@ export function WeekStartSelect(): JSX.Element {
   };
 
   return (
-    <ToggleGroup
-      type="single"
-      className={segmented}
-      value={String(weekStart)}
-      onValueChange={choose}
+    <SegmentedControl
       aria-label={copy.profile.weekStartTitle}
-    >
-      {copy.form.repeatDays.map((day, index) => (
-        <ToggleGroupItem key={day} className={segmentedItem} value={String(index)}>
-          {day}
-        </ToggleGroupItem>
-      ))}
-    </ToggleGroup>
+      value={String(weekStart)}
+      onValueChange={(value) => void choose(value)}
+      options={copy.form.repeatDays.map((day, index) => ({ value: String(index), label: day }))}
+    />
   );
 }

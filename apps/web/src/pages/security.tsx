@@ -6,9 +6,51 @@ import { ptBR } from "date-fns/locale";
 import { MonitorIcon, SmartphoneIcon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
-import { SettingsGroup, SettingsRow, settingsPage } from "@/components/settings-list";
+import { ListGroup, ListRow } from "@/components/kit/list";
+import { PageHeader } from "@/components/kit/page-header";
+import { accountGroups, accountPage } from "@/components/settings-list";
 import { Button } from "@/components/ui/button";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
+
+/** Uma sessão: o aparelho, onde e quando, e "Este aparelho" ou o "Encerrar" vermelho suave. */
+export function SessionRow({
+  mobile,
+  label,
+  meta,
+  current,
+  onRevoke,
+}: {
+  mobile: boolean;
+  label: string;
+  meta: string;
+  current: boolean;
+  onRevoke: () => void;
+}): JSX.Element {
+  const Icon = mobile ? SmartphoneIcon : MonitorIcon;
+  return (
+    <ListRow
+      icon={<Icon />}
+      label={label}
+      sublabel={meta}
+      trailing={
+        current ? (
+          <span className="rounded-full bg-fill px-2.5 py-0.5 text-footnote font-medium whitespace-nowrap text-ink-secondary">
+            {copy.profile.thisDevice}
+          </span>
+        ) : (
+          <Button
+            variant="soft-danger"
+            size="sm"
+            className="relative hit-target"
+            onClick={onRevoke}
+          >
+            {copy.profile.revokeDevice}
+          </Button>
+        )
+      }
+    />
+  );
+}
 
 export default function SecurityPage(): JSX.Element {
   const { user } = useUser();
@@ -32,51 +74,41 @@ export default function SecurityPage(): JSX.Element {
   };
 
   return (
-    <main className={settingsPage}>
-      {/* sr-only: a sidebar e o title do Helmet já nomeiam a página na tela */}
-      <h1 className="sr-only">{copy.profile.securityPageTitle}</h1>
+    <main className={accountPage}>
+      <PageHeader
+        title={copy.profile.securityPageTitle}
+        subtitle={copy.profile.securityLead}
+        className="px-1"
+      />
 
-      <SettingsGroup title={copy.profile.groupSessions}>
-        {[...(sessions ?? [])]
-          .sort((a, b) => b.lastActiveAt.getTime() - a.lastActiveAt.getTime())
-          .map((session) => {
-            const { browserName, deviceType, isMobile, city, country } = session.latestActivity;
-            const current = session.id === currentSession?.id;
-            const place = [city, country].filter(Boolean).join(", ");
-            const when = formatDistanceToNow(session.lastActiveAt, {
-              addSuffix: true,
-              locale: ptBR,
-            });
-            const Icon = isMobile ? SmartphoneIcon : MonitorIcon;
-            return (
-              <SettingsRow
-                key={session.id}
-                icon={<Icon className="size-4" />}
-                label={[browserName, deviceType].filter(Boolean).join(" · ")}
-                hint={
-                  place
-                    ? copy.profile.sessionMeta.replace("{place}", place).replace("{when}", when)
-                    : when
-                }
-              >
-                {current ? (
-                  <span className="rounded-md bg-surface-hover px-2 py-0.5 text-2xs text-content-secondary">
-                    {copy.profile.thisDevice}
-                  </span>
-                ) : (
-                  <Button
-                    variant="ghost"
-                    size="sm"
-                    className="cursor-pointer text-muted-foreground"
-                    onClick={() => void revoke(session)}
-                  >
-                    {copy.profile.revokeDevice}
-                  </Button>
-                )}
-              </SettingsRow>
-            );
-          })}
-      </SettingsGroup>
+      <div className={accountGroups}>
+        <ListGroup title={copy.profile.groupSessions} footer={copy.profile.sessionsFooter}>
+          {[...(sessions ?? [])]
+            .sort((a, b) => b.lastActiveAt.getTime() - a.lastActiveAt.getTime())
+            .map((session) => {
+              const { browserName, deviceType, isMobile, city, country } = session.latestActivity;
+              const place = [city, country].filter(Boolean).join(", ");
+              const when = formatDistanceToNow(session.lastActiveAt, {
+                addSuffix: true,
+                locale: ptBR,
+              });
+              return (
+                <SessionRow
+                  key={session.id}
+                  mobile={!!isMobile}
+                  label={[browserName, deviceType].filter(Boolean).join(" · ")}
+                  meta={
+                    place
+                      ? copy.profile.sessionMeta.replace("{place}", place).replace("{when}", when)
+                      : when
+                  }
+                  current={session.id === currentSession?.id}
+                  onRevoke={() => void revoke(session)}
+                />
+              );
+            })}
+        </ListGroup>
+      </div>
     </main>
   );
 }

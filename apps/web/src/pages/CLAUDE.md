@@ -7,21 +7,22 @@ Every page except `home.tsx` is `React.lazy` (one chunk per route; the landing a
 stay out of the dashboard entry). A new page gets a `lazy()` import too, unless it's the PWA's
 `start_url`.
 
-| Path                               | Page                       | Notes                                                                                                         |
-| ---------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------- |
-| `/`                                | `landingPage.tsx`          | public marketing page                                                                                         |
-| `/dashboard`                       | `home.tsx`                 | **protected**; the app (Hoje list + month calendar, `?view=calendar`)                                         |
-| `/profile`                         | `profile.tsx`              | **protected**; personal data, photo, phone, timezone                                                          |
-| `/security`                        | `security.tsx`             | **protected**; active sessions and account security                                                           |
-| `/billing`                         | `billing.tsx`              | **protected**; plan, usage, invoices. Free sees usage + CTA                                                   |
-| `/settings`                        | `settings.tsx`             | **protected**; theme and (soon) notifications                                                                 |
-| `/integrations/:provider/callback` | `integration-callback.tsx` | **protected**; OAuth `redirect_uri`: POSTs `{code,state}` once (StrictMode-safe), toasts, back to `/settings` |
-| `/login`                           | `login.tsx`                | Clerk sign-in — `AuthPage mode="signIn"` (`components/auth/`)                                                 |
-| `/signup`                          | `signup.tsx`               | same machinery, `mode="signUp"` — only the copy differs                                                       |
-| `/sso-callback`                    | Clerk                      | `AuthenticateWithRedirectCallback`, declared inline in `App.tsx`                                              |
-| `/verify`                          | `verify.tsx`               | where the emailed magic link lands                                                                            |
-| `/task/:id`                        | `[id]/taskPreview.tsx`     | public, shareable task rendered as an image (`html-to-image`)                                                 |
-| `/premium`                         | `premium.tsx`              | pricing + Stripe checkout                                                                                     |
+| Path                               | Page                       | Notes                                                                                                             |
+| ---------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
+| `/`                                | `landingPage.tsx`          | public marketing page                                                                                             |
+| `/dashboard`                       | `home.tsx`                 | **protected**; the app (Hoje list + month calendar, `?view=calendar`)                                             |
+| `/profile`                         | `profile.tsx`              | **protected**; personal data, photo, phone, timezone                                                              |
+| `/security`                        | `security.tsx`             | **protected**; active sessions and account security                                                               |
+| `/billing`                         | `billing.tsx`              | **protected**; plan, usage, invoices. Free sees usage + CTA                                                       |
+| `/settings`                        | `settings.tsx`             | **protected**; theme, date/time, notifications, Google Agenda summary                                             |
+| `/integrations`                    | `integrations.tsx`         | **protected**; Google Agenda card (connect, settings, disconnect) + "Em breve"                                    |
+| `/integrations/:provider/callback` | `integration-callback.tsx` | **protected**; OAuth `redirect_uri`: POSTs `{code,state}` once (StrictMode-safe), toasts, back to `/integrations` |
+| `/login`                           | `login.tsx`                | Clerk sign-in — `AuthPage mode="signIn"` (`components/auth/`)                                                     |
+| `/signup`                          | `signup.tsx`               | same machinery, `mode="signUp"` — only the copy differs                                                           |
+| `/sso-callback`                    | Clerk                      | `AuthenticateWithRedirectCallback`, declared inline in `App.tsx`                                                  |
+| `/verify`                          | `verify.tsx`               | where the emailed magic link lands                                                                                |
+| `/task/:id`                        | `[id]/taskPreview.tsx`     | public, shareable task rendered as an image (`html-to-image`)                                                     |
+| `/premium`                         | `premium.tsx`              | pricing + Stripe checkout                                                                                         |
 
 **There is no catch-all route** — a link to a non-existent path lands on a blank page. Only navigate
 to paths listed above (this caused the `/prices` vs `/premium` bug).

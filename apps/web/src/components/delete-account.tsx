@@ -4,8 +4,8 @@ import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import { copy } from "@/components/dashboard/copy";
+import { ListRow } from "@/components/kit/list";
 import { Button } from "@/components/ui/button";
-import { SettingsRowButton } from "@/components/settings-list";
 import {
   Dialog,
   DialogContent,
@@ -58,8 +58,8 @@ export function DeleteAccount(): JSX.Element | null {
     });
   };
 
-  // Uma linha do grupo Conta, com o nome em destructive: o vermelho marca o assunto sem transformar
-  // a página inteira num alerta.
+  // Uma linha do grupo Conta, com o nome em vermelho: marca o assunto sem transformar a página
+  // inteira num alerta. A explicação é o rodapé do grupo, em /profile.
   return (
     <Dialog
       open={open}
@@ -69,11 +69,7 @@ export function DeleteAccount(): JSX.Element | null {
       }}
     >
       <DialogTrigger asChild>
-        <SettingsRowButton
-          label={copy.profile.deleteAccount}
-          hint={copy.profile.dangerDescription}
-          danger
-        />
+        <ListRow label={copy.profile.deleteAccount} danger />
       </DialogTrigger>
 
       <DialogContent>
@@ -96,7 +92,7 @@ export function DeleteAccount(): JSX.Element | null {
         </div>
 
         <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={() => setOpen(false)} disabled={deleting}>
+          <Button variant="secondary" onClick={() => setOpen(false)} disabled={deleting}>
             {copy.form.cancel}
           </Button>
 

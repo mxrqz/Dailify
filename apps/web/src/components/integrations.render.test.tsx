@@ -20,9 +20,11 @@ vi.mock("@/hooks/useOnline", () => ({ useOnline }));
 vi.mock("@/functions/api", () => api);
 vi.mock("sonner", () => ({ toast }));
 
-import { IntegrationsGroup } from "./integrations";
+import { Integrations, IntegrationsSummary } from "./integrations";
 import { copy } from "@/components/dashboard/copy";
+import { CALENDAR_DEFAULT_KEY } from "@/hooks/useCalendarDefault";
 import { HIDE_EVENTS_KEY } from "@/hooks/useExternalEvents";
+import { setIntegrations } from "@/hooks/useIntegrations";
 
 const t = copy.integrations;
 const GCAL: IntegrationStatus = {
@@ -42,12 +44,12 @@ function renderWith(status?: Partial<IntegrationStatus>) {
   api.getIntegrations.mockResolvedValue({ integrations: [{ ...GCAL, ...status }] });
   return render(
     <MemoryRouter>
-      <IntegrationsGroup />
+      <Integrations />
     </MemoryRouter>,
   );
 }
 
-describe("<IntegrationsGroup>", () => {
+describe("<Integrations>", () => {
   it("não conectado: Conectar leva à URL do provedor", async () => {
     const assign = vi.fn();
     vi.stubGlobal("location", { ...window.location, assign });
@@ -122,5 +124,47 @@ describe("<IntegrationsGroup>", () => {
     expect(screen.getByRole("button", { name: t.connect })).toBeDisabled();
     expect(screen.getByText(t.offlineHint)).toBeInTheDocument();
     expect(api.getIntegrations).not.toHaveBeenCalled();
+  });
+
+  it("conectado: Novas tarefas no Google Agenda nasce Nunca e Sempre fica no device", async () => {
+    localStorage.clear();
+    renderWith({ connected: true, status: "active" });
+    const always = await screen.findByRole("radio", { name: t.always });
+    expect(screen.getByRole("radio", { name: t.never })).toBeChecked();
+    await userEvent.click(always);
+    expect(always).toBeChecked();
+    expect(localStorage.getItem(CALENDAR_DEFAULT_KEY)).toBe("1");
+  });
+
+  it("desconectado não mostra os ajustes da agenda", async () => {
+    renderWith();
+    await screen.findByRole("button", { name: t.connect });
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+    expect(screen.queryByRole("radio", { name: t.always })).not.toBeInTheDocument();
+  });
+});
+
+describe("<IntegrationsSummary>", () => {
+  const summary = () =>
+    render(
+      <MemoryRouter>
+        <IntegrationsSummary />
+      </MemoryRouter>,
+    );
+
+  it("conectado: conta, ajustes e as duas linhas levam a /integrations", () => {
+    setIntegrations([{ ...GCAL, connected: true, status: "active", account: "a@b.com" }]);
+    summary();
+    expect(screen.getByText("a@b.com")).toBeInTheDocument();
+    expect(screen.getByRole("switch", { name: copy.calendar.showEvents })).toBeInTheDocument();
+    for (const link of screen.getAllByRole("link"))
+      expect(link).toHaveAttribute("href", "/integrations");
+  });
+
+  it("desconectado: só o caminho pra conectar, sem ajustes", () => {
+    setIntegrations([GCAL]);
+    summary();
+    expect(screen.queryByRole("switch")).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: t.all })).toHaveAttribute("href", "/integrations");
   });
 });

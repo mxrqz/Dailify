@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
-import { CheckIcon, ChevronDownIcon } from "lucide-react";
+import { CheckIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
+import { ListRow } from "@/components/kit/list";
 import {
   Command,
   CommandEmpty,
@@ -27,7 +28,10 @@ function offsetOf(zone: string): string {
   return part?.value ?? "";
 }
 
-/** Fuso da conta. "Automático" segue o aparelho (e viaja com ele); escolher fixa um. Otimista. */
+/**
+ * A linha "Fuso horário" de /settings, que abre a busca. "Automático" segue o aparelho (e viaja
+ * com ele); escolher fixa um. Otimista.
+ */
 export function TimeZoneSelect(): JSX.Element {
   const { timeZone, setTimeZone } = useDailify();
   const { getToken } = useAuth();
@@ -55,9 +59,8 @@ export function TimeZoneSelect(): JSX.Element {
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger className="flex h-9 w-full max-w-72 cursor-pointer items-center justify-between gap-2 rounded-md border border-surface-line px-3 text-sm transition-colors hover:bg-surface-hover">
-        <span className="truncate">{label}</span>
-        <ChevronDownIcon className="size-4 shrink-0 text-muted-foreground" />
+      <PopoverTrigger asChild>
+        <ListRow label={copy.profile.timeZoneTitle} sublabel={label} accessory="chevron" />
       </PopoverTrigger>
       <PopoverContent align="start" className="w-(--radix-popover-trigger-width) p-0">
         <Command>
