@@ -100,8 +100,8 @@ function PlanCard({ plan, cycle }: { plan: Plan; cycle: Cycle }) {
         className={cn(
           "mt-1.5 mb-1 inline-flex min-h-11 w-full items-center justify-center rounded-sm px-5 text-base font-semibold transition-[scale,background-color] duration-fast ease-out outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-97",
           plan.featured
-            ? "bg-brand text-on-brand hover:bg-brand-pressed active:bg-brand-pressed"
-            : "bg-fill text-ink hover:bg-fill-pressed active:bg-fill-pressed",
+            ? "bg-brand text-on-brand hover:bg-brand-pressed pointer-fine:active:bg-brand-pressed"
+            : "bg-fill text-ink hover:bg-fill-pressed pointer-fine:active:bg-fill-pressed",
         )}
       >
         {c.cta}

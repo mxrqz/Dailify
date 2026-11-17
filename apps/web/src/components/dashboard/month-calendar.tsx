@@ -25,7 +25,7 @@ import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { cn } from "@/lib/utils";
 
 const iconButton =
-  "grid size-11 cursor-pointer place-items-center rounded-full text-ink transition-colors hover:bg-fill active:bg-fill-pressed [&_svg]:size-5.5";
+  "grid size-11 cursor-pointer place-items-center rounded-full text-ink transition-colors hover:bg-fill pointer-fine:active:bg-fill-pressed [&_svg]:size-5.5";
 
 /**
  * O mês em grade (props → markup): passado apagado, hoje em `brand-text`, o escolhido num círculo

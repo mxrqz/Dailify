@@ -7,7 +7,7 @@ import { Mew, type MewMood } from "@/components/mew/mew";
 import { cn } from "@/lib/utils";
 
 const backClass =
-  "grid size-11 place-items-center rounded-full text-ink transition-colors duration-fast hover:bg-fill active:bg-fill [&_svg]:size-5.5";
+  "grid size-11 place-items-center rounded-full text-ink transition-colors duration-fast hover:bg-fill pointer-fine:active:bg-fill [&_svg]:size-5.5";
 
 const EAR = "M0 12.5 L6.5 1.5 Q9 -1.5 11.5 1.5 L18 12.5";
 

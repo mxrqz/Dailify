@@ -23,7 +23,7 @@ export function SiteHeaderV2() {
         <Brand to="/" className="justify-self-center" />
         <Link
           to="/login"
-          className={`hit-target relative inline-flex h-7 items-center justify-self-end rounded-xs bg-brand px-3 text-sm font-semibold text-on-brand active:bg-brand-pressed ${FOCUS}`}
+          className={`hit-target relative inline-flex h-7 items-center justify-self-end rounded-xs bg-brand px-3 text-sm font-semibold text-on-brand pointer-fine:active:bg-brand-pressed ${FOCUS}`}
         >
           {copy.signIn}
         </Link>

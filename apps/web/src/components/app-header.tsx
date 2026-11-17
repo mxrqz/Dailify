@@ -11,7 +11,7 @@ import { PLAN_ID } from "@/consts/conts";
 import { cn, toText } from "@/lib/utils";
 
 const barButton =
-  "grid size-11 shrink-0 place-items-center rounded-full text-ink transition-colors hover:bg-fill active:bg-fill-pressed [&_svg]:size-5.5 md:size-8 md:rounded-md md:text-muted-foreground md:[&_svg]:size-4";
+  "grid size-11 shrink-0 place-items-center rounded-full text-ink transition-colors hover:bg-fill pointer-fine:active:bg-fill-pressed [&_svg]:size-5.5 md:size-8 md:rounded-md md:text-muted-foreground md:[&_svg]:size-4";
 
 /**
  * Barra do app: no mobile a barra de material do iOS (52px, ☰ à esquerda; na Hoje, calendário e

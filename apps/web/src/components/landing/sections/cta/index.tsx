@@ -44,7 +44,7 @@ export function CtaV2() {
       <div className="mt-2.5 flex flex-col items-center gap-2">
         <Link
           to="/signup"
-          className="inline-flex h-13 items-center rounded-md bg-brand px-6 text-lg font-semibold text-on-brand transition-[scale] outline-none hover:bg-brand-pressed focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-97 active:bg-brand-pressed"
+          className="inline-flex h-13 items-center rounded-md bg-brand px-6 text-lg font-semibold text-on-brand transition-[scale] outline-none hover:bg-brand-pressed focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-97 pointer-fine:active:bg-brand-pressed"
         >
           {copy.button}
         </Link>

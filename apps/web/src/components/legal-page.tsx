@@ -43,7 +43,7 @@ export function LegalPage({
         <Link
           to="/"
           aria-label={copy.legal.back}
-          className="grid size-11 place-items-center rounded-full text-ink active:bg-fill [&_svg]:size-5.5"
+          className="grid size-11 place-items-center rounded-full text-ink pointer-fine:active:bg-fill [&_svg]:size-5.5"
         >
           <ChevronLeftIcon />
         </Link>
@@ -67,7 +67,7 @@ export function LegalPage({
               <li key={section.title} className="group">
                 <a
                   href={`#s${i + 1}`}
-                  className="grid min-h-11 grid-cols-[1.5rem_1fr_1rem] items-center gap-2 px-4 leading-5.5 active:bg-fill"
+                  className="grid min-h-11 grid-cols-[1.5rem_1fr_1rem] items-center gap-2 px-4 leading-5.5 pointer-fine:active:bg-fill"
                 >
                   <b className="font-medium text-ink-secondary tabular-nums">{i + 1}</b>
                   <span className="self-stretch border-separator py-2.75 group-not-first:border-t">

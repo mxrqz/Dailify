@@ -102,7 +102,7 @@ export function WeekDays({
                 className={cn(
                   "flex h-13 w-full cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md transition-colors duration-fast",
                   "data-drop-over:outline-2 data-drop-over:-outline-offset-2 data-drop-over:outline-brand",
-                  on ? "bg-ink text-canvas" : "hover:bg-fill active:bg-fill-pressed",
+                  on ? "bg-ink text-canvas" : "hover:bg-fill pointer-fine:active:bg-fill-pressed",
                 )}
               >
                 <small
