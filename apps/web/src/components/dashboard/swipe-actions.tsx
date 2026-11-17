@@ -1,5 +1,11 @@
 import { useRef, useState, type ReactNode } from "react";
-import { animate, motion, useMotionValue, useMotionValueEvent } from "motion/react";
+import {
+  animate,
+  motion,
+  useDragControls,
+  useMotionValue,
+  useMotionValueEvent,
+} from "motion/react";
 import { CheckIcon, Trash2Icon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
@@ -19,6 +25,14 @@ const MAX_DISTANCE = 96;
  */
 const FLICK_VELOCITY = 400;
 const FLICK_MIN = 24;
+
+// Touches this close to a screen edge belong to the system back gesture, not the row.
+const EDGE = 24;
+
+/** Whether a touch at `x` may start the swipe in a window `width` wide. */
+export function startsSwipe(x: number, width: number): boolean {
+  return x > EDGE && x < width - EDGE;
+}
 
 type Armed = "complete" | "delete" | null;
 
@@ -52,6 +66,9 @@ export function SwipeActions({
   const armedRef = useRef<Armed>(null);
   const [armed, setArmed] = useState<Armed>(null);
   const x = useMotionValue(0);
+  const controls = useDragControls();
+  // The click that ends a drag must not open the row's editor.
+  const dragged = useRef(false);
 
   /**
    * O gesto "arma" ao cruzar o limiar, e é aí que o painel acende e o aparelho dá um pulso: soltar
@@ -72,6 +89,8 @@ export function SwipeActions({
     <div ref={track} className="overflow-hidden">
       <motion.div
         drag="x"
+        dragControls={controls}
+        dragListener={false}
         dragDirectionLock
         dragMomentum={false}
         style={{ x }}
@@ -79,7 +98,17 @@ export function SwipeActions({
         // 1 = o cartão acompanha o dedo. Com resistência (0.35) ele andava um terço do gesto, então
         // a distância da ação só chegava se o dedo cruzasse a tela inteira — impossível na mão.
         dragElastic={1}
+        onPointerDown={(event) => {
+          dragged.current = false;
+          if (startsSwipe(event.clientX, window.innerWidth)) controls.start(event);
+        }}
+        onClickCapture={(event) => {
+          if (!dragged.current) return;
+          event.stopPropagation();
+          event.preventDefault();
+        }}
         onDragStart={() => {
+          dragged.current = true;
           width.current = track.current?.offsetWidth ?? 0;
         }}
         onDragEnd={(_, info) => {

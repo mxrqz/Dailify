@@ -98,11 +98,16 @@ function SheetContent({
   showCloseButton?: boolean;
 }) {
   const bottom = side === "bottom";
+  // The drawer closes dragged left, the same rule mirrored on x.
+  const left = side === "left";
   const controls = useDragControls();
   const reduce = useReducedMotion();
-  const y = useMotionValue(0);
-  const height = React.useRef(0);
-  const scrim = useTransform(y, (value) => (value > 0 ? 1 - value / height.current : 1));
+  const shift = useMotionValue(0);
+  const size = React.useRef(0);
+  const scrim = useTransform(shift, (value) => {
+    const pulled = left ? -value : value;
+    return pulled > 0 ? 1 - pulled / size.current : 1;
+  });
   // O fechar do próprio Radix: passa pelo onOpenChange de quem abriu, como o Esc e o X.
   const close = React.useRef<HTMLButtonElement>(null);
   const [flung, setFlung] = React.useState(false);
@@ -113,9 +118,9 @@ function SheetContent({
       <SheetOverlay opacity={scrim} className={exit} />
       <SheetPrimitive.Content
         asChild
-        // Depois que a folha saiu de vez: zera o y que o arrasto deixou, pra próxima abrir no lugar.
+        // Depois que a folha saiu de vez: zera o deslocamento que o arrasto deixou, pra próxima abrir no lugar.
         onCloseAutoFocus={(event) => {
-          y.jump(0);
+          shift.jump(0);
           setFlung(false);
           onCloseAutoFocus?.(event);
         }}
@@ -123,26 +128,30 @@ function SheetContent({
       >
         <motion.div
           data-slot="sheet-content"
-          style={{ y }}
-          drag={bottom && "y"}
+          style={left ? { x: shift } : { y: shift }}
+          drag={bottom ? "y" : left && "x"}
           dragControls={controls}
           dragListener={false}
           dragDirectionLock
           dragMomentum={false}
-          dragConstraints={{ top: 0 }}
+          dragConstraints={left ? { right: 0 } : { top: 0 }}
           dragElastic={RESISTANCE}
           onPointerDown={(event) => {
-            if (!bottom || event.button !== 0) return;
-            if (!canDragSheet(event.target, event.currentTarget)) return;
-            height.current = event.currentTarget.offsetHeight;
+            if (!(bottom || left) || event.button !== 0) return;
+            // The drawer pans y natively (touch-pan-y), so a scrolled nav doesn't block closing.
+            if (bottom && !canDragSheet(event.target, event.currentTarget)) return;
+            size.current = left
+              ? event.currentTarget.offsetWidth
+              : event.currentTarget.offsetHeight;
             controls.start(event);
           }}
-          // ponytail: quem recusar o fechamento deixa a folha onde o dedo largou; aí, animate(y, 0).
+          // ponytail: quem recusar o fechamento deixa a folha onde o dedo largou; aí, animate(shift, 0).
           onDragEnd={(_, { offset, velocity }) => {
-            if (shouldCloseSheet(offset.y, velocity.y, height.current)) {
+            const [moved, speed] = left ? [-offset.x, -velocity.x] : [offset.y, velocity.y];
+            if (shouldCloseSheet(moved, speed, size.current)) {
               setFlung(true);
               close.current?.click();
-            } else void animate(y, 0, reduce ? { duration: 0 } : spring.snappy);
+            } else void animate(shift, 0, reduce ? { duration: 0 } : spring.snappy);
           }}
           className={cn(
             "glass text-ink fixed z-50 flex flex-col data-[state=open]:animate-in data-[state=open]:duration-slow data-[state=open]:ease-out data-[state=closed]:animate-out data-[state=closed]:duration-base",
@@ -150,7 +159,7 @@ function SheetContent({
             side === "right" &&
               "data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-right-full inset-y-0 right-0 h-full w-3/4 rounded-l-sheet sm:max-w-sm",
             side === "left" &&
-              "data-[state=closed]:slide-out-to-left-full data-[state=open]:slide-in-from-left-full inset-y-0 left-0 h-full w-76 max-w-5/6 rounded-r-sheet px-3 pt-4 pb-safe",
+              "data-[state=closed]:slide-out-to-left-full data-[state=open]:slide-in-from-left-full inset-y-0 left-0 h-full w-76 max-w-5/6 touch-pan-y transition-none rounded-r-sheet px-3 pt-4 pb-safe",
             side === "top" &&
               "data-[state=closed]:slide-out-to-top-full data-[state=open]:slide-in-from-top-full inset-x-0 top-0 h-auto rounded-b-sheet",
             // pan-x: o que o motion poria sozinho com `drag="y"` (o `dragListener={false}` tira).
@@ -174,7 +183,7 @@ function SheetContent({
               className={bottom ? "top-4.5 right-3" : "top-4 right-3"}
             />
           )}
-          {bottom && <SheetPrimitive.Close ref={close} hidden />}
+          {(bottom || left) && <SheetPrimitive.Close ref={close} hidden />}
         </motion.div>
       </SheetPrimitive.Content>
     </SheetPortal>

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MenuIcon } from "lucide-react";
+import { useLocation } from "react-router-dom";
 
 import { copy } from "@/components/dashboard/copy";
 import {
@@ -14,6 +15,13 @@ import { NavItems } from "./index";
 /** O acesso à navegação abaixo de `md`, onde a `Sidebar` é `hidden`: a gaveta de vidro da esquerda. */
 export function MobileNav(): JSX.Element {
   const [open, setOpen] = useState(false);
+  // Any navigation (a link, the device back) closes the drawer; state adjusted during render.
+  const location = useLocation();
+  const [seen, setSeen] = useState(location);
+  if (seen !== location) {
+    setSeen(location);
+    setOpen(false);
+  }
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
