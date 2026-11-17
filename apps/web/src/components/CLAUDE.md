@@ -51,8 +51,8 @@ Single source of truth via `useDailify()`: `tasks`, `selectedDay`, `targetDay`, 
 re-renders (the whole Home, measuring every swipe row).
 
 - **`protected-route.tsx`** is where it all loads: gates on `useSession()`
-  (`isPending`/`data.user.id`), then `getTasks()`: flushes the offline queue, then `reloadMonths` (context) for today, next month and
-  every month already in `loadedMonths`. Each month is fetched (`getTasksForMonth`) and merged into
+  (`isPending`/`data.user.id`), then `getTasks()`: flushes the offline queue, then `reloadMonths`
+  (context) for today, next month and every month already in `loadedMonths`. Each month is fetched (`getTasksForMonth`) and merged into
   `tasks` with `mergeMonth` — a month never replaces the others. `loadMonth(month)` adds one more
   month on demand, idempotent (loaded or in flight → no refetch). `goToDay(day)` loads every month
   between today and `day`, then sets `selectedDay` and `targetDay` (the list scrolls to it).
