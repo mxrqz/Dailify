@@ -26,6 +26,7 @@ const PremiumPage = lazy(() => import("./pages/premium"));
 const ProfilePage = lazy(() => import("./pages/profile"));
 const SecurityPage = lazy(() => import("./pages/security"));
 const SettingsPage = lazy(() => import("./pages/settings"));
+const IntegrationsPage = lazy(() => import("./pages/integrations"));
 const IntegrationCallback = lazy(() => import("./pages/integration-callback"));
 const TaskPreview = lazy(() => import("./pages/[id]/taskPreview"));
 const PrivacyPage = lazy(() => import("./pages/privacy"));
@@ -109,6 +110,19 @@ export default function App() {
                               </Helmet>
 
                               <BillingPage />
+                            </ProtectedRoute>
+                          }
+                        />
+
+                        <Route
+                          path="/integrations"
+                          element={
+                            <ProtectedRoute>
+                              <Helmet>
+                                <title>Mewki - Integrações</title>
+                              </Helmet>
+
+                              <IntegrationsPage />
                             </ProtectedRoute>
                           }
                         />

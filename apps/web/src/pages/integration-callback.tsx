@@ -11,7 +11,7 @@ import { useEffectEvent } from "@/hooks/useEffectEvent";
 
 const t = copy.integrations;
 
-/** Onde o provedor devolve a pessoa: troca o `code` no servidor e volta pra /settings com o recado. */
+/** Onde o provedor devolve a pessoa: troca o `code` no servidor e volta pra /integrations com o recado. */
 export default function IntegrationCallback(): JSX.Element {
   const { provider } = useParams();
   const [params] = useSearchParams();
@@ -26,7 +26,7 @@ export default function IntegrationCallback(): JSX.Element {
     const state = params.get("state");
     const fail = (message: string) => {
       toast.error(message.replace("{name}", name));
-      navigate("/settings", { replace: true });
+      navigate("/integrations", { replace: true });
     };
 
     if (params.get("error") === "access_denied") return fail(t.denied);
@@ -40,7 +40,7 @@ export default function IntegrationCallback(): JSX.Element {
     if (error) return fail(t.failed);
 
     toast.success(t.connected.replace("{name}", name));
-    navigate("/settings", { replace: true });
+    navigate("/integrations", { replace: true });
   });
 
   useEffect(() => {

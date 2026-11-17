@@ -30,18 +30,18 @@ const renderAt = (query: string) =>
       <MemoryRouter initialEntries={[`/integrations/google-calendar/callback?${query}`]}>
         <Routes>
           <Route path="/integrations/:provider/callback" element={<IntegrationCallback />} />
-          <Route path="/settings" element={<p>settings</p>} />
+          <Route path="/integrations" element={<p>integrations</p>} />
         </Routes>
       </MemoryRouter>
     </StrictMode>,
   );
 
 describe("<IntegrationCallback>", () => {
-  it("sucesso: um POST só (mesmo no StrictMode) e volta pra /settings", async () => {
+  it("sucesso: um POST só (mesmo no StrictMode) e volta pra /integrations", async () => {
     completeIntegration.mockResolvedValue({ integration: {} });
     renderAt("code=c&state=s");
 
-    expect(await screen.findByText("settings")).toBeInTheDocument();
+    expect(await screen.findByText("integrations")).toBeInTheDocument();
     expect(completeIntegration).toHaveBeenCalledTimes(1);
     expect(completeIntegration).toHaveBeenCalledWith("t", "google-calendar", "c", "s");
     expect(toast.success).toHaveBeenCalledWith("Google Agenda conectado");
@@ -50,7 +50,7 @@ describe("<IntegrationCallback>", () => {
   it("access_denied não chama o servidor", async () => {
     renderAt("error=access_denied&state=s");
 
-    expect(await screen.findByText("settings")).toBeInTheDocument();
+    expect(await screen.findByText("integrations")).toBeInTheDocument();
     expect(completeIntegration).not.toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledWith("Conexão com Google Agenda cancelada");
   });
@@ -64,7 +64,7 @@ describe("<IntegrationCallback>", () => {
     await waitFor(() =>
       expect(toast.error).toHaveBeenCalledWith(t.missingScope.replace("{name}", "Google Agenda")),
     );
-    expect(screen.getByText("settings")).toBeInTheDocument();
+    expect(screen.getByText("integrations")).toBeInTheDocument();
   });
 
   it("403 avisa que o pedido é de outra conta", async () => {

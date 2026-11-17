@@ -9,13 +9,18 @@ const { useUser, useClerk, useAuth } = vi.hoisted(() => ({
   useAuth: vi.fn(),
 }));
 vi.mock("@clerk/clerk-react", () => ({ useUser, useClerk, useAuth }));
+const { useDailify } = vi.hoisted(() => ({ useDailify: vi.fn() }));
+vi.mock("@/components/dailifyContext", () => ({ useDailify }));
 
 import { Sidebar } from "./index";
 import { copy } from "@/components/dashboard/copy";
 
 beforeEach(() => {
   vi.clearAllMocks();
-  useUser.mockReturnValue({ isSignedIn: true });
+  useUser.mockReturnValue({ isSignedIn: true, user: { firstName: "Seu", publicMetadata: {} } });
+  useDailify.mockReturnValue({
+    quotas: { limits: { tasks: -1, ai: 30 }, usage: { tasks: 0, ai: 12 } },
+  });
   useClerk.mockReturnValue({ signOut: vi.fn() });
   useAuth.mockReturnValue({ signOut: vi.fn(), getToken: async () => "t" });
 });
@@ -74,5 +79,29 @@ describe("<Sidebar>", () => {
     useUser.mockReturnValue({ isSignedIn: false });
     renderAt("/premium");
     expect(screen.queryByText(copy.profile.signOut)).not.toBeInTheDocument();
+  });
+
+  it("logado: inicial, plano Free e o medidor de créditos do mês", () => {
+    renderAt("/dashboard");
+    expect(screen.getByText("S")).toBeInTheDocument();
+    expect(screen.getByText("Free")).toBeInTheDocument();
+    expect(screen.getByRole("meter", { name: copy.quota.names.ai })).toHaveAttribute(
+      "aria-valuenow",
+      "12",
+    );
+    expect(screen.getByText("12 de 30 créditos de IA este mês")).toBeInTheDocument();
+  });
+
+  it("créditos ilimitados ou carregando: sem medidor", () => {
+    useDailify.mockReturnValue({
+      quotas: { limits: { tasks: -1, ai: -1 }, usage: { tasks: 0, ai: 3 } },
+    });
+    const { unmount } = renderAt("/dashboard");
+    expect(screen.queryByRole("meter")).not.toBeInTheDocument();
+    unmount();
+
+    useDailify.mockReturnValue({ quotas: undefined });
+    renderAt("/dashboard");
+    expect(screen.queryByRole("meter")).not.toBeInTheDocument();
   });
 });

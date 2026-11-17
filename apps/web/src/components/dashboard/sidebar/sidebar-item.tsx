@@ -7,14 +7,12 @@ import { cn } from "@/lib/utils";
 // classes num `<button>`.
 export function sidebarItemClass(active: boolean): string {
   return cn(
-    "inline-flex h-10 items-center gap-3 rounded-md px-3 text-base transition-colors",
-    active
-      ? "bg-surface-hover text-foreground"
-      : "text-muted-foreground hover:bg-surface-hover hover:text-foreground",
+    "flex h-12 w-full cursor-pointer items-center gap-3.5 rounded-md px-3 text-left text-body text-ink outline-none transition-colors duration-fast focus-visible:bg-fill [&_svg]:size-5 [&_svg]:shrink-0",
+    active ? "bg-fill-pressed font-semibold" : "hover:bg-fill [&_svg]:text-ink-secondary",
   );
 }
 
-// `alsoActive`: `/premium` (escolher plano) acende "Premium", que aponta pra `/billing` (gerenciar
+// `alsoActive`: `/premium` (escolher plano) acende "Planos", que aponta pra `/billing` (gerenciar
 // assinatura) — o destaque marca o assunto, não o destino.
 // O ativo é neutro de propósito: crimson aqui competiria com a ação primária do resto do app.
 export function SidebarItem({
@@ -33,7 +31,7 @@ export function SidebarItem({
 
   return (
     <Link to={to} aria-current={active ? "page" : undefined} className={sidebarItemClass(active)}>
-      <Icon className="size-5 shrink-0" aria-hidden="true" />
+      <Icon aria-hidden="true" />
       {label}
     </Link>
   );

@@ -6,18 +6,15 @@ import { Button } from "@/components/ui/button";
 import { copy } from "@/components/dashboard/copy";
 import { DeleteAccount } from "@/components/delete-account";
 import { CountryPicker, countries } from "@/components/country-picker";
-import {
-  SettingsGroup,
-  SettingsRow,
-  SettingsRowButton,
-  settingsPage,
-} from "@/components/settings-list";
+import { ListGroup, ListRow } from "@/components/kit/list";
+import { PageHeader } from "@/components/kit/page-header";
+import { accountGroups, accountPage } from "@/components/settings-list";
 import { Separator } from "@/components/ui/separator";
 import { formFile, formString } from "@/lib/form";
 
 import { PhoneNumberResource } from "@clerk/types";
 
-import { Camera, ChevronRightIcon, Loader2Icon, LockIcon } from "lucide-react";
+import { Camera, Loader2Icon, LockIcon } from "lucide-react";
 
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -33,7 +30,6 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 
 import {
@@ -43,6 +39,47 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { REGEXP_ONLY_DIGITS } from "input-otp";
+
+/** Foto (ou inicial), nome e e-mail; a câmera no canto abre a edição. Só props. */
+export function ProfileHero({
+  name,
+  email,
+  imageUrl,
+  onEdit,
+}: {
+  name: string;
+  email?: string;
+  imageUrl?: string;
+  onEdit: () => void;
+}): JSX.Element {
+  return (
+    <div className="flex items-center gap-4 px-1 pt-5">
+      <div className="relative flex-none">
+        <Avatar className="size-18 rounded-full">
+          <AvatarImage src={imageUrl} alt="" />
+          <AvatarFallback className="rounded-full bg-fill text-3xl font-semibold text-ink">
+            {name.charAt(0).toUpperCase()}
+          </AvatarFallback>
+        </Avatar>
+        {/* 44px de alvo; o disco de 24 com o anel do canvas é o que aparece. */}
+        <button
+          type="button"
+          onClick={onEdit}
+          className="absolute -right-2 -bottom-2 grid size-11 cursor-pointer place-items-center text-canvas"
+        >
+          <span className="grid size-6 place-items-center rounded-full bg-ink ring-3 ring-canvas">
+            <Camera className="size-3.5" aria-hidden="true" />
+          </span>
+          <span className="sr-only">{copy.profile.photoChange}</span>
+        </button>
+      </div>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="truncate text-title-3 font-semibold">{name}</span>
+        <span className="truncate text-subhead text-ink-secondary">{email}</span>
+      </div>
+    </div>
+  );
+}
 
 export default function ProfilePage(): JSX.Element {
   const { user, isLoaded } = useUser();
@@ -56,6 +93,7 @@ export default function ProfilePage(): JSX.Element {
   const [phoneFromUrl, setPhoneFromUrl] = useState<PhoneNumber>();
   const [isVerifyingPhone, setIsVerifyingPhone] = useState<boolean>(false);
   const [phoneDialogOpen, setPhoneDialogOpen] = useState(false);
+  const [editOpen, setEditOpen] = useState(false);
   const [code, setCode] = useState<string>();
   const [phoneObj, setPhoneObj] = useState<PhoneNumberResource>();
   const [isLoading, setIsLoading] = useState<boolean>(false);
@@ -171,81 +209,54 @@ export default function ProfilePage(): JSX.Element {
   }, [searchParams]);
 
   const fullName = [user?.firstName, user?.lastName].filter(Boolean).join(" ");
-  const chevron = <ChevronRightIcon className="size-4 text-muted-foreground" aria-hidden="true" />;
+  const email = user?.primaryEmailAddress?.emailAddress;
   const value = (text?: string | null) =>
-    text ? (
-      <span className="truncate text-sm text-content-secondary">{text}</span>
-    ) : (
-      <span className="text-xs text-muted-foreground">{copy.profile.empty}</span>
-    );
+    text || <span className="text-ink-tertiary">{copy.profile.empty}</span>;
+  const edit = () => setEditOpen(true);
 
   return (
-    <main className={settingsPage}>
-      {/* sr-only: a sidebar e o title do Helmet já nomeiam a página na tela */}
-      <h1 className="sr-only">{copy.profile.pageTitle}</h1>
+    <main className={accountPage}>
+      <PageHeader title={copy.profile.pageTitle} className="px-1" />
 
-      <Dialog>
-        <div className="flex items-center gap-4 px-1">
-          <Avatar className="size-14 rounded-xl">
-            <AvatarImage src={user?.imageUrl} alt={fullName} />
-            <AvatarFallback className="rounded-xl text-lg">
-              {user?.firstName?.charAt(0)}
-              {user?.lastName?.charAt(0)}
-            </AvatarFallback>
-          </Avatar>
-          <div className="flex min-w-0 flex-1 flex-col">
-            <span className="truncate text-base font-medium">{fullName}</span>
-            <span className="truncate text-sm text-muted-foreground">
-              {user?.primaryEmailAddress?.emailAddress}
-            </span>
-          </div>
-          <DialogTrigger asChild>
-            <Button variant="outline" size="sm" className="cursor-pointer">
-              {copy.profile.editProfile}
-            </Button>
-          </DialogTrigger>
-        </div>
+      <ProfileHero name={fullName} email={email} imageUrl={user?.imageUrl} onEdit={edit} />
 
-        <SettingsGroup title={copy.profile.groupData}>
-          <DialogTrigger asChild>
-            <SettingsRowButton
-              label={copy.profile.name}
-              trailing={
-                <>
-                  {value(fullName)}
-                  {chevron}
-                </>
-              }
-            />
-          </DialogTrigger>
-          <DialogTrigger asChild>
-            <SettingsRowButton
-              label={copy.profile.username}
-              trailing={
-                <>
-                  {value(user?.username && `@${user.username}`)}
-                  {chevron}
-                </>
-              }
-            />
-          </DialogTrigger>
-          <DialogTrigger asChild>
-            <SettingsRowButton
-              label={copy.profile.phone}
-              trailing={
-                <>
-                  {value(user?.primaryPhoneNumber?.phoneNumber)}
-                  {chevron}
-                </>
-              }
-            />
-          </DialogTrigger>
-          <SettingsRow label={copy.profile.email} hint={copy.profile.emailLocked}>
-            {value(user?.primaryEmailAddress?.emailAddress)}
-            <LockIcon className="size-3.5 text-muted-foreground" aria-hidden="true" />
-          </SettingsRow>
-        </SettingsGroup>
+      <div className={accountGroups}>
+        <ListGroup title={copy.profile.groupData} footer={copy.profile.emailLocked}>
+          <ListRow
+            label={copy.profile.name}
+            value={value(fullName)}
+            accessory="chevron"
+            onClick={edit}
+          />
+          <ListRow
+            label={copy.profile.username}
+            value={value(user?.username && `@${user.username}`)}
+            accessory="chevron"
+            onClick={edit}
+          />
+          <ListRow
+            label={copy.profile.phone}
+            value={value(user?.primaryPhoneNumber?.phoneNumber)}
+            accessory="chevron"
+            onClick={edit}
+          />
+          <ListRow
+            label={copy.profile.email}
+            value={email}
+            trailing={<LockIcon className="size-4 text-ink-secondary" aria-hidden="true" />}
+          />
+        </ListGroup>
 
+        <ListGroup title={copy.profile.groupAccount} footer={copy.profile.dangerDescription}>
+          <ListRow
+            label={copy.profile.signOut}
+            onClick={() => void signOut({ redirectUrl: "/" })}
+          />
+          <DeleteAccount />
+        </ListGroup>
+      </div>
+
+      <Dialog open={editOpen} onOpenChange={setEditOpen}>
         <DialogContent className="max-h-[calc(100%-2rem)] overflow-y-scroll scrollbar-floating">
           <DialogHeader className="">
             <DialogTitle>{copy.profile.editTitle}</DialogTitle>
@@ -361,7 +372,7 @@ export default function ProfilePage(): JSX.Element {
 
             <DialogFooter>
               <DialogClose asChild>
-                <Button type="button" variant="outline" className="cursor-pointer">
+                <Button type="button" variant="secondary" className="cursor-pointer">
                   {copy.form.cancel}
                 </Button>
               </DialogClose>
@@ -380,14 +391,6 @@ export default function ProfilePage(): JSX.Element {
           </form>
         </DialogContent>
       </Dialog>
-
-      <SettingsGroup title={copy.profile.groupAccount}>
-        <SettingsRowButton
-          label={copy.profile.signOut}
-          onClick={() => void signOut({ redirectUrl: "/" })}
-        />
-        <DeleteAccount />
-      </SettingsGroup>
 
       <Dialog open={phoneDialogOpen} onOpenChange={setPhoneDialogOpen}>
         <DialogContent>
@@ -458,7 +461,7 @@ export default function ProfilePage(): JSX.Element {
 
           <DialogFooter className="self-end">
             <DialogClose>
-              <Button variant={"outline"} onClick={() => setIsVerifyingPhone(false)}>
+              <Button variant="secondary" onClick={() => setIsVerifyingPhone(false)}>
                 {copy.profile.close}
               </Button>
             </DialogClose>

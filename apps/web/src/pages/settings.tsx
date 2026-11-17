@@ -1,43 +1,36 @@
 import { copy } from "@/components/dashboard/copy";
-import { IntegrationsGroup } from "@/components/integrations";
+import { IntegrationsSummary } from "@/components/integrations";
 import { HourFormatSelect } from "@/components/hour-format-select";
+import { ListGroup, ListRow } from "@/components/kit/list";
+import { PageHeader } from "@/components/kit/page-header";
 import { ThemeSelect } from "@/components/mode-toggle";
 import { PushToggle } from "@/components/dashboard/push-toggle";
-import { SettingsGroup, SettingsRow, settingsPage } from "@/components/settings-list";
+import { accountGroups, accountPage } from "@/components/settings-list";
 import { TimeZoneSelect } from "@/components/time-zone-select";
 import { WeekStartSelect } from "@/components/week-start-select";
 
 export default function SettingsPage(): JSX.Element {
   return (
-    <main className={settingsPage}>
-      {/* sr-only: a sidebar e o title do Helmet já nomeiam a página na tela */}
-      <h1 className="sr-only">{copy.profile.settingsPageTitle}</h1>
+    <main className={accountPage}>
+      <PageHeader title={copy.profile.settingsPageTitle} className="px-1" />
 
-      <SettingsGroup title={copy.profile.groupAppearance}>
-        <SettingsRow label={copy.profile.themeTitle}>
-          <ThemeSelect />
-        </SettingsRow>
-      </SettingsGroup>
+      <div className={accountGroups}>
+        <ListGroup title={copy.profile.groupAppearance}>
+          <ListRow label={copy.profile.themeTitle} below={<ThemeSelect />} />
+        </ListGroup>
 
-      <SettingsGroup title={copy.profile.groupDateTime}>
-        <SettingsRow label={copy.profile.timeZoneTitle} hint={copy.profile.timeZoneDescription}>
+        <ListGroup title={copy.profile.groupDateTime} footer={copy.profile.weekStartDescription}>
           <TimeZoneSelect />
-        </SettingsRow>
-        <SettingsRow label={copy.profile.hourFormatTitle}>
-          <HourFormatSelect />
-        </SettingsRow>
-        <SettingsRow label={copy.profile.weekStartTitle} hint={copy.profile.weekStartDescription}>
-          <WeekStartSelect />
-        </SettingsRow>
-      </SettingsGroup>
+          <ListRow label={copy.profile.hourFormatTitle} trailing={<HourFormatSelect />} />
+          <ListRow label={copy.profile.weekStartTitle} below={<WeekStartSelect />} />
+        </ListGroup>
 
-      <SettingsGroup title={copy.profile.notificationsTitle}>
-        <SettingsRow label={copy.profile.pushTitle} hint={copy.form.notificationsOff}>
+        <ListGroup title={copy.profile.notificationsTitle} footer={copy.form.notificationsOff}>
           <PushToggle />
-        </SettingsRow>
-      </SettingsGroup>
+        </ListGroup>
 
-      <IntegrationsGroup />
+        <IntegrationsSummary />
+      </div>
     </main>
   );
 }

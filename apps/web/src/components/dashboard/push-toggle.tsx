@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
 import { useAuth } from "@clerk/clerk-react";
-import { BellIcon, Loader2Icon } from "lucide-react";
+import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { copy } from "@/components/dashboard/copy";
+import { ListRow } from "@/components/kit/list";
+import { Switch } from "@/components/kit/switch";
 import { disablePush, enablePush, pushState, type PushState } from "@/functions/push";
 
 /**
- * O estado real mora no navegador (permissão + inscrição do push), não no nosso banco — por isso é
- * lido do device a cada montagem em vez de vir do contexto.
+ * A linha "Lembretes neste aparelho" de /settings. O estado real mora no navegador (permissão +
+ * inscrição do push), não no nosso banco — por isso é lido do device a cada montagem em vez de vir
+ * do contexto.
  */
 export function PushToggle(): JSX.Element {
   const { getToken } = useAuth();
@@ -35,29 +37,31 @@ export function PushToggle(): JSX.Element {
     }
   };
 
-  if (state === null) return <Loader2Icon className="size-4 animate-spin text-muted-foreground" />;
-
-  if (state === "unsupported" || state === "denied") {
-    return (
-      <p className="text-sm text-content-secondary">
-        {state === "unsupported"
-          ? copy.form.notificationsUnsupported
-          : copy.form.notificationsDenied}
-      </p>
-    );
-  }
+  // Sem suporte ou com a permissão negada não há o que ligar: a linha só explica.
+  const blocked = state === "unsupported" || state === "denied";
 
   return (
-    // O texto de estado é a ajuda da linha em /settings; aqui fica só a ação.
-    <Button
-      variant={state === "on" ? "outline" : "default"}
-      size="sm"
-      disabled={busy}
-      onClick={() => void toggle()}
-      className="w-fit cursor-pointer gap-2 rounded-md"
-    >
-      {busy ? <Loader2Icon className="size-4 animate-spin" /> : <BellIcon className="size-4" />}
-      {state === "on" ? copy.form.notificationsDisable : copy.form.notificationsEnable}
-    </Button>
+    <ListRow
+      label={copy.profile.pushTitle}
+      sublabel={
+        state === "unsupported"
+          ? copy.form.notificationsUnsupported
+          : state === "denied"
+            ? copy.form.notificationsDenied
+            : undefined
+      }
+      trailing={
+        state === null ? (
+          <Loader2Icon className="size-5 animate-spin text-ink-secondary" aria-hidden="true" />
+        ) : blocked ? undefined : (
+          <Switch
+            aria-label={copy.profile.pushTitle}
+            checked={state === "on"}
+            disabled={busy}
+            onCheckedChange={() => void toggle()}
+          />
+        )
+      }
+    />
   );
 }

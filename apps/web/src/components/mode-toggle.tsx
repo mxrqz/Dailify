@@ -7,8 +7,7 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { segmented, segmentedItem } from "@/components/settings-list";
-import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { SegmentedControl } from "@/components/kit/segmented-control";
 import { isTheme, useTheme } from "./theme-provider";
 import { cn } from "@/lib/utils";
 import { copy } from "@/components/dashboard/copy";
@@ -44,32 +43,20 @@ export function ModeToggle({ className }: { className?: string }) {
   );
 }
 
-/**
- * Seletor de tema em linha, pra dentro de `/settings`. O guard do `isTheme` não é
- * decoração: clicar no item já ativo faz o Radix emitir `""`, que sem ele zeraria o tema.
- */
+/** Seletor de tema em linha, pra dentro de `/settings`. */
 export function ThemeSelect(): JSX.Element {
   const { theme, setTheme } = useTheme();
 
   return (
-    <ToggleGroup
-      type="single"
-      className={segmented}
+    <SegmentedControl
+      aria-label={copy.profile.themeTitle}
       value={theme}
-      onValueChange={(value) => {
-        if (isTheme(value)) setTheme(value);
-      }}
-      aria-label={copy.header.themeToggle}
-    >
-      <ToggleGroupItem className={segmentedItem} value="light">
-        {copy.header.themeLight}
-      </ToggleGroupItem>
-      <ToggleGroupItem className={segmentedItem} value="dark">
-        {copy.header.themeDark}
-      </ToggleGroupItem>
-      <ToggleGroupItem className={segmentedItem} value="system">
-        {copy.header.themeSystem}
-      </ToggleGroupItem>
-    </ToggleGroup>
+      onValueChange={setTheme}
+      options={[
+        { value: "light", label: copy.header.themeLight },
+        { value: "dark", label: copy.header.themeDark },
+        { value: "system", label: copy.header.themeSystem },
+      ]}
+    />
   );
 }

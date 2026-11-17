@@ -30,7 +30,7 @@ export function SyncBadge(): JSX.Element | null {
 
   return (
     <span
-      className="inline-flex h-6 items-center gap-1.5 rounded-md border border-surface-line px-2 font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground"
+      className="inline-flex h-6 items-center gap-1.5 rounded-sm bg-fill px-2 text-xs font-medium text-ink-secondary"
       title={copy.sync.offline}
     >
       <CloudOffIcon className="size-3" aria-hidden="true" />

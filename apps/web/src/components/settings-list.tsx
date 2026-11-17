@@ -1,9 +1,16 @@
-import { forwardRef, type ComponentPropsWithoutRef, type ReactNode } from "react";
+import type { ReactNode } from "react";
 
 import { cn } from "@/lib/utils";
 
 /** Largura e ritmo das páginas da sidebar: uma coluna de grupos. */
 export const settingsPage = "mx-auto flex w-full max-w-160 flex-col gap-8 py-6";
+
+/**
+ * O mesmo, no redesign (`kit/list`): o `PageHeader` com `px-1` põe o Large Title 4px pra dentro
+ * dos cards, como no iOS. O resto deste arquivo é legado do `/billing`.
+ */
+export const accountPage = "mx-auto flex w-full max-w-160 flex-col pb-10";
+export const accountGroups = "flex flex-col gap-7 pt-7";
 
 /** Um grupo de linhas sob um título pequeno em mono. */
 export function SettingsGroup({ title, children }: { title: string; children: ReactNode }) {
@@ -52,35 +59,3 @@ export function SettingsRow({
     </div>
   );
 }
-
-/** A linha inteira é o botão (Sair, Excluir conta): encaminha ref e props pro gatilho do Radix. */
-export const SettingsRowButton = forwardRef<
-  HTMLButtonElement,
-  { label: string; hint?: ReactNode; danger?: boolean; trailing?: ReactNode } & Omit<
-    ComponentPropsWithoutRef<"button">,
-    "children"
-  >
->(function SettingsRowButton({ label, hint, danger, trailing, className, ...props }, ref) {
-  return (
-    <button
-      ref={ref}
-      type="button"
-      className={cn(
-        rowClass,
-        "cursor-pointer transition-colors outline-none first:rounded-t-xl last:rounded-b-xl hover:bg-surface-hover focus-visible:bg-surface-hover",
-        className,
-      )}
-      {...props}
-    >
-      <RowText label={label} hint={hint} danger={danger} />
-      {trailing}
-    </button>
-  );
-});
-
-/** Controle segmentado das linhas (tema, formato, início da semana): o escolhido ganha só o fundo. */
-export const segmented = "gap-0.5 rounded-md border border-surface-line p-0.5";
-export const segmentedItem =
-  "h-7 rounded-sm px-2.5 text-xs font-normal text-muted-foreground first:rounded-l-sm " +
-  "last:rounded-r-sm hover:bg-surface-hover hover:text-foreground " +
-  "data-[state=on]:bg-surface-line data-[state=on]:text-foreground";
