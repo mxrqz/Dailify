@@ -11,7 +11,7 @@ export default function TermsPage() {
       pageTitle="Mewki - Termos de Uso"
       bar={copy.legal.terms.bar}
       title="Termos de Uso"
-      updated="Última atualização: 3 de agosto de 2026"
+      updated="Última atualização: 17 de novembro de 2026"
       intro={
         <>
           Estes Termos regem o uso da Mewki ("serviço"), operado por{" "}
@@ -36,8 +36,9 @@ export default function TermsPage() {
           title: "Conta",
           body: (
             <p>
-              Você é responsável por manter suas credenciais seguras e por toda atividade na sua
-              conta. A autenticação é feita via nosso provedor de identidade (Clerk).
+              O acesso é feito por link enviado ao seu e-mail ou pela sua conta Google. Você é
+              responsável por manter o acesso ao seu e-mail seguro e por toda atividade na sua
+              conta.
             </p>
           ),
         },
@@ -52,7 +53,10 @@ export default function TermsPage() {
                 Você pode cancelar a qualquer momento; o acesso premium permanece até o fim do
                 período já pago. Não há reembolso proporcional, salvo quando exigido por lei.
               </li>
-              <li>Os limites de cada plano estão descritos na página de planos.</li>
+              <li>
+                Os limites de cada plano, incluindo os créditos de IA, estão descritos na página de
+                planos. Os créditos de IA renovam todo mês e não acumulam.
+              </li>
             </ul>
           ),
         },
@@ -70,8 +74,18 @@ export default function TermsPage() {
           title: "Recursos de IA",
           body: (
             <p>
-              A criação de tarefas por voz usa serviços de IA de terceiros (OpenAI). As
+              A criação de tarefas por voz e por texto com IA usa serviços de terceiros (OpenAI). As
               interpretações são automáticas e podem conter erros; revise as tarefas geradas.
+            </p>
+          ),
+        },
+        {
+          title: "Integrações",
+          body: (
+            <p>
+              Você pode conectar serviços de terceiros, como o Google Agenda. A Mewki só age nesses
+              serviços para sincronizar suas tarefas, e você pode desconectar a qualquer momento. O
+              uso desses serviços também segue os termos de cada um.
             </p>
           ),
         },
