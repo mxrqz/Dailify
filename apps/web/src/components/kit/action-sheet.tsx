@@ -14,7 +14,7 @@ export interface ActionSheetAction {
 }
 
 const option =
-  "h-14 w-full cursor-pointer text-xl leading-6 tracking-tight text-ink outline-none transition-colors active:bg-fill-pressed focus-visible:bg-fill";
+  "h-14 w-full cursor-pointer text-xl leading-6 tracking-tight text-ink outline-none transition-colors active:bg-fill-pressed pointer-fine:focus-visible:bg-fill";
 
 /**
  * Pergunta de múltipla escolha do iOS: as opções num card de vidro e "Cancelar" num card próprio,

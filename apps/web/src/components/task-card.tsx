@@ -380,7 +380,7 @@ function TitleField({
         "relative z-10 mr-auto -ml-2 min-w-[15ch] max-w-1/2 truncate rounded-md bg-transparent px-2 py-0.5",
         "field-sizing-content",
         "text-sm font-medium outline-none transition-colors",
-        "hover:bg-surface-panel focus:bg-surface-panel",
+        "hover:bg-surface-panel pointer-fine:focus:bg-surface-panel",
         completed ? "text-muted-foreground line-through" : "text-foreground",
       )}
     />

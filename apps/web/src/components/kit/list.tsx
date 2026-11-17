@@ -109,7 +109,7 @@ export const ListRow = forwardRef<HTMLElement, ListRowProps>(function ListRow(
         "group/row flex min-h-13 w-full items-center gap-3 px-4 text-left text-ink",
         "group-data-compact/list:min-h-12 group-data-compact/list:pr-3 group-data-compact/list:pl-3.5",
         interactive &&
-          "cursor-pointer outline-none transition-colors duration-fast hover:bg-fill focus-visible:bg-fill active:bg-fill-pressed disabled:cursor-default",
+          "cursor-pointer outline-none transition-colors duration-fast hover:bg-fill pointer-fine:focus-visible:bg-fill active:bg-fill-pressed disabled:cursor-default",
         className,
       )}
       {...props}

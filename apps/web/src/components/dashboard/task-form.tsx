@@ -135,7 +135,7 @@ function NativeRow({
 }: Omit<ComponentProps<typeof ListRow>, "asChild" | "children"> & { control: ReactNode }) {
   return (
     <ListRow asChild accessory={disabled ? undefined : "chevron"} {...row}>
-      <div className="relative focus-within:bg-fill">{control}</div>
+      <div className="relative pointer-fine:focus-within:bg-fill">{control}</div>
     </ListRow>
   );
 }

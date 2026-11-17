@@ -658,6 +658,22 @@
   body {
     @apply bg-canvas text-foreground min-h-dvh;
   }
+
+  /* App, não documento: tocar, arrastar ou dar duplo clique não seleciona nada; só o que se edita.
+     O toque também não deixa o flash azul do WebView nem o menu de "copiar imagem". */
+  html {
+    -webkit-user-select: none;
+    user-select: none;
+    -webkit-tap-highlight-color: transparent;
+    -webkit-touch-callout: none;
+  }
+  input,
+  textarea,
+  [contenteditable]:not([contenteditable="false"]) {
+    -webkit-user-select: text;
+    user-select: text;
+    -webkit-touch-callout: default;
+  }
 }
 
 #root {

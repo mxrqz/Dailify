@@ -68,7 +68,7 @@ export function AnytimeItem({
         type="button"
         onClick={onOpen}
         className={cn(
-          "flex min-w-0 flex-1 cursor-pointer flex-col justify-center gap-0.5 self-stretch border-separator py-2.5 text-left outline-none focus-visible:bg-fill",
+          "flex min-w-0 flex-1 cursor-pointer flex-col justify-center gap-0.5 self-stretch border-separator py-2.5 text-left outline-none pointer-fine:focus-visible:bg-fill",
           !first && "border-t",
         )}
       >
