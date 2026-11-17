@@ -89,6 +89,7 @@ export function WeekDays({
       {days.map((day) => {
         const on = selected !== undefined && isSameDay(day, selected);
         const label = weekdayLabel(day);
+        const has = marked(day);
         return (
           <div key={day.getTime()} className="flex flex-col items-center gap-1.5">
             {wrap(
@@ -98,7 +99,7 @@ export function WeekDays({
                 onClick={() => onPick(day)}
                 aria-pressed={on}
                 aria-current={isToday(day) ? "date" : undefined}
-                aria-label={marked(day) ? copy.day.withTasks.replace("{day}", label) : label}
+                aria-label={has ? copy.day.withTasks.replace("{day}", label) : label}
                 className={cn(
                   "flex h-13 w-full cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md transition-colors duration-fast",
                   "data-drop-over:outline-2 data-drop-over:-outline-offset-2 data-drop-over:outline-brand",
@@ -125,10 +126,7 @@ export function WeekDays({
             )}
             <i
               aria-hidden="true"
-              className={cn(
-                "size-1 rounded-full",
-                marked(day) ? "bg-ink-secondary" : "bg-transparent",
-              )}
+              className={cn("size-1 rounded-full", has ? "bg-ink-secondary" : "bg-transparent")}
             />
           </div>
         );

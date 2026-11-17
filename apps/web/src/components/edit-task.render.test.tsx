@@ -84,3 +84,24 @@ describe("<EditTaskContent> offline", () => {
     expect(readQueue("u1")).toEqual([]);
   });
 });
+
+describe("<EditTaskContent> preguiçosa", () => {
+  it("fechada não monta; depois do primeiro open fica montada pra animar a saída", () => {
+    dailify.mockClear();
+    dailify.mockReturnValue({ tasks: [task], setTasks: vi.fn(), loadedMonths: [] });
+    const sheet = (open: boolean) => (
+      <MemoryRouter>
+        <EditTask open={open}>
+          <EditTaskContent task={task} day={new Date(task.date)} open={open} onClose={vi.fn()} />
+        </EditTask>
+      </MemoryRouter>
+    );
+    const { rerender } = render(sheet(false));
+    expect(dailify).not.toHaveBeenCalled();
+    rerender(sheet(true));
+    expect(dailify).toHaveBeenCalled();
+    dailify.mockClear();
+    rerender(sheet(false));
+    expect(dailify).toHaveBeenCalled();
+  });
+});

@@ -13,8 +13,6 @@ vi.mock("@clerk/clerk-react", () => ({
   useUser: () => ({ user: { id: "u1" } }),
 }));
 vi.mock("@/functions/api", () => api);
-// Toque: o cartão vira overlay que abre a folha.
-vi.mock("@/hooks/useMediaQuery", () => ({ useMediaQuery: () => true }));
 vi.mock("@/components/edit-task", () => ({
   EditTask: ({ children }: { children: unknown }) => children,
   EditTaskContent: ({ open }: { open: boolean }) => (open ? <div>folha aberta</div> : null),
@@ -45,7 +43,7 @@ describe("DayTaskRow", () => {
       bumpUsage: vi.fn(),
     });
     api.completeTask.mockResolvedValue({});
-    render(<DayTaskRow task={task} day={day} />);
+    render(<DayTaskRow task={task} day={day} sheetEditing />);
 
     expect(screen.getByText("14:30")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("checkbox"));
@@ -66,7 +64,7 @@ describe("DayTaskRow", () => {
     const linked = { ...task, links: ["https://www.google.com/calendar/event?eid=abc"] };
     dailify.mockReturnValue({ tasks: [linked], setTasks: vi.fn(), loadedMonths: [day] });
     api.deleteTask.mockResolvedValue({});
-    render(<DayTaskRow task={linked} day={day} />);
+    render(<DayTaskRow task={linked} day={day} sheetEditing />);
     expect(screen.getByText(copy.calendar.name)).toBeInTheDocument();
 
     function Delete() {

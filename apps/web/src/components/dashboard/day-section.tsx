@@ -7,7 +7,7 @@ import { durationMinutes } from "@dailify/shared";
 import { useDailify } from "@/components/dailifyContext";
 import { AnytimeBlock, ScheduleDrop } from "@/components/dashboard/anytime-block";
 import { copy } from "@/components/dashboard/copy";
-import { DayTaskRow, NowLine } from "@/components/dashboard/day-task-row";
+import { DayTaskRow, NowLine, SHEET_EDITING } from "@/components/dashboard/day-task-row";
 import { TaskCard } from "@/components/task-card";
 import {
   formatClock,
@@ -16,6 +16,7 @@ import {
   groupTasksByHour,
   timeToMinutes,
 } from "@/functions/functions";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNow } from "@/hooks/useNow";
 import type { TaskProps } from "@/types/types";
 
@@ -70,6 +71,7 @@ export function DaySection({
 }): JSX.Element {
   const { tasks, hour12 } = useDailify();
   const reduce = useReducedMotion();
+  const sheetEditing = useMediaQuery(SHEET_EDITING);
   const isCurrentDay = isToday(day);
   // Só hoje tem o fio do agora; os outros dias só mudam (rótulo) na virada do dia.
   const now = useNow(isCurrentDay ? 60_000 : "day");
@@ -136,7 +138,13 @@ export function DaySection({
             {rows.map((row) =>
               "task" in row ? (
                 <motion.li key={row.task.id} variants={rowVariants}>
-                  <DayTaskRow task={row.task} day={day} hour={row.hour} live={live(row)} />
+                  <DayTaskRow
+                    task={row.task}
+                    day={day}
+                    hour={row.hour}
+                    live={live(row)}
+                    sheetEditing={sheetEditing}
+                  />
                 </motion.li>
               ) : (
                 <li key="now">

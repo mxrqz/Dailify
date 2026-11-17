@@ -81,18 +81,26 @@ function WithUndatedActions({
   return children(useUndatedActions(task));
 }
 
-export function EditTaskContent({
-  task,
-  day,
-  open,
-  onClose,
-}: {
+interface EditTaskContentProps {
   task: TaskProps;
   day: Date;
-  /** Só pra saber quando a folha fechou: reabrir tem que cair na raiz, não na última página. */
-  open?: boolean;
+  /** Monta a folha no primeiro open; ao fechar, reabrir tem que cair na raiz, não na última página. */
+  open: boolean;
   onClose: () => void;
-}) {
+}
+
+/**
+ * Cada linha da agenda tem a sua folha: fechada, ela não monta (os hooks dela — tags, integrações,
+ * ações — custavam por linha a cada render). Depois do primeiro open fica montada, pela animação de
+ * saída.
+ */
+export function EditTaskContent(props: EditTaskContentProps) {
+  const [opened, setOpened] = useState(props.open);
+  if (props.open && !opened) setOpened(true);
+  return opened ? <EditTaskSheet {...props} /> : null;
+}
+
+function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
   const { tasks, setTasks, undatedTasks, setUndatedTasks, loadedMonths, hour12 } = useDailify();
   const knownTags = useMemo(
     () => [...new Set((tasks ?? []).flatMap((t) => t.tags ?? []))],

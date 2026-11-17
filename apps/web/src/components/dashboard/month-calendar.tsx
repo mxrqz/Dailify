@@ -69,13 +69,14 @@ export function MonthGrid({
       {days.map((day) => {
         const on = isSameDay(day, selected);
         const label = weekdayDate(day, "EEEE, d 'de' MMMM");
+        const has = marked(day);
         return (
           <button
             key={day.getTime()}
             type="button"
             aria-pressed={on}
             aria-current={isToday(day) ? "date" : undefined}
-            aria-label={marked(day) ? copy.day.withTasks.replace("{day}", label) : label}
+            aria-label={has ? copy.day.withTasks.replace("{day}", label) : label}
             onClick={() => onPick(day)}
             className="group/day flex h-13 cursor-pointer flex-col items-center gap-1 pt-0.5"
           >
@@ -96,10 +97,7 @@ export function MonthGrid({
             </span>
             <i
               aria-hidden="true"
-              className={cn(
-                "size-1.25 rounded-full",
-                marked(day) ? "bg-ink-secondary" : "bg-transparent",
-              )}
+              className={cn("size-1.25 rounded-full", has ? "bg-ink-secondary" : "bg-transparent")}
             />
           </button>
         );
