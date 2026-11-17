@@ -322,11 +322,11 @@ export function MewDrafts({ say, drafts }: { say: string; drafts: DraftView[] })
   );
 }
 
-/** A Mew de olho nos créditos, embaixo do balão. */
+/** A Mew de olho nos créditos, embaixo do balão. Parada: animada, refiltra o vidro todo quadro. */
 export function MewCredits({ credits }: { credits: string | null }): JSX.Element {
   return (
     <div className="mt-4.5 ml-3.5 flex items-center gap-3">
-      <Mew mood="happy" className="w-14 flex-none" />
+      <MewStatic mood="happy" className="w-14 flex-none" />
       {credits && <span className="text-footnote text-ink-secondary tabular-nums">{credits}</span>}
     </div>
   );
