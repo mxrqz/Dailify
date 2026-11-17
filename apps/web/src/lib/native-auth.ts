@@ -4,6 +4,7 @@
  * `@tauri-apps/*` é importado estaticamente — na web este módulo não puxa o runtime do Tauri.
  */
 import { apiURL } from "@/consts/conts";
+import { forgetUser } from "@/functions/offline";
 import { authClient, setBearer } from "@/lib/auth";
 
 const SESSION_ACCOUNT = "mewki.session";
@@ -123,4 +124,11 @@ export async function signOutNative(): Promise<void> {
     setBearer(null);
     await vaultDelete(SESSION_ACCOUNT, VERIFIER_ACCOUNT);
   }
+}
+
+/** Todo "sair" passa aqui: no app também apaga o bearer e o cofre. */
+export async function signOut(): Promise<void> {
+  forgetUser();
+  if (isTauri()) return signOutNative();
+  await authClient.signOut();
 }

@@ -1,9 +1,9 @@
 /** @vitest-environment jsdom */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { MemoryRouter, Route, Routes } from "react-router-dom";
 
-const { api, offline, dailify } = vi.hoisted(() => ({
+const { api, offline, dailify, session } = vi.hoisted(() => ({
   api: {
     getTasksForMonth: vi.fn(async () => ({ tasks: [] })),
     getQuotas: vi.fn(async () => undefined),
@@ -16,6 +16,15 @@ const { api, offline, dailify } = vi.hoisted(() => ({
     cacheUndated: vi.fn(),
     readCachedTasks: vi.fn(),
     readCachedUndated: vi.fn(),
+    readLastUser: vi.fn(),
+    rememberUser: vi.fn(),
+  },
+  session: {
+    current: (): { data: unknown; error: unknown; isPending: boolean } => ({
+      data: { user: { id: "u1" } },
+      error: null,
+      isPending: false,
+    }),
   },
   dailify: {
     tasks: [],
@@ -37,7 +46,7 @@ vi.mock("@/functions/offline", () => offline);
 vi.mock("./dailifyContext", () => ({ useDailify: () => dailify }));
 // Objeto novo a cada render, como o do Better Auth no refetch: o gate depende do id, não dele.
 vi.mock("@/lib/auth", () => ({
-  useSession: () => ({ data: { user: { id: "u1" } }, isPending: false }),
+  useSession: () => session.current(),
 }));
 
 import ProtectedRoute from "./protected-route";
@@ -45,7 +54,10 @@ import ProtectedRoute from "./protected-route";
 // Elemento novo a cada chamada: `rerender` com o mesmo elemento nem re-renderiza.
 const app = () => (
   <MemoryRouter>
-    <ProtectedRoute>app</ProtectedRoute>
+    <Routes>
+      <Route path="/" element={<ProtectedRoute>app</ProtectedRoute>} />
+      <Route path="/login" element={<p>login</p>} />
+    </Routes>
   </MemoryRouter>
 );
 
@@ -135,5 +147,35 @@ describe("<ProtectedRoute>", () => {
     }
 
     expect(render(app()).getByText("app")).toBeInTheDocument();
+  });
+
+  describe("get-session sem resposta", () => {
+    const original = session.current;
+    afterEach(() => {
+      session.current = original;
+    });
+
+    it("rede/5xx segue offline com o último usuário e pinta o cache", async () => {
+      session.current = () => ({ data: null, error: { status: 503 }, isPending: false });
+      offline.readLastUser.mockReturnValue({ id: "u1", name: "", email: "a@b.c" });
+      offline.readCachedTasks.mockReturnValue([{ id: "t1" }]);
+      Object.assign(dailify, { tasks: undefined });
+      try {
+        const view = render(app());
+        await act(async () => {});
+        expect(view.queryByText("login")).toBeNull();
+        expect(offline.readCachedTasks).toHaveBeenCalledWith("u1");
+        expect(dailify.setTasks).toHaveBeenCalledWith([{ id: "t1" }]);
+      } finally {
+        Object.assign(dailify, { tasks: [] });
+      }
+    });
+
+    it("401 é sair de verdade: vai pro /login mesmo com usuário salvo", async () => {
+      session.current = () => ({ data: null, error: { status: 401 }, isPending: false });
+      offline.readLastUser.mockReturnValue({ id: "u1", name: "", email: "a@b.c" });
+      const view = render(app());
+      expect(await view.findByText("login")).toBeInTheDocument();
+    });
   });
 });

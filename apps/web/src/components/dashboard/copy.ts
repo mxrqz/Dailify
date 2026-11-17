@@ -241,6 +241,8 @@ export const copy = {
     unknownDevice: "Aparelho desconhecido",
     revokeOthers: "Encerrar as outras sessões",
     sessionMeta: "{place} · {when}",
+    sessionsError: "Não foi possível carregar as sessões",
+    revokeError: "Não foi possível encerrar a sessão",
     billingNoSubscription: "Você está no plano Free. Nenhuma assinatura ativa.",
     billingNoInvoices: "Nenhuma fatura ainda.",
     billingTitle: "Plano e assinatura",

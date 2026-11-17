@@ -8,6 +8,7 @@ import { EmailForm } from "@/components/auth/email-form";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import { useEmailLinkAuth } from "@/components/auth/use-email-link-auth";
 import { useSession } from "@/lib/auth";
+import { isTauri } from "@/lib/native-auth";
 
 /**
  * Corpo comum de /login e /signup. As duas rotas são a MESMA mecânica — a separação é de
@@ -76,7 +77,10 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
             failure={failure}
             defaultEmail={state.status === "error" ? state.email : undefined}
           />
-          <OAuthButtons onGoogle={signInWithGoogle} disabled={state.status === "sending"} />
+          {/* Google no app é a bd rzz.8: o redirect da webview não volta com a sessão. */}
+          {!isTauri() && (
+            <OAuthButtons onGoogle={signInWithGoogle} disabled={state.status === "sending"} />
+          )}
         </>
       )}
       {/* Fora do condicional: o reenvio, na caixa de entrada, também precisa do widget montado. */}

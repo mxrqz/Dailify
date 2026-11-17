@@ -76,6 +76,35 @@ export const readCachedUndated = (userId: string): Task[] | undefined =>
 export const cacheUndated = (userId: string, tasks: Task[]): void =>
   write(key(userId, "undated"), tasks);
 
+/** Quem estava logado: offline o get-session falha e, sem isto, o gate não sabe de quem é o cache. */
+export interface LastUser {
+  id: string;
+  name: string;
+  email: string;
+  image?: string | null;
+  plan?: string | null;
+}
+
+const LAST_USER = "dailify:last-user";
+
+export const rememberUser = ({ id, name, email, image, plan }: LastUser): void =>
+  write(LAST_USER, { id, name, email, image, plan });
+
+export function readLastUser(): LastUser | undefined {
+  const user = read<Partial<LastUser>>(LAST_USER);
+  return typeof user?.id === "string" && typeof user.email === "string"
+    ? { id: user.id, name: user.name ?? "", email: user.email, image: user.image, plan: user.plan }
+    : undefined;
+}
+
+export function forgetUser(): void {
+  try {
+    localStorage.removeItem(LAST_USER);
+  } catch {
+    /* sem acesso ao storage: não havia o que limpar */
+  }
+}
+
 export const readQueue = (userId: string): Mutation[] =>
   read<Mutation[]>(key(userId, "outbox")) ?? [];
 
@@ -166,6 +195,7 @@ export function clearLocal(userId: string): void {
     localStorage.removeItem(key(userId, "tasks"));
     localStorage.removeItem(key(userId, "outbox"));
     localStorage.removeItem(key(userId, "undated"));
+    localStorage.removeItem(LAST_USER);
   } catch {
     /* sem acesso ao storage: não havia o que limpar */
   }

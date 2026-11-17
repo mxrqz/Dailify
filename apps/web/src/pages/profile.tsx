@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { authClient, useSession } from "@/lib/auth";
 import { formString } from "@/lib/form";
+import { signOut } from "@/lib/native-auth";
 
 /** Foto (a do Google, ou a inicial), nome e e-mail. Só props. */
 export function ProfileHero({
@@ -67,7 +68,7 @@ export default function ProfilePage(): JSX.Element {
   };
 
   // Página inteira: derruba o estado em memória (tarefas, cotas) de quem saiu.
-  const signOut = () => void authClient.signOut().finally(() => window.location.assign("/"));
+  const leave = () => void signOut().finally(() => window.location.assign("/"));
 
   const name = user?.name ?? "";
   const edit = () => setEditOpen(true);
@@ -94,7 +95,7 @@ export default function ProfilePage(): JSX.Element {
         </ListGroup>
 
         <ListGroup title={copy.profile.groupAccount} footer={copy.profile.dangerDescription}>
-          <ListRow label={copy.profile.signOut} onClick={signOut} />
+          <ListRow label={copy.profile.signOut} onClick={leave} />
           <DeleteAccount />
         </ListGroup>
       </div>

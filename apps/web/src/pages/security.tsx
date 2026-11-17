@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MonitorIcon, SmartphoneIcon } from "lucide-react";
+import { toast } from "sonner";
 
 import { copy } from "@/components/dashboard/copy";
 import { ListGroup, ListRow } from "@/components/kit/list";
@@ -59,7 +60,10 @@ export default function SecurityPage(): JSX.Element {
   const [sessions, setSessions] = useState<Session[]>();
 
   const load = async () => {
-    const { data } = await authClient.listSessions();
+    const { data, error } = await authClient
+      .listSessions()
+      .catch(() => ({ data: null, error: true }));
+    if (error) return void toast.error(copy.profile.sessionsError);
     if (data) setSessions(data);
   };
 
@@ -70,12 +74,14 @@ export default function SecurityPage(): JSX.Element {
   }, []);
 
   const revoke = async (token: string) => {
-    await authClient.revokeSession({ token });
+    const { error } = await authClient.revokeSession({ token }).catch(() => ({ error: true }));
+    if (error) toast.error(copy.profile.revokeError);
     await load();
   };
 
   const revokeOthers = async () => {
-    await authClient.revokeOtherSessions();
+    const { error } = await authClient.revokeOtherSessions().catch(() => ({ error: true }));
+    if (error) toast.error(copy.profile.revokeError);
     await load();
   };
 

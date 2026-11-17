@@ -24,6 +24,7 @@ const renderAt = (hash: string) => {
           <Route path="/verify" element={<Verify />} />
           <Route path="/dashboard" element={<p>dashboard</p>} />
           <Route path="/login" element={<p>login</p>} />
+          <Route path="/billing" element={<p>billing</p>} />
         </Routes>
       </MemoryRouter>
     </StrictMode>,
@@ -47,6 +48,18 @@ describe("<Verify>", () => {
     expect(verify).toHaveBeenCalledTimes(1);
     expect(verify).toHaveBeenCalledWith(expect.objectContaining({ query: { token: "abc" } }));
     expect(notify).toHaveBeenCalledWith("$sessionSignal");
+  });
+
+  it("vai pro `next` interno; `next` de fora do site cai no /dashboard", async () => {
+    verify.mockResolvedValue({ data: {}, error: null });
+    const first = renderAt("#token=abc&next=%2Fbilling");
+    await userEvent.click(screen.getByRole("button", { name: copy.verify.submit }));
+    expect(await screen.findByText("billing")).toBeInTheDocument();
+    first.unmount();
+
+    renderAt("#token=abc&next=%2F%2Fevil.com");
+    await userEvent.click(screen.getByRole("button", { name: copy.verify.submit }));
+    expect(await screen.findByText("dashboard")).toBeInTheDocument();
   });
 
   it("token vencido/usado vira 'pedir novo link'", async () => {

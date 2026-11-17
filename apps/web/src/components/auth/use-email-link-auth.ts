@@ -9,6 +9,7 @@ import {
 } from "@/components/auth/auth-state";
 import { useTurnstile } from "@/components/auth/turnstile";
 import { authClient } from "@/lib/auth";
+import { isTauri, startNativeMagicLink } from "@/lib/native-auth";
 
 /**
  * Liga o Better Auth ao reducer de `auth-state.ts`. Nada de lógica mora aqui — se você for escrever
@@ -43,11 +44,14 @@ export function useEmailLinkAuth() {
 
       try {
         const token = await captchaToken();
-        const { error } = await authClient.signIn.magicLink({
-          email,
-          callbackURL: window.location.origin + from,
-          fetchOptions: { headers: { "x-captcha-response": token } },
-        });
+        // No app o link volta pelo deep link e só verifica com o verifier guardado neste aparelho.
+        const { error } = await (isTauri()
+          ? startNativeMagicLink(email, token)
+          : authClient.signIn.magicLink({
+              email,
+              callbackURL: window.location.origin + from,
+              fetchOptions: { headers: { "x-captcha-response": token } },
+            }));
         if (run !== runId.current) return;
         dispatch(
           error

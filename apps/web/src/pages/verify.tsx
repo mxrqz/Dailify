@@ -2,7 +2,7 @@ import { Loader2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import type { AuthErrorKey } from "@/components/auth/auth-state";
+import { internalPath, type AuthErrorKey } from "@/components/auth/auth-state";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { copy } from "@/components/auth/copy";
 import { Button } from "@/components/ui/button";
@@ -11,12 +11,16 @@ import { authClient } from "@/lib/auth";
 type Status = "ready" | "verifying" | "invalid" | AuthErrorKey;
 
 /**
- * Onde o link do e-mail cai: `/verify#token=…`. O token vem no hash (não chega a servidor nenhum)
+ * Onde o link do e-mail cai: `/verify#token=…&next=…`. O token vem no hash (não chega a servidor nenhum)
  * e só é gasto no clique em "Entrar" — scanner de e-mail (Safe Links) abre a página mas não clica.
  */
 export default function Verify() {
   const navigate = useNavigate();
-  const [token] = useState(() => new URLSearchParams(window.location.hash.slice(1)).get("token"));
+  // `next` vem do servidor (a página que pediu o login); só vale caminho deste site.
+  const [{ token, next }] = useState(() => {
+    const params = new URLSearchParams(window.location.hash.slice(1));
+    return { token: params.get("token"), next: internalPath(params.get("next")) };
+  });
   const [status, setStatus] = useState<Status>(token ? "ready" : "invalid");
 
   // Tira o token da barra de endereço (histórico, print, compartilhar a aba).
@@ -39,7 +43,7 @@ export default function Verify() {
       if (!error) {
         // O verify não está entre as rotas que avisam o átomo da sessão: avisa na mão.
         authClient.$store.notify("$sessionSignal");
-        navigate("/dashboard", { replace: true });
+        navigate(next, { replace: true });
         return;
       }
       setStatus(error.status === 429 ? "tooManyRequests" : "invalid");
