@@ -1,3 +1,3 @@
-package com.dailify.app
+package com.mewki.app
 
 class MainActivity : TauriActivity()

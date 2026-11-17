@@ -1,0 +1,10 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["TEAMID.com.mewki.app"],
+        "components": [{ "/": "/auth/app", "comment": "magic link do app (PKCE)" }]
+      }
+    ]
+  }
+}

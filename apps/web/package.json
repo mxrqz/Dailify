@@ -39,7 +39,8 @@
     "@radix-ui/react-toggle-group": "^1.1.2",
     "@radix-ui/react-tooltip": "^1.2.16",
     "@tailwindcss/vite": "^4.0.12",
-    "@tauri-apps/api": "^2",
+    "@tauri-apps/api": "^2.12",
+    "@tauri-apps/plugin-deep-link": "^2",
     "@tauri-apps/plugin-notification": "~2",
     "@tauri-apps/plugin-opener": "^2",
     "better-auth": "1.7.25",
@@ -66,7 +67,7 @@
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
-    "@tauri-apps/cli": "^2.3.1",
+    "@tauri-apps/cli": "^2.12",
     "@testing-library/jest-dom": "^7.0.1",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.6",
