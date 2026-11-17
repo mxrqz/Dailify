@@ -44,7 +44,7 @@ describe("DayTaskRow", () => {
       bumpUsage: vi.fn(),
     });
     api.completeTask.mockResolvedValue({});
-    const { container } = render(<DayTaskRow task={task} day={day} />);
+    render(<DayTaskRow task={task} day={day} />);
 
     expect(screen.getByText("14:30")).toBeInTheDocument();
     fireEvent.click(screen.getByRole("checkbox"));
