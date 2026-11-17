@@ -17,8 +17,6 @@
     "tauri": "tauri"
   },
   "dependencies": {
-    "@clerk/clerk-react": "^5.61.12",
-    "@clerk/types": "^4.50.1",
     "@dailify/shared": "workspace:*",
     "@date-fns/tz": "^1.5.0",
     "@fontsource-variable/geist": "^5.3.0",
@@ -50,8 +48,6 @@
     "date-fns": "^4.1.0",
     "html-to-image": "^1.11.13",
     "i18n-iso-countries": "^7.14.0",
-    "input-otp": "^1.4.2",
-    "libphonenumber-js": "^1.12.6",
     "lucide-react": "^0.487.0",
     "motion": "^12",
     "react": "^18.3.1",
