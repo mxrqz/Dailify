@@ -31,6 +31,7 @@ import { billingSections } from "@/functions/billing-sections";
 import { quotaLabel } from "@/functions/quota-label";
 import { useQuotas } from "@/hooks/useQuotas";
 import { planOf, useSession } from "@/lib/auth";
+import { openExternal } from "@/lib/open-external";
 import { toText } from "@/lib/utils";
 import { zoned } from "@/functions/zone";
 import type { InvoicesProps, PaymentDetailsProps } from "@/types/types";
@@ -276,7 +277,7 @@ export default function BillingPage(): JSX.Element {
 
   const getBillingPortalUrl = async () => {
     const { url } = await billingPortal();
-    if (url) window.location.href = url;
+    if (url) await openExternal(url);
   };
 
   return (

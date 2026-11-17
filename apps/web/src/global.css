@@ -530,6 +530,12 @@
   padding-bottom: max(--spacing(4), env(safe-area-inset-bottom));
 }
 
+/* Barra sticky do topo: 52px de conteúdo abaixo da status bar/notch (0 fora do app edge-to-edge). */
+@utility h-bar {
+  height: calc(--spacing(13) + env(safe-area-inset-top));
+  padding-top: env(safe-area-inset-top);
+}
+
 @utility section-y {
   padding-block: --spacing(20);
   @variant md {

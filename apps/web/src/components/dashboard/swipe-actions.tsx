@@ -3,6 +3,7 @@ import { animate, motion, useMotionValue, useMotionValueEvent } from "motion/rea
 import { CheckIcon, Trash2Icon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
+import { haptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
 /**
@@ -64,8 +65,7 @@ export function SwipeActions({
     if (next === armedRef.current) return;
     armedRef.current = next;
     setArmed(next);
-    // Só o Android tem `vibrate`; no iOS a chamada simplesmente não existe.
-    if (next) navigator.vibrate?.(12);
+    if (next) haptic("impact");
   });
 
   return (
