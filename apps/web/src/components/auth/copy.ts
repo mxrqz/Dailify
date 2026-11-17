@@ -46,7 +46,7 @@ export const copy = {
     bubble: "Prontinho, mandei o link!",
     title: "Confira seu e-mail",
     sentTo: "Enviamos um link de acesso para",
-    // 10 minutos é a expiração padrão do Clerk. Se mudar no dashboard, mude aqui.
+    // 10 minutos é o `expiresIn` do magicLink no servidor (apps/server). Se mudar lá, mude aqui.
     hint: "Clique no link para entrar. Ele vale por 10 minutos.",
     resend: "Reenviar link",
     resendIn: "Reenviar em",
@@ -56,27 +56,27 @@ export const copy = {
   },
 
   verify: {
-    pageTitle: "Mewki — Verificação",
-    loading: "Verificando…",
-    verified: "Pronto. Pode fechar esta aba.",
-    switchTab: "Verificado. Volte para a aba onde você começou.",
-    expired: "Este link expirou.",
-    clientMismatch: "Abra o link no mesmo navegador em que você começou.",
-    failed: "Não foi possível verificar este link.",
-    restart: "Tentar de novo",
+    pageTitle: "Mewki — Entrar",
+    ready: "Tudo certo. Toque em Entrar para abrir sua conta.",
+    submit: "Entrar",
+    invalid: "Este link expirou ou já foi usado.",
+    restart: "Pedir novo link",
+  },
+
+  app: {
+    pageTitle: "Mewki — Abrir no app",
+    desktop: "Abrindo a Mewki… Se nada aconteceu, use o botão abaixo.",
+    mobile: "Este link entra pelo app da Mewki, que não está instalado neste aparelho.",
+    open: "Abrir na Mewki",
+    browser: "Entrar pelo navegador",
   },
 
   errors: {
     invalidEmail: "E-mail inválido.",
-    blockedEmail: "E-mails temporários não são aceitos. Use seu e-mail de sempre.",
     captcha: "A verificação de segurança falhou. Recarregue a página e tente de novo.",
     tooManyRequests: "Muitas tentativas. Espere um minuto e tente de novo.",
-    expiredLink: "Seu link expirou. Peça um novo.",
+    network: "Sem conexão. Confira sua internet e tente de novo.",
     generic: "Algo deu errado. Tente de novo.",
-    offerSignUp: "Não achei uma conta com esse e-mail.",
-    offerSignUpAction: "Criar conta",
-    offerSignIn: "Já existe uma conta com esse e-mail.",
-    offerSignInAction: "Entrar",
   },
 } as const;
 

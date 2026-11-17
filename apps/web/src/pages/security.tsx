@@ -1,6 +1,4 @@
-import { useSession, useUser } from "@clerk/clerk-react";
 import { useEffect, useState } from "react";
-import type { SessionWithActivitiesResource } from "@clerk/types";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MonitorIcon, SmartphoneIcon } from "lucide-react";
@@ -10,7 +8,11 @@ import { ListGroup, ListRow } from "@/components/kit/list";
 import { PageHeader } from "@/components/kit/page-header";
 import { accountGroups, accountPage } from "@/components/settings-list";
 import { Button } from "@/components/ui/button";
+import { parseUserAgent } from "@/functions/user-agent";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
+import { authClient, useSession } from "@/lib/auth";
+
+type Session = NonNullable<Awaited<ReturnType<typeof authClient.listSessions>>["data"]>[number];
 
 /** Uma sessão: o aparelho, onde e quando, e "Este aparelho" ou o "Encerrar" vermelho suave. */
 export function SessionRow({
@@ -53,13 +55,12 @@ export function SessionRow({
 }
 
 export default function SecurityPage(): JSX.Element {
-  const { user } = useUser();
-  const { session: currentSession } = useSession();
-  const [sessions, setSessions] = useState<SessionWithActivitiesResource[]>();
+  const currentId = useSession().data?.session.id;
+  const [sessions, setSessions] = useState<Session[]>();
 
   const load = async () => {
-    const all = await user?.getSessions();
-    if (all) setSessions(all);
+    const { data } = await authClient.listSessions();
+    if (data) setSessions(data);
   };
 
   // Uma vez ao abrir; depois, só o revogar relê.
@@ -68,8 +69,13 @@ export default function SecurityPage(): JSX.Element {
     void loadOnOpen();
   }, []);
 
-  const revoke = async (session: SessionWithActivitiesResource) => {
-    await session.revoke();
+  const revoke = async (token: string) => {
+    await authClient.revokeSession({ token });
+    await load();
+  };
+
+  const revokeOthers = async () => {
+    await authClient.revokeOtherSessions();
     await load();
   };
 
@@ -84,30 +90,37 @@ export default function SecurityPage(): JSX.Element {
       <div className={accountGroups}>
         <ListGroup title={copy.profile.groupSessions} footer={copy.profile.sessionsFooter}>
           {[...(sessions ?? [])]
-            .sort((a, b) => b.lastActiveAt.getTime() - a.lastActiveAt.getTime())
+            .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime())
             .map((session) => {
-              const { browserName, deviceType, isMobile, city, country } = session.latestActivity;
-              const place = [city, country].filter(Boolean).join(", ");
-              const when = formatDistanceToNow(session.lastActiveAt, {
+              const { browser, os, mobile } = parseUserAgent(session.userAgent);
+              const when = formatDistanceToNow(session.updatedAt, {
                 addSuffix: true,
                 locale: ptBR,
               });
               return (
                 <SessionRow
                   key={session.id}
-                  mobile={!!isMobile}
-                  label={[browserName, deviceType].filter(Boolean).join(" · ")}
+                  mobile={mobile}
+                  label={[browser, os].filter(Boolean).join(" · ") || copy.profile.unknownDevice}
                   meta={
-                    place
-                      ? copy.profile.sessionMeta.replace("{place}", place).replace("{when}", when)
+                    session.ipAddress
+                      ? copy.profile.sessionMeta
+                          .replace("{place}", session.ipAddress)
+                          .replace("{when}", when)
                       : when
                   }
-                  current={session.id === currentSession?.id}
-                  onRevoke={() => void revoke(session)}
+                  current={session.id === currentId}
+                  onRevoke={() => void revoke(session.token)}
                 />
               );
             })}
         </ListGroup>
+
+        {sessions && sessions.length > 1 && (
+          <ListGroup>
+            <ListRow label={copy.profile.revokeOthers} danger onClick={() => void revokeOthers()} />
+          </ListGroup>
+        )}
       </div>
     </main>
   );

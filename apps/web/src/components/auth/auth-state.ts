@@ -1,17 +1,14 @@
 /**
- * Lógica pura das telas de auth. Fica fora do React de propósito: o repo não tem
- * @testing-library/react nem jsdom, então o que merece teste precisa ser função pura.
- * `use-email-link-auth.ts` é só o fio que liga o Clerk a este reducer.
+ * Lógica pura das telas de auth. Fica fora do React de propósito: o que merece teste precisa ser
+ * função pura. `use-email-link-auth.ts` é só o fio que liga o Better Auth a este reducer.
  */
 
 export type AuthMode = "signIn" | "signUp";
 
-export type AuthErrorKey =
-  "invalidEmail" | "blockedEmail" | "captcha" | "tooManyRequests" | "expiredLink" | "generic";
+export type AuthErrorKey = "invalidEmail" | "captcha" | "tooManyRequests" | "network" | "generic";
 
-/** Um erro vira uma mensagem, ou um convite pra ir pra outra tela. */
-export type AuthFailure =
-  { kind: "message"; key: AuthErrorKey; code?: string } | { kind: "offer"; mode: AuthMode };
+/** `code` só no genérico: a tela mostra em mono pra virar relato de bug. */
+export type AuthFailure = { key: AuthErrorKey; code?: string };
 
 /** Um link já enviado, que a tela continua mostrando enquanto o reenvio não volta. */
 export type SentLink = { email: string; sentAt: number };
@@ -22,17 +19,13 @@ export type AuthState =
   // entrada durante o round-trip, em vez de piscar de volta pro formulário.
   | { status: "sending"; resendOf?: SentLink }
   | ({ status: "awaitingLink" } & SentLink)
-  | { status: "expired"; email: string }
   // `email` só existe quando a falha veio depois de um link já enviado (reenvio).
-  | { status: "error"; failure: AuthFailure; email?: string }
-  | { status: "verified" };
+  | { status: "error"; failure: AuthFailure; email?: string };
 
 export type AuthAction =
   | { type: "submit" }
   | { type: "linkSent"; email: string; at: number }
-  | { type: "expired" }
   | { type: "failed"; failure: AuthFailure }
-  | { type: "verified" }
   | { type: "reset" };
 
 export const initialAuthState: AuthState = { status: "idle" };
@@ -51,8 +44,6 @@ export function authReducer(state: AuthState, action: AuthAction): AuthState {
       return state.status === "sending"
         ? { status: "awaitingLink", email: action.email, sentAt: action.at }
         : state;
-    case "expired":
-      return state.status === "awaitingLink" ? { status: "expired", email: state.email } : state;
     case "failed": {
       // Um reenvio que falha desmonta a CheckInbox e devolve o formulário: sem carregar o e-mail,
       // ele volta em branco e o usuário perde o endereço — e o link válido que ainda está na caixa.
@@ -64,33 +55,30 @@ export function authReducer(state: AuthState, action: AuthAction): AuthState {
             : undefined;
       return { status: "error", failure: action.failure, email };
     }
-    case "verified":
-      return { status: "verified" };
     case "reset":
       return initialAuthState;
   }
 }
 
+/** O `error` que o cliente do Better Auth devolve (`{ data, error }`), ou só a parte que importa. */
+export type BetterAuthError = { status: number; code?: string };
+
 /**
- * Traduz um `code` do Clerk numa falha que a tela sabe renderizar.
- *
- * `form_identifier_not_found` e `form_identifier_exists` só viram convite no modo em que são
- * inesperados — no outro modo eles são o caminho normal e nem chegam aqui.
+ * Traduz o erro do envio do link numa falha que a tela sabe renderizar. `null` = a requisição nem
+ * saiu (o fetch lançou): rede.
  */
-export function classifyClerkError(code: string, mode: AuthMode): AuthFailure {
-  if (code === "form_identifier_not_found" && mode === "signIn") {
-    return { kind: "offer", mode: "signUp" };
+export function classifyAuthError(error: BetterAuthError | null): AuthFailure {
+  if (!error) return { key: "network" };
+  if (error.status === 429) return { key: "tooManyRequests" };
+  // VALIDATION_ERROR: o zod do servidor só valida o `email` no corpo do magic link.
+  if (error.code === "VALIDATION_ERROR" || error.code === "INVALID_EMAIL") {
+    return { key: "invalidEmail" };
   }
-  if (code === "form_identifier_exists" && mode === "signUp") {
-    return { kind: "offer", mode: "signIn" };
+  // Códigos do plugin `captcha` (token ausente, recusado pela Cloudflare ou já gasto).
+  if (error.code === "MISSING_RESPONSE" || error.code === "VERIFICATION_FAILED") {
+    return { key: "captcha" };
   }
-  if (code === "form_param_format_invalid") return { kind: "message", key: "invalidEmail" };
-  if (code === "form_email_address_blocked") return { kind: "message", key: "blockedEmail" };
-  if (code === "captcha_invalid" || code === "captcha_unavailable") {
-    return { kind: "message", key: "captcha" };
-  }
-  if (code === "too_many_requests") return { kind: "message", key: "tooManyRequests" };
-  return { kind: "message", key: "generic", code };
+  return { key: "generic", code: error.code ?? String(error.status) };
 }
 
 /** De onde o ProtectedRoute mandou o usuário — `location.state` é `unknown` por definição. */
@@ -101,7 +89,7 @@ export function redirectTarget(state: unknown): string {
   const pathname = "pathname" in from && typeof from.pathname === "string" ? from.pathname : "";
   const search = "search" in from && typeof from.search === "string" ? from.search : "";
   // Só caminho interno. `//evil.com` (e `/\evil.com`, que o navegador normaliza pro mesmo) é
-  // protocol-relative: sairia do site pelo `<Navigate>` e pelo `redirectUrlComplete` do Clerk.
+  // protocol-relative: sairia do site pelo `<Navigate>` e pelo `callbackURL` do Better Auth.
   if (!pathname.startsWith("/") || pathname.startsWith("//") || pathname.startsWith("/\\")) {
     return "/dashboard";
   }

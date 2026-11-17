@@ -1,6 +1,6 @@
 import { useState } from "react";
-import { useAuth, useUser } from "@clerk/clerk-react";
 import { Loader2Icon } from "lucide-react";
+import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { copy } from "@/components/dashboard/copy";
@@ -18,44 +18,50 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { clearLocal } from "@/functions/offline";
+import { authClient, useSession } from "@/lib/auth";
 
 /**
- * Excluir a conta. O trabalho pesado é do servidor: `user.delete()` faz o Clerk disparar
- * `user.deleted`, e o webhook (`routes/clerk-webhook.ts`) apaga as tarefas no D1 e cancela a
- * assinatura no Stripe. Aqui só se confirma a intenção e se limpa o rastro local.
+ * Excluir a conta. O trabalho pesado é do servidor: `deleteUser()` roda o `beforeDelete` /
+ * `afterDelete` do Better Auth, que cancelam o Stripe e apagam os dados no D1. Aqui só se confirma
+ * a intenção e se limpa o rastro local.
  *
  * Confirmação por digitação, não "tem certeza?": é a única ação do app sem volta — não há
  * "Desfazer" possível depois que a conta some.
  */
 export function DeleteAccount(): JSX.Element | null {
-  const { user } = useUser();
-  const { signOut, userId } = useAuth();
+  const user = useSession().data?.user;
+  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const [deleting, setDeleting] = useState(false);
 
   if (!user) return null;
 
-  const email = user.primaryEmailAddress?.emailAddress ?? "";
+  const email = user.email;
   const confirmed = typed.trim().toLowerCase() === email.toLowerCase();
 
   const handleDelete = async () => {
     if (!confirmed) return;
     setDeleting(true);
 
-    try {
-      await user.delete();
-    } catch {
-      toast.error(copy.profile.deleteAccountError);
+    const { error } = await authClient.deleteUser().catch(() => ({ error: { code: undefined } }));
+    if (error) {
       setDeleting(false);
+      // Sessão mais velha que o `freshAge` do servidor: só uma entrada nova autoriza excluir.
+      if (error.code === "SESSION_EXPIRED") {
+        toast.error(copy.profile.deleteReauth);
+        await authClient.signOut().catch(() => undefined);
+        navigate("/login");
+        return;
+      }
+      toast.error(copy.profile.deleteAccountError);
       return;
     }
 
-    if (userId) clearLocal(userId);
-    // A sessão já morreu com a conta; se o signOut falhar, a saída é ir embora do mesmo jeito.
-    await signOut({ redirectUrl: "/" }).catch(() => {
-      window.location.href = "/";
-    });
+    clearLocal(user.id);
+    // A sessão já morreu com a conta; o signOut só limpa o cookie, e a página inteira recarrega.
+    await authClient.signOut().catch(() => undefined);
+    window.location.assign("/");
   };
 
   // Uma linha do grupo Conta, com o nome em vermelho: marca o assunto sem transformar a página
