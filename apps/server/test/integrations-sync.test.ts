@@ -336,6 +336,20 @@ describe("syncCalendar", () => {
     expect((await linkOf("ev1"))?.stale).toBe(0);
   });
 
+  it("Meet trocado ou tirado no Google: o antigo não fica pra trás nos links", async () => {
+    const meet = (code: string) => `https://meet.google.com/${code}`;
+    respond = () => page([ev("ev1", { hangoutLink: meet("abc-defg-hij") })]);
+    await sync();
+    respond = () =>
+      page([ev("ev1", { hangoutLink: meet("xyz-wxyz-xyz"), updated: iso(NOW - 10 * 60_000) })]);
+    await sync();
+    const html = "https://www.google.com/calendar/event?eid=ev1";
+    expect((await taskOf("ev1"))?.links).toEqual([html, meet("xyz-wxyz-xyz")]);
+    respond = () => page([ev("ev1", { updated: iso(NOW - 5 * 60_000) })]);
+    await sync();
+    expect((await taskOf("ev1"))?.links).toEqual([html]);
+  });
+
   it("LWW: Google mais novo aplica (e preserva o que é só da Mewki); Mewki mais nova fica stale", async () => {
     respond = () => page([ev("ev1")]);
     await sync();

@@ -95,6 +95,19 @@ export function videoLink(links: string[] = []): string | undefined {
   );
 }
 
+/**
+ * O primeiro link de sala do Meet (`meet.google.com/abc-defg-hij`): é o que vira o `conferenceData`
+ * do evento — o código da sala é o `conferenceId` que o Google aceita.
+ */
+export function meetLink(links: string[] = []): string | undefined {
+  return links.find(
+    (url) =>
+      URL.canParse(url) &&
+      new URL(url).hostname === "meet.google.com" &&
+      /^\/[a-z]{3}-[a-z]{4}-[a-z]{3}$/.test(new URL(url).pathname),
+  );
+}
+
 /** O `htmlLink` de um evento do Google Agenda — é ele, nos links da tarefa, que marca "já está lá". */
 export function isCalendarEventLink(url: string): boolean {
   if (!URL.canParse(url)) return false;

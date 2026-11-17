@@ -10,6 +10,7 @@ import {
   matchDuplicate,
   PROVIDER_IDS,
   videoLink,
+  meetLink,
 } from "./integrations";
 import { zonedEpoch } from "./timezone";
 import type { Task } from "./types";
@@ -108,6 +109,10 @@ describe("calendário", () => {
       "https://us02web.zoom.us/j/1",
     );
     expect(videoLink(["https://notzoom.us.evil.com"])).toBeUndefined();
+    expect(meetLink(["https://x.com", "https://meet.google.com/abc-defg-hij?authuser=0"])).toBe(
+      "https://meet.google.com/abc-defg-hij?authuser=0",
+    );
+    expect(meetLink(["https://meet.google.com/lookup/abc"])).toBeUndefined();
     expect(isCalendarEventLink("https://www.google.com/calendar/event?eid=abc")).toBe(true);
     expect(isCalendarEventLink("https://google.com/calendar/event?eid=abc")).toBe(false);
   });

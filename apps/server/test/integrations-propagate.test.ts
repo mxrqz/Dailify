@@ -35,6 +35,7 @@ let tid: string;
 let calls: { url: string; method: string; body: string }[];
 let google404 = false;
 let googleStatus = 200;
+let googleBody: Record<string, unknown> = {};
 
 beforeAll(async () => {
   await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
@@ -46,6 +47,7 @@ beforeEach(() => {
   calls = [];
   google404 = false;
   googleStatus = 200;
+  googleBody = {};
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
     const url = input instanceof Request ? input.url : String(input);
     calls.push({ url, method: init?.method ?? "GET", body: String(init?.body ?? "") });
@@ -56,7 +58,7 @@ beforeEach(() => {
     if (googleStatus !== 200) return Response.json({}, { status: googleStatus });
     return init?.method === "DELETE"
       ? new Response(null, { status: 204 })
-      : Response.json({ updated: UPDATED });
+      : Response.json({ updated: UPDATED, ...googleBody });
   });
 });
 
@@ -158,7 +160,7 @@ describe("propagação de tarefa vinculada", () => {
 
   it("evento vinculado (não criado pela Mewki): nunca description/location/extendedProperties", async () => {
     await seed({}, { external: "ev1" });
-    await patch({ title: "Dentista", links: [HTML, "https://meet.google.com/abc-defg-hij"] });
+    await patch({ title: "Dentista", links: [HTML, "https://x.com/doc"] });
     expect(googleCalls()[0].url).toBe(`${google.EVENTS}/ev1`);
     expect(bodyOf()).toEqual({ summary: "Dentista" });
 
@@ -313,5 +315,95 @@ describe("propagação de tarefa vinculada", () => {
     });
     expect(res.status).toBe(200);
     expect(await link()).toMatchObject({ stale: false, timeZone: TZ });
+  });
+});
+
+const MEET = "https://meet.google.com/abc-defg-hij";
+const OTHER = "https://meet.google.com/xyz-wxyz-xyz";
+const room = (code: string) => ({
+  conferenceId: code,
+  conferenceSolution: { key: { type: "hangoutsMeet" } },
+  entryPoints: [{ entryPointType: "video", uri: `https://meet.google.com/${code}` }],
+});
+
+describe("Meet de tarefa vinculada", () => {
+  it("evento vinculado: trocar e tirar o Meet manda só o conferenceData, com version=1", async () => {
+    await seed({ links: [HTML, MEET] }, { external: "ev1" });
+    await patch({ links: [HTML, OTHER] });
+    expect(googleCalls()[0].url).toBe(`${google.EVENTS}/ev1?conferenceDataVersion=1`);
+    expect(bodyOf()).toEqual({ conferenceData: room("xyz-wxyz-xyz") });
+    expect(await remoteUpdated()).toBe(Date.parse(UPDATED));
+
+    calls = [];
+    await patch({ links: [HTML] });
+    expect(bodyOf()).toEqual({ conferenceData: null });
+  });
+
+  it("evento criado pela Mewki: a sala troca junto com a descrição e o local", async () => {
+    await seed({ links: [HTML, MEET] });
+    await patch({ links: [HTML, OTHER] });
+    expect(googleCalls()[0].url).toBe(`${google.EVENTS}/${eventId(tid)}?conferenceDataVersion=1`);
+    expect(bodyOf()).toEqual({
+      description: `Criado pela Mewki\n${OTHER}`,
+      location: OTHER,
+      conferenceData: room("xyz-wxyz-xyz"),
+    });
+
+    calls = [];
+    await patch({ links: [HTML] });
+    expect(bodyOf()).toEqual({
+      description: "Criado pela Mewki",
+      location: null,
+      conferenceData: null,
+    });
+  });
+
+  it("reenvio não regrava a sala (tiraria os telefones de discagem)", async () => {
+    await seed({ links: [HTML, MEET] }, { external: "ev1" });
+    await send(`/integrations/google-calendar/events/${tid}/sync`, {
+      method: "POST",
+      body: JSON.stringify({ timezone: TZ }),
+    });
+    expect(googleCalls()[0].url).toBe(`${google.EVENTS}/ev1`);
+    expect(bodyOf()).not.toHaveProperty("conferenceData");
+  });
+
+  const newMeet = () =>
+    send(`/integrations/google-calendar/events/${tid}/meet`, { method: "POST" });
+
+  for (const [kind, external] of [
+    ["criado", undefined],
+    ["vinculado", "ev1"],
+  ] as const)
+    it(`gerar novo Meet (evento ${kind}): createRequest, e o Meet antigo sai dos links`, async () => {
+      await seed({ links: [HTML, "https://x.com/doc", MEET] }, { external });
+      googleBody = { hangoutLink: OTHER };
+      const res = await newMeet();
+      expect(res.status).toBe(200);
+      const [call] = googleCalls();
+      expect([call.method, call.url]).toEqual([
+        "PATCH",
+        `${google.EVENTS}/${external ?? eventId(tid)}?conferenceDataVersion=1`,
+      ]);
+      const body = bodyOf();
+      expect(Object.keys(body)).toEqual(["conferenceData"]);
+      expect(body.conferenceData.createRequest).toMatchObject({
+        requestId: expect.any(String),
+        conferenceSolutionKey: { type: "hangoutsMeet" },
+      });
+      const { task } = await res.json<{ task: Task }>();
+      expect(task.links).toEqual([HTML, "https://x.com/doc", OTHER]);
+      expect((await getTask(env.DB, userId, tid))?.links).toEqual(task.links);
+      // O eco do PATCH: o sync reconhece e não desfaz a troca.
+      expect(await remoteUpdated()).toBe(Date.parse(UPDATED));
+    });
+
+  it("gerar novo Meet: convite readonly e tarefa fora da Agenda recusam sem chamar o Google", async () => {
+    await seed({}, { external: "ev1", readonly: true });
+    expect((await newMeet()).status).toBe(400);
+    tid = `t${crypto.randomUUID().slice(0, 8)}`;
+    await seed({}, { linked: false });
+    expect((await newMeet()).status).toBe(404);
+    expect(googleCalls()).toHaveLength(0);
   });
 });

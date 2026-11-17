@@ -43,7 +43,7 @@ import {
 import { loadCtx, makeCtx, revokeSealed, sealTokens } from "../integrations/connection";
 import { pushLink } from "../integrations/propagate";
 import { getTask } from "../db/tasks";
-import { createEvent } from "../integrations/google-calendar";
+import { createEvent, replaceMeet } from "../integrations/google-calendar";
 import { syncCalendar } from "../integrations/google-calendar/sync";
 import { ActionError, type Ctx as ProviderCtx } from "../integrations/types";
 
@@ -221,6 +221,11 @@ integrations.post("/integrations/google-calendar/events", async (c) => {
   if ("error" in parsed) return fail(c, 400, parsed.error);
   return withCalendar(c, (ctx) => createEvent.run(ctx, parsed.input));
 });
+
+// "Gerar novo Meet": trocar ou tirar o Meet é edição da tarefa (links) e vai na propagação.
+integrations.post("/integrations/google-calendar/events/:taskId/meet", (c) =>
+  withCalendar(c, (ctx) => replaceMeet(ctx, c.req.param("taskId"))),
+);
 
 // O par da duplicata (`duplicates` do GET): "merge" junta na tarefa própria, "keep" mantém as duas.
 // Só D1, nada no Google — por isso sem gate de plano nem conexão, como o desconectar.

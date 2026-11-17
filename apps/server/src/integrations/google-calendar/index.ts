@@ -2,6 +2,7 @@ import { IANAZone } from "luxon";
 import {
   calendarEventPreview,
   INTEGRATION_ERROR,
+  meetLink,
   TASK_LIMITS,
   zonedParts,
   type IntegrationLink,
@@ -10,13 +11,14 @@ import {
 import {
   getLink,
   listInstanceIds,
+  listTaskLinks,
   setRemoteUpdated,
   upsertLink,
   type StoredLink,
 } from "../../db/integrations";
 import { getTask, updateTask } from "../../db/tasks";
 import { ActionError, type Action, type Ctx, type Provider } from "../types";
-import { eventId, toEvent, type GoogleEvent } from "./event";
+import { eventId, newMeet, toEvent, type GoogleEvent } from "./event";
 
 const EVENTS_API = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
 const NO_DAY = "Tarefa sem dia não vira evento: escolha um dia antes";
@@ -61,9 +63,13 @@ async function addLinks(ctx: Ctx, task: Task, added: string[]): Promise<Task> {
   return (await updateTask(ctx.env.DB, ctx.userId, task.id, { links })) ?? task;
 }
 
+/** Sem `conferenceDataVersion=1` o Google ignora o `conferenceData` do corpo. */
+const conferenceQuery = (body: object) =>
+  "conferenceData" in body ? "?conferenceDataVersion=1" : "";
+
 /** Insert; 409 = o id já existe (retry depois de o D1 falhar, ou evento apagado que volta). */
-async function saveEvent(ctx: Ctx, event: GoogleEvent, meet: boolean) {
-  const query = meet ? "?conferenceDataVersion=1" : "";
+async function saveEvent(ctx: Ctx, event: GoogleEvent) {
+  const query = conferenceQuery(event);
   const init = (method: string, body: object): RequestInit => ({
     method,
     headers: { "content-type": "application/json" },
@@ -125,7 +131,7 @@ export const createEvent: Action<CreateEventInput> = {
     const event = toEvent(task, input.timeZone, { meet: input.meet });
     if (!event) throw new ActionError(400, NO_DAY);
 
-    const saved = await saveEvent(ctx, event, input.meet);
+    const saved = await saveEvent(ctx, event);
     const link: IntegrationLink = {
       provider: "google-calendar",
       taskId: task.id,
@@ -143,7 +149,7 @@ export const createEvent: Action<CreateEventInput> = {
 // PATCH mescla objetos: sem os nulls, trocar horário por dia inteiro deixaria date e dateTime juntos.
 const CLEAR_WHEN = { date: null, dateTime: null, timeZone: null };
 
-/** O que a Mewki escreve, com null no que saiu (local, recorrência). O Meet criado fica. */
+/** O que a Mewki escreve, com null no que saiu (local, recorrência, Meet). */
 const patchBody = (e: GoogleEvent) => ({
   summary: e.summary,
   description: e.description,
@@ -152,6 +158,7 @@ const patchBody = (e: GoogleEvent) => ({
   end: { ...CLEAR_WHEN, ...e.end },
   recurrence: e.recurrence ?? null,
   extendedProperties: e.extendedProperties,
+  conferenceData: e.conferenceData ?? null,
 });
 
 const pad = (n: number) => String(n).padStart(2, "0");
@@ -208,13 +215,16 @@ async function withoutLinkedInstances(ctx: Ctx, link: StoredLink, task: Task, tz
   return { ...task, exdates };
 }
 
-// Evento que a Mewki não criou é da pessoa: só a agenda dele (título, horário, regra) é nossa.
-const FOREIGN_KEYS = new Set(["summary", "start", "end", "recurrence"]);
+// Evento que a Mewki não criou é da pessoa: só a agenda dele (título, horário, regra) e a sala do
+// Meet, que a pessoa troca pela Mewki, são nossas.
+const FOREIGN_KEYS = new Set(["summary", "start", "end", "recurrence", "conferenceData"]);
 
 /**
  * Só as chaves que mudaram entre o evento de antes e o de agora; `prev` null (retry) = tudo o que
  * pode ir. Evento criado pela Mewki (id derivado da tarefa) leva o corpo todo; vinculado ou
  * importado nunca recebe description/location/extendedProperties; instância nunca leva recurrence.
+ * O retry nunca mexe na sala: sem o "antes" não dá pra saber se ela mudou, e regravá-la tiraria os
+ * telefones de discagem (só o link de vídeo vai) e a sala de um evento com Zoom.
  */
 function patchFor(link: StoredLink, prev: GoogleEvent | null, next: GoogleEvent) {
   const created = link.externalId === eventId(link.taskId);
@@ -225,6 +235,7 @@ function patchFor(link: StoredLink, prev: GoogleEvent | null, next: GoogleEvent)
       ([key, value]) =>
         (created || FOREIGN_KEYS.has(key)) &&
         !(instance && key === "recurrence") &&
+        !(!old && key === "conferenceData") &&
         (!old || JSON.stringify(Reflect.get(old, key)) !== JSON.stringify(value)),
     ),
   );
@@ -253,7 +264,7 @@ async function syncEvent(
       before && toEvent(await withoutLinkedInstances(ctx, link, before, tz), tz, NO_MEET);
     const body = patchFor(link, prev, next);
     if (!Object.keys(body).length) return;
-    res = await ctx.api(url, {
+    res = await ctx.api(url + conferenceQuery(body), {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
@@ -265,6 +276,35 @@ async function syncEvent(
   const updated = updatedOf(await res.json().catch(() => null));
   if (updated !== undefined)
     await setRemoteUpdated(ctx.env.DB, ctx.userId, link.provider, link.taskId, updated);
+}
+
+/**
+ * "Gerar novo Meet" numa tarefa da Agenda: só o `conferenceData` vai (vale pra evento vinculado
+ * também), e o Meet antigo sai dos links. Sem `hangoutLink` na resposta a sala ainda está sendo
+ * criada: o sync traz o link quando o Google terminar.
+ */
+export async function replaceMeet(ctx: Ctx, taskId: string): Promise<{ task: Task }> {
+  const task = await ownTask(ctx, taskId);
+  const link = (await listTaskLinks(ctx.env.DB, ctx.userId, taskId)).find(
+    (l) => l.provider === "google-calendar",
+  );
+  if (!link) throw new ActionError(404, "Tarefa não está na Agenda");
+  if (link.readonly) throw new ActionError(400, "Só quem convidou pode mudar");
+  const res = await ctx.api(`${EVENTS_API}/${link.externalId}?conferenceDataVersion=1`, {
+    method: "PATCH",
+    headers: { "content-type": "application/json" },
+    body: JSON.stringify({ conferenceData: newMeet(crypto.randomUUID()) }),
+  });
+  if (res.status === 404 || res.status === 410)
+    throw new ActionError(404, "O evento não existe mais na Agenda");
+  await ensureOk(res);
+  const body: unknown = await res.json();
+  const updated = updatedOf(body);
+  if (updated !== undefined)
+    await setRemoteUpdated(ctx.env.DB, ctx.userId, link.provider, taskId, updated);
+  const hangoutLink = text(body, "hangoutLink");
+  const kept = { ...task, links: task.links?.filter((l) => !meetLink([l])) };
+  return { task: await addLinks(ctx, kept, hangoutLink ? [hangoutLink] : []) };
 }
 
 export const googleCalendar: Provider = {

@@ -117,6 +117,15 @@ describe("toEvent", () => {
     const zoom = toEvent(task({ links: ["https://us02web.zoom.us/j/1"] }), TZ, { meet: true });
     expect(zoom?.location).toBe("https://us02web.zoom.us/j/1");
     expect(zoom?.conferenceData).toBeUndefined();
+    // Meet colado: a sala é ele (pelo código), não uma nova.
+    const meet = toEvent(task({ links: ["https://meet.google.com/abc-defg-hij?authuser=0"] }), TZ, {
+      meet: true,
+    });
+    expect(meet?.conferenceData).toEqual({
+      conferenceId: "abc-defg-hij",
+      conferenceSolution: { key: { type: "hangoutsMeet" } },
+      entryPoints: [{ entryPointType: "video", uri: "https://meet.google.com/abc-defg-hij" }],
+    });
   });
 
   it("id do evento: base32hex válido pro Google, determinístico", () => {

@@ -5,6 +5,7 @@ import {
   TASK_LIMITS,
   fromRrule,
   matchDuplicate,
+  meetLink,
   minutesToDuration,
   zonedEpoch,
   zonedParts,
@@ -237,7 +238,11 @@ async function update(s: Pass, ev: Remote, link: SyncLink): Promise<void> {
     ...mapped.fields,
     duration: mapped.day ? task.duration : mapped.fields.duration,
     alert: alertFor(task, mapped, tz),
-    links: withLinks(task.links, mapped.links),
+    // A sala é a do evento: Meet trocado ou tirado lá não deixa o antigo pra trás aqui.
+    links: withLinks(
+      task.links?.filter((l) => !meetLink([l])),
+      mapped.links,
+    ),
     updatedAt: Math.max(ev.updated, task.updatedAt ?? 0),
   });
   const exdates = [...new Set([...(task.exdates ?? []), ...mapped.exdates])];

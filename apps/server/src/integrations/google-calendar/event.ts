@@ -1,6 +1,7 @@
 import {
   calendarSlot,
   isCalendarEventLink,
+  meetLink,
   toRrule,
   videoLink,
   zonedParts,
@@ -20,8 +21,33 @@ export interface GoogleEvent {
   end: When;
   recurrence?: string[];
   extendedProperties: { private: { mewkiTaskId: string } };
-  conferenceData?: {
-    createRequest: { requestId: string; conferenceSolutionKey: { type: "hangoutsMeet" } };
+  conferenceData?: Conference;
+}
+
+const HANGOUTS_MEET = { type: "hangoutsMeet" } as const;
+
+/** Sala nova (`createRequest`) ou uma que já existe, pelo código; as duas pedem conferenceDataVersion=1. */
+export type Conference =
+  | { createRequest: { requestId: string; conferenceSolutionKey: typeof HANGOUTS_MEET } }
+  | {
+      conferenceId: string;
+      conferenceSolution: { key: typeof HANGOUTS_MEET };
+      entryPoints: { entryPointType: "video"; uri: string }[];
+    };
+
+/** `requestId` novo = sala nova; repetir o mesmo devolve a sala daquele pedido. */
+export const newMeet = (requestId: string): Conference => ({
+  createRequest: { requestId, conferenceSolutionKey: HANGOUTS_MEET },
+});
+
+/** O Meet que a pessoa colou: o Google liga o evento a essa sala (e devolve ela no `hangoutLink`). */
+function existingMeet(url: string): Conference {
+  const code = new URL(url).pathname.slice(1);
+  const uri = `https://meet.google.com/${code}`;
+  return {
+    conferenceId: code,
+    conferenceSolution: { key: HANGOUTS_MEET },
+    entryPoints: [{ entryPointType: "video", uri }],
   };
 }
 
@@ -73,6 +99,7 @@ export function toEvent(task: Task, timeZone: string, opts: { meet: boolean }): 
   const id = eventId(task.id);
   const links = (task.links ?? []).filter((url) => !isCalendarEventLink(url));
   const location = videoLink(links);
+  const meet = meetLink(links);
   const recurrence = toRrule(task, startParts, timeZone);
 
   return {
@@ -84,12 +111,9 @@ export function toEvent(task: Task, timeZone: string, opts: { meet: boolean }): 
     end,
     ...(recurrence && { recurrence }),
     extendedProperties: { private: { mewkiTaskId: task.id } },
-    // Já tem Meet/Zoom: ele vira o local e não nasce uma segunda sala.
-    ...(opts.meet &&
-      !location && {
-        conferenceData: {
-          createRequest: { requestId: id, conferenceSolutionKey: { type: "hangoutsMeet" } },
-        },
-      }),
+    // Já tem Meet/Zoom: ele vira o local e não nasce uma segunda sala; o Meet também é a sala.
+    ...(meet
+      ? { conferenceData: existingMeet(meet) }
+      : opts.meet && !location && { conferenceData: newMeet(id) }),
   };
 }
