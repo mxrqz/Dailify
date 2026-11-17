@@ -5,7 +5,7 @@ vi.mock("@clerk/hono", async (importOriginal) => {
   return { ...actual, getAuth: vi.fn(() => ({ userId: "u1" })) };
 });
 
-import { env } from "cloudflare:test";
+import { env, createExecutionContext } from "cloudflare:test";
 import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
 import { insertTask } from "../src/db/tasks";
@@ -22,7 +22,7 @@ describe("GET /tasks", () => {
   });
 
   it("400s on invalid month", async () => {
-    const res = await app.request("/tasks?month=nope", {}, env);
+    const res = await app.request("/tasks?month=nope", {}, env, createExecutionContext());
     expect(res.status).toBe(400);
   });
 
@@ -38,7 +38,7 @@ describe("GET /tasks", () => {
     };
     await insertTask(env.DB, "u1", task);
 
-    const res = await app.request("/tasks?month=2026-01", {}, env);
+    const res = await app.request("/tasks?month=2026-01", {}, env, createExecutionContext());
     expect(res.status).toBe(200);
     const body = await res.json<{ tasks: Task[] }>();
     const mine = body.tasks.filter((t) => t.id === "daily1");
@@ -61,7 +61,12 @@ describe("GET /tasks?tz — fuso do cliente", () => {
       completed: [],
     });
 
-    const res = await app.request("/tasks?month=2026-12&tz=America%2FSao_Paulo", {}, env);
+    const res = await app.request(
+      "/tasks?month=2026-12&tz=America%2FSao_Paulo",
+      {},
+      env,
+      createExecutionContext(),
+    );
     const { tasks } = await res.json<{ tasks: Task[] }>();
     const instances = tasks.filter((t) => t.id === "tz-daily");
 
@@ -71,7 +76,12 @@ describe("GET /tasks?tz — fuso do cliente", () => {
   });
 
   it("tz inválido é ignorado em vez de derrubar a leitura", async () => {
-    const res = await app.request("/tasks?month=2026-12&tz=Marte%2FOlympus", {}, env);
+    const res = await app.request(
+      "/tasks?month=2026-12&tz=Marte%2FOlympus",
+      {},
+      env,
+      createExecutionContext(),
+    );
     expect(res.status).toBe(200);
   });
 });
@@ -89,7 +99,12 @@ describe("GET /tasks — repeatEvery", () => {
       completed: [],
     });
 
-    const res = await app.request("/tasks?month=2026-02&tz=America%2FSao_Paulo", {}, env);
+    const res = await app.request(
+      "/tasks?month=2026-02&tz=America%2FSao_Paulo",
+      {},
+      env,
+      createExecutionContext(),
+    );
     const { tasks } = await res.json<{ tasks: Task[] }>();
     const days = tasks
       .filter((t) => t.id === "biweekly")
