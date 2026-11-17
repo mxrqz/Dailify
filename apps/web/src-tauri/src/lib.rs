@@ -8,6 +8,10 @@ pub fn run() {
     {
         builder = builder.plugin(tauri_plugin_single_instance::init(|_app, _argv, _cwd| {}));
     }
+    #[cfg(mobile)]
+    {
+        builder = builder.plugin(tauri_plugin_haptics::init());
+    }
 
     builder
         .plugin(tauri_plugin_deep_link::init())

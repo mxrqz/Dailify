@@ -10,6 +10,7 @@ import type { PlanRole } from "@/consts/pricing";
 import { copy } from "@/components/pricing/copy";
 import { checkout } from "@/functions/api";
 import { planOf, useSession } from "@/lib/auth";
+import { openExternal } from "@/lib/open-external";
 
 const ROLES: readonly PlanRole[] = [PLAN_ID.free, PLAN_ID.pro, PLAN_ID.max];
 
@@ -98,7 +99,7 @@ export default function PremiumPage(): JSX.Element {
     }
 
     const { url } = await checkout(cycle === "yearly" ? `${role}-year` : role);
-    if (url) window.location.href = url;
+    if (url) await openExternal(url);
     else toast.error(copy.page.checkoutFailed);
   };
 

@@ -1,0 +1,10 @@
+{
+  "app": {
+    "windows": [
+      {
+        "title": "Mewki",
+        "transparent": true
+      }
+    ]
+  }
+}

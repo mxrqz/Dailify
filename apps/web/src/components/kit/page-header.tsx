@@ -24,7 +24,7 @@ export function PageHeader({
   return (
     <>
       {bar && (
-        <div className="sticky top-0 z-20 flex h-13 items-center justify-between bg-material-bar-solid px-2">
+        <div className="sticky top-0 z-20 flex h-bar items-center justify-between bg-material-bar-solid px-2">
           {bar}
         </div>
       )}

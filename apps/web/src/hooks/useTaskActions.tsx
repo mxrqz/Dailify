@@ -3,6 +3,7 @@ import { toast } from "sonner";
 
 import { useDailify } from "@/components/dailifyContext";
 import { useSession } from "@/lib/auth";
+import { haptic } from "@/lib/haptics";
 import { copy } from "@/components/dashboard/copy";
 import { RecurrenceScopeDialog } from "@/components/dashboard/recurrence-scope-dialog";
 import { ActionSheet } from "@/components/kit/action-sheet";
@@ -59,6 +60,7 @@ export function useTaskActions(
     const previous = tasks ?? [];
     const done: TaskProps = { ...task, completed: [...task.completed, at], updatedAt: at };
     setTasks(upsertTaskWithRecurrence(previous, done, loadedMonths));
+    haptic("success");
 
     const mutation: Mutation = { op: "complete", taskId: task.id, at };
     const { error } = await completeTask(task.id, at);

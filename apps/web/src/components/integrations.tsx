@@ -37,6 +37,8 @@ import { connectIntegration, disconnectIntegration, getIntegrations } from "@/fu
 import { useCalendarDefault } from "@/hooks/useCalendarDefault";
 import { patchIntegration, setIntegrations, useIntegrations } from "@/hooks/useIntegrations";
 import { useOnline } from "@/hooks/useOnline";
+import { isTauri } from "@/lib/native-auth";
+import { openExternal } from "@/lib/open-external";
 
 const t = copy.integrations;
 // ponytail: um provedor só no catálogo; com o segundo, o card vira um por `PROVIDER_IDS`.
@@ -177,8 +179,12 @@ export function Integrations(): JSX.Element {
   const connect = async () => {
     setBusy(true);
     const { url, error } = await connectIntegration(GCAL);
-    // Sem `setBusy(false)`: a página vai embora pro consentimento do provedor.
-    if (url) return window.location.assign(url);
+    // Na web, sem `setBusy(false)`: a página vai embora pro consentimento do provedor.
+    if (url) {
+      await openExternal(url);
+      if (isTauri()) setBusy(false);
+      return;
+    }
     setBusy(false);
     if (error?.status === 503) setSoon(true);
     else toast.error(named(t.connectError), { description: error?.message });

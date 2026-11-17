@@ -19,6 +19,7 @@ import { appTimeZone } from "@/functions/zone";
 import { calendarRevoked, useApplyTask } from "@/hooks/useCalendarPush";
 import { patchIntegration, useCalendarReady, useIntegrations } from "@/hooks/useIntegrations";
 import { useOnline } from "@/hooks/useOnline";
+import { openExternal } from "@/lib/open-external";
 import type { TaskProps } from "@/types/types";
 
 const t = copy.calendar;
@@ -78,10 +79,7 @@ export function AddToCalendar({
   }
   if (linked) {
     return variant === "toolbar" ? (
-      <ToolbarButton
-        label={t.linked}
-        onClick={() => window.open(linked, "_blank", "noopener,noreferrer")}
-      >
+      <ToolbarButton label={t.linked} onClick={() => void openExternal(linked, true)}>
         <CalendarCheckIcon className="size-4" aria-hidden="true" />
       </ToolbarButton>
     ) : (
@@ -107,9 +105,7 @@ export function AddToCalendar({
       applyTask(res.task);
       const url = res.link?.url;
       toast.success(t.added, {
-        action: url
-          ? { label: t.open, onClick: () => window.open(url, "_blank", "noopener,noreferrer") }
-          : undefined,
+        action: url ? { label: t.open, onClick: () => void openExternal(url, true) } : undefined,
       });
       return;
     }
