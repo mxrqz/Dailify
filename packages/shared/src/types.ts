@@ -36,6 +36,12 @@ export type TaskInput = Omit<Task, "id" | "completed" | "hash" | "repeatEvery" |
   repeatEvery?: number | null;
 };
 
+/** `PATCH`/`DELETE /tasks/:id?occurrence=`: the detached day in `task` (PATCH only), the series in `series`. */
+export interface OccurrenceEdit {
+  task?: Task;
+  series?: Task;
+}
+
 /**
  * Rascunho de tarefa lido de uma frase — o mesmo formato do parser local (`ParsedTask` do web,
  * sem `unsure`) com a data em epoch-ms, pra resposta da IA caber nas mesmas etiquetas do composer.

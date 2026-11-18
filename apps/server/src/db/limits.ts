@@ -1,5 +1,6 @@
 import {
   limitsFor,
+  QUOTA_ERRORS,
   QUOTA_KEYS,
   type QuotaKey,
   type QuotaLimits,
@@ -35,12 +36,6 @@ const COUNTERS: Record<QuotaKey, Counter> = {
   // de IA é ancorado em AGORA — "o mês em que o pedido foi feito" —, então ignora o `at` e lê o mês
   // do servidor; senão o cliente navegando pro mês que vem via o medidor de créditos zerar sozinho.
   ai: (db, userId) => readStoredUsage(db, userId, "ai", periodFor("ai", new Date())),
-};
-
-/** Strings de contrato: `tasks-create.test.ts` e o toast do cliente batem nelas. */
-const QUOTA_ERRORS: Record<QuotaKey, string> = {
-  tasks: "Monthly Tasks Limit Reached",
-  ai: "AI Credits Limit Reached",
 };
 
 export async function enforce(

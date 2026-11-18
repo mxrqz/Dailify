@@ -1,13 +1,4 @@
-import { DEFAULT_WEEK_START, isWeekStart, type WeekStart } from "@dailify/shared";
-
-export interface UserSettings {
-  weekStart: WeekStart;
-  /** null = automático: vale o fuso do aparelho. */
-  timeZone: string | null;
-  hour12: boolean;
-  /** The user agreed to send their agenda to OpenAI through the Mew chat. */
-  mewConsent: boolean;
-}
+import { DEFAULT_WEEK_START, isWeekStart, type UserSettings } from "@dailify/shared";
 
 export async function getSettings(db: D1Database, userId: string): Promise<UserSettings> {
   const row = await db

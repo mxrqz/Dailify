@@ -16,7 +16,7 @@ import {
   excludeOccurrence,
 } from "../db/tasks";
 import { enforceCreate } from "../db/limits";
-import type { Role, Task } from "@dailify/shared";
+import type { OccurrenceEdit, Role, Task } from "@dailify/shared";
 import { parseClientId, parseNewTask, parseTaskFields } from "../lib/task-input";
 import { fail } from "../lib/errors";
 import { linkedTask, propagate } from "../integrations/propagate";
@@ -116,7 +116,7 @@ tasks.patch("/:id", async (c) => {
         ]),
       );
     }
-    return c.json(detached); // { task, series }
+    return c.json(detached satisfies OccurrenceEdit);
   }
 
   const updated = await updateTask(c.env.DB, userId, id, parsed.fields);
@@ -165,7 +165,7 @@ tasks.delete("/:id", async (c) => {
     if (!series) return fail(c, 404, "Recurring task not found");
     if (linked)
       c.executionCtx.waitUntil(propagate(c.env, userId, linked.links, linked.before, series));
-    return c.json({ series });
+    return c.json({ series } satisfies OccurrenceEdit);
   }
 
   await deleteTask(c.env.DB, userId, id);

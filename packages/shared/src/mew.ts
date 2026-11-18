@@ -15,6 +15,9 @@ export const MEW_TEXT_MAX = 500;
 export const MEW_HISTORY_MAX = 8;
 export const MEW_IMAGE_MAX = 1_400_000;
 
+/** The `error` of the 403 before consent: the web shows the consent card instead of failing. */
+export const MEW_CONSENT_REQUIRED = "Mew Consent Required";
+
 /** Drives the header Mew: `notFound`/`unsupported` make her confused. */
 export type MewIntent = "answer" | "propose" | "notFound" | "unsupported";
 

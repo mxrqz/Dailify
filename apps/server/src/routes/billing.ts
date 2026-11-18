@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type Stripe from "stripe";
-import { limitsFor, type Role } from "@dailify/shared";
+import { limitsFor, type QuotaSnapshot, type Role } from "@dailify/shared";
 import type { Env } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
@@ -40,7 +40,7 @@ billing.get("/permissions", requireAuth, async (c) => {
   return c.json({
     limits: limitsFor(c.get("plan")),
     usage: await readAllUsage(c.env.DB, userId, at),
-  });
+  } satisfies QuotaSnapshot);
 });
 
 billing.post("/billing/checkout", requireAuth, rateLimit("API_LIMITER"), async (c) => {

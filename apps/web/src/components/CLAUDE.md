@@ -67,7 +67,7 @@ It owns the task boot. Other code only re-triggers loads (`pages/integration-cal
   `hooks/`).
 - `Duplicates` shows at most once per app load (module `shown` flag), mounted once in `AppLayout`.
 - View/container splits here: `DuplicatesSheet`, `CalendarRows`, `IntegrationCard` are the Views.
-- New setting: a `Settings` field (`functions/api.ts`) and its server side, a context field set in
+- New setting: a `UserSettings` field (shared `period.ts`) and its server side, a context field set in
   protected-route `loadUndated`, a widget that applies it, calls `saveSettings` and restores it with
   `toast.error` on failure (`week-start-select.tsx`), and a row in `pages/settings.tsx`.
 - `theme-provider`: the key `vite-ui-theme` must match the pre-paint script in

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import { DateTime } from "luxon";
 import {
+  MEW_CONSENT_REQUIRED,
   MEW_HISTORY_MAX,
   MEW_IMAGE_MAX,
   MEW_TEXT_MAX,
@@ -72,8 +73,7 @@ mew.post("/chat", rateLimit("VOICE_LIMITER"), async (c) => {
   const userId = c.get("userId");
   const req = parseRequest(await c.req.json().catch(() => null));
   if ("error" in req) return fail(c, req.status, req.error);
-  if (!(await getSettings(c.env.DB, userId)).mewConsent)
-    return fail(c, 403, "Mew Consent Required");
+  if (!(await getSettings(c.env.DB, userId)).mewConsent) return fail(c, 403, MEW_CONSENT_REQUIRED);
   const quotaError = await aiQuotaError(c);
   if (quotaError) return quotaError;
 

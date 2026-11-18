@@ -18,9 +18,10 @@ are in [Shared model](../../RULES.md#shared-model); required zones are in
 
 ## Module map (`src/`)
 
-- `types.ts`: `Task`, `TaskInput` (PATCH: `null` resets, absent keeps), `Repeat`, `Role`, `PLAN_ID`,
+- `types.ts`: `Task`, `TaskInput` (PATCH: `null` resets, absent keeps), `OccurrenceEdit`, `Repeat`, `Role`, `PLAN_ID`,
   `ParsedTaskWire`, `AiIntent`/`AiParse`, Stripe `Invoice`/`PaymentDetails` (Unix seconds).
-- `mew.ts`: the Mew chat wire (`MewRequest`/`MewReply`/`MewBlock`) and the `MEW_*` caps.
+- `mew.ts`: the Mew chat wire (`MewRequest`/`MewReply`/`MewBlock`) and the `MEW_*` caps, plus the
+  `MEW_CONSENT_REQUIRED` error text the web compares.
 - `integrations.ts`: `ProviderId`/`INTEGRATIONS`/`PROVIDER_IDS`, `IntegrationStatus`,
   `IntegrationLink`, `INTEGRATION_ERROR`, duration helpers, `calendarSlot`, Meet/Zoom link helpers,
   `matchDuplicate`, and `calendarEventPreview`, whose pt-BR text is the web card and the server
@@ -28,9 +29,10 @@ are in [Shared model](../../RULES.md#shared-model); required zones are in
   a code.
 - `limits.ts`: `TASK_LIMITS`, `DATE_RANGE`. `pricing.ts`: `PLAN_PRICING` in cents, `formatPrice`.
 - `quotas.ts`: `QUOTAS` per `Role`. Only `ai` has a limit (`tasks` is `-1` for every plan).
+  `QuotaSnapshot` (`GET /permissions`) and `QUOTA_ERRORS`, the exhausted-quota error texts.
 - `timezone.ts`: `zonedParts`/`zonedEpoch` (two-pass DST fix, one cached formatter per zone).
 - `dates.ts`: `startOfMonthMs`/`endOfMonthMs`, legacy optional zone, no test.
-- `period.ts`: `WeekStart`, the 06:00 rollover, `periodStart`, `doneThisPeriod`.
+- `period.ts`: `WeekStart`, `UserSettings` (`/settings`), the 06:00 rollover, `periodStart`, `doneThisPeriod`.
 - `recurrence.ts`: `expandRecurringTask`, `normalizeRepeat`, `weekDays`/`dayMap`. `rrule.ts`:
   `toRrule`/`fromRrule` for Google Calendar.
 - `hash.ts`: `taskHash`, `stampUpdatedAt` (LWW clock-skew clamp). Server-only today.
@@ -71,7 +73,7 @@ are in [Shared model](../../RULES.md#shared-model); required zones are in
   changes; `updateTask` skips the write on equal hashes. Then on the server: `lib/task-input.ts`
   (`parseTaskFields`), `db/tasks.ts` (`rowToTask`, `insertStatement`, `updateTask`), a migration.
 - **A quota:** an entry in `QUOTAS` with a limit per `Role` (`-1` unlimited, `0` blocked). The
-  server's `COUNTERS`/`QUOTA_ERRORS` (`db/limits.ts`) and the web labels (`dashboard/copy.ts`,
+  server's `COUNTERS` (`db/limits.ts`), `QUOTA_ERRORS` (here) and the web labels (`dashboard/copy.ts`,
   `pricing/copy.ts`) are keyed by `QuotaKey`, so tsc lists every place. A `0` limit also needs a
   per-quota loading default in `computeQuotas` (see its `ponytail:`).
 - **A provider:** a `ProviderId` member plus its `INTEGRATIONS` entry, then a module in

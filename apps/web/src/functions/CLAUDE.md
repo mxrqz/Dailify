@@ -34,7 +34,7 @@ Each has a colocated `<module>.test.ts`, except `api.ts` and `push.ts`.
 - Legacy, don't copy: `createTaskVoice` (FormData; `authed()` forces JSON Content-Type) and the push
   trio call `fetch` directly, so push throws offline and voice errors lack `status`/`code`.
   `getQuotas`, `getPaymentDetails`, `getInvoices`, `checkout`, `billingPortal` drop `error`. The
-  `/tasks/${id}` routes skip `encodeURIComponent`. `Settings`/`QuotaSnapshot` should live in shared.
+  `/tasks/${id}` routes skip `encodeURIComponent`.
 
 Adding an endpoint: name the wire type in `@dailify/shared`
 ([TypeScript](../../../../RULES.md#typescript)); wrap `request<T>()` here and `encodeURIComponent`
