@@ -17,12 +17,12 @@ import { isRepeatEvery, sanitizeLinks } from "./task-input";
 
 export const openaiClient = (env: Env) => new OpenAI({ apiKey: env.OPENAI_API_KEY });
 
-// gpt-4o-mini-transcribe: ~$0.003/min (half of whisper-1) with equal/better accuracy.
+// gpt-4o-mini-transcribe shuts down 2027-02-26; gpt-transcribe is OpenAI's listed successor.
 // Billing is per audio DURATION, not file size — the client keeps clips short + Opus-compressed.
 export async function transcribe(env: Env, file: File): Promise<string> {
   const r = await openaiClient(env).audio.transcriptions.create({
     file,
-    model: "gpt-4o-mini-transcribe",
+    model: "gpt-transcribe",
   });
   return r.text;
 }
@@ -251,7 +251,11 @@ export async function interpretText(
   const local = DateTime.now().setZone(timezone);
   const result = await openaiClient(env).responses.create(
     {
-      model: "gpt-4o-mini",
+      // gpt-4o-mini shuts down 2027-01-14. Luna reasons; "low" keeps the composer snappy.
+      model: "gpt-6-luna",
+      reasoning: { effort: "low" },
+      // The Responses API keeps outputs 30 days by default; task text has no reason to stay there.
+      store: false,
       instructions: PROMPT(
         local.toISO({ includeOffset: false, suppressMilliseconds: true }) ?? "",
         weekDays[local.weekday % 7],

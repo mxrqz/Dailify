@@ -96,6 +96,16 @@ describe("POST /tasks/voice", () => {
     expect(saved).toMatchObject({ title: "Reunião com o time", date: meeting.date });
   });
 
+  it("transcribes with the successor of gpt-4o-mini-transcribe", async () => {
+    role = "max";
+    userId = "vu-model";
+    openaiMock.audio.transcriptions.create.mockResolvedValue({ text: "comprar pão amanhã" });
+    await audioRequest("UTC");
+    expect(openaiMock.audio.transcriptions.create.mock.calls[0][0]).toMatchObject({
+      model: "gpt-transcribe",
+    });
+  });
+
   it("reinterprets GPT's naive-local dates using the user's non-UTC timezone (America/Sao_Paulo, UTC-3)", async () => {
     role = "max";
     userId = "vu3";

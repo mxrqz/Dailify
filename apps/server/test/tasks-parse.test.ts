@@ -212,6 +212,17 @@ describe("POST /tasks/parse — targets", () => {
   const targetsSchema = () =>
     JSON.parse(JSON.stringify(sent().text.format.schema)).properties.tasks.items.properties.targets;
 
+  it("usa o modelo sucessor do gpt-4o-mini e não deixa a OpenAI guardar o pedido", async () => {
+    userId = "pt-model";
+    aiReturns({ intent: "create", reply: "ok", tasks: [task({ targets: [] })] });
+    await parse({ text: "x", timezone: "UTC" });
+    expect(sent()).toMatchObject({
+      model: "gpt-6-luna",
+      store: false,
+      reasoning: { effort: "low" },
+    });
+  });
+
   it("sem conexão: o schema só aceita [] e um target inventado cai", async () => {
     userId = "pt-none";
     aiReturns({
