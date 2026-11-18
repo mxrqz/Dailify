@@ -11,7 +11,7 @@ vi.mock("@dailify/shared", async (importOriginal) => {
 });
 
 import { env, applyD1Migrations } from "cloudflare:test";
-import { zonedEpoch, type Task } from "@dailify/shared";
+import { TASK_LIMITS, zonedEpoch, type Task } from "@dailify/shared";
 import { sealTokens } from "../src/integrations/connection";
 import { eventId } from "../src/integrations/google-calendar/event";
 import { syncCalendar, syncOldest } from "../src/integrations/google-calendar/sync";
@@ -175,6 +175,12 @@ describe("syncCalendar", () => {
     expect(q.get("timeMin")).toBeNull();
     expect((await taskOf("ev2"))?.title).toBe("Dentista");
     expect((await conn())?.sync_token).toBe("tok-2");
+  });
+
+  it("caps an imported title at the task title limit", async () => {
+    respond = () => page([ev("ev1", { summary: "x".repeat(TASK_LIMITS.titleMax + 50) })]);
+    await sync();
+    expect((await taskOf("ev1"))?.title).toHaveLength(TASK_LIMITS.titleMax);
   });
 
   it("410 no incremental: volta pro full e troca o token", async () => {

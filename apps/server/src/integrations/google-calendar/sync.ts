@@ -30,24 +30,18 @@ import { deleteLink, getLink, setLinkState } from "../../db/integrations";
 import { getSettings } from "../../db/settings";
 import { getTask, setExdatesStatement, updateTask } from "../../db/tasks";
 import { loadCtx } from "../connection";
+import { appendLinks, withoutLink } from "../links";
 import type { Ctx } from "../types";
+import { EVENTS_API, field, text } from "./api";
 import { eventId } from "./event";
 
 const P = "google-calendar";
-const EVENTS_API = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
 const THROTTLE = 60_000;
 const DAY = 86_400_000;
 const WINDOW = 30 * DAY;
 // ponytail: 10 páginas × 250 = 2500 eventos; acima disso não vem nextSyncToken e cada passada
 // refaz o full. Paginar entre passadas (guardar o pageToken) se alguém chegar perto.
 const MAX_PAGES = 10;
-
-const field = (v: unknown, key: string): unknown =>
-  typeof v === "object" && v !== null ? Reflect.get(v, key) : undefined;
-const text = (v: unknown, key: string): string | undefined => {
-  const x = field(v, key);
-  return typeof x === "string" ? x : undefined;
-};
 
 interface When {
   date?: string;
@@ -133,7 +127,8 @@ const ymd = (date: string) => {
 /** `null` = não cabe no modelo (regra que a Mewki não expressa, dia inteiro recorrente ou multi-dia). */
 function toFields(ev: Remote, timeZone: string): Mapped | null {
   if (!ev.start || !ev.end) return null;
-  const title = ev.summary?.trim() || "Sem título";
+  // The invite's sender writes the title: cap it like any task title before it reaches the AI.
+  const title = (ev.summary?.trim() || "Sem título").slice(0, TASK_LIMITS.titleMax);
   const links = [ev.htmlLink, ev.hangoutLink].filter((l): l is string => !!l);
   const off: Recurrence = { repeat: "Off", repeatEvery: undefined, repeatUntil: undefined };
 
@@ -174,10 +169,8 @@ function toFields(ev: Remote, timeZone: string): Mapped | null {
   };
 }
 
-/** Os do Google entram no fim; passou do teto, saem os mais antigos (como o `addLinks`). */
 function withLinks(current: string[] | undefined, added: string[]): string[] | undefined {
-  const kept = (current ?? []).filter((l) => !added.includes(l));
-  const links = [...kept.slice(0, TASK_LIMITS.linksMax - added.length), ...added];
+  const links = appendLinks(current, added);
   return links.length ? links : undefined;
 }
 
@@ -325,10 +318,8 @@ async function cancel(s: Pass, ev: Remote): Promise<void> {
     await deleteLink(s.db, s.userId, P, l.taskId);
     const task = await getTask(s.db, s.userId, l.taskId);
     // Sem o endereço o web para de ler a tarefa como "Na Agenda" (como no `pushLink`).
-    if (task?.links && l.url && task.links.includes(l.url))
-      await updateTask(s.db, s.userId, task.id, {
-        links: task.links.filter((u) => u !== l.url),
-      });
+    const links = withoutLink(task?.links, l.url);
+    if (task && links) await updateTask(s.db, s.userId, task.id, { links });
   }
 }
 

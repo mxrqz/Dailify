@@ -3,6 +3,7 @@ import type { Env } from "../index";
 import { deleteLink, listTaskLinks, setLinkState, type StoredLink } from "../db/integrations";
 import { getTask, updateTask } from "../db/tasks";
 import { loadCtx } from "./connection";
+import { withoutLink } from "./links";
 import { InvalidGrantError } from "./oauth";
 import { PROVIDERS } from "./registry";
 import type { Ctx } from "./types";
@@ -33,10 +34,8 @@ export async function pushLink(
   if ((await provider.onTaskChanged(ctx, link, before, after)) === "unlink") {
     await deleteLink(DB, ctx.userId, link.provider, link.taskId);
     // Sem isso o web seguiria lendo a tarefa como "No Google Agenda" (é o `url` nos links).
-    if (after?.links && link.url && after.links.includes(link.url))
-      await updateTask(DB, ctx.userId, after.id, {
-        links: after.links.filter((l) => l !== link.url),
-      });
+    const links = withoutLink(after?.links, link.url);
+    if (after && links) await updateTask(DB, ctx.userId, after.id, { links });
   } else if (link.stale) {
     const state = { stale: false, timeZone: link.timeZone ?? undefined };
     await setLinkState(DB, ctx.userId, link.provider, link.taskId, state, Date.now());

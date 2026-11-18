@@ -6,7 +6,8 @@ event mapping and sync: `google-calendar/CLAUDE.md`.
 
 ## Layout
 
-- `types.ts` `Provider`, `Ctx`, `Action`, `ActionError` · `registry.ts` `PROVIDERS` · `oauth.ts`
+- `types.ts` `Provider`, `Ctx`, `ActionError` · `registry.ts` `PROVIDERS` · `links.ts`
+  `appendLinks` (capped) and `withoutLink` for `task.links` · `oauth.ts`
   code + PKCE (S256) on plain fetch, `InvalidGrantError` · `crypto.ts` token sealing ·
   `connection.ts` `makeCtx`/`loadCtx`, `sealTokens`/`openTokens`, best-effort `revokeSealed` ·
   `propagate.ts` task edits to providers · `<id>/` one folder per provider.
@@ -17,7 +18,7 @@ event mapping and sync: `google-calendar/CLAUDE.md`.
 1. Id and `roles` in `INTEGRATIONS` (`packages/shared/src/integrations.ts`). That is the plan gate
    (`canUseIntegration`), not `QUOTAS`.
 2. `integrations/<id>/index.ts` exports a `Provider`: `oauth` (endpoints, `scopes`, `required`,
-   `credentials(env)`), `identify`, `actions`, optional `onTaskChanged`. Expected action failures
+   `credentials(env)`), `identify`, optional `onTaskChanged`. Expected action failures
    throw `ActionError(status, msg, extra)`, which the route maps to `fail`.
 3. Register it in `PROVIDERS`; `satisfies Record<ProviderId, Provider>` makes a missing entry a
    compile error.
@@ -28,8 +29,8 @@ event mapping and sync: `google-calendar/CLAUDE.md`.
 
 Gotcha: the registry is only half used. The generic `/:provider/callback` calls Google's
 `syncCalendar` directly, the action routes are hardcoded to Google (`withCalendar`, `createEvent`,
-`replaceMeet`), and `Provider.actions` (with `name`/`kind`/`preview`) is read nowhere in `src`. A
-second provider needs those routed through `PROVIDERS[id]` first.
+`replaceMeet`; `createEvent` is a plain `{ parse, run }`). A second provider needs those routed
+through `PROVIDERS[id]` first.
 
 ## Ctx.api and tokens
 
