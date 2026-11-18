@@ -21,11 +21,14 @@ export const PLAN_PRICING = {
 
 export const PRICING_CURRENCY = "brl";
 
-/** Centavos → "R$ 9,90". Um lugar só formata, então a vitrine inteira fala a mesma língua. */
-export function formatPrice(cents: number): string {
+/**
+ * Centavos → "R$ 9,90". Um lugar só formata, então a vitrine inteira fala a mesma língua.
+ * `currency` is a Stripe code ("brl", any case) for amounts Stripe reports.
+ */
+export function formatPrice(cents: number, currency: string = PRICING_CURRENCY): string {
   return (cents / 100).toLocaleString(sharedCopy.locale, {
     style: "currency",
-    currency: PRICING_CURRENCY.toUpperCase(),
+    currency: currency.toUpperCase(),
   });
 }
 
