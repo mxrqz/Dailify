@@ -49,6 +49,28 @@ export function parseAuthLink(raw: string): string | null {
   return tokens.length === 1 && TOKEN_RE.test(tokens[0]) ? tokens[0] : null;
 }
 
+/** `mewki://open/<path>` or `https://mewki.mxrqz.com/app/<path>` (e.g. back from Stripe) → in-app path. */
+export function parseOpenLink(raw: string): string | null {
+  let url: URL;
+  try {
+    url = new URL(raw);
+  } catch {
+    return null;
+  }
+  let path: string;
+  if (url.protocol === "mewki:" && url.host === "open") path = url.pathname;
+  else if (
+    url.protocol === "https:" &&
+    url.host === LINK_HOST &&
+    (url.pathname === "/app" || url.pathname.startsWith("/app/"))
+  )
+    path = url.pathname.slice("/app".length);
+  else return null;
+  // Only same-app paths: `//host` would be read as another origin.
+  if (!path.startsWith("/") || path.startsWith("//") || path.startsWith("/\\")) return "/dashboard";
+  return path + url.search;
+}
+
 async function vaultGet(account: string): Promise<string | null> {
   const { invoke } = await import("@tauri-apps/api/core");
   const [secret] = await invoke<(string | null)[]>("plugin:keyring-store|get_passwords", {
@@ -107,6 +129,13 @@ export async function initNativeAuth(onError: (error: unknown) => void): Promise
   const seen = new Set<string>();
   const handle = (urls: string[] | null) => {
     for (const raw of urls ?? []) {
+      const path = parseOpenLink(raw);
+      if (path) {
+        // BrowserRouter follows popstate, so this is a navigation from outside React.
+        history.pushState(null, "", path);
+        dispatchEvent(new PopStateEvent("popstate"));
+        continue;
+      }
       const token = parseAuthLink(raw);
       if (!token || seen.has(token)) continue;
       seen.add(token);

@@ -32,8 +32,12 @@
         {
           "scheme": ["https"],
           "host": "mewki.mxrqz.com",
-          "pathPrefix": ["/auth/app"],
+          "pathPrefix": ["/auth/app", "/app/"],
           "appLink": true
+        },
+        {
+          "scheme": ["mewki"],
+          "appLink": false
         }
       ]
     }

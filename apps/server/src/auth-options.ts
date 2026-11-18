@@ -3,7 +3,7 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import type { GenericEndpointContext } from "better-auth";
 import { bearer, captcha, magicLink, oneTimeToken } from "better-auth/plugins";
 import type { Env } from "./index";
-import { allowedOrigins } from "./lib/origin";
+import { allowedOrigins, NATIVE_ORIGINS } from "./lib/origin";
 import { challengeOf } from "./integrations/oauth";
 import { sendEmail } from "./lib/email";
 import { magicLinkEmail } from "./lib/email/templates/magic-link";
@@ -14,13 +14,6 @@ import { deleteUserData } from "./db/tasks";
 const LINK_TTL_S = 600;
 const EMAIL_COOLDOWN_MS = 60_000;
 const VERIFY = "/magic-link/verify";
-// O app (Tauri) chama de uma origem própria; `mewki://` é o deep link de volta.
-const NATIVE_ORIGINS = [
-  "tauri://localhost",
-  "http://tauri.localhost",
-  "https://tauri.localhost",
-  "mewki://",
-];
 
 /**
  * Um e-mail por endereço por minuto, contado só nos que saíram (o plugin cria o token antes de

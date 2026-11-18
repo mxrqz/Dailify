@@ -95,6 +95,30 @@ describe("POST /billing/checkout", () => {
     ]);
   });
 
+  it("sends the app back through the web /app bounce, which reopens it", async () => {
+    profileMock.mockResolvedValue({});
+    stripeMock.checkout.sessions.create.mockResolvedValue({
+      url: "https://checkout.stripe.com/xyz",
+    });
+
+    await post({ productName: "pro" }, { Origin: "http://tauri.localhost" });
+    await post({ productName: "pro" }, { Origin: "tauri://localhost" });
+    const calls = stripeMock.checkout.sessions.create.mock.calls.map(([arg]) => [
+      arg.success_url,
+      arg.cancel_url,
+    ]);
+    expect(calls).toEqual([
+      [
+        "https://dailify.mxrqz.com/app/billing?checkout=success",
+        "https://dailify.mxrqz.com/app/billing?checkout=cancel",
+      ],
+      [
+        "https://dailify.mxrqz.com/app/billing?checkout=success",
+        "https://dailify.mxrqz.com/app/billing?checkout=cancel",
+      ],
+    ]);
+  });
+
   it("returns a billing-portal url instead when the user already has an active subscription", async () => {
     profileMock.mockResolvedValue({ stripeCustomerId: "cus_1" });
     stripeMock.subscriptions.list.mockResolvedValue({ data: [{ id: "sub_1" }] });

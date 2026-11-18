@@ -17,7 +17,7 @@ import {
   stripeClient,
 } from "../lib/stripe";
 import { fail } from "../lib/errors";
-import { appOrigin } from "../lib/origin";
+import { returnBase } from "../lib/origin";
 
 const billing = new Hono<{ Bindings: Env; Variables: { userId: string; plan: Role } }>();
 
@@ -62,7 +62,7 @@ billing.post("/billing/checkout", requireAuth, rateLimit("API_LIMITER"), async (
     if (subscriptions.data.length) {
       const portal = await stripe.billingPortal.sessions.create({
         customer: stripeCustomerId,
-        return_url: `${appOrigin(c.env, c.req.header("Origin"))}/billing`,
+        return_url: `${returnBase(c.env, c.req.header("Origin"))}/billing`,
       });
       return c.json({ url: portal.url });
     }
@@ -72,8 +72,8 @@ billing.post("/billing/checkout", requireAuth, rateLimit("API_LIMITER"), async (
     mode: "subscription",
     payment_method_types: ["card"],
     line_items: [{ price: priceMap(c.env)[productName], quantity: 1 }],
-    success_url: `${appOrigin(c.env, c.req.header("Origin"))}/billing?checkout=success`,
-    cancel_url: `${appOrigin(c.env, c.req.header("Origin"))}/billing?checkout=cancel`,
+    success_url: `${returnBase(c.env, c.req.header("Origin"))}/billing?checkout=success`,
+    cancel_url: `${returnBase(c.env, c.req.header("Origin"))}/billing?checkout=cancel`,
     // Quem já foi cliente (assinatura cancelada) volta no mesmo customer, não ganha um duplicado.
     ...(stripeCustomerId ? { customer: stripeCustomerId } : { customer_email: email }),
     subscription_data: { metadata: { clerkUserId: userId } },
@@ -89,7 +89,7 @@ billing.get("/billing/portal", requireAuth, async (c) => {
 
   const portal = await stripeClient(c.env).billingPortal.sessions.create({
     customer: stripeCustomerId,
-    return_url: `${appOrigin(c.env, c.req.header("Origin"))}/billing`,
+    return_url: `${returnBase(c.env, c.req.header("Origin"))}/billing`,
   });
   return c.json({ url: portal.url });
 });

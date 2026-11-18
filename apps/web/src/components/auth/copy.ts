@@ -71,6 +71,13 @@ export const copy = {
     browser: "Entrar pelo navegador",
   },
 
+  appReturn: {
+    pageTitle: "Mewki — Voltar para o app",
+    message: "Tudo certo por aqui. Volte para o app da Mewki para continuar.",
+    open: "Abrir na Mewki",
+    browser: "Continuar no navegador",
+  },
+
   errors: {
     invalidEmail: "E-mail inválido.",
     captcha: "A verificação de segurança falhou. Recarregue a página e tente de novo.",

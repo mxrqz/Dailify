@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from "vitest";
 // O cliente do Better Auth lê `window.location` ao carregar; aqui só as funções puras importam.
 vi.mock("@/lib/auth", () => ({}));
 
-const { base64url, parseAuthLink, s256 } = await import("./native-auth");
+const { base64url, parseAuthLink, parseOpenLink, s256 } = await import("./native-auth");
 
 const TOKEN = "aBcDeFgHiJkLmNoPqRsTuVwXyZaBcDeF";
 
@@ -44,5 +44,26 @@ describe("PKCE", () => {
   it("S256 = base64url(sha256), o mesmo que o server confere", async () => {
     // printf abc | openssl dgst -sha256 -binary | base64 | tr '+/' '-_' | tr -d '='
     expect(await s256("abc")).toBe("ungWv48Bz-pBQUDeXa4iI7ADYaOWF3qctBD_YfIAFa0");
+  });
+});
+
+describe("parseOpenLink", () => {
+  it("turns the app return links into an in-app path", () => {
+    expect(parseOpenLink("mewki://open/billing?checkout=success")).toBe(
+      "/billing?checkout=success",
+    );
+    expect(parseOpenLink("https://mewki.mxrqz.com/app/billing?checkout=cancel")).toBe(
+      "/billing?checkout=cancel",
+    );
+    expect(parseOpenLink("mewki://open")).toBe("/dashboard");
+  });
+
+  it("rejects anything else", () => {
+    expect(parseOpenLink(`mewki://auth?token=${TOKEN}`)).toBeNull();
+    expect(parseOpenLink("https://evil.example/app/billing")).toBeNull();
+    expect(parseOpenLink("https://mewki.mxrqz.com/billing")).toBeNull();
+    expect(parseOpenLink("https://mewki.mxrqz.com/apple")).toBeNull();
+    expect(parseOpenLink("mewki://open//evil.example")).toBe("/dashboard");
+    expect(parseOpenLink("not a url")).toBeNull();
   });
 });
