@@ -95,7 +95,7 @@ describe("POST /billing/checkout", () => {
     ]);
   });
 
-  it("sends the app back through the web /app bounce, which reopens it", async () => {
+  it("sends the app back through its App Link domain, whatever the first origin is", async () => {
     profileMock.mockResolvedValue({});
     stripeMock.checkout.sessions.create.mockResolvedValue({
       url: "https://checkout.stripe.com/xyz",
@@ -109,12 +109,12 @@ describe("POST /billing/checkout", () => {
     ]);
     expect(calls).toEqual([
       [
-        "https://dailify.mxrqz.com/app/billing?checkout=success",
-        "https://dailify.mxrqz.com/app/billing?checkout=cancel",
+        "https://mewki.mxrqz.com/app/billing?checkout=success",
+        "https://mewki.mxrqz.com/app/billing?checkout=cancel",
       ],
       [
-        "https://dailify.mxrqz.com/app/billing?checkout=success",
-        "https://dailify.mxrqz.com/app/billing?checkout=cancel",
+        "https://mewki.mxrqz.com/app/billing?checkout=success",
+        "https://mewki.mxrqz.com/app/billing?checkout=cancel",
       ],
     ]);
   });

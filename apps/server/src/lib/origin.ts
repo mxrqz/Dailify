@@ -17,10 +17,11 @@ export function appOrigin(env: Env, origin: string | undefined) {
   return origin && list.includes(origin) ? origin : list[0];
 }
 
-// Stripe can't send a browser back into the app, so the app returns via the web `/app/*` page,
-// which hands the rest of the path to the app (App Link or `mewki://open`).
+// Stripe can't send a browser back into the app, so the app returns through `/app/*` on the domain
+// its App Links are verified for (fixed, so local dev reopens the app too); the page there is the
+// fallback that hands the path to `mewki://open`.
+const APP_LINK_BASE = "https://mewki.mxrqz.com/app";
+
 export function returnBase(env: Env, origin: string | undefined) {
-  return origin && NATIVE_ORIGINS.includes(origin)
-    ? `${allowedOrigins(env)[0]}/app`
-    : appOrigin(env, origin);
+  return origin && NATIVE_ORIGINS.includes(origin) ? APP_LINK_BASE : appOrigin(env, origin);
 }
