@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
+import type { SetStateAction } from "react";
 import type { IntegrationStatus, Task } from "@dailify/shared";
 
 const { dailify, useOnline, api, toast, navigate } = vi.hoisted(() => ({
@@ -44,10 +45,15 @@ const task: Task = {
   repeat: "Off",
   completed: [],
 };
-const setTasks = vi.fn();
+// The real provider passes useState setters: a functional update reads the list of the moment.
+let store: Task[] = [];
+const setTasks = vi.fn((next: SetStateAction<Task[] | undefined>) => {
+  store = (typeof next === "function" ? next(store) : next) ?? [];
+});
 
 beforeEach(() => {
   vi.clearAllMocks();
+  store = [task];
   setIntegrations([GCAL]);
   useOnline.mockReturnValue(true);
   dailify.mockReturnValue({
@@ -130,7 +136,7 @@ describe("<AddToCalendar>", () => {
 
     await waitFor(() => expect(toast.success).toHaveBeenCalled());
     expect(api.createCalendarEvent).toHaveBeenCalledWith("task01", true);
-    expect(setTasks).toHaveBeenCalledWith([updated]);
+    expect(store).toEqual([updated]);
   });
 
   it("revogado: toast com Reconectar levando a /settings", async () => {
@@ -172,7 +178,7 @@ describe("<AddToCalendar>", () => {
       }),
     );
     await waitFor(() => expect(toast.info).toHaveBeenCalledWith(t.alreadyLinked));
-    expect(setTasks).toHaveBeenCalledWith([updated]);
+    expect(store).toEqual([updated]);
   });
 
   it("série: o preview mostra a regra e o início, não o dia tocado", async () => {

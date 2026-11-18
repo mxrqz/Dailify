@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
+import type { SetStateAction } from "react";
 import type { ParsedTaskWire, Task } from "@dailify/shared";
 
 import { zonedAt } from "@/functions/zone";
@@ -20,7 +21,16 @@ const api = vi.hoisted(() => ({
 const toast = vi.hoisted(() =>
   Object.assign(vi.fn(), { error: vi.fn(), success: vi.fn(), message: vi.fn(), info: vi.fn() }),
 );
-const ctx = vi.hoisted(() => ({ setTasks: vi.fn() }));
+// The real provider passes useState setters: a functional update reads the list of the moment.
+const ctx = vi.hoisted(() => {
+  const state: { tasks: Task[] } = { tasks: [] };
+  return {
+    state,
+    setTasks: vi.fn((next: SetStateAction<Task[] | undefined>) => {
+      state.tasks = (typeof next === "function" ? next(state.tasks) : next) ?? [];
+    }),
+  };
+});
 
 vi.mock("@/lib/auth", () => ({
   useSession: () => ({ data: { user: { id: "u1" } }, isPending: false }),
@@ -112,6 +122,7 @@ const draft = (text: string, hour: number): ParsedTaskWire => ({
 
 beforeEach(() => {
   vi.resetAllMocks();
+  ctx.state.tasks = [];
   localStorage.clear();
   connect(true);
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
@@ -175,7 +186,7 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
     await waitFor(() => expect(toast.success).toHaveBeenCalledWith(t.createdAdded));
     const id = api.createTask.mock.calls[0][0].id;
     expect(api.createCalendarEvent).toHaveBeenCalledWith(id, false);
-    expect(ctx.setTasks).toHaveBeenLastCalledWith([expect.objectContaining({ links: [EVENT] })]);
+    expect(ctx.state.tasks).toEqual([expect.objectContaining({ links: [EVENT] })]);
 
     await write(user, "outra amanhã às 9h");
     expect(chip()).toHaveAttribute("aria-checked", "false");
@@ -240,7 +251,7 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
     await user.click(chip()!);
     await send(user);
     await waitFor(() =>
-      expect(toast).toHaveBeenCalledWith(copy.form.createError, expect.anything()),
+      expect(toast.error).toHaveBeenCalledWith(copy.form.createError, expect.anything()),
     );
     expect(api.createCalendarEvent).not.toHaveBeenCalled();
   });
