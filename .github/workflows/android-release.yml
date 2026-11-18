@@ -31,10 +31,9 @@ jobs:
           distribution: temurin
           java-version: 17
 
-      - uses: android-actions/setup-android@v3
-
+      # The runner ships the Android SDK; only the NDK version is ours.
       - name: Install NDK
-        run: sdkmanager --install "ndk;${NDK_VERSION}"
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --install "ndk;${NDK_VERSION}" > /dev/null
 
       # ponytail: arm64 only (nearly every phone in use); add armv7/x86_64 targets if someone needs them.
       - uses: dtolnay/rust-toolchain@stable
