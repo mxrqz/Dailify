@@ -62,8 +62,8 @@ guard)`: `MODEL`, `reasoning: { effort: "low" }`, `store: false`, a strict `json
   throw makes Stripe retry and eventually disable the endpoint.
 - The plan comes from `planLine` (the first non-proration subscription line): after a plan change
   Stripe lists the prorations, priced at the old plan, first. An unknown price never writes a role.
-- Known bugs, don't copy: `isProductName` uses `in` (accepts `"toString"`); `stripeClient` sets no
-  timeout (SDK default 80 s).
+  `listInvoices` reads each invoice's own plan line and fetches a shared subscription once.
+- `stripeClient` sets a 20 s timeout (SDK default 80 s).
 
 ## occurrence-alert
 

@@ -60,6 +60,11 @@ describe("POST /billing/checkout", () => {
     expect(res.status).toBe(400);
   });
 
+  it("400s on a productName that only exists on Object.prototype", async () => {
+    expect((await post({ productName: "toString" })).status).toBe(400);
+    expect(stripeMock.checkout.sessions.create).not.toHaveBeenCalled();
+  });
+
   it("creates a checkout session and returns its url when there's no active subscription", async () => {
     profileMock.mockResolvedValue({ email: "a@b.com" });
     stripeMock.checkout.sessions.create.mockResolvedValue({
