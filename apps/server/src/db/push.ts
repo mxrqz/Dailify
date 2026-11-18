@@ -69,9 +69,9 @@ export async function subscriptionsFor(
   const { results } = await db
     .prepare(
       `SELECT endpoint,user_id,p256dh,auth,timezone FROM push_subscriptions
-       WHERE user_id IN (${userIds.map(() => "?").join(",")})`,
+       WHERE user_id IN (SELECT value FROM json_each(?))`,
     )
-    .bind(...userIds)
+    .bind(JSON.stringify(userIds))
     .all<SubscriptionRow>();
 
   for (const row of results) {
@@ -188,10 +188,11 @@ export async function markOccurrenceAlerted(
   await db.prepare(`UPDATE tasks SET alert_sent=? WHERE id=?`).bind(alertAt, id).run();
 }
 
+// Os ids vão num único parâmetro JSON: um `?` por id estoura o teto de 100 parâmetros do D1.
 export async function markAlertsSent(db: D1Database, ids: string[], at: number): Promise<void> {
   if (!ids.length) return;
   await db
-    .prepare(`UPDATE tasks SET alert_sent=? WHERE id IN (${ids.map(() => "?").join(",")})`)
-    .bind(at, ...ids)
+    .prepare(`UPDATE tasks SET alert_sent=? WHERE id IN (SELECT value FROM json_each(?))`)
+    .bind(at, JSON.stringify(ids))
     .run();
 }

@@ -22,7 +22,12 @@ import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
 import { dispatchAlerts } from "../src/alerts";
 import { insertTask } from "../src/db/tasks";
-import { saveSubscription, subscriptionsOf } from "../src/db/push";
+import {
+  markAlertsSent,
+  saveSubscription,
+  subscriptionsFor,
+  subscriptionsOf,
+} from "../src/db/push";
 
 beforeAll(async () => {
   await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
@@ -96,6 +101,43 @@ describe("dispatchAlerts", () => {
       alert_sent: number | null;
     }>();
     expect(row?.alert_sent).toBeTruthy();
+  });
+
+  it("um device que estoura não derruba a passada e o que saiu fica marcado", async () => {
+    sendPush.mockRejectedValueOnce(new TypeError("fetch failed"));
+    await insertTask(env.DB, "pushuser", task());
+    await insertTask(env.DB, "outro", task({ id: "b1" }));
+    await saveSubscription(env.DB, "pushuser", subscription);
+    await saveSubscription(env.DB, "outro", {
+      ...subscription,
+      endpoint: "https://push.example.net/y",
+    });
+
+    expect(await dispatchAlerts(env)).toBe(1);
+    expect(sendPush).toHaveBeenCalledTimes(2);
+    // próxima passada: nada reenviado
+    expect(await dispatchAlerts(env)).toBe(0);
+    expect(sendPush).toHaveBeenCalledTimes(2);
+  });
+});
+
+// D1 limita 100 parâmetros por statement; dueAlerts devolve até 200 ids por passada.
+describe("db/push — mais de 100 ids", () => {
+  const ids = Array.from({ length: 150 }, (_, i) => `muitos-${i}`);
+
+  it("markAlertsSent marca 150 tarefas", async () => {
+    for (const id of ids) await insertTask(env.DB, "pushuser", task({ id }));
+    await markAlertsSent(env.DB, ids, 42);
+    const row = await env.DB.prepare("SELECT COUNT(*) AS n FROM tasks WHERE alert_sent=42").first<{
+      n: number;
+    }>();
+    expect(row?.n).toBe(150);
+  });
+
+  it("subscriptionsFor aceita 150 usuários", async () => {
+    await saveSubscription(env.DB, "muitos-7", subscription);
+    const byUser = await subscriptionsFor(env.DB, ids);
+    expect(byUser.get("muitos-7")).toHaveLength(1);
   });
 });
 

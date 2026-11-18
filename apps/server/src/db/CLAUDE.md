@@ -61,8 +61,8 @@ SQL still outside db/, to move here: `lib/user.ts` and `middleware/auth.ts` (`"u
   `integrations/google-calendar/index.ts`.
 
 Known gaps: `updateTask`, `appendCompletion`/`removeCompletions`, `excludeOccurrence`,
-`detachOccurrence` and `mergeDuplicate` decide in JS between read and write; `markAlertsSent` and
-`subscriptionsFor` bind one `?` per id and fail past ~99 ids.
+`detachOccurrence` and `mergeDuplicate` decide in JS between read and write. Id lists go in one
+JSON param (`IN (SELECT value FROM json_each(?))`, `markAlertsSent`), never one `?` per id.
 
 ## D1 facts beyond RULES.md
 

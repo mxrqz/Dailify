@@ -41,11 +41,19 @@ export async function dispatchAlerts(env: Env, now: number = Date.now()): Promis
 
   for (const alert of outgoing) {
     for (const subscription of subscriptions.get(alert.userId) ?? []) {
-      const status = await sendPush(env, subscription, {
-        taskId: alert.taskId,
-        title: alert.title,
-        at: alert.at,
-      });
+      // Um device com host que não resolve ou chave inválida não pode abortar a passada: o que já
+      // saiu ficaria sem marca e seria reenviado a cada 5 minutos.
+      let status: number;
+      try {
+        status = await sendPush(env, subscription, {
+          taskId: alert.taskId,
+          title: alert.title,
+          at: alert.at,
+        });
+      } catch (err) {
+        console.error("push falhou", subscription.endpoint, err);
+        continue;
+      }
       if (status === 404 || status === 410) {
         await deleteSubscriptionByEndpoint(env.DB, subscription.endpoint);
       } else if (status < 300) {
