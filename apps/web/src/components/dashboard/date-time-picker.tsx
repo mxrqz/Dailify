@@ -212,8 +212,8 @@ function Wheel({
           aria-selected={v === value}
           onClick={() => step(i - index)}
           className={cn(
-            "flex h-5 snap-center items-center justify-center font-mono text-sm transition-colors",
-            v === value ? "text-foreground" : "text-muted-foreground",
+            "flex h-5 snap-center items-center justify-center font-mono text-sm transition-colors duration-fast",
+            v === value ? "text-ink" : "text-ink-secondary",
           )}
         >
           {display(v)}
@@ -245,7 +245,7 @@ export function TimeWheel({
     <div className="relative flex items-center justify-center gap-1">
       {/* A faixa do meio marca a linha escolhida das colunas. */}
       <div
-        className="pointer-events-none absolute inset-x-0 top-5.5 h-5 rounded-md bg-surface-hover"
+        className="pointer-events-none absolute inset-x-0 top-5.5 h-5 rounded-md bg-fill"
         aria-hidden="true"
       />
       <div className="relative flex items-center">
@@ -264,7 +264,7 @@ export function TimeWheel({
             onChange={(h) => set(h, value.getMinutes())}
           />
         )}
-        <span className="font-mono text-sm text-muted-foreground">:</span>
+        <span className="font-mono text-sm text-ink-secondary">:</span>
         <Wheel
           values={minuteOptions(value.getMinutes())}
           value={value.getMinutes()}
@@ -303,7 +303,7 @@ export function DateTimePicker({
           onChange(next);
         }}
       />
-      <div className="h-px bg-surface-line" aria-hidden="true" />
+      <div className="h-px bg-separator" aria-hidden="true" />
       <TimeWheel value={value} onChange={onChange} />
     </div>
   );
