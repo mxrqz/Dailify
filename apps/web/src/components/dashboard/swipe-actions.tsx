@@ -136,7 +136,7 @@ export function SwipeActions({
           className={cn(
             panelClass,
             "-ml-[100%] justify-end pr-4 text-success",
-            armed === "complete" ? "bg-success/30" : "bg-success/15",
+            armed === "complete" ? "bg-success-soft-strong" : "bg-success-soft",
           )}
         >
           <CheckIcon
@@ -150,8 +150,8 @@ export function SwipeActions({
           aria-hidden
           className={cn(
             panelClass,
-            "pl-4 text-destructive",
-            armed === "delete" ? "bg-destructive/30" : "bg-destructive/15",
+            "pl-4 text-brand-text",
+            armed === "delete" ? "bg-brand-soft-pressed" : "bg-brand-soft",
           )}
         >
           <Trash2Icon

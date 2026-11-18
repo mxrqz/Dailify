@@ -62,8 +62,8 @@
     1
   );
 
-  /* Design System Mewki (tokens.json). Dark é o tema principal; os tokens legados abaixo
-     (shadcn, surface-*) apontam pra cá, então telas antigas herdam o visual sem trocar classe. */
+  /* Design System Mewki (tokens.json). Dark é o tema principal; os nomes shadcn abaixo, que só
+     components/ui/ usa, apontam pra cá. */
   --canvas: light-dark(oklch(97% 0.002 60), oklch(0% 0 0));
   /* Escuro "opção C" (QA do redesign mobile): grafite frio, um degrau perto do preto do canvas. */
   --surface: light-dark(oklch(100% 0 0), oklch(12% 0.006 265));
@@ -116,16 +116,12 @@
      um feMorphology refiltrava a mensagem inteira a cada quadro de qualquer animação dentro dela. */
   --shadow-line: 0 0 0 1px var(--separator);
 
-  --background: var(--canvas);
+  /* shadcn bridge: only components/ui/ reads these names. */
   --foreground: var(--ink);
-  --card: var(--surface);
-  --card-foreground: var(--ink);
   --popover: var(--surface-popover); /* o shadcn lê daqui: todo popover cai no mesmo token */
   --popover-foreground: var(--ink);
   --primary: var(--brand);
   --primary-foreground: var(--on-brand);
-  --secondary: var(--fill);
-  --secondary-foreground: var(--ink);
   --muted: var(--fill);
   --muted-foreground: var(--ink-secondary);
   /* No shadcn, accent é o fundo de hover, não a marca (essa é --brand). */
@@ -152,20 +148,11 @@
   --priority-3: light-dark(oklch(63% 0.18 50), oklch(75% 0.17 55));
   --priority-4: light-dark(oklch(58.6% 0.222 17.6), oklch(70% 0.2 20));
 
-  /* brand gradient (task preview) — mode-independent (were #5a24d6, #b92f84, #fa652a) */
-  --brand-from: oklch(46.5% 0.242 286.1);
-  --brand-via: oklch(54.5% 0.192 347.6);
-  --brand-to: oklch(68.8% 0.195 39.8);
-
-  /* superfícies legadas (landing/app), re-apontadas pro DS */
-  --surface-page: var(--canvas);
-  --surface-card: var(--surface);
+  /* Legacy surfaces left in components/ui/ (tooltip, popover, menus). */
   --surface-panel: var(--surface-raised);
   /* Fundo de TODO popover e menu (calendário, chips, dropdowns): um só. */
   --surface-popover: var(--surface-raised);
-  --surface-hover: var(--fill);
   --surface-line: var(--separator);
-  --accent-hover: var(--brand-pressed);
   /* Metadados por tipo: data azul, horário âmbar, recorrência roxo. Texto legível nos dois temas; fundo = mesmo tom a 16%. */
   --meta-date: light-dark(oklch(48% 0.19 255), oklch(76% 0.13 255));
   --meta-time: light-dark(oklch(50% 0.13 70), oklch(82% 0.15 80));
@@ -173,9 +160,8 @@
   --meta-date-subtle: color-mix(in oklch, var(--meta-date) 16%, transparent);
   --meta-time-subtle: color-mix(in oklch, var(--meta-time) 16%, transparent);
   --meta-repeat-subtle: color-mix(in oklch, var(--meta-repeat) 16%, transparent);
-  --border-highlight: var(--separator);
-  /* Borda do ClockCheck: no light a highlight some no branco; 62% dá ~3.6:1 contra
-     a page (WCAG 1.4.11). Dark igual à highlight. */
+  /* Borda do ClockCheck: no light a separator some no branco; 62% dá ~3.6:1 contra
+     a page (WCAG 1.4.11). Dark igual à separator. */
   --control-mark: light-dark(oklch(62% 0.004 286.3), oklch(30% 0.005 286));
   --radius-panel: 1.375rem; /* = rounded-lg, o card do DS */
   /* Miolo de um painel com p-1: o panel menos os 4px do padding, pra o canto de dentro ficar
@@ -227,7 +213,7 @@
   color-scheme: light;
   /* re-resolve aqui: sem isso, descendentes herdam o valor já resolvido em dark (color-scheme
      não re-resolve light-dark() em cada descendente, só onde a propriedade é especificada). */
-  color: var(--foreground);
+  color: var(--ink);
 }
 
 @theme inline {
@@ -245,16 +231,11 @@
   --default-transition-duration: var(--motion-duration-fast);
   --default-transition-timing-function: var(--motion-ease-out);
 
-  --color-background: var(--background);
   --color-foreground: var(--foreground);
-  --color-card: var(--card);
-  --color-card-foreground: var(--card-foreground);
   --color-popover: var(--popover);
   --color-popover-foreground: var(--popover-foreground);
   --color-primary: var(--primary);
   --color-primary-foreground: var(--primary-foreground);
-  --color-secondary: var(--secondary);
-  --color-secondary-foreground: var(--secondary-foreground);
   --color-muted: var(--muted);
   --color-muted-foreground: var(--muted-foreground);
   --color-accent: var(--accent);
@@ -303,27 +284,16 @@
   --color-priority-3: var(--priority-3);
   --color-priority-4: var(--priority-4);
 
-  --color-brand-from: var(--brand-from);
-  --color-brand-via: var(--brand-via);
-  --color-brand-to: var(--brand-to);
-
-  --color-surface-page: var(--surface-page);
-  --color-surface-card: var(--surface-card);
   --color-surface-panel: var(--surface-panel);
   --color-surface-popover: var(--surface-popover);
   --color-surface-raised: var(--surface-raised);
-  --color-surface-hover: var(--surface-hover);
   --color-surface-line: var(--surface-line);
-  --color-content-secondary: var(--text-secondary);
-  --color-accent-primary: var(--primary);
-  --color-accent-hover: var(--accent-hover);
   --color-meta-date: var(--meta-date);
   --color-meta-time: var(--meta-time);
   --color-meta-repeat: var(--meta-repeat);
   --color-meta-date-subtle: var(--meta-date-subtle);
   --color-meta-time-subtle: var(--meta-time-subtle);
   --color-meta-repeat-subtle: var(--meta-repeat-subtle);
-  --color-highlight: var(--border-highlight);
   --color-control-mark: var(--control-mark);
   --radius-panel: var(--radius-panel);
   --radius-field: var(--radius-field);
@@ -738,7 +708,7 @@
 
 /* Neutral opacity pulse: stays on the compositor, no gradient repaint. */
 @utility skeleton {
-  background-color: var(--surface-line);
+  background-color: var(--separator);
   animation: skeleton-pulse 1.5s ease-in-out infinite;
 
   @media (prefers-reduced-motion: reduce) {

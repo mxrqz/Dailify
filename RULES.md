@@ -119,7 +119,7 @@ relative to the package they name (`apps/web/src`, `apps/server/src`, `packages/
   (`lib/utils.ts`) with a test, or `cn()` silently keeps two conflicting classes.
 - Outside `components/ui/`, use only the DS color names (`ink*`, `canvas`, `surface*`, `fill*`,
   `separator`, `brand*`, `meta-*`, `priority-*`, ...). The legacy aliases (`surface-panel`,
-  `content-secondary`, `accent-primary`, ...) and the shadcn names (`foreground`,
+  `surface-popover`, `surface-line`) and the shadcn names (`foreground`,
   `muted-foreground`, `accent`) resolve at `:root`, so they don't step up a tone inside `.glass`.
 - Define a color once with `light-dark()` in oklch. No hex, except vendor logos, SVG filter constants
   and native contexts that can't read CSS variables (PWA manifest, Android `themes.xml`), each

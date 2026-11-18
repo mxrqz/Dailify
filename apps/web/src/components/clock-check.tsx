@@ -44,14 +44,14 @@ export function ClockCheck({ checked, onCheckedChange, time, label }: Props) {
           strokeWidth="1.5"
           className={cn(
             "transition-colors duration-base ease-out",
-            checked ? "fill-primary stroke-primary" : "fill-transparent stroke-control-mark",
+            checked ? "fill-brand stroke-brand" : "fill-transparent stroke-control-mark",
           )}
         />
         <motion.circle
           data-dot
           {...dot}
           r={1.6}
-          className="fill-content-secondary"
+          className="fill-ink-secondary"
           animate={{ opacity: checked ? 0 : 1 }}
           transition={{ duration: reduce ? 0 : duration.fast, ease: ease.out }}
         />
@@ -62,7 +62,7 @@ export function ClockCheck({ checked, onCheckedChange, time, label }: Props) {
           strokeWidth="2"
           strokeLinecap="round"
           strokeLinejoin="round"
-          className="fill-none stroke-primary-foreground"
+          className="fill-none stroke-on-brand"
           initial={false}
           animate={{ strokeDashoffset: checked ? 0 : 1 }}
           transition={{ duration: reduce ? 0 : duration.base, ease: ease.out }}

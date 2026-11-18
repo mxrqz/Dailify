@@ -11,7 +11,7 @@ import { planOf, useSession } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
 const barButton =
-  "grid size-11 shrink-0 place-items-center rounded-full text-ink transition-colors hover:bg-fill pointer-fine:active:bg-fill-pressed [&_svg]:size-5.5 md:size-8 md:rounded-md md:text-muted-foreground md:[&_svg]:size-4";
+  "grid size-11 shrink-0 place-items-center rounded-full text-ink transition-colors hover:bg-fill pointer-fine:active:bg-fill-pressed [&_svg]:size-5.5 md:size-8 md:rounded-md md:text-ink-secondary md:[&_svg]:size-4";
 
 /**
  * Barra do app: no mobile a barra de material do iOS (52px, ☰ à esquerda; na Hoje, calendário e
@@ -28,8 +28,8 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
   return (
     <header
       className={cn(
-        "sticky top-0 z-20 flex h-bar w-full shrink-0 items-center gap-3 bg-material-bar-solid",
-        "md:h-10 md:border-b md:border-surface-line md:bg-surface-page",
+        "sticky top-0 z-bar flex h-bar w-full shrink-0 items-center gap-3 bg-material-bar-solid",
+        "md:h-10 md:border-b md:border-separator md:bg-canvas",
         className,
       )}
     >
@@ -44,7 +44,7 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
           size="icon"
           aria-label={copy.header.back}
           onClick={() => navigate(-1)}
-          className="size-6 rounded-md text-muted-foreground hover:bg-surface-hover hover:text-foreground"
+          className="size-6 rounded-md text-ink-secondary hover:bg-fill hover:text-ink"
         >
           <ChevronLeftIcon className="size-4" />
         </Button>
@@ -54,7 +54,7 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
           size="icon"
           aria-label={copy.header.forward}
           onClick={() => navigate(1)}
-          className="size-6 rounded-md text-muted-foreground hover:bg-surface-hover hover:text-foreground"
+          className="size-6 rounded-md text-ink-secondary hover:bg-fill hover:text-ink"
         >
           <ChevronRightIcon className="size-4" />
         </Button>
