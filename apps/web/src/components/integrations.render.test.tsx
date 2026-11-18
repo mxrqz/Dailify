@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor, within } from "@testing-library/react";
+import { act, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import type { IntegrationStatus } from "@dailify/shared";
@@ -21,7 +21,7 @@ vi.mock("sonner", () => ({ toast }));
 import { Integrations, IntegrationsSummary } from "./integrations";
 import { copy } from "@/components/dashboard/copy";
 import { CALENDAR_DEFAULT_KEY } from "@/hooks/useCalendarDefault";
-import { setIntegrations } from "@/hooks/useIntegrations";
+import { patchIntegration, setIntegrations } from "@/hooks/useIntegrations";
 
 const t = copy.integrations;
 const GCAL: IntegrationStatus = {
@@ -33,7 +33,9 @@ const GCAL: IntegrationStatus = {
 
 beforeEach(() => {
   vi.clearAllMocks();
+  vi.restoreAllMocks();
   useOnline.mockReturnValue(true);
+  setIntegrations(undefined);
 });
 
 function renderWith(status?: Partial<IntegrationStatus>) {
@@ -110,6 +112,7 @@ describe("<Integrations>", () => {
 
   it("offline desabilita e não busca", () => {
     useOnline.mockReturnValue(false);
+    vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     renderWith();
     expect(screen.getByRole("button", { name: t.connect })).toBeDisabled();
     expect(screen.getByText(t.offlineHint)).toBeInTheDocument();
@@ -124,6 +127,13 @@ describe("<Integrations>", () => {
     await userEvent.click(always);
     expect(always).toBeChecked();
     expect(localStorage.getItem(CALENDAR_DEFAULT_KEY)).toBe("1");
+  });
+
+  it("follows a store patch made elsewhere, like a revoked calendar", async () => {
+    renderWith({ connected: true, status: "active", account: "a@b.com" });
+    await screen.findByRole("button", { name: t.disconnect });
+    act(() => patchIntegration("google-calendar", { status: "revoked" }));
+    expect(await screen.findByRole("button", { name: t.reconnect })).toBeInTheDocument();
   });
 
   it("desconectado não mostra os ajustes da agenda", async () => {
