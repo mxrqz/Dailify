@@ -18,6 +18,7 @@ export const ease = {
   exit: [0.3, 0, 1, 1],
   outExpo: [0.16, 1, 0.3, 1],
   outQuint: [0.22, 1, 0.36, 1],
+  outSoft: [0.2, 0.7, 0.2, 1],
 } as const;
 
 // Sem bounce em UI do app. `soft` é o morph aprovado do composer.
@@ -39,14 +40,5 @@ export const reveal = {
   animate: { opacity: 1, transition: { duration: 0.14, delay: 0.06 } },
 } as const;
 
-/** Variants para AnimatePresence custom={dir}: entra pelo lado de dir e sai pelo oposto. */
-export const slideX = (dir: 1 | -1, distance = 24) => ({
-  enter: { x: dir * distance, opacity: 0 },
-  center: { x: 0, opacity: 1 },
-  exit: { x: -dir * distance, opacity: 0 },
-});
-
-export const collapse = {
-  exit: { opacity: 0, height: 0 },
-  transition: { duration: duration.base, ease: ease.exit },
-} as const;
+// A morphing surface takes its radius through `style` (motion corrects it only there), in px.
+export const radius = { panel: 22 } as const;
