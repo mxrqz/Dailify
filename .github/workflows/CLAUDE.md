@@ -29,16 +29,12 @@ Repo-wide rules: [`/RULES.md`](../../RULES.md). Workflow commits are unscoped `c
     run: echo "keyAlias=$KEY_ALIAS" >> keystore.properties
   ```
 
-  The `Android signing`, `Build APK + AAB` and `Collect` steps still interpolate inline (legacy):
-  move them when you touch them.
-
 - An artifact or release step fails when it matches no files: `fail_on_unmatched_files: true` on
-  `softprops/action-gh-release`, `if-no-files-found: error` on `upload-artifact`. Neither is set
-  today, and `Collect` (`find -exec cp`) stays green when the build produced nothing.
-- Use the Node 24 majors: `actions/checkout@v6`, `actions/setup-java@v5`,
-  `actions/upload-artifact@v6`, `softprops/action-gh-release@v3`. The three `actions/*@v4` and
-  `action-gh-release@v2` used today declare `node20`, which hosted runners dropped in September 2026.
-  `setup-bun@v2` and `rust-cache@v2` are already on node24.
+  `softprops/action-gh-release`, `if-no-files-found: error` on `upload-artifact`, because `Collect`
+  (`find -exec cp`) stays green when the build produced nothing. A required `VITE_*` is asserted
+  with `: "${VAR:?...}"` at the top of the build step.
+- Use the Node 24 majors (`actions/checkout@v6`, `actions/setup-java@v5`,
+  `actions/upload-artifact@v6`, `softprops/action-gh-release@v3`): hosted runners dropped `node20`
+  in September 2026.
 
-`bun run format` formats only each package's `src` (plus the server's `test`), so run
-`bunx prettier --write .github` after editing here.
+The root `bun run format` also formats `.github`.

@@ -89,7 +89,7 @@ jobs:
           find apps/web/src-tauri/gen/android/app/build/outputs -name "*release*.aab" -exec cp {} "dist-android/mewki-$NAME.aab" \;
           ls -l dist-android
 
-      - uses: softprops/action-gh-release@v2
+      - uses: softprops/action-gh-release@v3
         if: github.ref_type == 'tag'
         with:
           files: dist-android/*
