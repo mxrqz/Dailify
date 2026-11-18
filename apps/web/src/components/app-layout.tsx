@@ -1,7 +1,7 @@
 import { Outlet, useMatch } from "react-router-dom";
 
 import { AppHeader } from "@/components/app-header";
-import { Sidebar } from "@/components/dashboard/sidebar";
+import { Sidebar } from "@/components/nav";
 import { Duplicates } from "@/components/duplicates-sheet";
 import { cn } from "@/lib/utils";
 

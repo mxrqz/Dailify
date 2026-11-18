@@ -9,9 +9,9 @@ motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hoo
   `copy.kit`.
 - `kit/`: DS presentational primitives, props to markup (`kit/CLAUDE.md`). No `useDailify`,
   `useSession`, api or router hooks.
-- Feature folders own their code and `copy.ts`: `dashboard/` (agenda, composer, sidebar), `auth/`,
-  `landing/`, `mew/`, `mew-chat/`, and `pricing/` (covered below).
-- Root, for what no single feature owns. Shell: `app-layout` (AppHeader, `dashboard/sidebar`,
+- Feature folders own their code and `copy.ts`: `dashboard/` (agenda, composer), `auth/`,
+  `landing/`, `mew/`, `mew-chat/`, and `nav/` and `pricing/` (covered below).
+- Root, for what no single feature owns. Shell: `app-layout` (AppHeader, `nav/`,
   Outlet, Duplicates; no gutter on /dashboard), `app-header`, `protected-route`, `splash`,
   `scroll-restoration`, `error-boundary`, `brand`. State: `dailifyContext`, `theme-provider`. Task
   UI: `edit-task`, `task-card` (legacy desktop row, rendered by `dashboard/day-task-row` when not
@@ -71,6 +71,20 @@ It owns the task boot. Other code only re-triggers loads (`pages/integration-cal
   `toast.error` on failure (`week-start-select.tsx`), and a row in `pages/settings.tsx`.
 - `theme-provider`: the key `vite-ui-theme` must match the pre-paint script in
   `apps/web/index.html`. The `transition:none` style injected on each switch is deliberate.
+
+## nav/
+
+- App-shell nav: `Sidebar` is mounted by `components/app-layout.tsx` (md+), `MobileNav` by
+  `components/app-header.tsx` (below md, the glass drawer `Sheet side="left"`).
+- `NavMenu` is props-only and shared by both (items are the `NAV_ITEMS` list); `NavItems` wires
+  session and quotas, and the meter draws `QuotaState.ratio`. `/premium` shares
+  the layout without `ProtectedRoute`, so account, credits and sign-out appear only when logged in.
+- The active item is neutral on purpose (brand would compete with the primary action), and nothing
+  stays lit on mobile. `alsoActive="/premium"` lights "Planos" though it links to `/billing`.
+- `MobileNav` closes only on a location change, adjusted during render (a link, even to the current
+  route, and the device back); tapping the account or the meter leaves it open.
+  The credits meter hides while quotas load or when AI is unlimited. Tests assert
+  `aria-current="page"`.
 
 ## pricing/
 

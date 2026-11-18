@@ -2,7 +2,7 @@ import { CalendarIcon, ChevronLeftIcon, ChevronRightIcon, UserIcon } from "lucid
 import { Link, useMatch, useNavigate } from "react-router-dom";
 
 import { Brand } from "@/components/brand";
-import { MobileNav } from "@/components/dashboard/sidebar/mobile-nav";
+import { MobileNav } from "@/components/nav/mobile-nav";
 import { SyncBadge } from "@/components/sync-badge";
 import { copy } from "@/components/dashboard/copy";
 import { Button } from "@/components/ui/button";
