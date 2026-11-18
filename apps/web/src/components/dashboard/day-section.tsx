@@ -2,7 +2,7 @@ import { duration, ease } from "@/consts/motion";
 import { format, isSameWeek, isToday, isTomorrow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { motion, useReducedMotion, type Variants } from "motion/react";
-import { durationMinutes } from "@dailify/shared";
+import { durationMinutes, type WeekStart } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { AnytimeBlock, ScheduleDrop } from "@/components/dashboard/anytime-block";
@@ -26,12 +26,18 @@ const SKELETON_ROWS = 3;
 /** Id da seção de um dia — a `DayList` usa isto pra rolar até ele. */
 export const dayAnchorId = (day: Date) => `day-${format(day, "yyyy-MM-dd")}`;
 
+// Shaped like the rows that replace it (TaskRow when sheet-editing), so boot doesn't shift layout.
 export function TaskSkeletons(): JSX.Element {
+  const sheetEditing = useMediaQuery(SHEET_EDITING);
   return (
-    <ul className="flex flex-col gap-3">
+    <ul className={sheetEditing ? "flex flex-col gap-2" : "flex flex-col gap-3"}>
       {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
         <li key={i}>
-          <TaskCard loading time="" title="" duration="" tags={["", ""]} />
+          {sheetEditing ? (
+            <div className="card skeleton min-h-16 rounded-md" />
+          ) : (
+            <TaskCard loading time="" title="" duration="" tags={["", ""]} />
+          )}
         </li>
       ))}
     </ul>
@@ -46,10 +52,11 @@ export const weekdayDate = (day: Date, pattern: string) =>
  * Hoje é "Agenda" (a página já se chama Hoje), amanhã tem nome próprio, o resto da semana corrente
  * vira o dia da semana e daí em diante o dia com a data: "sexta" só situa dentro da semana.
  */
-function dayLabel(day: Date, now: Date): string {
+function dayLabel(day: Date, now: Date, weekStart: WeekStart): string {
   if (isToday(day)) return copy.day.agenda;
   if (isTomorrow(day)) return copy.day.tomorrow;
-  if (!isSameWeek(day, now)) return weekdayDate(day, "EEEE, d MMM");
+  // Same week as the WeekStrip (`useWeek`), which honors the configured first day.
+  if (!isSameWeek(day, now, { weekStartsOn: weekStart })) return weekdayDate(day, "EEEE, d MMM");
   return weekdayDate(day, "EEEE");
 }
 
@@ -69,7 +76,7 @@ export function DaySection({
   /** O dia escolhido no calendário: título "Terça, 17", sem o bloco A qualquer hora. */
   calendar?: boolean;
 }): JSX.Element {
-  const { tasks, hour12 } = useDailify();
+  const { tasks, hour12, weekStart } = useDailify();
   const reduce = useReducedMotion();
   const sheetEditing = useMediaQuery(SHEET_EDITING);
   const isCurrentDay = isToday(day);
@@ -79,15 +86,13 @@ export function DaySection({
   const nowAt = now.getHours() * 60 + now.getMinutes();
   // Tarefas e o fio do agora numa ordem só. O fio fica antes do que começa agora (-0.5): o que já
   // começou fica acima dele.
-  const rows: Row[] = [
-    ...groupTasksByHour(dayTasks).flatMap((group) =>
-      group.tasks.map((task, index) => ({
-        at: timeToMinutes(getTime(task.date, "HH:MM")),
-        task,
-        hour: index === 0 ? group.time : undefined,
-      })),
-    ),
-  ];
+  const rows: Row[] = groupTasksByHour(dayTasks).flatMap((group) =>
+    group.tasks.map((task, index) => ({
+      at: timeToMinutes(getTime(task.date, "HH:MM")),
+      task,
+      hour: index === 0 ? group.time : undefined,
+    })),
+  );
   if (isCurrentDay && rows.length) rows.push({ at: nowAt - 0.5, now: true });
   rows.sort((a, b) => a.at - b.at);
   const live = (row: { at: number; task: TaskProps }) =>
@@ -114,11 +119,13 @@ export function DaySection({
       {/* content-visibility só no mobile: no desktop cortaria o contorno de soltar (outline-offset). */}
       <section
         id={calendar ? undefined : dayAnchorId(day)}
+        // What the WeekStrip queries (`section[data-day]`), so it never re-types the id format.
+        data-day={calendar ? undefined : true}
         className="flex scroll-mt-bar max-md:[contain-intrinsic-size:auto_20rem] max-md:[content-visibility:auto] flex-col gap-2 rounded-lg outline-offset-4 data-drop-over:outline-2 data-drop-over:outline-dashed data-drop-over:outline-brand"
       >
         <header className="flex items-baseline justify-between gap-3 px-1 pb-1">
           <h2 className="text-title-3 font-semibold">
-            {calendar ? weekdayDate(day, "EEEE, d") : dayLabel(day, now)}
+            {calendar ? weekdayDate(day, "EEEE, d") : dayLabel(day, now, weekStart)}
           </h2>
           {sub && <span className="text-footnote text-ink-secondary">{sub}</span>}
         </header>

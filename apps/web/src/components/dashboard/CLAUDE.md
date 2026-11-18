@@ -102,8 +102,9 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
 - `dayAnchorId(day)` = `day-yyyy-MM-dd`, absent in calendar mode. `DayList` scrolls to it when
   `targetDay` changes; a remount with the same target keeps the restored scroll.
 - `useVisibleDay` picks the last section whose top crossed 64px, if it is in this week; a
-  `targetDay` pins the pill until `touchstart`/`wheel`/`keydown`. Its `section[id^='day-']`
-  selector re-types the anchor prefix, so change both together.
+  `targetDay` pins the pill until `touchstart`/`wheel`/`keydown`. It queries `section[data-day]`,
+  which only anchored (non-calendar) sections carry.
+- `dayLabel` uses `isSameWeek` with `weekStart`, the same week as the strip.
 - `NowLine` sorts at `nowAt - 0.5`, so a task starting this minute sits below it. Only today uses
   `useNow(60_000)`. The row stagger runs only for today and the calendar day, so months loaded
   mid-scroll don't animate.
@@ -149,4 +150,5 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
   `@/functions/api`, `@/lib/auth`, `dailifyContext` and `sonner`, and need a `MemoryRouter`
   (`MewCard` links to `/premium`). `create-fab.render` mocks the hooks instead.
 - `anytime-block.render` also covers today's undated `DayList`, `CheckHistory`, `useUndatedActions`
-  and drag-drop; `DaySection` has no test of its own. New cases go in the component's own file.
+  and drag-drop. `day-section.render` pins the day labels and the now-line order. New cases go in
+  the component's own file.
