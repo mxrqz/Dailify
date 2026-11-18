@@ -8,7 +8,7 @@ rules: [/RULES.md](../../../../RULES.md).
 - `auth.ts`: the Better Auth client, `setBearer`/`authHeaders`, `useSession`, `planOf`. With
   `native-auth.ts` it is the only `better-auth` import, so tests mock `@/lib/auth` alone.
 - `native-auth.ts`: `isTauri`, `signedOutPath`, the device-bound magic link, keyring access, the
-  deep-link parsers, `initNativeAuth`, `signOut`.
+  deep-link parsers, `initNativeAuth`, `signOut`, `signOutAndReload`.
 - `back-button.ts` (Android back), `haptics.ts` (`haptic(kind)`), `open-external.ts`
   (`openExternal`).
 - `form.ts`: `formString` reads `FormData` without `as string`. `utils.ts`: `cn()`, `toText`.
@@ -47,7 +47,9 @@ rules: [/RULES.md](../../../../RULES.md).
 
 - `signOut()` clears the last-user marker; in the app it also clears the bearer and both keyring
   accounts, even when the server call fails. `signedOutPath()` is `/login` in the app (no landing)
-  and `/` on the web. The full-reload rule: RULES.md › Security and privacy.
+  and `/` on the web. Callers use `signOutAndReload(path?)`, which always ends in a full page load
+  (RULES.md › Security and privacy); account deletion's SESSION_EXPIRED passes
+  `/login?error=SESSION_EXPIRED`, which the auth page shows as `copy.errors.reauth`.
 
 ## External URLs
 

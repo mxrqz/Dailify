@@ -17,7 +17,8 @@ import { isTauri } from "@/lib/native-auth";
 export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
   const { data: session } = useSession();
   const { state, from, captchaRef, submit, resend, reset, signInWithGoogle } = useEmailLinkAuth();
-  // O Google que falha volta pra cá via `errorCallbackURL` com `?error=<código>`.
+  // O Google que falha volta pra cá via `errorCallbackURL` com `?error=<código>`; a exclusão de
+  // conta, com `?error=SESSION_EXPIRED`.
   const oauthError = useSearchParams()[0].get("error");
   const text = mode === "signUp" ? copy.signUp : copy.signIn;
 
@@ -34,7 +35,9 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
     state.status === "error"
       ? state.failure
       : state.status === "idle" && oauthError
-        ? { key: "generic", code: oauthError }
+        ? oauthError === "SESSION_EXPIRED"
+          ? { key: "reauth" }
+          : { key: "generic", code: oauthError }
         : undefined;
 
   // Quem já está logado não tem o que fazer aqui — e vai pro mesmo destino que o fluxo de e-mail

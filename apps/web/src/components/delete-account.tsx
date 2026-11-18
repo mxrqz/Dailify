@@ -1,6 +1,5 @@
 import { useState } from "react";
 import { Loader2Icon } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { copy } from "@/components/dashboard/copy";
@@ -19,7 +18,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { clearLocal } from "@/functions/offline";
 import { authClient, useSession } from "@/lib/auth";
-import { signOut, signedOutPath } from "@/lib/native-auth";
+import { signOutAndReload } from "@/lib/native-auth";
 
 /**
  * Excluir a conta. O trabalho pesado é do servidor: `deleteUser()` roda o `beforeDelete` /
@@ -31,7 +30,6 @@ import { signOut, signedOutPath } from "@/lib/native-auth";
  */
 export function DeleteAccount(): JSX.Element | null {
   const user = useSession().data?.user;
-  const navigate = useNavigate();
   const [open, setOpen] = useState(false);
   const [typed, setTyped] = useState("");
   const [deleting, setDeleting] = useState(false);
@@ -49,20 +47,15 @@ export function DeleteAccount(): JSX.Element | null {
     if (error) {
       setDeleting(false);
       // Sessão mais velha que o `freshAge` do servidor: só uma entrada nova autoriza excluir.
-      if (error.code === "SESSION_EXPIRED") {
-        toast.error(copy.profile.deleteReauth);
-        await signOut().catch(() => undefined);
-        navigate("/login");
-        return;
-      }
+      // Recarrega como todo "sair" (o toast morreria junto): o aviso vai pelo `?error=` do /login.
+      if (error.code === "SESSION_EXPIRED") return signOutAndReload("/login?error=SESSION_EXPIRED");
       toast.error(copy.profile.deleteAccountError);
       return;
     }
 
     clearLocal(user.id);
     // A sessão já morreu com a conta; o signOut só limpa o cookie, e a página inteira recarrega.
-    await signOut().catch(() => undefined);
-    window.location.assign(signedOutPath());
+    signOutAndReload();
   };
 
   // Uma linha do grupo Conta, com o nome em vermelho: marca o assunto sem transformar a página

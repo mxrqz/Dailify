@@ -229,13 +229,12 @@ relative to the package they name (`apps/web/src`, `apps/server/src`, `packages/
 - Any path from outside the app (location.state, query, hash, deep link) goes through
   `internalPath()` (`components/auth/auth-state.ts`) before a `Link`, `navigate` or callback URL;
   React Router treats `//host` as external.
-- Sign out with `signOut()` then a full `window.location.assign(signedOutPath())`
-  (`pages/profile.tsx`), never `navigate()`: the context above the router keeps the previous user's
-  tasks.
+- Sign out with `signOutAndReload()` (`lib/native-auth.ts`), never `signOut()` plus `navigate()`:
+  the context above the router keeps the previous user's tasks.
 - External links are `<a target="_blank" rel="noreferrer">`; programmatic ones use `openExternal()`
   (`lib/open-external.ts`). Anything else navigates the Tauri webview away from the app.
 - localStorage only through try/catch wrappers (`hooks/useStoredFlag.ts`, `functions/offline.ts`);
-  per-user keys (`dailify:<what>:<userId>`) are also removed in `clearLocal`. `VITE_*` values are
+  per-user keys (`dailify:<what>:<userId>`, `chatKey`) are also removed in `clearLocal`. `VITE_*` values are
   inlined into the public bundle, so never put a secret there.
 
 ## Git and task tracking

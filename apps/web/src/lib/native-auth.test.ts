@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from "vitest";
 
 // O cliente do Better Auth lê `window.location` ao carregar; aqui só as funções puras importam.
-vi.mock("@/lib/auth", () => ({}));
+const auth = vi.hoisted(() => ({ authClient: { signOut: vi.fn() }, setBearer: vi.fn() }));
+vi.mock("@/lib/auth", () => auth);
 
-const { base64url, parseAuthLink, parseOpenLink, s256 } = await import("./native-auth");
+const { base64url, parseAuthLink, parseOpenLink, s256, signOutAndReload } =
+  await import("./native-auth");
 
 const TOKEN = "aBcDeFgHiJkLmNoPqRsTuVwXyZaBcDeF";
 
@@ -65,5 +67,18 @@ describe("parseOpenLink", () => {
     expect(parseOpenLink("https://mewki.mxrqz.com/apple")).toBeNull();
     expect(parseOpenLink("mewki://open//evil.example")).toBe("/dashboard");
     expect(parseOpenLink("not a url")).toBeNull();
+  });
+});
+
+describe("signOutAndReload", () => {
+  it("recarrega a página mesmo quando o servidor falha: a memória do usuário anterior não fica", async () => {
+    const assign = vi.fn();
+    vi.stubGlobal("window", { location: { assign } });
+    auth.authClient.signOut.mockRejectedValueOnce(new Error("offline"));
+    signOutAndReload("/login?error=SESSION_EXPIRED");
+    await vi.waitFor(() => expect(assign).toHaveBeenCalledWith("/login?error=SESSION_EXPIRED"));
+    signOutAndReload();
+    await vi.waitFor(() => expect(assign).toHaveBeenLastCalledWith("/"));
+    vi.unstubAllGlobals();
   });
 });
