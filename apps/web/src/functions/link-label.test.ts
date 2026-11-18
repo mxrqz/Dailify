@@ -8,6 +8,7 @@ describe("linkLabel", () => {
     ["https://www.youtube.com/watch?v=1", "YouTube"],
     ["https://dailify.mxrqz.com/x", "dailify.mxrqz.com"],
     ["https://www.exemplo.com", "exemplo.com"],
+    ["https://www.google.com/calendar/event?eid=abc", "Agenda"],
   ])("%s → %s", (url, expected) => {
     expect(linkLabel(url)).toBe(expected);
   });
