@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useId, useMemo, useState, ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, ReactNode } from "react";
 import {
   Sheet,
   SheetContent,
@@ -6,7 +6,6 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "./ui/sheet";
 import { AddToCalendar } from "@/components/add-to-calendar";
 import { RecurrenceScopeDialog } from "@/components/dashboard/recurrence-scope-dialog";
@@ -36,10 +35,6 @@ import { enqueue } from "@/functions/offline";
 import { removeUndated, upsertUndated } from "@/functions/undated";
 import { zoned } from "@/functions/zone";
 
-type EditTaskProps = Record<string, never>;
-
-const EditTaskContext = createContext<EditTaskProps | undefined>(undefined);
-
 export function EditTask({
   children,
   open,
@@ -50,24 +45,10 @@ export function EditTask({
   onOpenChange?: (open: boolean) => void;
 }) {
   return (
-    <EditTaskContext.Provider value={{}}>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        {children}
-      </Sheet>
-    </EditTaskContext.Provider>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      {children}
+    </Sheet>
   );
-}
-
-export function useEditTask() {
-  const context = useContext(EditTaskContext);
-  if (!context) {
-    throw new Error("useEditTask must be used within a EditTask");
-  }
-  return context;
-}
-
-export function EditTaskTrigger({ children }: { children: ReactNode }) {
-  return <SheetTrigger asChild>{children}</SheetTrigger>;
 }
 
 /** Sem data marca por período e exclui sem diálogo de escopo; só quem é Sem data paga o hook. */

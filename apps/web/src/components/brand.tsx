@@ -1,13 +1,13 @@
 import { Link } from "react-router-dom";
 
-import { BrandCat } from "@/components/brand-cat";
+import { MewStatic } from "@/components/mew/mew-static";
 import { cn } from "@/lib/utils";
 
 const NAME = "Mewki";
 
 /**
- * Logo + wordmark, compartilhado pelo SiteHeader e pelo AppHeader. `to` difere: na landing aponta
- * pra "/", no app pro "/dashboard".
+ * Logo + wordmark, compartilhado pelo header da landing, pelo AppHeader e pela auth. `to` difere:
+ * na landing aponta pra "/", no app pro "/dashboard".
  *
  * `compact` é o header do app, que fica logo acima da sidebar: o `pl-3` e o `gap-3` repetem o
  * `px-3`/`gap-3` do `sidebar-item` de propósito — sem eles a marca cai 10px à esquerda dos
@@ -34,7 +34,7 @@ export function Brand({
       aria-label={iconOnly ? NAME : undefined}
       className={cn("inline-flex items-center", compact ? "gap-3 pl-3" : "gap-2", className)}
     >
-      <BrandCat className={cn("shrink-0", iconOnly ? "size-10" : compact ? "size-4" : "size-7")} />
+      <MewStatic className={cn("shrink-0", iconOnly ? "size-10" : compact ? "size-4" : "size-7")} />
       {!iconOnly && (
         <span
           className={cn(

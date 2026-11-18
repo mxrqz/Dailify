@@ -56,9 +56,8 @@ diff the output and re-apply them. App widgets live in `components/` or `kit/`, 
 
 ## Dead files
 
-- No importer: `accordion`, `card`, `select`, `tabs`, `toggle-group`, `toggle` (used only by
-  toggle-group), and `CommandDialog`. `badge` only backs task-card's `TagBadge`, which nothing
-  renders. Don't build on them: delete them (and their `@radix-ui/*` dep), re-add with the CLI.
+- Deleted for lack of importers: `accordion`, `card`, `select`, `tabs`, `toggle-group`, `toggle`,
+  `badge`, `CommandDialog`. Re-add one with the CLI when a screen needs it.
 - `applePayLogo.tsx`, `googlePayLogo.tsx` are not shadcn: brand SVGs for `pages/billing.tsx`.
 
 ## Tests
