@@ -38,6 +38,23 @@ const post = (body: string, sig?: string) =>
     env,
   );
 
+/** An invoice line in the API shape (`2026-08-26.dahlia`): plan vs proration lives on `parent`. */
+const line = (price: string, proration = false) => ({
+  pricing: { price_details: { price, product: "prod_1" } },
+  parent: { type: "subscription_item_details", subscription_item_details: { proration } },
+});
+
+const invoicePaid = (lines: unknown[]) => ({
+  type: "invoice.paid",
+  data: {
+    object: {
+      customer: "cus_1",
+      parent: { subscription_details: { metadata: { clerkUserId: "u1" }, subscription: "sub_1" } },
+      lines: { data: lines },
+    },
+  },
+});
+
 describe("POST /webhooks/stripe", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
@@ -70,15 +87,58 @@ describe("POST /webhooks/stripe", () => {
               subscription: "sub_1",
             },
           },
-          lines: {
-            data: [{ pricing: { price_details: { price: "price_pro_month", product: "prod_1" } } }],
-          },
+          lines: { data: [line("price_pro_month")] },
         },
       },
     });
     const res = await post("{}", "t=1,v1=abc");
     expect(res.status).toBe(200);
     expect(await billingOf("u1")).toEqual({ plan: "pro", stripeCustomerId: "cus_1" });
+  });
+
+  // Upgrade Pro -> Max: Stripe lists the proration lines (priced at the OLD plan) before the plan line.
+  it("invoice.paid takes the plan from the non-proration line, not lines[0]", async () => {
+    stripeMock.webhooks.constructEventAsync.mockResolvedValue(
+      invoicePaid([
+        line("price_pro_month", true),
+        line("price_max_month", true),
+        line("price_max_month"),
+      ]),
+    );
+    await post("{}", "t=1,v1=abc");
+    expect(await billingOf("u1")).toEqual({ plan: "max", stripeCustomerId: "cus_1" });
+  });
+
+  it("invoice.paid with only proration lines leaves the plan alone", async () => {
+    await seedUser(env.DB, "u1", { plan: "pro", stripeCustomerId: "cus_1" });
+    stripeMock.webhooks.constructEventAsync.mockResolvedValue(
+      invoicePaid([line("price_max_month", true), line("price_pro_month", true)]),
+    );
+    await post("{}", "t=1,v1=abc");
+    expect(await billingOf("u1")).toEqual({ plan: "pro", stripeCustomerId: "cus_1" });
+  });
+
+  it("invoice.paid with an unknown price doesn't downgrade a paying user", async () => {
+    await seedUser(env.DB, "u1", { plan: "max", stripeCustomerId: "cus_1" });
+    stripeMock.webhooks.constructEventAsync.mockResolvedValue(invoicePaid([line("price_legacy")]));
+    await post("{}", "t=1,v1=abc");
+    expect(await billingOf("u1")).toEqual({ plan: "max", stripeCustomerId: "cus_1" });
+  });
+
+  it("customer.subscription.updated with an unknown price doesn't downgrade a paying user", async () => {
+    await seedUser(env.DB, "u1", { plan: "max", stripeCustomerId: "cus_1" });
+    stripeMock.webhooks.constructEventAsync.mockResolvedValue({
+      type: "customer.subscription.updated",
+      data: {
+        object: {
+          customer: "cus_1",
+          metadata: { clerkUserId: "u1" },
+          items: { data: [{ price: { id: "price_legacy" } }] },
+        },
+      },
+    });
+    await post("{}", "t=1,v1=abc");
+    expect(await billingOf("u1")).toEqual({ plan: "max", stripeCustomerId: "cus_1" });
   });
 
   it("routes customer.subscription.deleted to a free-role update", async () => {
