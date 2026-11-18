@@ -66,7 +66,7 @@ rules: [/RULES.md](../../../../RULES.md).
 
 ## `cn()`
 
-- An extended tailwind-merge: every custom `text-*`, `rounded-*`, `z-*` or `pb-*` token from
+- An extended tailwind-merge: every custom utility name (token or `@utility`) from
   `global.css` must be registered, or `text-subhead` is read as a color and dropped next to
   `text-ink-secondary`. Registered and still-missing names: `apps/web/src/CLAUDE.md`. Each new
   name gets a case in `utils.test.ts`.

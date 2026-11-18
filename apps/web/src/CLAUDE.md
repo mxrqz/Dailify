@@ -10,11 +10,11 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
 - `:root`: every raw value (`--motion-*`, DS palette, shadows, legacy aliases, widths, `--layer-*`).
   `.dark`/`.light` only set `color-scheme`; `components/theme-provider.tsx` puts one on `<html>`.
 - `@theme inline`: var mappings that generate utilities (`--color-*`, `--radius-*`, `--shadow-*`,
-  `--width-*`, `--max-width-*`, `--z-index-*`, `--transition-duration-*`, `--ease-*`).
-- `@theme`: fonts, `ease-out-expo|out-quint|in-out-quint`, the type scale (`text-2xs`,
-  `text-title-1|title-3|body|subhead|footnote`), `animate-dot|bar|caret-blink` and keyframes.
-- `@utility` blocks, then `@layer base`. The unlayered tail (`#root`, `.scrollbar-floating`,
-  `.mask-b`, `.skeleton`) beats every utility, so `bg-*` can't recolor a `.skeleton`.
+  `--width-*`, `--max-width-*`, `--z-index-*`, `--transition-duration-*`, `--ease-*`) and the
+  `--default-transition-*` pair, so a bare `transition-*` runs at `fast` on `ease-out`.
+- `@theme`: fonts, `ease-out-expo|out-quint|out-soft`, the type scale (`text-2xs`,
+  `text-title-1|title-3|body|subhead|footnote`), `animate-dot|caret-blink` and keyframes.
+- `@utility` blocks, `@layer base`, then `#root` and the `scrollbar-floating`/`skeleton` utilities.
 
 ## How to add a token (its WHY goes in a one-line comment on it, like `--radius-field`)
 
@@ -37,7 +37,8 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
 - DS names: `canvas`, `surface(-raised)`, `fill(-pressed)`, `separator`, `card-edge`, `ink`,
   `ink-secondary`, `ink-tertiary` (placeholder and disabled only: under 4.5:1), `brand(-pressed)`,
   `brand-text` (red text, errors, focus), `brand-soft(-pressed)`, `on-brand`,
-  `material-bar(-solid)`, `scrim`, `meta-*(-subtle)`, `priority-0..4`, `success`, `control-mark`.
+  `material-bar(-solid)`, `scrim`, `meta-*(-subtle)`, `priority-0..4`, `success(-soft|-soft-strong)`,
+  `control-mark`.
 - Legacy to DS: `foreground` → `ink`; `muted-foreground`, `content-secondary` → `ink-secondary`;
   `surface-line`, `highlight`, `border` → `separator`; `surface-hover`, `accent`, `muted` → `fill`;
   `surface-panel`, `surface-popover` → `surface-raised`; `background`, `surface-page` → `canvas`;
@@ -65,35 +66,35 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
 - `hit-target`: a 44px `::after`, so the element must be positioned. Safe-area math: `pb-safe`,
   `pb-dock`, `pb-dock-clear`, `h-bar` (height and padding-top), `pt-safe`, `top-safe`,
   `scroll-mt-bar`. `px-gutter`/`pr-gutter` pad in percent of the containing block, so `pr-gutter`
-  doesn't subtract the sidebar. Also `min-w-duration` (6ch), `min-h-2lh`, `fade-top`.
+  doesn't subtract the sidebar. Also `min-w-duration` (6ch), `min-h-2lh`, `fade-top`,
+  `max-h-sheet` (bottom sheets), `h-below-bar` with `top-(--bar-desktop)` (desktop sticky columns).
+- `focus-ring` is the only focus style (`ring-3 ring-ring/50` on `focus-visible`); group-driven
+  focus spells out the same values. `caps` is the mono uppercase label.
 - `word-in` reads `--i`, `delay-words(-lag)` reads `--words`, set through the typed `cssVar()` in
-  `components/mew-chat/chat-drawer.tsx`. `section-y`, `plinth` and `.mask-b` have no consumers.
+  `components/mew-chat/chat-drawer.tsx`.
 
 ## cn(), offenders, z layers
 
-- twMerge knows `text-title-1|title-3|body|subhead|footnote`, `rounded-sheet|panel|field`,
-  `z-chat|dock`, `pb-safe|dock|dock-clear`. Unregistered, so `cn()` keeps both classes and
-  stylesheet order decides (checked with bun): `duration-*`, `ease-standard|exit|out-*`,
-  `shadow-raised|float|line|elevation-1`, `w-sheet|undated`, `max-w-bubble`, `pt-safe`, `top-safe`,
-  `h-bar`, `px-gutter`, `pr-gutter`, `scroll-mt-bar`, `min-w-duration`. Worse,
-  `cn("shadow-raised", "shadow-ink")` drops `shadow-raised` as a color.
-- Don't copy: `ring-[3px]` focus recipes (19 copies from shadcn; no shared focus utility yet),
-  `tracking-[0.04em]` caps labels, `max-h-[94svh]` (edit-task, duplicates-sheet),
-  `h-[calc(100dvh-…)]` tied to the desktop bar (sidebar, undated-column). Scale forms: `ring-3`,
-  `min-w-32`, `max-h-75`, `top-1/2`, `-translate-1/2`.
-- Only `z-chat` (35) and `z-dock` (40) are named. Raw `z-20` sticky bars, `z-30` floats, `z-50`
-  overlays; `create-fab.tsx`'s raw `z-40` repeats the dock value.
+- twMerge knows the custom `text-*`, `rounded-*`, `shadow-*`, `ease-*`, `duration-*`, `z-*`,
+  `w-sheet|undated`, `max-w-bubble`, `max-h-sheet`, `h-bar|below-bar`, `pb-*`, `pt-safe`,
+  `top-safe`, `px-gutter`, `pr-gutter`. Still unregistered: `scroll-mt-bar`, `min-w-duration`.
+- Don't copy: `ring-[3px]` focus recipes (use `focus-ring`), `tracking-[0.04em]` caps labels (use
+  `caps`), `max-h-[94svh]` (use `max-h-sheet`), `h-[calc(100dvh-…)]` (use `h-below-bar`),
+  `rounded-xl`/`shadow-panel` (legacy aliases of `rounded-lg`/`shadow-raised`). Scale forms:
+  `ring-3`, `min-w-32`, `max-h-75`, `top-1/2`, `-translate-1/2`.
+- Page layers: `z-bar` (20) < `z-float` (30) < `z-chat` (35) < `z-dock` (40) < `z-overlay` (50).
+  Numeric z only for stacking inside one component.
 
 ## Motion
 
 - JS mirrors (`duration`, `ease`, `spring`): `consts/CLAUDE.md`. WAAPI takes
   `` `cubic-bezier(${ease.outQuint.join()})` ``, or reads the landing-only `--motion-ease-spring`
   via `getComputedStyle`. `ease-out` overrides Tailwind's default curve; a `transition-*` with no
-  duration gets its 150ms.
+  duration gets `duration-fast` and `ease-out`.
 - Exceptions to transform/opacity: the `grid-template-rows` reveal (`starting:grid-rows-[0fr]`, the
   Reveal in chat-drawer) and the side column's width and margin (`dashboard/undated-column.tsx`).
 - Motion corrects a radius during a layout morph only when it comes through `style`, so a morphing
-  surface takes a px number equal to its token. `create-fab.tsx` `RADIUS_FAB`/`RADIUS_PANEL` are
-  12 but claim to mirror `rounded-xl`/`--radius-panel` (22px): known drift, no parity test yet.
+  surface takes a px number equal to its token: `radius.panel` from `@/consts/motion` (tested).
+  `create-fab.tsx` `RADIUS_FAB`/`RADIUS_PANEL` are still a local 12 that claims to mirror it.
 - `<MotionConfig reducedMotion="user">` (`App.tsx`) covers only the motion library; CSS utilities
-  carry their own `@media` (`word-in`, `.skeleton`). Research: `docs/research/2026-10-21-*.md`.
+  carry their own `@media` (`word-in`, `skeleton`). Research: `docs/research/2026-10-21-*.md`.

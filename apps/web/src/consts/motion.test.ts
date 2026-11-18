@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { duration, ease, slideX, spring } from "./motion";
+import { duration, ease, radius, spring } from "./motion";
 
 const css = readFileSync(new URL("../global.css", import.meta.url), "utf8");
 const token = (name: string) => css.match(new RegExp(`--${name}:\\s*([^;]+);`))?.[1];
@@ -16,16 +16,16 @@ describe("consts/motion", () => {
     ["exit", "motion-ease-exit"],
     ["outExpo", "ease-out-expo"],
     ["outQuint", "ease-out-quint"],
+    ["outSoft", "ease-out-soft"],
   ] as const)("ease.%s bate com --%s", (key, name) => {
     expect(token(name)).toBe(`cubic-bezier(${ease[key].join(", ")})`);
   });
 
-  it("spring.soft é a aprovada no composer", () => {
-    expect(spring.soft).toEqual({ type: "spring", visualDuration: 0.24, bounce: 0 });
+  it("radius.panel matches --radius-panel at 16px per rem", () => {
+    expect(token("radius-panel")).toBe(`${radius.panel / 16}rem`);
   });
 
-  it("slideX entra de um lado e sai pelo oposto", () => {
-    expect(slideX(1).enter.x).toBe(24);
-    expect(slideX(-1).exit.x).toBe(24);
+  it("spring.soft é a aprovada no composer", () => {
+    expect(spring.soft).toEqual({ type: "spring", visualDuration: 0.24, bounce: 0 });
   });
 });

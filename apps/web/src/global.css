@@ -112,9 +112,6 @@
   --shadow-raised:
     0 0 0 1px light-dark(oklch(0% 0 0 / 5%), oklch(100% 0 0 / 8%)),
     0 12px 32px -8px light-dark(oklch(0% 0 0 / 18%), oklch(0% 0 0 / 60%));
-  --shadow-float:
-    0 0 0 1px light-dark(oklch(0% 0 0 / 6%), oklch(100% 0 0 / 10%)),
-    0 40px 80px -24px light-dark(oklch(0% 0 0 / 25%), oklch(0% 0 0));
   /* Contorno de 1px da bolha da Mew (MessageBox), a cor do antigo filtro #bubLine sem o filtro:
      um feMorphology refiltrava a mensagem inteira a cada quadro de qualquer animação dentro dela. */
   --shadow-line: 0 0 0 1px var(--separator);
@@ -140,17 +137,13 @@
   --border: var(--separator);
   --input: var(--separator);
   --ring: var(--brand-text);
-  --chart-1: light-dark(oklch(67.7% 0.157 35.2), oklch(52.9% 0.193 262.1));
-  --chart-2: light-dark(oklch(63.1% 0.101 183.5), oklch(69.8% 0.134 165.5));
-  --chart-3: light-dark(oklch(37.9% 0.044 225.5), oklch(72.3% 0.15 60.6));
-  --chart-4: light-dark(oklch(83.4% 0.119 88.1), oklch(61.9% 0.204 312.7));
-  --chart-5: light-dark(oklch(78.3% 0.126 58.7), oklch(61.2% 0.209 6.4));
 
   /* semantic status */
   --success: light-dark(oklch(52% 0.15 150), oklch(72% 0.17 150));
-  --success-foreground: light-dark(oklch(98.5% 0 0), oklch(14.7% 0.004 49.3));
-  --premium: light-dark(oklch(55.8% 0.24 302.3), oklch(62% 0.23 303));
-  --premium-foreground: oklch(98.5% 0 0);
+  /* Swipe-to-complete fill: success mixed solid into the canvas, not /opacity (bd k00).
+     `-strong` is the armed state, past the threshold. */
+  --success-soft: color-mix(in oklch, var(--success) 15%, var(--canvas));
+  --success-soft-strong: color-mix(in oklch, var(--success) 30%, var(--canvas));
 
   /* escala de prioridade 0–4 (bd emm) — substitui gray/green/yellow/orange/red crus */
   --priority-0: light-dark(oklch(55.2% 0.014 285.9), oklch(71.2% 0.013 286.1));
@@ -158,39 +151,11 @@
   --priority-2: light-dark(oklch(66% 0.14 85), oklch(80% 0.16 85));
   --priority-3: light-dark(oklch(63% 0.18 50), oklch(75% 0.17 55));
   --priority-4: light-dark(oklch(58.6% 0.222 17.6), oklch(70% 0.2 20));
-  /* fundo do chip de prioridade: mistura sólida, não /opacity (bd k00) */
-  --priority-bg-0: color-mix(in oklch, var(--priority-0) 12%, var(--surface-card));
-  --priority-bg-1: color-mix(in oklch, var(--priority-1) 12%, var(--surface-card));
-  --priority-bg-2: color-mix(in oklch, var(--priority-2) 12%, var(--surface-card));
-  --priority-bg-3: color-mix(in oklch, var(--priority-3) 12%, var(--surface-card));
-  --priority-bg-4: color-mix(in oklch, var(--priority-4) 12%, var(--surface-card));
 
-  /* brand gradient (task preview) — mode-independent */
-  --brand-from: #5a24d6;
-  --brand-via: #b92f84;
-  --brand-to: #fa652a;
-
-  /* tag chip backgrounds (decorative, mode-independent) */
-  --tag-1: #eae4e9;
-  --tag-2: #fff1e6;
-  --tag-3: #fde2e4;
-  --tag-4: #fad2e1;
-  --tag-5: #e2ece9;
-  --tag-6: #bee1e6;
-  --tag-7: #f0efeb;
-  --tag-8: #dfe7fd;
-  --tag-9: #cddafd;
-
-  /* palette dots */
-  --palette-1: #ffadad;
-  --palette-2: #ffd6a5;
-  --palette-3: #fdffb6;
-  --palette-4: #caffbf;
-  --palette-5: #9bf6ff;
-  --palette-6: #a0c4ff;
-  --palette-7: #bdb2ff;
-  --palette-8: #ffc6ff;
-  --palette-9: #fffffc;
+  /* brand gradient (task preview) — mode-independent (were #5a24d6, #b92f84, #fa652a) */
+  --brand-from: oklch(46.5% 0.242 286.1);
+  --brand-via: oklch(54.5% 0.192 347.6);
+  --brand-to: oklch(68.8% 0.195 39.8);
 
   /* superfícies legadas (landing/app), re-apontadas pro DS */
   --surface-page: var(--canvas);
@@ -198,23 +163,9 @@
   --surface-panel: var(--surface-raised);
   /* Fundo de TODO popover e menu (calendário, chips, dropdowns): um só. */
   --surface-popover: var(--surface-raised);
-  --surface-slab: var(--surface);
-  --surface-slab-card: var(--surface-raised);
   --surface-hover: var(--fill);
-  --surface-header: var(--surface);
   --surface-line: var(--separator);
-  /* tinta sempre-escura (CTA/footer): o grain (blend screen) só lê bem sobre superfície escura, então
-     NÃO é light-dark — fica dark nos dois temas (como o antigo bloco crimson era crimson nos dois). */
-  --surface-ink: oklch(14.5% 0 0); /* #0a0a0a, mesmo preto neutro da page dark */
-  --surface-ink-foreground: oklch(96.2% 0 0); /* texto claro sobre a tinta */
-  --surface-ink-muted: oklch(70% 0.01 286); /* texto secundário sobre a tinta */
-  --surface-ink-line: oklch(100% 0 0 / 10%); /* hairline claro sutil sobre a tinta escura */
-  --text-secondary: var(--ink-secondary);
   --accent-hover: var(--brand-pressed);
-  --accent-subtle: var(--brand-soft);
-  --accent-glow: color-mix(in oklch, var(--primary) 20%, transparent);
-  /* Borda crimson suave do chip de lembrete: a hairline puxada pro crimson, sem gritar como ação. */
-  --accent-line: color-mix(in oklch, var(--primary) 35%, var(--surface-line));
   /* Metadados por tipo: data azul, horário âmbar, recorrência roxo. Texto legível nos dois temas; fundo = mesmo tom a 16%. */
   --meta-date: light-dark(oklch(48% 0.19 255), oklch(76% 0.13 255));
   --meta-time: light-dark(oklch(50% 0.13 70), oklch(82% 0.15 80));
@@ -230,8 +181,6 @@
   /* Miolo de um painel com p-1: o panel menos os 4px do padding, pra o canto de dentro ficar
      concêntrico com o de fora. Usado pelo campo do composer e pelos chips do eco. */
   --radius-field: calc(var(--radius-panel) - 0.25rem);
-  /* Fundo do shell do dashboard: o canvas, um degrau abaixo dos painéis (surface-card). */
-  --surface-shell: var(--canvas);
   /* Largura da coluna lateral (hoje vazia, reservada): cabe título + chips de lembrete/histórico sem quebrar. */
   --width-undated: 20rem;
   /* Puxador aberto: centro no gap entre agenda e coluna (largura + p-1 do shell + meio gap-1). */
@@ -240,11 +189,16 @@
   --width-sheet: 27.5rem;
   /* Bolha de conversa (sua ou da Mew): até 70% da coluna, como nos apps de mensagem. */
   --width-bubble: 70%;
-  /* Camadas: página (z-30) < chat da Mew < dock do composer < overlays (z-50: gaveta, folhas,
-     diálogos). O chat abre por baixo do dock, então o mesmo campo flutuante vira a caixa de mensagem. */
+  /* Page layers: sticky bar < float (buttons and columns over the list) < Mew chat < composer dock
+     < overlay (drawer, sheets, dialogs, splash). The chat opens under the dock, so the same floating
+     field becomes its message box. Local stacking inside a card keeps numeric z. */
+  --layer-bar: 20;
+  --layer-float: 30;
   --layer-chat: 35;
   --layer-dock: 40;
-  --surface-scrim: var(--scrim);
+  --layer-overlay: 50;
+  /* Desktop app bar (md:h-10): the sticky columns start below it and size against it. */
+  --bar-desktop: calc(var(--spacing) * 10);
   --layout-content: 1380px; /* teto de largura do conteúdo (mastra-like) */
 }
 
@@ -265,7 +219,7 @@
 
 /* Contraparte do bridge acima: inverte um subtree pro tema claro dentro de uma página dark
    (a laje de preços). Como os tokens são light-dark() resolvidos no ponto de uso, texto, bordas
-   e superfícies do subtree flipam junto — exceto --surface-ink, que é sempre escuro por projeto.
+   e superfícies do subtree flipam junto.
    Atenção: `.light` é escopado ao DOM, então um portal Radix (Tooltip, Dialog) aberto de dentro da
    laje monta em `document.body`, fora do escopo, e renderiza escuro — hoje não há nenhum componente
    assim na laje, mas o próximo baseado em portal precisa levar isso em conta. */
@@ -287,6 +241,9 @@
   --ease-standard: var(--motion-ease-standard);
   --ease-exit: var(--motion-ease-exit);
   --ease-spring: var(--motion-ease-spring);
+  /* A bare `transition-*` lands here instead of Tailwind's 150ms and curve, both off the scale. */
+  --default-transition-duration: var(--motion-duration-fast);
+  --default-transition-timing-function: var(--motion-ease-out);
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -307,17 +264,12 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-chart-1: var(--chart-1);
-  --color-chart-2: var(--chart-2);
-  --color-chart-3: var(--chart-3);
-  --color-chart-4: var(--chart-4);
-  --color-chart-5: var(--chart-5);
   /* Raios do DS (concêntricos: o de dentro = o de fora − o padding entre eles). */
   --radius-xs: 0.375rem;
   --radius-sm: 0.625rem;
   --radius-md: 0.875rem;
-  --radius-lg: 1.375rem;
-  --radius-xl: 1.375rem; /* rounded-xl legado (cards) vira o card do DS */
+  --radius-lg: var(--radius-panel);
+  --radius-xl: var(--radius-panel); /* legacy alias: use rounded-lg */
   --radius-sheet: 2rem;
 
   --color-canvas: var(--canvas);
@@ -339,70 +291,32 @@
   --color-material-bar-solid: var(--material-bar-solid);
   --color-scrim: var(--scrim);
   --shadow-raised: var(--shadow-raised);
-  --shadow-float: var(--shadow-float);
   --shadow-line: var(--shadow-line);
 
   --color-success: var(--success);
-  --color-success-foreground: var(--success-foreground);
-  --color-premium: var(--premium);
-  --color-premium-foreground: var(--premium-foreground);
+  --color-success-soft: var(--success-soft);
+  --color-success-soft-strong: var(--success-soft-strong);
 
   --color-priority-0: var(--priority-0);
   --color-priority-1: var(--priority-1);
   --color-priority-2: var(--priority-2);
   --color-priority-3: var(--priority-3);
   --color-priority-4: var(--priority-4);
-  --color-priority-bg-0: var(--priority-bg-0);
-  --color-priority-bg-1: var(--priority-bg-1);
-  --color-priority-bg-2: var(--priority-bg-2);
-  --color-priority-bg-3: var(--priority-bg-3);
-  --color-priority-bg-4: var(--priority-bg-4);
 
   --color-brand-from: var(--brand-from);
   --color-brand-via: var(--brand-via);
   --color-brand-to: var(--brand-to);
-
-  --color-tag-1: var(--tag-1);
-  --color-tag-2: var(--tag-2);
-  --color-tag-3: var(--tag-3);
-  --color-tag-4: var(--tag-4);
-  --color-tag-5: var(--tag-5);
-  --color-tag-6: var(--tag-6);
-  --color-tag-7: var(--tag-7);
-  --color-tag-8: var(--tag-8);
-  --color-tag-9: var(--tag-9);
-
-  --color-palette-1: var(--palette-1);
-  --color-palette-2: var(--palette-2);
-  --color-palette-3: var(--palette-3);
-  --color-palette-4: var(--palette-4);
-  --color-palette-5: var(--palette-5);
-  --color-palette-6: var(--palette-6);
-  --color-palette-7: var(--palette-7);
-  --color-palette-8: var(--palette-8);
-  --color-palette-9: var(--palette-9);
 
   --color-surface-page: var(--surface-page);
   --color-surface-card: var(--surface-card);
   --color-surface-panel: var(--surface-panel);
   --color-surface-popover: var(--surface-popover);
   --color-surface-raised: var(--surface-raised);
-  --color-surface-slab: var(--surface-slab);
-  --color-surface-slab-card: var(--surface-slab-card);
   --color-surface-hover: var(--surface-hover);
-  --color-surface-header: var(--surface-header);
   --color-surface-line: var(--surface-line);
-  --color-surface-shell: var(--surface-shell);
-  --color-surface-ink: var(--surface-ink);
-  --color-surface-ink-foreground: var(--surface-ink-foreground);
-  --color-surface-ink-muted: var(--surface-ink-muted);
-  --color-surface-ink-line: var(--surface-ink-line);
   --color-content-secondary: var(--text-secondary);
   --color-accent-primary: var(--primary);
   --color-accent-hover: var(--accent-hover);
-  --color-accent-subtle: var(--accent-subtle);
-  --color-accent-glow: var(--accent-glow);
-  --color-accent-line: var(--accent-line);
   --color-meta-date: var(--meta-date);
   --color-meta-time: var(--meta-time);
   --color-meta-repeat: var(--meta-repeat);
@@ -416,10 +330,12 @@
   --width-undated: var(--width-undated);
   --width-sheet: var(--width-sheet);
   --max-width-bubble: var(--width-bubble);
+  --z-index-bar: var(--layer-bar);
+  --z-index-float: var(--layer-float);
   --z-index-chat: var(--layer-chat);
   --z-index-dock: var(--layer-dock);
-  --color-surface-scrim: var(--surface-scrim);
-  --shadow-panel: var(--shadow-raised);
+  --z-index-overlay: var(--layer-overlay);
+  --shadow-panel: var(--shadow-raised); /* legacy alias: use shadow-raised */
   /* Elevação 1 — o degrau mais baixo: o que flutua encostado na superfície (a toolbar do cartão).
      Duas camadas de BOX-shadow, contato + difusa; nunca `drop-shadow`, que é filtro e se empilha
      entre camadas — uma sombra acaba escurecendo a outra onde os elementos se sobrepõem. */
@@ -435,11 +351,11 @@
     "Segoe UI Symbol", "Noto Color Emoji";
   --font-mono: "Geist Mono Variable", ui-monospace, SFMono-Regular, "SF Mono", Menlo, monospace;
 
-  /* Easings — curvas usadas em produção (Ghost/Vercel/Radix). Gera utilitários `ease-*`.
-     out-expo = "premium", entra rápido e assenta; in-out-quint = simétrica, boa pra loop/crossfade. */
+  /* Easings from production sites (Ghost/Vercel/Radix); each makes an `ease-*` utility.
+     out-expo enters fast and settles; out-soft is the landing's gentler entry (pricing, features). */
   --ease-out-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-out-quint: cubic-bezier(0.22, 1, 0.36, 1);
-  --ease-in-out-quint: cubic-bezier(0.83, 0, 0.17, 1);
+  --ease-out-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
 
   /* Font sizes — Tailwind's text-xs..text-9xl scale plus a project 2xs (was text-[0.6rem]). */
   --text-2xs: 0.625rem;
@@ -472,8 +388,6 @@
   --animate-caret-blink: caret-blink 1.25s ease-out infinite;
   /* "Pensando" da Mew: cada ponto sobe e acende, em onda (o delay por ponto vem do componente). */
   --animate-dot: dot 1.2s linear infinite;
-  /* Barras do "ouvindo": o delay por barra vem do componente. */
-  --animate-bar: bar 1.1s ease-in-out infinite;
 
   @keyframes dot {
     0%,
@@ -486,25 +400,6 @@
     30% {
       opacity: 1;
       translate: 0 --spacing(-0.75);
-    }
-  }
-
-  @keyframes bar {
-    0%,
-    100% {
-      scale: 1 0.2;
-    }
-
-    25% {
-      scale: 1 1;
-    }
-
-    50% {
-      scale: 1 0.35;
-    }
-
-    75% {
-      scale: 1 0.8;
     }
   }
 
@@ -573,11 +468,6 @@
   padding-right: max(1rem, 5vw, calc((100% - var(--layout-content)) / 2));
 }
 
-/*
- * Ritmo vertical de seção. Estava hardcoded como `py-20 md:py-28` em cinco das seis seções da
- * landing — o hero é a exceção, com `pt-20` e altura fixa. Centralizar aqui torna o respiro da
- * página inteira ajustável numa linha. O valor é o mesmo de antes: refator, não mudança de layout.
- */
 /* Rodapé de painel: a área da barra de gestos (0 no desktop) mais 8px, somados e não o maior dos dois. */
 @utility pb-safe {
   padding-bottom: calc(--spacing(2) + env(safe-area-inset-bottom));
@@ -649,54 +539,32 @@
   scroll-margin-top: calc(--spacing(16) + env(safe-area-inset-top));
 }
 
-@utility section-y {
-  padding-block: --spacing(20);
-  @variant md {
-    padding-block: --spacing(28);
+/* Desktop sticky column: the viewport minus the app bar; pair it with `top-(--bar-desktop)`. */
+@utility h-below-bar {
+  height: calc(100dvh - var(--bar-desktop));
+}
+
+/* Bottom sheet (SheetContent side="bottom"): a sliver of the screen stays visible above it. */
+@utility max-h-sheet {
+  max-height: 94svh;
+}
+
+/* The app's only focus style: keyboard focus only, in --ring. Focus driven by a group
+   (`group-focus-visible:`) spells out the same `ring-3 ring-ring/50`. */
+@utility focus-ring {
+  outline: none;
+  &:focus-visible {
+    @apply ring-3 ring-ring/50;
   }
 }
 
-/*
- * Plinto: caixa recuada de `--skirt` cuja base alarga até as bordas do pai, por duas saias côncavas
- * (máscara radial de mesmo raio que o recuo — é o que faz a ponta cair exatamente na borda) nos
- * cantos de baixo. Só a FORMA mora aqui: cor e padding ficam com as utilities de quem usa, e as
- * saias herdam o `background-color` do plinto. `--skirt` é fonte única (recuo + tamanho da saia +
- * raio da máscara) e é sobrescrevível no uso: `class="plinth [--skirt:3rem]"`.
- */
-@utility plinth {
-  --skirt: 1.75rem;
-  position: relative;
-  margin-inline: var(--skirt);
-  border-start-start-radius: var(--radius-panel);
-  border-start-end-radius: var(--radius-panel);
-
-  &::before,
-  &::after {
-    content: "";
-    position: absolute;
-    bottom: 0;
-    width: var(--skirt);
-    height: var(--skirt);
-    background-color: inherit;
-  }
-
-  &::before {
-    right: 100%;
-    mask-image: radial-gradient(
-      circle at top left,
-      transparent var(--skirt),
-      black calc(var(--skirt) + 0.5px)
-    );
-  }
-
-  &::after {
-    left: 100%;
-    mask-image: radial-gradient(
-      circle at top right,
-      transparent var(--skirt),
-      black calc(var(--skirt) + 0.5px)
-    );
-  }
+/* Mono uppercase label (weekday heads, bar shortcuts, form captions). */
+@utility caps {
+  font-family: var(--font-mono);
+  font-size: var(--text-2xs);
+  line-height: var(--text-2xs--line-height);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
 }
 
 /*
@@ -858,36 +726,28 @@
   height: 100dvh;
 }
 
-.scrollbar-floating::-webkit-scrollbar {
-  width: 3px;
-}
-
-.scrollbar-floating {
+/* Scroll area with a thin bar (the edit sheet's form). `overflow-y: auto` is what makes it scroll:
+   it replaces the non-standard `overlay`, which Chrome read as auto. */
+@utility scrollbar-floating {
+  overflow-y: auto;
   scrollbar-width: thin;
-  overflow-y: overlay;
-  /* scrollbar-width: none */
-  /* scrollbar-color: rgba(0, 0, 0, 0.3) transparent; */
-}
-
-.mask-b {
-  mask-image: linear-gradient(to top, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 15%);
-  -webkit-mask-image: linear-gradient(to top, rgba(0, 0, 0, 0) 0%, rgba(0, 0, 0, 1) 15%);
-}
-
-/* Skeleton — pulso de opacidade neutro (surfaces): fica no compositor, sem repintar o gradiente. */
-@keyframes skeleton-pulse {
-  50% {
-    opacity: 0.5;
+  &::-webkit-scrollbar {
+    width: 3px;
   }
 }
 
-.skeleton {
-  background: var(--surface-line);
+/* Neutral opacity pulse: stays on the compositor, no gradient repaint. */
+@utility skeleton {
+  background-color: var(--surface-line);
   animation: skeleton-pulse 1.5s ease-in-out infinite;
+
+  @media (prefers-reduced-motion: reduce) {
+    animation: none;
+  }
 }
 
-@media (prefers-reduced-motion: reduce) {
-  .skeleton {
-    animation: none;
+@keyframes skeleton-pulse {
+  50% {
+    opacity: 0.5;
   }
 }
