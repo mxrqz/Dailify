@@ -22,6 +22,7 @@ stay out of the dashboard entry). A new page gets a `lazy()` import too, unless 
 | `/signup`                          | `signup.tsx`               | same machinery, `mode="signUp"` — only the copy differs                                                           |
 | `/verify`                          | `verify.tsx`               | web magic link `#token=…`; spends it only on the "Entrar" click (mail scanners don't click)                       |
 | `/auth/app`                        | `auth-app.tsx`             | app magic link `?token=…`; tries `mewki://auth` once, NEVER calls verify (token bound to the app)                 |
+| `/app/*`                           | `app-return.tsx`           | where Stripe returns someone who paid from the app; hands `<path>` to `mewki://open` (App Link opens the app first) |
 | `/task/:id`                        | `[id]/taskPreview.tsx`     | public, shareable task rendered as an image (`html-to-image`)                                                     |
 | `/premium`                         | `premium.tsx`              | pricing + Stripe checkout                                                                                         |
 
