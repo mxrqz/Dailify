@@ -10,7 +10,7 @@ export function FaqV2() {
   const id = useId();
 
   return (
-    <section id="faq" className="px-5 py-16 md:py-28">
+    <section id="faq" className="scroll-mt-bar px-5 py-16 md:py-28">
       <div className="mx-auto flex max-w-180 flex-col gap-6 md:gap-8">
         <h2 className="text-center text-3xl font-bold tracking-tight md:text-4xl">{copy.title}</h2>
         <div className="divide-y divide-separator overflow-hidden rounded-lg bg-surface">
