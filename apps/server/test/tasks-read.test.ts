@@ -25,6 +25,11 @@ describe("GET /tasks", () => {
     expect(res.status).toBe(400);
   });
 
+  it("400s on month 13 instead of reading January of the next year", async () => {
+    const res = await app.request("/tasks?month=2026-13", {}, env, createExecutionContext());
+    expect(res.status).toBe(400);
+  });
+
   it("expands a Daily recurring task across the month, deduped", async () => {
     const task: Task = {
       id: "daily1",
