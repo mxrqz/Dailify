@@ -57,7 +57,7 @@ const chipClass =
   "pointer-events-auto inline-flex w-fit shrink-0 cursor-default items-center gap-1 " +
   "overflow-hidden rounded-md px-2 py-0.5 text-sm font-normal whitespace-nowrap " +
   "text-content-secondary transition-colors outline-none hover:bg-surface-panel " +
-  "focus-visible:ring-[3px] focus-visible:ring-ring/50";
+  "focus-visible:ring-3 focus-visible:ring-ring/50";
 
 type ChipProps = ComponentPropsWithoutRef<"button"> & {
   editable?: boolean;
@@ -209,7 +209,7 @@ export const ToolbarButton = forwardRef<
         type="button"
         aria-label={label}
         className={cn(
-          "flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50",
+          "flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
           className,
         )}
         {...props}
@@ -422,7 +422,7 @@ function CardBody({
             type="button"
             onClick={onClick}
             aria-label={title}
-            className="absolute inset-0 z-0 cursor-default rounded-lg outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="absolute inset-0 z-0 cursor-default rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           />
         )}
 
