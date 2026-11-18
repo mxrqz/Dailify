@@ -65,8 +65,8 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
   online (`useOnline`, so reconnecting retries), a failure retries on the next mount. Writers: `setIntegrations`/`patchIntegration`.
 - `useOnline` lies upward (connected, no internet): use it to warn; `error.offline` decides.
 - `useEffectEvent` polyfills React 19.2's hook; the lint knows the name, so call it only in effects.
-- `useMediaQuery`: pass a named constant (`SHEET_EDITING`, `dashboard/day-task-row.tsx`) and read
-  it once per list. `ui/sonner.tsx` and `dashboard/create-fab.tsx` still pass literals.
+- `useMediaQuery`: pass a named constant from `consts/media.ts` (`DESKTOP`, `MOBILE`,
+  `SHEET_EDITING`, `NO_DRAG`) and read it once per list.
 - `useStoredFlag(key)`: device-wide `"1"`/`"0"` under `dailify:<name>`, so not in `clearLocal`;
   `useCalendarDefault` is one. `useCalendarReady` = Google Calendar connected and active.
 

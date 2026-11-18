@@ -1,6 +1,7 @@
-import { Toaster as Sonner, ToasterProps } from "sonner";
+import { Toaster as Sonner, type ToasterProps } from "sonner";
 
 import { useTheme } from "@/components/theme-provider";
+import { MOBILE } from "@/consts/media";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 // Interseção com Record: CSSProperties sozinho não aceita custom properties.
@@ -19,7 +20,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
   const { theme } = useTheme();
   // No mobile o rodapé é do polegar, do composer e da nav — o toast lá cobre justamente o que a
   // pessoa acabou de tocar.
-  const mobile = useMediaQuery("(max-width: 767px)");
+  const mobile = useMediaQuery(MOBILE);
 
   return (
     <Sonner

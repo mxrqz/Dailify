@@ -6,7 +6,7 @@ import { MobileNav } from "@/components/dashboard/sidebar/mobile-nav";
 import { SyncBadge } from "@/components/sync-badge";
 import { copy } from "@/components/dashboard/copy";
 import { Button } from "@/components/ui/button";
-import { PLAN_ID } from "@/consts/conts";
+import { CALENDAR_VIEW, PLAN_ID } from "@/consts/conts";
 import { planOf, useSession } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -87,7 +87,7 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
 
         {dashboard && (
           <Link
-            to={{ search: "?view=calendar" }}
+            to={{ search: `?view=${CALENDAR_VIEW}` }}
             aria-label={copy.day.openCalendar}
             className={barButton}
           >

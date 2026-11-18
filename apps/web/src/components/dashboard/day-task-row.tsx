@@ -26,16 +26,6 @@ import type { Task } from "@dailify/shared";
 import { zoned } from "@/functions/zone";
 import { cn } from "@/lib/utils";
 
-/**
- * Sem hover não há como alcançar a toolbar do cartão nem os chips, então é aí — e só aí — que o
- * cartão inteiro vira um alvo que abre a folha, e a edição no cartão é desligada INTEIRA (título
- * incluído): dois caminhos de edição no toque só dariam campo aberto sem querer. Com hover
- * (desktop) é o inverso — edita-se tudo no cartão e um clique no meio dele não faz nada. O
- * `max-width` cobre a janela estreita com mouse, onde a linha de metadados já está apertada demais
- * pra editar em cima dela.
- */
-export const SHEET_EDITING = "(hover: none), (max-width: 639px)";
-
 /** 15 → "15 min", 60 → "1h", 90 → "1h30": a duração embaixo do horário. */
 export function durationText(minutes: number): string {
   if (minutes < 60) return fill(copy.day.minutes, { n: minutes });

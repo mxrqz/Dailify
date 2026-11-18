@@ -6,7 +6,7 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
 ## File map
 
 - Agenda: `day-list.tsx` → `day-section.tsx` (`dayAnchorId`) → `day-task-row.tsx`
-  (`DayTaskRow` container; `TaskRow`, `CheckCircle`, `NowLine` views; `SHEET_EDITING`).
+  (`DayTaskRow` container; `TaskRow`, `CheckCircle`, `NowLine` views).
 - Undated: `anytime-block.tsx` (today's card, `ScheduleDrop`), `check-history.tsx`;
   `undated-column.tsx` is a reserved, empty desktop column (bd `Dailify-1td`).
 - Navigation: `week-strip.tsx` (`WeekDays`/`WeekStrip`), `month-calendar.tsx` (`MonthGrid`/
@@ -22,7 +22,7 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
 
 ## Two editing modes, never both
 
-- `SHEET_EDITING = "(hover: none), (max-width: 639px)"`. Matched: rows are the read-only `TaskRow` +
+- `SHEET_EDITING = "(hover: none), (max-width: 639px)"` (`consts/media.ts`). Matched: rows are the read-only `TaskRow` +
   `CheckCircle` inside `SwipeActions`, and all editing happens in the `EditTask` sheet. Otherwise:
   the legacy `TaskCard` with chip popovers (its `edit` prop).
 - Read once per list and passed down (`DaySection` → `DayTaskRow sheetEditing`; `AnytimeBlock`).
@@ -115,7 +115,7 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
 ## Drag to schedule (desktop)
 
 - Undated rows drag with `DRAG_TYPE = "application/x-mewki-task"`; other drags are ignored. Mouse
-  only: `NO_DRAG = "(max-width: 767px), (pointer: coarse)"`.
+  only: `NO_DRAG = "(max-width: 767px), (pointer: coarse)"` (`consts/media.ts`).
 - `ScheduleDrop` wraps each `DaySection` and week pill; the child paints `data-drop-over:`. A drop
   opens a `TimeWheel` popover and only "Agendar" writes (`useUndatedActions().schedule`). The drop
   time is 09:00, or the next full hour (capped at 23) when today is past 09:00.

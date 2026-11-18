@@ -5,13 +5,14 @@ import { DEFAULT_HOUR, parseTaskText, type Task } from "@dailify/shared";
 import { useDailify } from "@/components/dailifyContext";
 import { CheckHistory, periodKind } from "@/components/dashboard/check-history";
 import { copy } from "@/components/dashboard/copy";
-import { CheckCircle, SHEET_EDITING } from "@/components/dashboard/day-task-row";
+import { CheckCircle } from "@/components/dashboard/day-task-row";
 import { TimeWheel } from "@/components/dashboard/date-time-picker";
 import { calendarPanel } from "@/components/dashboard/styles";
 import { SwipeActions } from "@/components/dashboard/swipe-actions";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import { NO_DRAG, SHEET_EDITING } from "@/consts/media";
 import { countLabel } from "@/functions/count-label";
 import { clockAt, dayDot } from "@/functions/date-label";
 import { fill } from "@/functions/functions";
@@ -28,8 +29,6 @@ const weekday = (day: number) => copy.form.repeatDays[day].toLowerCase();
 
 /** Só uma linha daqui vira alvo de soltar: arquivo ou texto arrastado de fora não. */
 export const DRAG_TYPE = "application/x-mewki-task";
-/** Arrastar é do mouse: no toque a linha já desliza (swipe) e segue só com a folha de edição. */
-const NO_DRAG = "(max-width: 767px), (pointer: coarse)";
 
 /**
  * Uma linha do card A qualquer hora (props → markup): o círculo à esquerda, título e meta. O

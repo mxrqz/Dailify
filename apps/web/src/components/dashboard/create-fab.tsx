@@ -15,6 +15,7 @@ import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useOnline } from "@/hooks/useOnline";
 import { voiceSupported } from "@/hooks/useVoiceCreate";
+import { DESKTOP } from "@/consts/media";
 import { reveal, spring } from "@/consts/motion";
 import { useStoredFlag } from "@/hooks/useStoredFlag";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
@@ -50,7 +51,7 @@ interface CreateFabProps {
  */
 export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabProps): JSX.Element {
   const [open, setOpen] = useState(false);
-  const desktop = useMediaQuery("(min-width: 768px)");
+  const desktop = useMediaQuery(DESKTOP);
   const [pinned, setDocked] = useStoredFlag(DOCKED_KEY);
   const docked = pinned && desktop;
   // Aberta pelo mic do dock: a folha já nasce gravando.
