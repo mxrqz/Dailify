@@ -5,7 +5,7 @@ import { cn } from "@/lib/utils";
 
 import { copy } from "./copy";
 
-export function FaqV2() {
+export function Faq() {
   const [open, setOpen] = useState<number | null>(0);
   const id = useId();
 

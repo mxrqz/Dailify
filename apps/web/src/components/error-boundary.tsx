@@ -1,5 +1,8 @@
 import { Component, type ErrorInfo, type ReactNode } from "react";
+import { copy } from "@/components/dashboard/copy";
 import { Button } from "@/components/ui/button";
+
+const t = copy.errorBoundary;
 
 interface Props {
   children: ReactNode;
@@ -30,11 +33,9 @@ export class ErrorBoundary extends Component<Props, State> {
 
     return (
       <div className="flex h-dvh w-full flex-col items-center justify-center gap-4 bg-canvas p-6 text-center">
-        <h1 className="text-2xl font-bold text-ink">Algo deu errado</h1>
-        <p className="max-w-md text-ink-secondary">
-          Ocorreu um erro inesperado. Tente recarregar a página.
-        </p>
-        <Button onClick={() => window.location.reload()}>Recarregar</Button>
+        <h1 className="text-title-1 text-ink">{t.title}</h1>
+        <p className="max-w-md text-ink-secondary">{t.description}</p>
+        <Button onClick={() => window.location.reload()}>{t.reload}</Button>
       </div>
     );
   }

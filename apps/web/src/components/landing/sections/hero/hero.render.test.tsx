@@ -4,13 +4,13 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 
 import { copy } from "./copy";
-import { HeroV2 } from "./index";
+import { Hero } from "./index";
 
-describe("<HeroV2>", () => {
+describe("<Hero>", () => {
   it("mostra o título e o CTA para o cadastro", () => {
     render(
       <MemoryRouter>
-        <HeroV2 />
+        <Hero />
       </MemoryRouter>,
     );
     expect(screen.getByRole("heading", { level: 1, name: copy.title })).toBeInTheDocument();

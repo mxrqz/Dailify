@@ -36,6 +36,8 @@ vi.mock("@/components/mew-chat/mew-chat", () => ({
   ),
 }));
 
+import { copy as kitCopy } from "@/components/kit/copy";
+
 import { copy } from "./copy";
 import { CreateFab } from "./create-fab";
 
@@ -76,7 +78,7 @@ describe("<CreateFab> mobile", () => {
     expect(screen.getByRole("dialog", { name: copy.composer.open })).toBeInTheDocument();
     expect(screen.getByRole("textbox")).toHaveFocus();
 
-    await user.click(screen.getByRole("button", { name: copy.kit.cancel }));
+    await user.click(screen.getByRole("button", { name: kitCopy.cancel }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 

@@ -71,6 +71,7 @@ export const copy = {
 
   /** Página `/billing` (assinatura). */
   account: {
+    pageTitle: "Mewki — Assinatura",
     title: "Assinatura",
     currentPlan: "Plano {plan}",
     freePrice: "Grátis, pra sempre",

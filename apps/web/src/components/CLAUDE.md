@@ -6,7 +6,7 @@ motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hoo
 ## Where code goes
 
 - `ui/`: Radix/shadcn wrappers adapted to the DS (`ui/CLAUDE.md`). No app logic, no strings beyond
-  `copy.kit`.
+  `kit/copy.ts`.
 - `kit/`: DS presentational primitives, props to markup (`kit/CLAUDE.md`). No `useDailify`,
   `useSession`, api or router hooks.
 - Feature folders own their code and `copy.ts`: `dashboard/` (agenda, composer), `auth/`,
@@ -19,7 +19,8 @@ motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hoo
   widgets for `pages/`: `hour-format-select`, `week-start-select`, `time-zone-select`,
   `theme-select`, `push-toggle`, `delete-account`, `integrations`,
   `settings-list.tsx:accountPage/accountGroups`.
-- `dashboard/copy.ts` is the dictionary of the root components, `functions/` and `hooks/` too.
+- `dashboard/copy.ts` is the dictionary of the root components, `functions/` and `hooks/` too;
+  `kit/`, `mew/` and `mew-chat/` have their own `copy.ts`.
 - `logos/`: vendor brand SVGs (Google, Calendar, the landing's apps, the wallets), one file per
   family, all re-exported by `logos/index.ts`. A new logo goes there.
 
@@ -93,7 +94,7 @@ It owns the task boot. Other code only re-triggers loads (`pages/integration-cal
 - `PlanCards` and `planFeatures(role)` derive bullets from `QUOTAS`: a limit of 0 gets no bullet,
   -1 the unlimited phrase. `currentPlan` is `string` on purpose: it is the session's free-text
   `user.plan` written by the Stripe webhook, and an unknown id just matches no card.
-- Only `pages/premium.tsx` uses it; the landing forks it (`PricingV2`), so don't fork it again.
+- Only `pages/premium.tsx` uses it; the landing forks it (`landing/sections/pricing`), so don't fork it again.
 
 ## Legacy: don't copy or import
 

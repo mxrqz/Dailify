@@ -4,15 +4,14 @@ import { motion } from "motion/react";
 import { toast } from "sonner";
 import { MEW_IMAGE_MAX, MEW_TEXT_MAX } from "@dailify/shared";
 
-import { copy } from "@/components/dashboard/copy";
 import { Button } from "@/components/ui/button";
 import { spring } from "@/consts/motion";
 import { cn } from "@/lib/utils";
 
+import { copy as t } from "./copy";
 import { DockButton } from "./dock";
 import { type Photo, photoOf } from "./photo";
 
-const t = copy.mewChat;
 export const INPUT_ID = "mew-input";
 
 /**

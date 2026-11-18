@@ -6,6 +6,8 @@ import { copy } from "@/components/dashboard/copy";
 import { MewStatic } from "@/components/mew/mew-static";
 import { cn } from "@/lib/utils";
 
+import { copy as mewChatCopy } from "./copy";
+
 /** The dock's round ink button: the mic, and the chat's send. */
 export function DockButton({
   className,
@@ -66,7 +68,7 @@ export function CreateDock({
               <>
                 <button
                   type="button"
-                  aria-label={copy.mewChat.open}
+                  aria-label={mewChatCopy.open}
                   onClick={onOpen}
                   className="flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left outline-none"
                 >

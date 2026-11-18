@@ -55,10 +55,6 @@ applied to the agenda.
 - A server block kind: add it to `MewBlock` (shared `mew.ts`), widen `Block` in thread.ts, render it
   in `Reply` (`bubbles.tsx`), and update `moodOf` if it should change the mood.
 
-## Known debt
-
-- Copy lives in `dashboard/copy.ts` under `mewChat`; move it to a local `copy.ts` when touching it.
-
 ## Tests
 
 - `thread.test.ts` (jsdom, for localStorage), `apply.test.ts` (node, pure half), `mood.test.ts`

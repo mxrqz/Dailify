@@ -13,6 +13,7 @@ import {
 
 import { copy } from "@/components/dashboard/copy";
 
+import { copy as t } from "./copy";
 import { MewChat } from "./mew-chat";
 
 const api = vi.hoisted(() => ({
@@ -46,7 +47,6 @@ const ctx = vi.hoisted(() => ({
 vi.mock("@/components/dailifyContext", () => ({ useDailify: () => ctx }));
 vi.mock("@/lib/auth", () => ({ useSession: () => ({ data: { user: { id: "u1" } } }) }));
 
-const t = copy.mewChat;
 const bread: Task = {
   id: "srv-1",
   title: "Comprar pão",

@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useDailify } from "@/components/dailifyContext";
@@ -67,6 +68,9 @@ export default function Home() {
   return (
     // Shell (md+): a agenda e a coluna lateral lado a lado.
     <div className="flex min-w-0 flex-1 md:p-1">
+      <Helmet>
+        <title>{copy.pageTitle.dashboard}</title>
+      </Helmet>
       <div className="relative min-w-0 flex-1 md:flex md:flex-col">
         {/* pb-30: a lista termina acima do dock do composer (~92px com a área segura). */}
         <div

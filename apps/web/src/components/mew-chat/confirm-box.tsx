@@ -14,9 +14,8 @@ import { fill, getCompletionDate } from "@/functions/functions";
 import { fromDateInput, zoned } from "@/functions/zone";
 import { cn } from "@/lib/utils";
 
+import { copy as t } from "./copy";
 import type { ChatAction, ConfirmBlock } from "./thread";
-
-const t = copy.mewChat;
 
 /** "hoje", "amanhã" or the weekday ("sexta-feira"), as the Mew says it. */
 function dayName(ms: number): string {

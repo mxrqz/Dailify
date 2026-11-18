@@ -10,8 +10,9 @@ One file per route. `src/App.tsx` declares the routes; each page owns its own I/
   `Suspense fallback={null}`. `ScrollRestoration`, `Toaster` and `Refraction` sit beside the
   boundary. `main.tsx` only boots.
 - Every page is a `lazy()` chunk except `home.tsx`, the PWA `start_url` (`/dashboard`).
-- Protected routes wrap the page inline in `<ProtectedRoute>`, which gates on the session and boots
-  the task data before rendering (`components/CLAUDE.md`, "Boot").
+- Protected routes nest under one layout route, `<ProtectedRoute><Outlet /></ProtectedRoute>`,
+  which gates on the session and boots the task data before rendering (`components/CLAUDE.md`,
+  "Boot").
 - `*` redirects to `/dashboard`, so a mistyped link fails silently. Link only to paths in this table
   (`/premium`, never `/prices`).
 
@@ -30,11 +31,12 @@ One file per route. `src/App.tsx` declares the routes; each page owns its own I/
 ## Adding a page
 
 1. `lazy(() => import("./pages/<kebab-name>"))`, then a `Route` inside `<AppLayout>` (top bar and
-   sidebar) or outside it (full screen). Wrap it in `<ProtectedRoute>` if it needs a user.
-2. Title: a `pageTitle` key in the feature's `copy.ts`, `"Mewki — <Page>"` (as `auth/copy.ts`),
-   rendered by a `<Helmet>` in the page itself (`auth-app.tsx`). Today's titles are mixed
-   (`Mewki - Profile` literals in App.tsx, `Mewki - Premium` on `/billing`, none on `/premium`, the
-   callback or the landing); don't copy them.
+   sidebar) or outside it (full screen). Nest it under the `ProtectedRoute` layout route if it needs
+   a user.
+2. Title: a `pageTitle` key in the feature's `copy.ts`, `"Mewki — <Page>"` (`dashboard/copy.ts`
+   `pageTitle`, `auth/copy.ts`), rendered by a `<Helmet>` in the page itself (`settings.tsx`). Its
+   render test then wraps the page in `HelmetProvider`. `/premium`, the callback and the landing
+   have none yet.
 3. Default-export the container; conditional UI goes in a named, props-only View with a
    `<page>.render.test.tsx` ([Testing](../../../../RULES.md#testing)).
 4. Add its row to the table above.

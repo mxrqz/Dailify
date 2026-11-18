@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { copy } from "./copy";
 import { HeroScene } from "./scene";
 
-export function HeroV2() {
+export function Hero() {
   return (
     <section aria-labelledby="hero-title" className="px-5 pt-8 pb-10 md:py-16">
       <div className="mx-auto flex max-w-6xl flex-col gap-6 md:grid md:grid-cols-[1fr_--spacing(95)] md:items-center md:gap-12">

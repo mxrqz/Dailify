@@ -2,7 +2,7 @@ import * as React from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { XIcon } from "lucide-react";
 
-import { copy } from "@/components/dashboard/copy";
+import { copy } from "@/components/kit/copy";
 import { cn } from "@/lib/utils";
 
 function Dialog({ ...props }: React.ComponentProps<typeof DialogPrimitive.Root>) {
@@ -53,7 +53,7 @@ function OverlayClose({ className, plain }: { className?: string; plain?: boolea
       <span className={cn("grid size-7.5 place-items-center rounded-full", !plain && "bg-fill")}>
         <XIcon className={plain ? "size-5.5" : "size-4"} strokeWidth={plain ? 2 : 2.5} />
       </span>
-      <span className="sr-only">{copy.kit.close}</span>
+      <span className="sr-only">{copy.close}</span>
     </DialogPrimitive.Close>
   );
 }

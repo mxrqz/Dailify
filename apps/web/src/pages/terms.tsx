@@ -8,10 +8,10 @@ import { LegalPage, Placeholder } from "@/components/legal-page";
 export default function TermsPage() {
   return (
     <LegalPage
-      pageTitle="Mewki - Termos de Uso"
+      pageTitle={copy.legal.terms.pageTitle}
       bar={copy.legal.terms.bar}
-      title="Termos de Uso"
-      updated="Última atualização: 17 de novembro de 2026"
+      title={copy.legal.terms.title}
+      updated={copy.legal.updated}
       intro={
         <>
           Estes Termos regem o uso da Mewki ("serviço"), operado por{" "}

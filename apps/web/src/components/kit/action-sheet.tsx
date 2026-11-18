@@ -1,8 +1,9 @@
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 
-import { copy } from "@/components/dashboard/copy";
 import { DialogOverlay } from "@/components/ui/dialog";
 import { cn } from "@/lib/utils";
+
+import { copy } from "./copy";
 
 export interface ActionSheetAction {
   label: string;
@@ -27,7 +28,7 @@ export function ActionSheet({
   title,
   description,
   actions,
-  cancelLabel = copy.kit.cancel,
+  cancelLabel = copy.cancel,
 }: {
   open: boolean;
   onOpenChange: (open: boolean) => void;

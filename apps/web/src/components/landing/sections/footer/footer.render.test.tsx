@@ -3,16 +3,16 @@ import { describe, it, expect } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
-import { CtaV2 } from "../cta";
-import { FooterV2 } from "./index";
+import { Cta } from "../cta";
+import { Footer } from "./index";
 import { copy } from "./copy";
 
-describe("<FooterV2> e <CtaV2>", () => {
+describe("<Footer> e <Cta>", () => {
   it("renderizam", () => {
     render(
       <MemoryRouter>
-        <CtaV2 />
-        <FooterV2 />
+        <Cta />
+        <Footer />
       </MemoryRouter>,
     );
     expect(screen.getByRole("link", { name: copy.legal.terms })).toHaveAttribute("href", "/termos");

@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { MonitorIcon, SmartphoneIcon } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
 
 import { copy } from "@/components/dashboard/copy";
@@ -86,6 +87,9 @@ export default function SecurityPage(): JSX.Element {
 
   return (
     <main className={accountPage}>
+      <Helmet>
+        <title>{copy.pageTitle.security}</title>
+      </Helmet>
       <PageHeader
         title={copy.profile.securityPageTitle}
         subtitle={copy.profile.securityLead}

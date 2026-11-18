@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { LockIcon } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
 
 import { copy } from "@/components/dashboard/copy";
@@ -74,6 +75,9 @@ export default function ProfilePage(): JSX.Element {
 
   return (
     <main className={accountPage}>
+      <Helmet>
+        <title>{copy.pageTitle.profile}</title>
+      </Helmet>
       <PageHeader title={copy.profile.pageTitle} className="px-1" />
 
       <ProfileHero name={name} email={user?.email} imageUrl={user?.image ?? undefined} />

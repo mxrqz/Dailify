@@ -121,7 +121,7 @@ function PlanCard({ plan, cycle }: { plan: Plan; cycle: Cycle }) {
   );
 }
 
-export function PricingV2() {
+export function Pricing() {
   const [cycle, setCycle] = useState<Cycle>("monthly");
 
   return (

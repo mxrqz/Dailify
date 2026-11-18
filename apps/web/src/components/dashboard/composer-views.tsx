@@ -14,6 +14,7 @@ import type { Field } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { Chip } from "@/components/kit/chip";
+import { copy as kitCopy } from "@/components/kit/copy";
 import { BUBBLE_FILTER, BubbleDefs } from "@/components/mew/bubble";
 import { Ears } from "@/components/mew/ears";
 import { Tail } from "@/components/mew/tail";
@@ -483,7 +484,7 @@ export function VoiceSheet({
           onClick={onCancel}
           className="flex-1"
         >
-          {copy.kit.cancel}
+          {kitCopy.cancel}
         </Button>
         <Button size="lg" disabled={sending} onClick={onStop} className="flex-1">
           <SquareIcon aria-hidden="true" className="size-4 fill-current" />

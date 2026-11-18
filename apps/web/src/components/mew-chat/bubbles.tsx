@@ -1,16 +1,15 @@
 import { type CSSProperties, Fragment, type ReactNode } from "react";
 import type { Task } from "@dailify/shared";
 
-import { copy } from "@/components/dashboard/copy";
 import { MessageBox } from "@/components/mew/message-box";
 import { MewStatic } from "@/components/mew/mew-static";
 import { cn } from "@/lib/utils";
 
 import { ConfirmBody, Row } from "./confirm-box";
+import { copy as t } from "./copy";
 import { isConfirm } from "./mood";
 import type { ChatAction, Message, Step } from "./thread";
 
-const t = copy.mewChat;
 const DOT_STAGGER_MS = 150;
 
 /** `.mine`: accent bubble, tight corner at the bottom right, never wider than `max-w-bubble`. */

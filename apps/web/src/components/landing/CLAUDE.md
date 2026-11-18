@@ -6,7 +6,7 @@ local here.
 
 ## Layout
 
-- `sections/<name>/`: `index.tsx` exports `<Name>V2` (the header's is `SiteHeaderV2`), `copy.ts`
+- `sections/<name>/`: `index.tsx` exports `<Name>` (the header's is `SiteHeader`), `copy.ts`
   holds its pt-BR strings `as const`, and a render test sits beside them (`<name>.render.test.tsx`
   or `index.render.test.tsx`). The CTA has no test file; `footer.render.test.tsx` renders it.
 - Private parts sit beside their section: `hero/scene.tsx` and `hero/script.ts`, the
@@ -19,10 +19,11 @@ local here.
 
 1. Create `sections/<name>/{index.tsx,copy.ts,<name>.render.test.tsx}`. Wrap the test render in
    `MemoryRouter` when the section renders a `Link`.
-2. Mount it in `pages/landingPage.tsx`. Sections use `px-5 py-16 md:py-28` on the `<section>` with
+2. Mount it inside `<main>` in `pages/landingPage.tsx` (header and footer sit outside it, as their
+   own landmarks). Sections use `px-5 py-16 md:py-28` on the `<section>` with
    an inner `mx-auto max-w-6xl` (faq, features).
 3. Footer links target ids: `#features` and `#pricing` are wrapper divs in `landingPage.tsx`, and
-   `#faq` is on FaqV2's `<section>`. Renaming or moving one silently breaks the footer.
+   `#faq` is on Faq's `<section>`, all with `scroll-mt-bar`. Renaming or moving one silently breaks the footer.
 
 ## Invariants
 
@@ -42,7 +43,7 @@ local here.
   while in view. Off-screen it stops, and it restarts from the top, so the script resets its own
   state first (`ok-art.tsx`). It returns `reduce`; when that is true nothing runs and the art
   renders its final frame (`talk-art.tsx` shows `ALL`).
-- `HeroScene` (a `setTimeout` set) and `WorldV2` (an `AbortSignal` `wait`) hand-roll their own
+- `HeroScene` (a `setTimeout` set) and `World` (an `AbortSignal` `wait`) hand-roll their own
   schedulers. They are legacy; don't copy them.
 - On top of RULES "Motion": a scale duration equal to a token uses the token (`duration-200` ->
   `duration-base`, `duration-300` -> `duration-slow`). JS curves come from `ease` in

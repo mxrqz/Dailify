@@ -6,16 +6,16 @@ import { MemoryRouter } from "react-router-dom";
 
 import { PLAN_PRICING, formatPrice } from "@dailify/shared";
 
-import { PricingV2 } from ".";
+import { Pricing } from ".";
 import { copy } from "./copy";
 
 const price = (cents: number) => formatPrice(cents).replace(/\u00a0/g, " ");
 
-describe("<PricingV2>", () => {
+describe("<Pricing>", () => {
   it("troca mensal → anual e mostra a economia", async () => {
     render(
       <MemoryRouter>
-        <PricingV2 />
+        <Pricing />
       </MemoryRouter>,
     );
     expect(screen.getByRole("heading", { name: copy.title })).toBeInTheDocument();

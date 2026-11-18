@@ -1,8 +1,9 @@
 import { forwardRef, type ComponentPropsWithoutRef, type ReactNode } from "react";
 import { XIcon } from "lucide-react";
 
-import { copy } from "@/components/dashboard/copy";
 import { cn } from "@/lib/utils";
+
+import { copy } from "./copy";
 
 type ChipProps = ComponentPropsWithoutRef<"button"> & {
   /** Ícone de 16px antes do texto; a cor `meta-*` vai no próprio ícone, só em chip. */
@@ -29,7 +30,7 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(function Chip(
     size = "default",
     pressed,
     onRemove,
-    removeLabel = copy.kit.remove,
+    removeLabel = copy.remove,
     className,
     children,
     ...props

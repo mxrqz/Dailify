@@ -37,6 +37,7 @@ import {
   VoiceSheet,
 } from "@/components/dashboard/composer-views";
 import { copy } from "@/components/dashboard/copy";
+import { copy as kitCopy } from "@/components/kit/copy";
 import { MewStatic } from "@/components/mew/mew-static";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
@@ -325,7 +326,7 @@ export function TaskComposer({
               onCancel?.();
             }}
           >
-            {copy.kit.cancel}
+            {kitCopy.cancel}
           </Button>
           {primary}
         </ComposerActions>
@@ -339,7 +340,7 @@ export function TaskComposer({
     <>
       {large && (
         <ComposerHeader
-          start={onCancel && <HeaderButton onClick={onCancel}>{copy.kit.cancel}</HeaderButton>}
+          start={onCancel && <HeaderButton onClick={onCancel}>{kitCopy.cancel}</HeaderButton>}
         />
       )}
       <Label htmlFor={COMPOSER_TEXT_ID} className="sr-only">

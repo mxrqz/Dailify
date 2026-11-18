@@ -65,8 +65,7 @@ curves and durations in mew.css and mew.tsx keyframes are legacy; new ones use m
 - `ConfirmAction` is the confirm dialog for every external action (epic zpq; today
   `add-to-calendar.tsx`). A new provider reuses it with its own `preview` and optional `option`;
   `pending` blocks closing.
-- Its strings sit in `dashboard/copy.ts`; move them to a local `copy.ts` when
-  touching them.
+- Its strings are in `copy.ts`.
 
 ## Tests
 

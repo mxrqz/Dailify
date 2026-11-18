@@ -10,11 +10,13 @@ import type { QuotaKey, UnsureCode } from "@dailify/shared";
  * Não hard-codar números de plano aqui: limites vêm de `@dailify/shared` `limitsFor`/`QUOTAS`.
  */
 export const copy = {
-  /** Os primitivos de `components/kit` e dos overlays de `ui/` (fechar, cancelar, remover). */
-  kit: {
-    close: "Fechar",
-    cancel: "Cancelar",
-    remove: "Remover",
+  /** O `<title>` de cada página do app, no formato de `auth/copy.ts`. */
+  pageTitle: {
+    dashboard: "Mewki — Hoje",
+    profile: "Mewki — Perfil",
+    settings: "Mewki — Configurações",
+    security: "Mewki — Segurança",
+    integrations: "Mewki — Integrações",
   },
 
   header: {
@@ -24,8 +26,6 @@ export const copy = {
     profile: "Perfil",
     openNav: "Abrir navegação",
     signIn: "Entrar",
-    dashboard: "Dashboard",
-    themeToggle: "Alternar tema",
     themeLight: "Claro",
     themeDark: "Escuro",
     themeSystem: "Sistema",
@@ -43,8 +43,6 @@ export const copy = {
      * nomes de quota não compartilham.
      */
     summaryUnlimited: "{used} {name} · ilimitado",
-    /** A palavra sozinha, pro `/billing`, que a usa como valor num par ("0 / ilimitado"). */
-    unlimited: "ilimitado",
   },
 
   day: {
@@ -89,6 +87,12 @@ export const copy = {
     onePending: "1 pendente",
     manyPending: "{n} pendentes",
     dropped: "{n} alteração(ões) não foram aceitas pelo servidor",
+  },
+
+  errorBoundary: {
+    title: "Algo deu errado",
+    description: "Ocorreu um erro inesperado. Tente recarregar a página.",
+    reload: "Recarregar",
   },
 
   loading: {
@@ -183,7 +187,6 @@ export const copy = {
     pageTitle: "Perfil",
     settingsPageTitle: "Configurações",
     securityPageTitle: "Segurança",
-    billingPageTitle: "Premium",
     navLabel: "Navegação",
     navDashboard: "Hoje",
     navPersonal: "Perfil",
@@ -230,15 +233,6 @@ export const copy = {
     sessionMeta: "{place} · {when}",
     sessionsError: "Não foi possível carregar as sessões",
     revokeError: "Não foi possível encerrar a sessão",
-    billingNoSubscription: "Você está no plano Free. Nenhuma assinatura ativa.",
-    billingNoInvoices: "Nenhuma fatura ainda.",
-    billingTitle: "Plano e assinatura",
-    billingCurrentPlan: "Plano {plan}",
-    billingNextCharge: "Próxima cobrança em {date} • {amount} / {cycle}",
-    billingManage: "Gerenciar plano",
-    billingHistory: "Histórico de pagamentos",
-    billingPaid: "Pago",
-    billingViewInvoice: "Ver fatura",
     dangerDescription:
       "Encerra sua conta, apaga suas tarefas e cancela a assinatura. Não há como desfazer.",
     deleteAccount: "Excluir conta",
@@ -290,13 +284,6 @@ export const copy = {
     missingScope: "Faltou permissão: marque a permissão da {name} na tela do Google",
     wrongUser: "Este pedido de conexão é de outra conta",
     failed: "Não deu pra concluir a conexão; tente de novo",
-  },
-
-  /** O cartão de confirmação das ações externas (`mew/confirm-action.tsx`). */
-  confirmAction: {
-    title: "A Mewki vai fazer isto",
-    confirm: "Confirmar",
-    cancel: "Cancelar",
   },
 
   calendar: {
@@ -450,8 +437,6 @@ export const copy = {
     found: "Achei {n} tarefas nessa frase. Confere antes de eu criar?",
     credits: "Créditos de IA · {left}",
     createdMany: "{n} tarefas criadas",
-    /** A Mew com `onPet` vira botão: tocar faz carinho. */
-    pet: "Fazer carinho na Mew",
     // Por que o parser local pode ter errado — o motivo que aparece junto do botão.
     unsure: {
       question: "Parece uma pergunta",
@@ -469,72 +454,6 @@ export const copy = {
       long: "Frase longa",
       integration: "Pede pra pôr num app conectado",
     } satisfies Record<UnsureCode, string>,
-  },
-
-  // O chat da Mew (o dock do mobile abre ele): 1 crédito por mensagem.
-  mewChat: {
-    open: "Conversar com a Mew",
-    title: "Mew",
-    thinking: "Pensando…",
-    menu: "Opções da conversa",
-    clear: "Limpar conversa",
-    close: "Fechar conversa",
-    thread: "Conversa com a Mew",
-    placeholder: "Pergunte ou peça algo…",
-    offline: "Sem conexão",
-    attach: "Anexar imagem",
-    removeImage: "Tirar a imagem",
-    mic: "Falar",
-    send: "Enviar",
-    photo: "Foto anexada",
-    emptyTitle: "Oi! Eu cuido da sua agenda.",
-    emptyHint: "Pergunte, mande uma lista ou uma foto, e eu organizo pra você.",
-    suggestions: {
-      today: "O que tenho hoje?",
-      overdue: "Joga os atrasados pra sexta",
-      steps: "Quebra 'mudança' em passos",
-      photo: "Foto de uma lista",
-    },
-    tomorrowWord: "amanhã",
-    todayWord: "hoje",
-    failed: "Não consegui responder agora. Nenhum crédito foi usado.",
-    tooBig: "Essa imagem é grande demais. Tenta outra?",
-    tooFast: "Calma, uma mensagem de cada vez. Tenta de novo daqui a pouco.",
-    applyError: "Não foi possível aplicar na agenda",
-    // LGPD: o que vai pra OpenAI, antes da primeira mensagem.
-    consentTitle: "Antes de começar",
-    consentBody:
-      "Pra responder, a Mew manda pra OpenAI suas mensagens e as tarefas dos últimos e dos próximos 14 dias. Nada disso fica guardado lá.",
-    consentAccept: "Ativar a Mew",
-    consentError: "Não foi possível ativar a Mew",
-    box: {
-      move: "Mover {n} para {day}",
-      moveSource: "Atrasadas",
-      create: "Novas tarefas",
-      createSource: "Da sua mensagem",
-      steps: "Passos de {task}",
-      stepsSource: "Subtarefas sugeridas",
-      event: "Novo evento",
-      eventSource: "Google Agenda",
-      remove: "Apagar {n}?",
-      removeSource: "Não dá pra desfazer depois de limpar a conversa",
-      cancel: "Cancelar",
-      confirm: "Confirmar",
-      createN: "Criar {n}",
-      addN: "Adicionar {n}",
-      createEvent: "Criar evento",
-      removeN: "Apagar {n}",
-      undo: "Desfazer",
-      moved: "{n} movidas para {day}",
-      created: "{n} criadas",
-      added: "{n} passos adicionados",
-      scheduled: "Evento criado na Agenda",
-      removed: "{n} apagadas",
-      cancelled: "Cancelado. Nada mudou.",
-      undone: "Desfeito. Voltou como estava.",
-      editTitle: "Título da tarefa",
-      include: "Incluir {title}",
-    },
   },
 
   task: {
@@ -566,11 +485,19 @@ export const copy = {
     toc: "Nesta página",
     questions: "Dúvidas?",
     home: "Voltar ao início",
+    updated: "Última atualização: 17 de novembro de 2026",
     privacy: {
+      pageTitle: "Mewki — Política de Privacidade",
+      title: "Política de Privacidade",
       bar: "Privacidade",
       contact: "Fale com a gente sobre seus dados e direitos pela LGPD.",
     },
-    terms: { bar: "Termos", contact: "Fale com a gente sobre sua conta, plano ou estes Termos." },
+    terms: {
+      pageTitle: "Mewki — Termos de Uso",
+      title: "Termos de Uso",
+      bar: "Termos",
+      contact: "Fale com a gente sobre sua conta, plano ou estes Termos.",
+    },
   },
 } as const;
 

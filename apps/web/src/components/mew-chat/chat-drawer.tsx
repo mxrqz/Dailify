@@ -19,10 +19,10 @@ import { spring } from "@/consts/motion";
 
 import { Mine, Reply, Reveal } from "./bubbles";
 import { INPUT_ID } from "./chat-input";
+import { copy as t } from "./copy";
 import { moodOf } from "./mood";
 import type { ChatAction, Message } from "./thread";
 
-const t = copy.mewChat;
 const CHIP_DELAY = 0.1;
 const CHIP_STAGGER = 0.05;
 

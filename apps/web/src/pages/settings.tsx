@@ -1,3 +1,5 @@
+import { Helmet } from "react-helmet-async";
+
 import { copy } from "@/components/dashboard/copy";
 import { IntegrationsSummary } from "@/components/integrations";
 import { HourFormatSelect } from "@/components/hour-format-select";
@@ -12,6 +14,9 @@ import { WeekStartSelect } from "@/components/week-start-select";
 export default function SettingsPage(): JSX.Element {
   return (
     <main className={accountPage}>
+      <Helmet>
+        <title>{copy.pageTitle.settings}</title>
+      </Helmet>
       <PageHeader title={copy.profile.settingsPageTitle} className="px-1" />
 
       <div className={accountGroups}>
