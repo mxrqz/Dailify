@@ -8,7 +8,7 @@ import {
   type Role,
   type Task,
 } from "@dailify/shared";
-import { getTask, insertStatement, setExdatesStatement } from "./tasks";
+import { addExdatesStatement, getTask, insertStatement, rowToTask, type TaskRow } from "./tasks";
 
 export interface ConnectionRow {
   provider: string;
@@ -198,23 +198,6 @@ export async function getLink(
        WHERE user_id=? AND provider=? AND task_id=?`,
     )
     .bind(userId, provider, taskId)
-    .first<LinkRow>();
-  return row ? toLink(provider, row) : null;
-}
-
-/** O lado externo do vínculo: o UNIQUE(external_id) viraria 500 num upsert às cegas. */
-export async function getLinkByExternal(
-  db: D1Database,
-  userId: string,
-  provider: ProviderId,
-  externalId: string,
-): Promise<IntegrationLink | null> {
-  const row = await db
-    .prepare(
-      `SELECT task_id, external_id, url FROM integration_links
-       WHERE user_id=? AND provider=? AND external_id=?`,
-    )
-    .bind(userId, provider, externalId)
     .first<LinkRow>();
   return row ? toLink(provider, row) : null;
 }
@@ -410,7 +393,6 @@ export async function mergeDuplicate(
 
   const added = (imported.links ?? []).filter((l) => !(own.links ?? []).includes(l));
   const links = [...(own.links ?? []).slice(0, TASK_LIMITS.linksMax - added.length), ...added];
-  const exdates = [...new Set([...(own.exdates ?? []), ...(imported.exdates ?? [])])];
   const merged: Task = {
     ...own,
     title: imported.title,
@@ -423,9 +405,9 @@ export async function mergeDuplicate(
     links: links.length ? links : undefined,
     updatedAt: undefined,
   };
-  await db.batch([
+  const results = await db.batch<TaskRow>([
     insertStatement(db, userId, merged),
-    setExdatesStatement(db, userId, own.id, exdates),
+    addExdatesStatement(db, userId, own.id, imported.exdates ?? []),
     db
       .prepare(
         `UPDATE integration_links SET task_id=?, imported=0, duplicate_of=NULL
@@ -433,8 +415,10 @@ export async function mergeDuplicate(
       )
       .bind(own.id, userId, provider, importedId),
     db.prepare(`DELETE FROM tasks WHERE user_id=? AND id=?`).bind(userId, importedId),
+    db.prepare(`SELECT * FROM tasks WHERE user_id=? AND id=?`).bind(userId, own.id),
   ]);
-  return getTask(db, userId, own.id);
+  const r = results[4].results[0];
+  return r ? rowToTask(r) : null;
 }
 
 /** `timeZone` só quando vem (o retry manda o fuso do aparelho); ausente mantém o gravado. */
