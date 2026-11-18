@@ -45,9 +45,9 @@ server's prettier, eslint and `tsc` gates. Its package-rename warning on every r
   read on every request (`null` = 401). With `plan` it seeds the `"user"` row first, because
   `requireAuth` reads the plan from D1; `seedUser` covers `stripeCustomerId`. `magic-link` and
   `account-delete` use the real Better Auth via `auth.api.*` (captcha runs only in the HTTP handler).
-- `stripe` and `openai` are module mocks shared like the session: `vi.mock("stripe", () =>
-import("./stripe"))` then `import { stripeMock } from "./stripe"` (`openai.ts`: `openaiMock`).
-  `../src/lib/email` is mocked per file.
+- `stripe` and `openai` are module mocks shared like the session:
+  `vi.mock("stripe", () => import("./stripe"))`, then `import { stripeMock } from "./stripe"`
+  (`openai.ts` exports `openaiMock`). `../src/lib/email` is mocked per file.
 - Google goes through `vi.spyOn(globalThis, "fetch")`, set in beforeEach, restored in afterEach, and
   throwing on any URL it doesn't know (`integrations-propagate.test.ts`).
 - Legacy: `integrations-sync.test.ts` mocks shared `matchDuplicate` with a stale reason ("arrives in
