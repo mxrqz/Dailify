@@ -1,9 +1,10 @@
-import { IANAZone } from "luxon";
 import { nanoid } from "nanoid";
 import {
   DEFAULT_DURATION,
   TASK_LIMITS,
   fromRrule,
+  isRecord,
+  isTimeZone,
   matchDuplicate,
   meetLink,
   minutesToDuration,
@@ -70,7 +71,7 @@ interface Remote {
 }
 
 const when = (raw: unknown): When | undefined =>
-  typeof raw === "object" && raw !== null
+  isRecord(raw)
     ? { date: text(raw, "date"), dateTime: text(raw, "dateTime"), timeZone: text(raw, "timeZone") }
     : undefined;
 
@@ -200,8 +201,10 @@ interface Pass {
   own?: Task[];
 }
 
-const zoneOf = (s: Pass, ev: Remote) =>
-  ev.start?.timeZone && IANAZone.isValidZone(ev.start.timeZone) ? ev.start.timeZone : s.zone;
+function zoneOf(s: Pass, ev: Remote): string {
+  const zone = ev.start?.timeZone;
+  return isTimeZone(zone) ? zone : s.zone;
+}
 
 async function addExdate(s: Pass, taskId: string, at: number): Promise<void> {
   const task = await getTask(s.db, s.userId, taskId);

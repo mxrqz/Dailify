@@ -1,4 +1,4 @@
-import { isProviderId, type ProviderId } from "@dailify/shared";
+import { isProviderId, isRecord, type ProviderId } from "@dailify/shared";
 import type { Env } from "../index";
 import { getConnection, listConnections, markRevoked, updateTokens } from "../db/integrations";
 import { seal, unseal } from "./crypto";
@@ -12,13 +12,12 @@ export const sealTokens = (env: Env, userId: string, provider: ProviderId, token
   seal(env, JSON.stringify(tokens), aad(userId, provider));
 
 function isTokens(v: unknown): v is Tokens {
-  if (typeof v !== "object" || v === null) return false;
-  const refreshToken = Reflect.get(v, "refreshToken");
   return (
-    typeof Reflect.get(v, "accessToken") === "string" &&
-    typeof Reflect.get(v, "expiresAt") === "number" &&
-    typeof Reflect.get(v, "scope") === "string" &&
-    (refreshToken === undefined || typeof refreshToken === "string")
+    isRecord(v) &&
+    typeof v.accessToken === "string" &&
+    typeof v.expiresAt === "number" &&
+    typeof v.scope === "string" &&
+    (v.refreshToken === undefined || typeof v.refreshToken === "string")
   );
 }
 

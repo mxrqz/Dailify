@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type Stripe from "stripe";
-import { limitsFor, type QuotaSnapshot } from "@dailify/shared";
+import { isRecord, limitsFor, type QuotaSnapshot } from "@dailify/shared";
 import type { AppEnv } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
@@ -17,7 +17,7 @@ import {
   stripeClient,
 } from "../lib/stripe";
 import { fail } from "../lib/errors";
-import { isRecord, parseMonth, readJson } from "../lib/task-input";
+import { parseMonth, readJson } from "../lib/task-input";
 import { returnBase } from "../lib/origin";
 
 const billing = new Hono<AppEnv>();

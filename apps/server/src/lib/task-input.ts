@@ -1,15 +1,18 @@
-import { IANAZone } from "luxon";
-import { DATE_RANGE, TASK_LIMITS, normalizeRepeat, type Task } from "@dailify/shared";
+import { nanoid } from "nanoid";
+import {
+  DATE_RANGE,
+  TASK_LIMITS,
+  isRecord,
+  isRepeatEvery,
+  isTimeZone,
+  normalizeRepeat,
+  type Task,
+} from "@dailify/shared";
 
 /** Fuso vindo do cliente: sempre presente (Intl), mas é entrada de usuário — validar antes de usar. */
 export function validZone(value: unknown): string | undefined {
-  return typeof value === "string" && IANAZone.isValidZone(value) ? value : undefined;
+  return isTimeZone(value) ? value : undefined;
 }
-
-// ponytail: copy of `isRecord` in lib/openai.ts so routes import input guards from one place.
-// Delete that copy once openai.ts (and lib/mew.ts) import this one.
-export const isRecord = (v: unknown): v is Record<string, unknown> =>
-  typeof v === "object" && v !== null;
 
 /** The JSON body as `unknown`, never throwing: empty or malformed becomes `undefined` (a 400). */
 export async function readJson(c: { req: { json: () => Promise<unknown> } }): Promise<unknown> {
@@ -57,10 +60,6 @@ export function isEpochMs(value: unknown): value is number {
     typeof value === "number" && Number.isInteger(value) && value >= MIN_DATE && value <= MAX_DATE
   );
 }
-
-/** `Task.repeatEvery`: inteiro 2..365. O 1 nunca é guardado — é a ausência. */
-export const isRepeatEvery = (value: unknown): value is number =>
-  typeof value === "number" && Number.isInteger(value) && value >= 2 && value <= 365;
 
 // `undefined` = campo nao veio (ou veio null); "invalid" = veio e nao presta pra nada.
 // So http(s) passa porque `javascript:`/`data:` num `<a href>` do cliente e XSS; `username`/
@@ -134,7 +133,12 @@ export function parseTaskFields(body: unknown, opts: { partial: boolean }): Pars
 
   const priority = body.priority;
   if (priority !== undefined) {
-    if (typeof priority !== "number" || !Number.isInteger(priority) || priority < 0 || priority > 4)
+    if (
+      typeof priority !== "number" ||
+      !Number.isInteger(priority) ||
+      priority < 0 ||
+      priority > TASK_LIMITS.priorityMax
+    )
       return { error: "invalid priority" };
     fields.priority = priority;
   }
@@ -184,6 +188,9 @@ export function parseTaskFields(body: unknown, opts: { partial: boolean }): Pars
 // na tela — senão o reenvio cria uma cópia. Só o FORMATO se valida aqui; quem impede que um id de
 // outra conta seja sobrescrito é o `WHERE user_id` do upsert (`db/tasks.ts`).
 const ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
+
+/** A server-minted task id; it passes `ID_RE`, so the client can POST it back as-is. */
+export const newTaskId = (): string => nanoid(6);
 
 export function parseClientId(body: unknown): string | undefined | "invalid" {
   if (!isRecord(body)) return undefined;

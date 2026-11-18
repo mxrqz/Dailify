@@ -23,6 +23,7 @@ import app from "../src/index";
 import { limitsFor, type AiParse } from "@dailify/shared";
 import { bumpStoredUsage, periodFor, readStoredUsage } from "../src/db/usage";
 import { markRevoked, upsertConnection } from "../src/db/integrations";
+import { toEpoch } from "../src/lib/openai";
 
 beforeAll(async () => {
   await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
@@ -279,5 +280,21 @@ describe("POST /tasks/parse — targets", () => {
     });
     expect((await parse({ text: "x", timezone: "UTC" })).status).toBe(502);
     expect(await used(userId)).toBe(0);
+  });
+});
+
+describe("toEpoch", () => {
+  it("reads wall time in the client zone and drops a stray offset", () => {
+    const at = Date.UTC(2026, 6, 10, 17, 30);
+    expect(toEpoch("2026-07-10T14:30:00", "America/Sao_Paulo")).toBe(at);
+    expect(toEpoch("2026-07-10T14:30Z", "America/Sao_Paulo")).toBe(at);
+    expect(toEpoch("2026-07-10", "America/Sao_Paulo")).toBe(Date.UTC(2026, 6, 10, 3));
+  });
+
+  it("rejects dates that don't exist or fall outside DATE_RANGE", () => {
+    expect(toEpoch("2026-02-30", "UTC")).toBeNull();
+    expect(toEpoch("2026-07-10T25:00", "UTC")).toBeNull();
+    expect(toEpoch("amanhã", "UTC")).toBeNull();
+    expect(toEpoch("1999-12-31", "UTC")).toBeNull();
   });
 });

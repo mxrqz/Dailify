@@ -15,10 +15,9 @@ import {
   excludeOccurrence,
 } from "../db/tasks";
 import { enforceCreate } from "../db/limits";
-import type { OccurrenceEdit, Task } from "@dailify/shared";
+import { isRecord, type OccurrenceEdit, type Task } from "@dailify/shared";
 import {
   isEpochMs,
-  isRecord,
   parseClientId,
   parseMonth,
   parseNewTask,

@@ -1,11 +1,11 @@
 import { Hono } from "hono";
-import { isWeekStart, type UserSettings } from "@dailify/shared";
+import { isRecord, isWeekStart, type UserSettings } from "@dailify/shared";
 import type { AppEnv } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { getSettings, saveSettings } from "../db/settings";
 import { fail } from "../lib/errors";
-import { isRecord, readJson, validZone } from "../lib/task-input";
+import { readJson, validZone } from "../lib/task-input";
 
 const settings = new Hono<AppEnv>();
 settings.use("/settings", requireAuth, rateLimit("API_LIMITER"));

@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { TZDate } from "@date-fns/tz";
-import { TASK_LIMITS, parseTaskText, type AiParse, type Task } from "@dailify/shared";
+import { TASK_LIMITS, isRecord, parseTaskText, type AiParse, type Task } from "@dailify/shared";
 import type { AppEnv } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
@@ -10,7 +10,7 @@ import { insertTask } from "../db/tasks";
 import { aiQuotaError, debitAi, enforceCreate } from "../db/limits";
 import { aiTargets } from "../db/integrations";
 import { fail } from "../lib/errors";
-import { isRecord, readJson, validZone } from "../lib/task-input";
+import { readJson, validZone } from "../lib/task-input";
 
 const voice = new Hono<AppEnv>();
 

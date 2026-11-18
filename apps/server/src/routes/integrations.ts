@@ -3,6 +3,7 @@ import {
   canUseIntegration,
   INTEGRATION_ERROR,
   isProviderId,
+  isRecord,
   MISSING_SCOPE_ERROR,
   PROVIDER_IDS,
   type IntegrationStatus,
@@ -12,7 +13,7 @@ import type { AppEnv, Env } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { fail } from "../lib/errors";
-import { isRecord, readJson, validZone } from "../lib/task-input";
+import { readJson, validZone } from "../lib/task-input";
 import { appOrigin } from "../lib/origin";
 import { bytesToBase64url } from "../lib/push";
 import {

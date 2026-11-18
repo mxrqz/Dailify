@@ -1,6 +1,7 @@
-import { IANAZone } from "luxon";
 import {
   INTEGRATION_ERROR,
+  isTimeZone,
+  isoDate,
   meetLink,
   zonedParts,
   type IntegrationLink,
@@ -81,8 +82,7 @@ export const createEvent = {
     const timeZone = field(raw, "timezone");
     const meet = field(raw, "meet");
     if (typeof taskId !== "string" || !taskId) return { error: "taskId é obrigatório" };
-    if (typeof timeZone !== "string" || !IANAZone.isValidZone(timeZone))
-      return { error: "Fuso inválido" };
+    if (!isTimeZone(timeZone)) return { error: "Fuso inválido" };
     if (meet !== undefined && typeof meet !== "boolean") return { error: "meet inválido" };
     return { input: { taskId, timeZone, meet: meet === true } };
   },
@@ -128,16 +128,13 @@ const patchBody = (e: GoogleEvent) => ({
   conferenceData: e.conferenceData ?? null,
 });
 
-const pad = (n: number) => String(n).padStart(2, "0");
-
 /**
  * O id da instância da série no Google: `${master}_20261118T130000Z` (UTC) ou, no dia inteiro,
  * `${master}_20261118` (o dia no fuso). `occurrence` = o início original da ocorrência.
  */
 function instanceId(masterId: string, series: Task, occurrence: number, timeZone: string) {
   if (series.undated) {
-    const p = zonedParts(occurrence, timeZone);
-    return `${masterId}_${p.year}${pad(p.month + 1)}${pad(p.day)}`;
+    return `${masterId}_${isoDate(zonedParts(occurrence, timeZone)).replaceAll("-", "")}`;
   }
   return `${masterId}_${new Date(occurrence).toISOString().slice(0, 19).replace(/[-:]/g, "")}Z`;
 }

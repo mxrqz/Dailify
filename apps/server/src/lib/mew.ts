@@ -1,7 +1,12 @@
-import { DateTime } from "luxon";
 import { nanoid } from "nanoid";
 import {
   isCalendarEventLink,
+  isRecord,
+  isStringArray,
+  isoDate,
+  isoWallTime,
+  zonedEpoch,
+  zonedParts,
   type MewAction,
   type MewBlock,
   type MewIntent,
@@ -17,8 +22,6 @@ import {
   clock,
   draftToTask,
   isGPTTask,
-  isRecord,
-  isStringArray,
   structured,
   taskRules,
   taskSchema,
@@ -99,15 +102,14 @@ const isLinked = (t: Task) => t.links?.some(isCalendarEventLink) ?? false;
  * `WINDOW_DAYS`, everything in the next `WINDOW_DAYS`. A series instance is `id@day`.
  */
 export function agendaOf(tasks: Task[], timezone: string, now: number): Map<string, Task> {
-  const today = DateTime.fromMillis(now, { zone: timezone }).startOf("day");
-  const from = today.minus({ days: WINDOW_DAYS }).toMillis();
-  const to = today.plus({ days: WINDOW_DAYS + 1 }).toMillis();
+  const p = zonedParts(now, timezone);
+  const midnight = (days: number) =>
+    zonedEpoch({ ...p, day: p.day + days, hour: 0, minute: 0, second: 0, ms: 0 }, timezone);
+  const [from, today, to] = [midnight(-WINDOW_DAYS), midnight(0), midnight(WINDOW_DAYS + 1)];
   const keep = (t: Task) =>
-    t.undated || (t.date >= from && t.date < to && (t.date >= today.toMillis() || !isDone(t)));
+    t.undated || (t.date >= from && t.date < to && (t.date >= today || !isDone(t)));
   const refOf = (t: Task) =>
-    isRecurring(t) && !t.undated
-      ? `${t.id}@${DateTime.fromMillis(t.date, { zone: timezone }).toISODate()}`
-      : t.id;
+    isRecurring(t) && !t.undated ? `${t.id}@${isoDate(zonedParts(t.date, timezone))}` : t.id;
   const sorted = tasks.filter(keep).sort((a, b) => a.date - b.date);
   return new Map(sorted.slice(0, AGENDA_MAX).map((t) => [refOf(t), t]));
 }
@@ -119,9 +121,7 @@ function lines(agenda: Map<string, Task>, timezone: string): string {
       [
         ref,
         t.title.replace(/[|\n\r]/g, " "),
-        t.undated
-          ? "sem data"
-          : DateTime.fromMillis(t.date, { zone: timezone }).toFormat("yyyy-MM-dd'T'HH:mm"),
+        t.undated ? "sem data" : isoWallTime(zonedParts(t.date, timezone)).slice(0, 16),
         isDone(t) ? "feita" : "aberta",
         isRecurring(t) ? "recorrente" : "-",
         isLinked(t) ? "google" : "-",
@@ -207,20 +207,21 @@ export function toBlocks(
         if (p.date === null) return null;
         const at = toEpoch(p.date, timezone);
         if (at === null) throw new Error("AI returned an invalid date");
-        const day = DateTime.fromMillis(at, { zone: timezone });
+        const day = zonedParts(at, timezone);
         const keepTime = DATE_ONLY_RE.test(p.date);
         // ponytail: undated tasks can't be moved yet; giving one a day needs a default hour.
         const before = pick(p.ids).filter((t) => !isRecurring(t) && !t.undated);
         const after = before.map((t) => {
-          const from = DateTime.fromMillis(t.date, { zone: timezone });
+          const from = zonedParts(t.date, timezone);
           const date = keepTime
-            ? day
-                .set({ hour: from.hour, minute: from.minute, second: 0, millisecond: 0 })
-                .toMillis()
+            ? zonedEpoch(
+                { ...day, hour: from.hour, minute: from.minute, second: 0, ms: 0 },
+                timezone,
+              )
             : at;
           return { ...t, date, ...(t.alert !== undefined && { alert: t.alert + date - t.date }) };
         });
-        return before.length ? { ...base, before, after, label: day.toISODate() ?? "" } : null;
+        return before.length ? { ...base, before, after, label: isoDate(day) } : null;
       }
       case "delete": {
         const before = pick(p.ids).filter((t) => !isRecurring(t) && !isLinked(t));
