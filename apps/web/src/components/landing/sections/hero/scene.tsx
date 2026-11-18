@@ -16,7 +16,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Bubble } from "@/components/landing/kit/bubble";
 import { Tail } from "@/components/landing/kit/tail";
-import { Mew, type MewHandle } from "@/components/mew/mew";
+import { Mew } from "@/components/mew/mew";
 import { damp } from "@/components/mew/spring";
 import { cn } from "@/lib/utils";
 
@@ -134,7 +134,6 @@ export function HeroScene() {
   const reduce = useReducedMotion() ?? false;
   const root = useRef<HTMLDivElement>(null);
   const inView = useInView(root, { margin: "64px" });
-  const mew = useRef<MewHandle>(null);
   const look = useRef<Element | null>(null);
   const caret = useRef<HTMLSpanElement>(null);
   const lastWord = useRef<HTMLSpanElement>(null);
@@ -190,7 +189,6 @@ export function HeroScene() {
   useEffect(() => {
     if (reduce || !inView) return;
     const timers = new Set<number>();
-    const cat = mew.current;
     const wait = (ms: number) =>
       new Promise<void>((res) => {
         const t = window.setTimeout(() => {
@@ -214,7 +212,6 @@ export function HeroScene() {
         const t = timeline(sc.say);
         clearFlight();
         look.current = null;
-        mew.current?.setHappy(false);
         setView((s) => ({ ...START, calDay: s.calDay, run: ++run, i }));
         await wait(40);
         setView((s) => ({ ...s, phase: "idle" }));
@@ -251,11 +248,9 @@ export function HeroScene() {
           )
           .catch(() => {});
         await wait(60);
-        mew.current?.setHappy(true);
         setView((s) => ({ ...s, reply: "on" }));
         await wait(3600);
 
-        mew.current?.setHappy(false);
         look.current = null;
         setView((s) => ({ ...s, reply: "out", calOn: false }));
         await wait(450);
@@ -266,7 +261,6 @@ export function HeroScene() {
     return () => {
       timers.forEach(clearTimeout);
       clearFlight();
-      cat?.setHappy(false);
       look.current = null;
     };
   }, [reduce, inView]);
@@ -395,7 +389,7 @@ export function HeroScene() {
       </div>
 
       <div className="relative w-33 flex-none md:w-39">
-        <Mew ref={mew} lookAt={look} onHeadMove={onHeadMove} className="w-full" />
+        <Mew lookAt={look} onHeadMove={onHeadMove} happy={v.reply === "on"} className="w-full" />
         <div
           ref={cal}
           className={cn(

@@ -9,9 +9,6 @@ import {
   useState,
 } from "react";
 
-import { copy } from "@/components/dashboard/copy";
-import { cn } from "@/lib/utils";
-
 import { GAZE, MOODS, type MewMood, MewArt, type Pose, poseAttrs, restPose } from "./mew-static";
 import { type SpringState, springStep } from "./spring";
 
@@ -27,10 +24,6 @@ export type MewBehaviors = {
 
 export type MewHandle = {
   hop(): void;
-  earFlick(side?: "left" | "right"): void;
-  tilt(): void;
-  blink(): void;
-  setHappy(on: boolean): void;
 };
 
 export type MewProps = {
@@ -45,10 +38,6 @@ export type MewProps = {
   mood?: MewMood;
   /** Entra com um pulinho e acorda (a pálpebra abre). */
   enter?: boolean;
-  /** Liga o carinho: a Mew vira botão e cada toque chama isto. */
-  onPet?: () => void;
-  /** Sem `title` a Mew é decorativa (aria-hidden). */
-  title?: string;
   /** Deslocamento horizontal da cabeça em px, a cada frame — pra `<Tail>` seguir sem re-render. */
   onHeadMove?: (px: number) => void;
 };
@@ -141,7 +130,6 @@ function createMew(svg: SVGSVGElement, live: { current: Live }) {
   let peek = 0;
   let phase = 0;
   let wakeAt = 0;
-  let burst = 0; // carinho até este instante
   let darts = 0;
   let dT = [640, 1460];
   let drawnWhite = "";
@@ -207,7 +195,7 @@ function createMew(svg: SVGSVGElement, live: { current: Live }) {
 
   // parada (fora da tela ou reduced-motion): vai direto pra pose final, sem mola
   function settle() {
-    const goal = restPose(live.current.mood, happy || performance.now() < burst);
+    const goal = restPose(live.current.mood, happy);
     for (const k of POSE) {
       pose[k].x = goal[k];
       pose[k].v = 0;
@@ -282,7 +270,6 @@ function createMew(svg: SVGSVGElement, live: { current: Live }) {
       mood = id;
     }
     const awake = now >= wakeAt;
-    const petting = now < burst;
     const c = svg.getBoundingClientRect();
     const k = 1600 / (c.width || 1);
     let headGoal = 0;
@@ -370,7 +357,7 @@ function createMew(svg: SVGSVGElement, live: { current: Live }) {
       }
     }
     if (p.blink && now > tBlink) {
-      if (b.blink && awake && !petting && joy.x < 0.3 && lid.x < 0.5) {
+      if (b.blink && awake && joy.x < 0.3 && lid.x < 0.5) {
         blink();
         if (Math.random() < 0.18) later(blink, 380);
       }
@@ -390,31 +377,25 @@ function createMew(svg: SVGSVGElement, live: { current: Live }) {
       tPeek = now + rand(6000, 10000);
     }
 
-    const joyGoal = petting || happy ? 1 : p.joy;
+    const joyGoal = happy ? 1 : p.joy;
     const lx = joyGoal > 0.5 ? 0 : gx;
     const ly = joyGoal > 0.5 ? 0 : gy;
-    const rub = petting ? Math.sin(now / 130) * 3 : 0;
     springStep(joy, joyGoal, 0.06, dt);
     springStep(
       lid,
-      !awake ? 1 : petting ? 0 : Math.max(0, p.lid - peek * 0.55),
+      !awake ? 1 : Math.max(0, p.lid - peek * 0.55),
       id === "sleepy" ? 0.18 : 0.07,
       dt,
     );
-    springStep(dil, petting ? 1 : p.dil, 0.12, dt);
+    springStep(dil, p.dil, 0.12, dt);
     springStep(px, lx, 0.035, dt);
     springStep(py, ly, 0.035, dt);
     springStep(hx, following ? 0 : lx * 0.25, 0.22, dt);
     springStep(hy, following ? 0 : ly * 0.2, 0.25, dt);
     springStep(head, headGoal, 0.24, dt);
-    springStep(
-      tilt,
-      p.tilt + tiltExtra + rub + (hunting ? lx * 0.06 : 0),
-      petting ? 0.06 : 0.28,
-      dt,
-    );
-    springStep(el, petting ? 6 : p.ears[0], 0.12, dt);
-    springStep(er, petting ? -6 : p.ears[1], 0.12, dt);
+    springStep(tilt, p.tilt + tiltExtra + (hunting ? lx * 0.06 : 0), 0.28, dt);
+    springStep(el, p.ears[0], 0.12, dt);
+    springStep(er, p.ears[1], 0.12, dt);
     springStep(dop, hunting ? 1 : 0, 0.06, dt);
     const tremor = Math.sin(now * 0.021) * 6 + Math.sin(now * 0.037) * 4;
     springStep(dx, dT[0] + tremor, 0.045, dt);
@@ -475,19 +456,6 @@ function createMew(svg: SVGSVGElement, live: { current: Live }) {
       happy = on;
       if (!raf) settle();
     },
-    pet() {
-      burst = performance.now() + 1500;
-      if (!raf) {
-        settle();
-        later(settle, 1500);
-      }
-      ear(0);
-      ear(1);
-      hop(0, 36);
-    },
-    blink,
-    ear,
-    tilt: doTilt,
     hop,
   };
 }
@@ -501,8 +469,6 @@ export const Mew = forwardRef<MewHandle, MewProps>(function Mew(
     happy = false,
     mood = "idle",
     enter = false,
-    onPet,
-    title,
     onHeadMove,
   },
   ref,
@@ -557,38 +523,9 @@ export const Mew = forwardRef<MewHandle, MewProps>(function Mew(
     ref,
     () => ({
       hop: () => ctl.current?.hop(),
-      earFlick: (side) => ctl.current?.ear(side && (side === "left" ? 0 : 1)),
-      tilt: () => ctl.current?.tilt(),
-      blink: () => ctl.current?.blink(),
-      setHappy: (on) => ctl.current?.setHappy(on),
     }),
     [],
   );
 
-  const art = (
-    <MewArt
-      ref={svgRef}
-      className={onPet ? "w-full" : className}
-      title={onPet ? undefined : title}
-      mood={mood}
-      pose={pose}
-    />
-  );
-  if (!onPet) return art;
-  return (
-    <button
-      type="button"
-      aria-label={copy.mew.pet}
-      className={cn(
-        "block cursor-pointer touch-manipulation rounded-lg outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2",
-        className,
-      )}
-      onClick={() => {
-        ctl.current?.pet();
-        onPet();
-      }}
-    >
-      {art}
-    </button>
-  );
+  return <MewArt ref={svgRef} className={className} mood={mood} pose={pose} />;
 });

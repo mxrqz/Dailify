@@ -23,12 +23,11 @@ Repo-wide rules: `/RULES.md` (Frontend and Motion apply most here).
 - Props: `mood`, `happy`, `behaviors` (partial breathe/look/blink/ears/tilt toggles), `lookAt` (a
   ref read every frame: retarget by assigning `.current`), `headFollows={false}` when the parent
   moves the cat (only the pupils follow), `onHeadMove(px)` per frame for a following `Tail`,
-  `enter` (hidden before paint, pops in once in view), `onPet` (a button labelled `copy.mew.pet`).
-- Handle: only `hop()` for one-shot gestures. hero/scene.tsx still calls the handle's `setHappy()`
-  (legacy: use the `happy` prop).
-- Decorative by default (`aria-hidden`); `title` makes it `role="img"`, so pass it only when the cat
-  is the only content there. `tone="onBrand"` (brand-red backgrounds) exists on `MewArt`/`MewStatic`
-  only.
+  `enter` (hidden before paint, pops in once in view).
+- Handle: only `hop()` for one-shot gestures; joy goes through the `happy` prop.
+- `Mew` is always decorative (`aria-hidden`). On `MewArt`/`MewStatic`, `title` makes it
+  `role="img"`, so pass it only when the cat is the only content there. `tone="onBrand"`
+  (brand-red backgrounds) exists on `MewArt`/`MewStatic` only.
 
 ## Invariants
 
@@ -63,13 +62,13 @@ curves and durations in mew.css and mew.tsx keyframes are legacy; new ones use m
 - `ConfirmAction` is the confirm dialog for every external action (epic zpq; today
   `add-to-calendar.tsx`). A new provider reuses it with its own `preview` and optional `option`;
   `pending` blocks closing.
-- Its strings and `mew.pet` sit in `dashboard/copy.ts`; move them to a local `copy.ts` when
+- Its strings sit in `dashboard/copy.ts`; move them to a local `copy.ts` when
   touching them.
 
 ## Tests
 
 - `mew.render.test.tsx` (jsdom): static poses via the `opacity` of `data-mew` parts, unique clipPath
-  ids, the `onPet` button. The IntersectionObserver stub never fires, so the controller never
+  ids, and the live cat staying decorative. The IntersectionObserver stub never fires, so the controller never
   starts: assert on the first-render pose.
 - `spring.test.ts` (same result at 60 and 120 Hz), `eye-path.test.ts`.
 - Screen tests that ignore the cat mock it to `() => null` (`dashboard/day-list.render.test.tsx`).
