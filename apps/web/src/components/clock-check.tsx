@@ -1,5 +1,6 @@
 import { motion, useReducedMotion } from "motion/react";
 import { duration, ease } from "@/consts/motion";
+import { cn } from "@/lib/utils";
 
 // Posição do ponteiro das horas: 0° = 12h, sentido horário, com a fração dos minutos.
 export const hourAngle = (time: string) => {
@@ -41,7 +42,10 @@ export function ClockCheck({ checked, onCheckedChange, time, label }: Props) {
           cy={CENTER}
           r="9"
           strokeWidth="1.5"
-          className={`transition-colors duration-base ease-out ${checked ? "fill-primary stroke-primary" : "fill-transparent stroke-control-mark"}`}
+          className={cn(
+            "transition-colors duration-base ease-out",
+            checked ? "fill-primary stroke-primary" : "fill-transparent stroke-control-mark",
+          )}
         />
         <motion.circle
           data-dot

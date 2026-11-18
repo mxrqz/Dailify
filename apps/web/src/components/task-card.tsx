@@ -18,7 +18,6 @@ import {
   Trash2Icon,
 } from "lucide-react";
 
-import { Badge } from "@/components/ui/badge";
 /**
  * Labels de acessibilidade (sr-only) pro `completed` e `priority` — estados que só existem no app.
  * Mocks da landing passam só os 4 campos base e nunca atingem este código, então a dependência
@@ -35,26 +34,13 @@ import { cn } from "@/lib/utils";
 /**
  * Cartão de task (mock decorativo do hero, mas modelado como componente real reutilizável).
  * O cartão cabe em UMA linha: título truncado à esquerda, e à direita os metadados na ordem
- * link → repetição → prioridade → horário + duração. `TagBadge` continua exportado pros mocks da
- * landing, mas o cartão não mostra tags — elas vivem na edição.
+ * link → repetição → prioridade → horário + duração. O cartão não mostra tags: elas vivem na
+ * edição.
  *
  * Cada peça é auto-contida: recebe `loading` e renderiza o próprio skeleton — o crossfade
  * skeleton→conteúdo mora no TaskCard, então nada dessincroniza. Sem `loading`/timer interno:
  * o pai controla quando resolve.
  */
-
-/** Uma tag como badge outline neutro (ou seu skeleton). */
-export function TagBadge({ label, loading }: { label: string; loading?: boolean }): JSX.Element {
-  if (loading) return <span className="skeleton block h-5 w-12 rounded-md" />;
-  return (
-    <Badge
-      variant="outline"
-      className="border-surface-line px-2 py-0.5 text-2xs font-normal text-content-secondary"
-    >
-      {label}
-    </Badge>
-  );
-}
 
 /**
  * Um link só, mesmo quando a tarefa tem vários: o cartão informa que existe link e leva pro
@@ -71,7 +57,7 @@ const chipClass =
   "pointer-events-auto inline-flex w-fit shrink-0 cursor-default items-center gap-1 " +
   "overflow-hidden rounded-md px-2 py-0.5 text-sm font-normal whitespace-nowrap " +
   "text-content-secondary transition-colors outline-none hover:bg-surface-panel " +
-  "focus-visible:ring-[3px] focus-visible:ring-ring/50";
+  "focus-visible:ring-3 focus-visible:ring-ring/50";
 
 type ChipProps = ComponentPropsWithoutRef<"button"> & {
   editable?: boolean;
@@ -223,7 +209,7 @@ export const ToolbarButton = forwardRef<
         type="button"
         aria-label={label}
         className={cn(
-          "flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:ring-[3px] focus-visible:ring-ring/50",
+          "flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
           className,
         )}
         {...props}
@@ -436,7 +422,7 @@ function CardBody({
             type="button"
             onClick={onClick}
             aria-label={title}
-            className="absolute inset-0 z-0 cursor-default rounded-lg outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50"
+            className="absolute inset-0 z-0 cursor-default rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
           />
         )}
 

@@ -1,7 +1,8 @@
-import { CloudOffIcon } from "lucide-react";
+import { CloudOffIcon, CloudUploadIcon } from "lucide-react";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
+import { fill } from "@/functions/functions";
 import { pendingCount } from "@/functions/offline";
 import { useOnline } from "@/hooks/useOnline";
 import { useSession } from "@/lib/auth";
@@ -25,15 +26,15 @@ export function SyncBadge(): JSX.Element | null {
   const label = pending
     ? pending === 1
       ? copy.sync.onePending
-      : copy.sync.manyPending.replace("{n}", String(pending))
+      : fill(copy.sync.manyPending, { n: pending })
     : copy.sync.offline;
 
+  // Online with a queue (e.g. writes held after a 401) is not "offline".
+  const Icon = online ? CloudUploadIcon : CloudOffIcon;
+
   return (
-    <span
-      className="inline-flex h-6 items-center gap-1.5 rounded-sm bg-fill px-2 text-xs font-medium text-ink-secondary"
-      title={copy.sync.offline}
-    >
-      <CloudOffIcon className="size-3" aria-hidden="true" />
+    <span className="inline-flex h-6 items-center gap-1.5 rounded-sm bg-fill px-2 text-xs font-medium text-ink-secondary">
+      <Icon className="size-3" aria-hidden="true" />
       {label}
     </span>
   );

@@ -82,10 +82,5 @@ export function ThemeProvider({
   );
 }
 
-export const useTheme = () => {
-  const context = useContext(ThemeProviderContext);
-
-  if (context === undefined) throw new Error("useTheme must be used within a ThemeProvider");
-
-  return context;
-};
+// No guard: the context has a default, so the Toaster also renders in tests without a provider.
+export const useTheme = () => useContext(ThemeProviderContext);

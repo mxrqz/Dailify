@@ -1,7 +1,7 @@
-import { motion, useReducedMotion } from "motion/react";
+import { motion, useInView, useReducedMotion } from "motion/react";
 import { Fragment, type ReactNode, type RefObject, useEffect, useRef } from "react";
 
-import { useInView } from "@/components/landing/kit/use-in-view";
+import { duration, ease } from "@/consts/motion";
 
 export type Wait = (ms: number) => Promise<void>;
 
@@ -12,7 +12,7 @@ export type Wait = (ms: number) => Promise<void>;
  */
 export function useScene(ref: RefObject<Element | null>, script: (wait: Wait) => Promise<void>) {
   const reduce = useReducedMotion() ?? false;
-  const inView = useInView(ref);
+  const inView = useInView(ref, { margin: "64px" });
   const live = useRef(script);
 
   useEffect(() => {
@@ -42,8 +42,6 @@ export function useScene(ref: RefObject<Element | null>, script: (wait: Wait) =>
   return reduce;
 }
 
-const OUT = [0.22, 1, 0.36, 1] as const;
-
 /** Mensagem nova num chat ancorado embaixo: abre espaço (empurra as outras pra cima) e aparece. */
 export function Slot({ children, className }: { children: ReactNode; className?: string }) {
   const reduce = useReducedMotion();
@@ -52,13 +50,13 @@ export function Slot({ children, className }: { children: ReactNode; className?:
       className="flex-none overflow-hidden"
       initial={reduce ? false : { height: 0 }}
       animate={{ height: "auto" }}
-      transition={{ duration: 0.46, ease: OUT }}
+      transition={{ duration: duration.open, ease: ease.outQuint }}
     >
       <motion.div
         className={className}
-        initial={reduce ? false : { opacity: 0, y: 10, filter: "blur(4px)" }}
-        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-        transition={{ duration: 0.5, delay: 0.08, ease: OUT }}
+        initial={reduce ? false : { opacity: 0, y: 10 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: duration.open, delay: duration.lag, ease: ease.outQuint }}
       >
         {/* pb: o contorno da bolha (filtro, 1px fora da caixa) não pode ser cortado pelo overflow */}
         <div className="pt-1.5 pb-1">{children}</div>
@@ -67,7 +65,7 @@ export function Slot({ children, className }: { children: ReactNode; className?:
   );
 }
 
-/** Palavras entrando uma a uma (fade + blur), como texto sendo escrito. */
+/** Palavras entrando uma a uma (fade + rise), como texto sendo escrito. */
 export function Words({ text, delay = 0 }: { text: string; delay?: number }) {
   const reduce = useReducedMotion();
   return text.split(" ").map((w, i) => (
@@ -75,9 +73,9 @@ export function Words({ text, delay = 0 }: { text: string; delay?: number }) {
       {i > 0 && " "}
       <motion.span
         className="inline-block"
-        initial={reduce ? false : { opacity: 0, y: 3, filter: "blur(4px)" }}
-        animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-        transition={{ duration: 0.38, delay: delay + i * 0.05, ease: [0.2, 0.7, 0.2, 1] }}
+        initial={reduce ? false : { opacity: 0, y: 3 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: duration.word, delay: delay + i * 0.05, ease: ease.out }}
       >
         {w}
       </motion.span>

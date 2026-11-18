@@ -24,7 +24,7 @@ export const Switch = forwardRef<
         if (!event.defaultPrevented) onCheckedChange(!checked);
       }}
       className={cn(
-        "group/switch relative hit-target inline-flex h-7.75 w-12.75 flex-none cursor-pointer items-center rounded-full bg-fill-pressed p-0.5 outline-none transition-colors duration-base focus-visible:ring-[3px] focus-visible:ring-ring/50 disabled:cursor-default disabled:opacity-50 aria-checked:bg-ink",
+        "group/switch relative hit-target inline-flex h-7.75 w-12.75 flex-none cursor-pointer items-center rounded-full bg-fill-pressed p-0.5 outline-none transition-colors duration-base focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-default disabled:opacity-50 aria-checked:bg-ink",
         className,
       )}
       {...props}

@@ -88,17 +88,10 @@ export function TalkArt() {
             {`0:0${sec}`}
             <span className="flex h-5 items-center gap-0.5">
               {Array.from({ length: 14 }, (_, i) => (
-                <motion.i
+                <i
                   key={i}
-                  className="h-1 w-0.5 rounded-xs bg-ink-secondary"
-                  animate={{ height: [4, 18] }}
-                  transition={{
-                    duration: i % 4 === 0 ? 0.45 : 0.6,
-                    delay: (i % 3) * 0.2,
-                    repeat: Infinity,
-                    repeatType: "mirror",
-                    ease: "easeInOut",
-                  }}
+                  className="h-4.5 w-0.5 origin-center animate-bar rounded-xs bg-ink-secondary motion-reduce:animate-none"
+                  style={{ animationDelay: `${(i % 3) * 0.2}s` }}
                 />
               ))}
             </span>

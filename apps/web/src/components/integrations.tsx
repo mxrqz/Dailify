@@ -34,6 +34,7 @@ import {
   DialogTrigger,
 } from "@/components/ui/dialog";
 import { connectIntegration, disconnectIntegration, getIntegrations } from "@/functions/api";
+import { fill } from "@/functions/functions";
 import { useCalendarDefault } from "@/hooks/useCalendarDefault";
 import { patchIntegration, setIntegrations, useIntegrations } from "@/hooks/useIntegrations";
 import { useOnline } from "@/hooks/useOnline";
@@ -44,7 +45,7 @@ const t = copy.integrations;
 // ponytail: um provedor só no catálogo; com o segundo, o card vira um por `PROVIDER_IDS`.
 const GCAL: ProviderId = "google-calendar";
 const NAME = copy.calendar.name;
-const named = (text: string) => text.replace("{name}", NAME);
+const named = (text: string) => fill(text, { name: NAME });
 const tag =
   "rounded-full bg-fill px-2.5 py-0.5 text-footnote font-medium whitespace-nowrap text-ink-secondary";
 
@@ -99,7 +100,7 @@ export function IntegrationCard({
 }): JSX.Element {
   const icons = [PlusIcon, Repeat2Icon];
   return (
-    <div className="card rounded-lg py-4">
+    <div className="py-4">
       <div className="flex items-center gap-3 px-4">
         <span className="grid size-11 flex-none place-items-center rounded-sm bg-fill [&_svg]:size-7">
           {logo}
@@ -161,8 +162,11 @@ export function UpcomingIntegrations(): JSX.Element {
 /** O corpo de /integrations: o card do Google Agenda (conectar, ajustes, desconectar) e o Em breve. */
 export function Integrations(): JSX.Element {
   const online = useOnline();
-  // undefined = carregando; null = não deu pra ler (rede ou servidor).
-  const [statuses, setStatuses] = useState<IntegrationStatus[] | null>();
+  const stored = useIntegrations();
+  // The store has no failure state: a failed read with nothing stored shows the offline hint.
+  const [failed, setFailed] = useState(false);
+  // undefined = loading; null = couldn't read (network or server).
+  const statuses = stored ?? (failed ? null : undefined);
   // `configured` do GET já diz; o 503 do connect cobre o servidor que perdeu a credencial depois.
   const [soon, setSoon] = useState(false);
   const [busy, setBusy] = useState(false);
@@ -171,7 +175,7 @@ export function Integrations(): JSX.Element {
     if (!online) return;
     void (async () => {
       const { integrations } = await getIntegrations();
-      setStatuses(integrations ?? null);
+      setFailed(!integrations);
       if (integrations) setIntegrations(integrations);
     })();
   }, [online]);
@@ -198,16 +202,13 @@ export function Integrations(): JSX.Element {
       toast.error(named(t.disconnectError), { description: error?.message });
       return;
     }
-    const patch = { connected: false, status: undefined };
-    setStatuses((list) => list?.map((s) => (s.provider === GCAL ? { ...s, ...patch } : s)));
-    patchIntegration(GCAL, patch);
+    patchIntegration(GCAL, { connected: false, status: undefined });
     toast.success(named(t.disconnected));
   };
 
   const status = statuses?.find((s) => s.provider === GCAL);
   const connected = active(status);
   const disabled = !online || !status || busy;
-  const spinner = busy && <Loader2Icon className="size-4 animate-spin" />;
 
   const skipped = status?.skipped ?? 0;
   let account: ReactNode = status?.account;
@@ -224,8 +225,8 @@ export function Integrations(): JSX.Element {
     action = (
       <Dialog>
         <DialogTrigger asChild>
-          <Button variant="secondary" disabled={disabled}>
-            {spinner || t.disconnect}
+          <Button variant="secondary" disabled={disabled} loading={busy}>
+            {t.disconnect}
           </Button>
         </DialogTrigger>
         <DialogContent>
@@ -264,9 +265,10 @@ export function Integrations(): JSX.Element {
       <Button
         variant={revoked ? "soft-danger" : "default"}
         disabled={disabled}
+        loading={busy}
         onClick={() => void connect()}
       >
-        {spinner || (revoked ? t.reconnect : t.connect)}
+        {revoked ? t.reconnect : t.connect}
       </Button>
     );
   }
@@ -285,7 +287,7 @@ export function Integrations(): JSX.Element {
             connected && skipped > 0
               ? skipped === 1
                 ? copy.calendar.skippedOne
-                : copy.calendar.skippedMany.replace("{n}", String(skipped))
+                : fill(copy.calendar.skippedMany, { n: skipped })
               : undefined
           }
         >

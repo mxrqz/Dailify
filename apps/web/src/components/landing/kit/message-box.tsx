@@ -9,7 +9,7 @@ import {
   useState,
 } from "react";
 
-import { spring } from "@/consts/motion";
+import { duration, ease, spring } from "@/consts/motion";
 import { cn } from "@/lib/utils";
 
 import { Ears } from "./ears";
@@ -25,7 +25,7 @@ type MessageBoxProps = {
   className?: string;
 };
 
-const OUT_MS = 120;
+const OUT_MS = duration.fast * 1000;
 
 /**
  * Uma mensagem da Mewki = um container só: quando `type`/`contentKey` muda, o conteúdo velho some,
@@ -78,7 +78,7 @@ export function MessageBox({
         { opacity: 0, transform: "translateY(4px)" },
         { opacity: 1, transform: "none" },
       ],
-      { duration: 300, easing: "ease-out" },
+      { duration: duration.slow * 1000, easing: `cubic-bezier(${ease.out.join()})` },
     );
   }, [shown]);
 

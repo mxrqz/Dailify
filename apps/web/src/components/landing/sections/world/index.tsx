@@ -1,9 +1,10 @@
-import { motion, useReducedMotion } from "motion/react";
+import { CheckIcon } from "lucide-react";
+import { motion, useInView, useReducedMotion } from "motion/react";
 import { type ComponentType, type SVGProps, useEffect, useRef, useState } from "react";
 
 import { GoogleCalendarLogo } from "@/components/logos";
-import { useInView } from "@/components/landing/kit/use-in-view";
 import { Mew } from "@/components/mew/mew";
+import { ease } from "@/consts/motion";
 import { cn } from "@/lib/utils";
 
 import { copy } from "./copy";
@@ -63,7 +64,7 @@ export function WorldV2() {
   const tiles = useRef<(HTMLSpanElement | null)[]>([]);
   const target = useRef<Element | null>(null);
   const reduce = useReducedMotion() ?? false;
-  const inView = useInView(gridRef);
+  const inView = useInView(gridRef, { margin: "64px" });
   // `done` = apps acesos, `linked` = linhas já completas, ambos contando na ORDER
   const [done, setDone] = useState(0);
   const [linked, setLinked] = useState(0);
@@ -150,7 +151,7 @@ export function WorldV2() {
                   d={`M${MID} ${MID}L${x} ${y}`}
                   initial={drawing === i ? { pathLength: 0 } : false}
                   animate={{ pathLength: 1 }}
-                  transition={{ duration: 0.42, ease: [0.22, 1, 0.36, 1] }}
+                  transition={{ duration: 0.42, ease: ease.outQuint }}
                   stroke={app.color}
                   className={cn("fill-none stroke-2 opacity-55", !app.color && "stroke-ink")}
                   strokeLinecap="round"
@@ -199,14 +200,7 @@ export function WorldV2() {
                     lit(i) ? "scale-100" : "scale-0",
                   )}
                 >
-                  <svg
-                    viewBox="0 0 24 24"
-                    className="size-2.75 fill-none stroke-current stroke-3 lg:size-3"
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                  >
-                    <path d="M20 6 9 17l-5-5" />
-                  </svg>
+                  <CheckIcon className="size-2.75 stroke-3 lg:size-3" />
                 </em>
               </span>
             ) : (

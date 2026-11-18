@@ -10,7 +10,9 @@ diff the output and re-apply them. App widgets live in `components/` or `kit/`, 
 
 - `button.tsx`: variants `default` (brand), `secondary` (fill), `ghost`, `soft-danger`, `link`,
   plus legacy `outline`. Sizes `sm` 32px, `default` 44px, `lg` 52px, `icon` 44px; the radius grows
-  with height (`rounded-sm` up to 44px, `rounded-md` at 52px).
+  with height (`rounded-sm` up to 44px, `rounded-md` at 52px). `loading` (non-`asChild`) shows a
+  spinner, keeps the label as an sr-only name, and sets `disabled` + `aria-busy`; use it instead of
+  swapping the label for an icon. Pinned by `button.render.test.tsx`.
 - `dialog.tsx`: `DialogContent` is `glass` over a `scrim` overlay, with fade and zoom on the panel
   itself; `showCloseButton`. Exports `OverlayClose` (44px target, `plain` drops the fill circle),
   reused by sheet, and `DialogOverlay`, reused by `kit/action-sheet.tsx`. The close label is
@@ -56,9 +58,8 @@ diff the output and re-apply them. App widgets live in `components/` or `kit/`, 
 
 ## Dead files
 
-- No importer: `accordion`, `card`, `select`, `tabs`, `toggle-group`, `toggle` (used only by
-  toggle-group), and `CommandDialog`. `badge` only backs task-card's `TagBadge`, which nothing
-  renders. Don't build on them: delete them (and their `@radix-ui/*` dep), re-add with the CLI.
+- Deleted for lack of importers: `accordion`, `card`, `select`, `tabs`, `toggle-group`, `toggle`,
+  `badge`, `CommandDialog`. Re-add one with the CLI when a screen needs it.
 - `applePayLogo.tsx`, `googlePayLogo.tsx` are not shadcn: brand SVGs for `pages/billing.tsx`.
 
 ## Tests

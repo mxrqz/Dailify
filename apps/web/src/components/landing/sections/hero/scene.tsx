@@ -1,4 +1,4 @@
-import { useReducedMotion } from "motion/react";
+import { useInView, useReducedMotion } from "motion/react";
 import {
   ArrowUp,
   Bell,
@@ -16,8 +16,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Bubble } from "@/components/landing/kit/bubble";
 import { Tail } from "@/components/landing/kit/tail";
-import { useInView } from "@/components/landing/kit/use-in-view";
-import { Mew, type MewHandle } from "@/components/mew/mew";
+import { Mew } from "@/components/mew/mew";
 import { damp } from "@/components/mew/spring";
 import { cn } from "@/lib/utils";
 
@@ -120,18 +119,21 @@ function fly(wrap: HTMLElement, target: HTMLElement) {
     composite: "add",
   });
   wrap.animate([{ opacity: 1 }, { opacity: 1, offset: 0.82 }, { opacity: 0 }], o);
-  // raio corrigido pela escala: chega com o rounded-md do ícone, não achatado
-  wrap.firstElementChild?.animate(
-    [{ borderRadius: "22px" }, { borderRadius: `${14 / sx}px / ${14 / sy}px` }],
-    { ...o, easing: "cubic-bezier(0.55,0,0.25,1)" },
-  );
+  // Radius corrected for the scale, so it lands as the icon's own radius instead of squashed.
+  const shell = wrap.firstElementChild;
+  if (!shell) return;
+  const from = getComputedStyle(shell).borderTopLeftRadius;
+  const to = parseFloat(getComputedStyle(target).borderTopLeftRadius) || 0;
+  shell.animate([{ borderRadius: from }, { borderRadius: `${to / sx}px / ${to / sy}px` }], {
+    ...o,
+    easing: "cubic-bezier(0.55,0,0.25,1)",
+  });
 }
 
 export function HeroScene() {
   const reduce = useReducedMotion() ?? false;
   const root = useRef<HTMLDivElement>(null);
-  const inView = useInView(root);
-  const mew = useRef<MewHandle>(null);
+  const inView = useInView(root, { margin: "64px" });
   const look = useRef<Element | null>(null);
   const caret = useRef<HTMLSpanElement>(null);
   const lastWord = useRef<HTMLSpanElement>(null);
@@ -145,7 +147,9 @@ export function HeroScene() {
   const v = reduce ? FINAL : state;
   // enviado: o texto some mas segue no DOM; o campo volta a 1 linha (h-11) em vez de ficar vazio alto
   const sent = useRef(false);
-  sent.current = v.phase === "sent";
+  useEffect(() => {
+    sent.current = v.phase === "sent";
+  });
 
   // a setinha dos dois balões segue a cabeça da Mew, sem re-render
   const onHeadMove = useCallback((px: number) => {
@@ -185,7 +189,6 @@ export function HeroScene() {
   useEffect(() => {
     if (reduce || !inView) return;
     const timers = new Set<number>();
-    const cat = mew.current;
     const wait = (ms: number) =>
       new Promise<void>((res) => {
         const t = window.setTimeout(() => {
@@ -209,7 +212,6 @@ export function HeroScene() {
         const t = timeline(sc.say);
         clearFlight();
         look.current = null;
-        mew.current?.setHappy(false);
         setView((s) => ({ ...START, calDay: s.calDay, run: ++run, i }));
         await wait(40);
         setView((s) => ({ ...s, phase: "idle" }));
@@ -246,11 +248,9 @@ export function HeroScene() {
           )
           .catch(() => {});
         await wait(60);
-        mew.current?.setHappy(true);
         setView((s) => ({ ...s, reply: "on" }));
         await wait(3600);
 
-        mew.current?.setHappy(false);
         look.current = null;
         setView((s) => ({ ...s, reply: "out", calOn: false }));
         await wait(450);
@@ -261,7 +261,6 @@ export function HeroScene() {
     return () => {
       timers.forEach(clearTimeout);
       clearFlight();
-      cat?.setHappy(false);
       look.current = null;
     };
   }, [reduce, inView]);
@@ -390,7 +389,7 @@ export function HeroScene() {
       </div>
 
       <div className="relative w-33 flex-none md:w-39">
-        <Mew ref={mew} lookAt={look} onHeadMove={onHeadMove} className="w-full" />
+        <Mew lookAt={look} onHeadMove={onHeadMove} happy={v.reply === "on"} className="w-full" />
         <div
           ref={cal}
           className={cn(

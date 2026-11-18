@@ -1,8 +1,6 @@
 /** @vitest-environment jsdom */
-import { fireEvent, render, screen } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
-
-import { copy } from "@/components/dashboard/copy";
+import { render, screen } from "@testing-library/react";
+import { describe, expect, it } from "vitest";
 
 import { Mew } from "./mew";
 import { MewStatic } from "./mew-static";
@@ -42,15 +40,9 @@ describe("MewStatic", () => {
 });
 
 describe("Mew", () => {
-  it("sem `onPet` é decorativa; com `onPet` vira botão de carinho", () => {
-    const { container, unmount } = render(<Mew mood="thinking" />);
+  it("is decorative: hidden from assistive tech and not interactive", () => {
+    const { container } = render(<Mew mood="thinking" />);
     expect(screen.queryByRole("button")).toBeNull();
     expect(container.querySelector("[data-mood]")).toHaveAttribute("aria-hidden", "true");
-    unmount();
-
-    const onPet = vi.fn();
-    render(<Mew onPet={onPet} />);
-    fireEvent.click(screen.getByRole("button", { name: copy.mew.pet }));
-    expect(onPet).toHaveBeenCalledOnce();
   });
 });

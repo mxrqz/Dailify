@@ -1,5 +1,6 @@
 /** @vitest-environment jsdom */
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import type { SetStateAction } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { MEW_CONSENT_REQUIRED, QUOTA_ERRORS, type MewReply, type Task } from "@dailify/shared";
@@ -20,12 +21,17 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock("@/functions/api", () => api);
 
+// The setters apply functional updates, as the real useState setters do.
 const ctx = vi.hoisted(() => ({
-  tasks: [],
-  undatedTasks: [],
+  tasks: new Array<Task>(),
+  undatedTasks: new Array<Task>(),
   loadedMonths: [],
-  setTasks: vi.fn(),
-  setUndatedTasks: vi.fn(),
+  setTasks: vi.fn((next: SetStateAction<Task[] | undefined>) => {
+    ctx.tasks = (typeof next === "function" ? next(ctx.tasks) : next) ?? [];
+  }),
+  setUndatedTasks: vi.fn((next: SetStateAction<Task[] | undefined>) => {
+    ctx.undatedTasks = (typeof next === "function" ? next(ctx.undatedTasks) : next) ?? [];
+  }),
   bumpUsage: vi.fn(),
   goToDay: vi.fn(),
   quotas: undefined,
@@ -71,6 +77,8 @@ const say = (text: string) => {
 beforeEach(() => {
   localStorage.clear();
   vi.clearAllMocks();
+  ctx.tasks = [];
+  ctx.undatedTasks = [];
   api.getSettings.mockResolvedValue({ settings: { mewConsent: true } });
   api.saveSettings.mockResolvedValue({ settings: { mewConsent: true } });
   api.createTask.mockResolvedValue({ task: bread });
@@ -93,7 +101,7 @@ describe("MewChat", () => {
     fireEvent.click(create);
     await waitFor(() => expect(api.setMewAction).toHaveBeenCalledWith("act-1", "done"));
     expect(api.createTask).toHaveBeenCalledWith(expect.objectContaining({ id: "srv-1" }));
-    expect(ctx.setTasks).toHaveBeenCalledWith([expect.objectContaining({ id: "srv-1" })]);
+    expect(ctx.tasks).toEqual([expect.objectContaining({ id: "srv-1" })]);
 
     fireEvent.click(await within(chat).findByRole("button", { name: t.box.undo }));
     await waitFor(() => expect(api.setMewAction).toHaveBeenCalledWith("act-1", "undone"));

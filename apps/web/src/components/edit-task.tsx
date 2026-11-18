@@ -1,4 +1,4 @@
-import { createContext, useContext, useEffect, useId, useMemo, useState, ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, ReactNode } from "react";
 import {
   Sheet,
   SheetContent,
@@ -6,7 +6,6 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-  SheetTrigger,
 } from "./ui/sheet";
 import { AddToCalendar } from "@/components/add-to-calendar";
 import { RecurrenceScopeDialog } from "@/components/dashboard/recurrence-scope-dialog";
@@ -17,7 +16,7 @@ import { Button } from "./ui/button";
 import { replaceCalendarMeet, updateTask } from "@/functions/api";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeftIcon, CheckIcon, Loader2, RotateCcwIcon } from "lucide-react";
+import { ChevronLeftIcon, CheckIcon, RotateCcwIcon } from "lucide-react";
 import { getCompletionDate, isTaskModified, upsertTaskWithRecurrence } from "@/functions/functions";
 import {
   FORM_VIEWS,
@@ -36,10 +35,6 @@ import { enqueue } from "@/functions/offline";
 import { removeUndated, upsertUndated } from "@/functions/undated";
 import { zoned } from "@/functions/zone";
 
-type EditTaskProps = Record<string, never>;
-
-const EditTaskContext = createContext<EditTaskProps | undefined>(undefined);
-
 export function EditTask({
   children,
   open,
@@ -50,35 +45,34 @@ export function EditTask({
   onOpenChange?: (open: boolean) => void;
 }) {
   return (
-    <EditTaskContext.Provider value={{}}>
-      <Sheet open={open} onOpenChange={onOpenChange}>
-        {children}
-      </Sheet>
-    </EditTaskContext.Provider>
+    <Sheet open={open} onOpenChange={onOpenChange}>
+      {children}
+    </Sheet>
   );
 }
 
-export function useEditTask() {
-  const context = useContext(EditTaskContext);
-  if (!context) {
-    throw new Error("useEditTask must be used within a EditTask");
-  }
-  return context;
-}
-
-export function EditTaskTrigger({ children }: { children: ReactNode }) {
-  return <SheetTrigger asChild>{children}</SheetTrigger>;
-}
-
 /** Sem data marca por período e exclui sem diálogo de escopo; só quem é Sem data paga o hook. */
-function WithUndatedActions({
+function UndatedFooterButtons({
   task,
-  children,
+  onClose,
+  completeButton,
+  deleteButton,
 }: {
   task: TaskProps;
-  children: (actions: ReturnType<typeof useUndatedActions>) => JSX.Element;
+  onClose: () => void;
+  completeButton: (done: boolean, toggle: () => Promise<unknown>) => JSX.Element;
+  deleteButton: (onClick: () => void) => JSX.Element;
 }): JSX.Element {
-  return children(useUndatedActions(task));
+  const { done, toggle, remove } = useUndatedActions(task);
+  return (
+    <>
+      {completeButton(done, toggle)}
+      {deleteButton(() => {
+        void remove();
+        onClose();
+      })}
+    </>
+  );
 }
 
 interface EditTaskContentProps {
@@ -327,29 +321,23 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
       {view === "root" && (
         <SheetFooter className="gap-1 pb-4">
           {dirty && (
-            <Button type="submit" form={formId} size="lg" disabled={loading}>
-              {loading ? <Loader2 className="animate-spin" /> : copy.form.save}
+            <Button type="submit" form={formId} size="lg" loading={loading}>
+              {copy.form.save}
             </Button>
           )}
           {/* Concluída não desabilita o botão: ele vira o reabrir. */}
           {wasUndated ? (
-            <WithUndatedActions task={task}>
-              {({ done, toggle }) => completeButton(done, toggle)}
-            </WithUndatedActions>
+            <UndatedFooterButtons
+              task={task}
+              onClose={onClose}
+              completeButton={completeButton}
+              deleteButton={deleteButton}
+            />
           ) : (
-            completeButton(completedOnDay, completedOnDay ? onUncomplete : onComplete)
-          )}
-          {wasUndated ? (
-            <WithUndatedActions task={task}>
-              {({ remove }) =>
-                deleteButton(() => {
-                  void remove();
-                  onClose();
-                })
-              }
-            </WithUndatedActions>
-          ) : (
-            deleteButton(() => void onDelete())
+            <>
+              {completeButton(completedOnDay, completedOnDay ? onUncomplete : onComplete)}
+              {deleteButton(() => void onDelete())}
+            </>
           )}
         </SheetFooter>
       )}

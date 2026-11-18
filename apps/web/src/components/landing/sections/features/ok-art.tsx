@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 
 import { MessageBox } from "@/components/landing/kit/message-box";
 import { MewStatic } from "@/components/mew/mew-static";
+import { ease } from "@/consts/motion";
 import { cn } from "@/lib/utils";
 
 import { copy } from "./copy";
@@ -13,7 +14,7 @@ const t = copy.ok;
 type Scenario = (typeof t.scenarios)[number];
 type Step = "status" | "draft" | "done";
 const ICONS = { chat: Hash, issue: CircleDot, mail: Mail };
-const POINTER_EASE = "cubic-bezier(0.22,1,0.36,1)";
+const POINTER_EASE = `cubic-bezier(${ease.outQuint.join()})`;
 
 /** Pedido → "conectando" → rascunho → cursor clica no CTA → enviado. Uma mensagem que muda de tipo. */
 export function OkArt() {

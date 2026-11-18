@@ -28,9 +28,8 @@ applied to the agenda.
 - `useMewApply` calls `@/functions/api` itself instead of a `hooks/` writer, because a box applies
   all-or-nothing. It has no offline queue: any refused write, offline included, rolls everything
   back and returns `false` (ponytail: partial failure). `ChatInput` is disabled offline. On success
-  it bumps usage, records `setMewAction` and pushes Google Calendar targets. The `latest` ref
-  exists only because the context setters are typed value-only
-  ([Frontend](../../../../../RULES.md#frontend)).
+  it bumps usage, records `setMewAction` and pushes Google Calendar targets. Both the apply and
+  the rollback are functional `swap`s (the rollback swaps back), so writes landing meanwhile stay.
 - mew-chat.tsx matches the server's error texts, shared with it: `MEW_CONSENT_REQUIRED` and
   `QUOTA_ERRORS.ai` from `@dailify/shared` (texts, not codes, so the wire stays as it was).
   A send refused for consent is dropped, kept in `pending` and resent after accept: nothing

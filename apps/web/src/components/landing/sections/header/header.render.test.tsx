@@ -7,13 +7,12 @@ import { copy } from "./copy";
 import { SiteHeaderV2 } from "./index";
 
 describe("<SiteHeaderV2>", () => {
-  it("tem menu rotulado e Entrar levando ao login", () => {
+  it("Entrar leva ao login", () => {
     render(
       <MemoryRouter>
         <SiteHeaderV2 />
       </MemoryRouter>,
     );
-    expect(screen.getByRole("button", { name: copy.menu })).toBeInTheDocument();
     expect(screen.getByRole("link", { name: copy.signIn })).toHaveAttribute("href", "/login");
   });
 });

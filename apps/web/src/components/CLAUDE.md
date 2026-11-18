@@ -83,8 +83,5 @@ It owns the task boot. Other code only re-triggers loads (`pages/integration-cal
 
 ## Legacy: don't copy or import
 
-- Dead: `site-header.tsx`, `ModeToggle`, `SettingsGroup`/`SettingsRow`/`settingsPage` (use kit
-  `ListGroup`/`ListRow`), `EditTaskContext`/`useEditTask`/`EditTaskTrigger`, `TagBadge`.
-- Stale comments: `task-card.tsx` (landing mock call sites), `pricing/plan-cards.tsx` (claims the
-  landing and /billing use it).
+- Settings rows are kit `ListGroup`/`ListRow`; `settings-list.tsx` keeps only the page widths.
 - `ui/applePayLogo.tsx`, `ui/googlePayLogo.tsx` are brand art in `ui/`; new logos go in `logos.tsx`.
