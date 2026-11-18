@@ -222,6 +222,10 @@ export function flushQueue(userId: string): Promise<FlushResult> {
   return flush;
 }
 
+/** A 401 waits like a network error: the session dropped (stale tab, account switch), not the write. */
+export const shouldQueue = (error?: ApiError): boolean =>
+  !!error && (error.offline || error.status === 401);
+
 // Lê a fila guardada a cada passo, não um retrato do começo: o que entra durante a subida não se perde.
 async function drainQueue(userId: string): Promise<FlushResult> {
   let sent = 0;
@@ -230,7 +234,7 @@ async function drainQueue(userId: string): Promise<FlushResult> {
   for (let mutation = readQueue(userId)[0]; mutation; mutation = readQueue(userId)[0]) {
     const error = await send(mutation);
 
-    if (error?.offline || error?.status === 401) {
+    if (shouldQueue(error)) {
       writeQueue(userId, collapseQueue(readQueue(userId)));
       return { sent, dropped, offline: true };
     }

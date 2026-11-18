@@ -56,7 +56,8 @@ render test whose component now calls it (a factory mock throws on an export it 
   stops at the first offline or 401 (kept for the next sign-in) and drops what the server refused.
   Entries are removed by value, not index: another tab may have sent the head meanwhile.
 - `enqueue` doesn't collapse during a flush: a delete folded into an in-flight create is lost.
-- `drainQueue` holds one of the five copies of the settle predicate (`hooks/CLAUDE.md`).
+- `shouldQueue(error)` is the settle predicate (offline or 401); `drainQueue` uses it, the four
+  copies in hooks and `edit-task.tsx` should too (`hooks/CLAUDE.md`).
 - Storage keys are a persisted contract (renaming drops queued writes):
   `dailify:{tasks,outbox,undated}:<userId>`, `dailify:last-user`, `mewki:mew:<userId>:v1`
   (`chatKey`, read by `components/mew-chat/thread.ts`); `clearLocal` removes all but device-wide ones
@@ -73,8 +74,9 @@ render test whose component now calls it (a factory mock throws on an export it 
 
 ## Copy and tests
 
-- Helpers read pt-BR from `@/components/dashboard/copy`. The `.replace` chains in `repeat-label` and
-  `quota-label` and the api.ts fallback messages are legacy
+- Helpers read pt-BR from `@/components/dashboard/copy`. The `.replace` in `repeat-label` (its
+  value is a number; `fill` would be a cycle with `functions.ts`) and the api.ts fallback messages
+  are legacy
   ([Copy](../../../../RULES.md#copy-and-i18n)).
 - Harness and jsdom opt-in: `apps/web/CLAUDE.md`. A module that calls the API mocks `./api` through
   `vi.hoisted`, as `offline.test.ts` does.
