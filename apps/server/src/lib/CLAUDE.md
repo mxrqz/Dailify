@@ -11,9 +11,9 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   `/tasks/parse` and voice). `mew.ts` builds the chat on top of it: `agendaOf`, `toBlocks`,
   `askMew`.
 - `stripe.ts`: `stripeClient(env)` with `createFetchHttpClient` (Workers has no Node http), the
-  price maps, the expandable-field normalisers, the invoice and payment DTOs, `handleInvoicePaid`
-  and `cancelSubscriptionsOf`. The subscription webhook branches and the checkout and portal calls
-  still sit in `routes/billing.ts`.
+  price maps, `isProductName`, `activeSubscription`, the expandable-field normalisers, the invoice
+  and payment DTOs, `handleStripeEvent` (every webhook branch, `handleInvoicePaid` among them) and
+  `cancelSubscriptionsOf`. The checkout and portal calls still sit in `routes/billing.ts`.
 - `push.ts`: Web Push written by hand (RFC 8291 payload, RFC 8292 VAPID) on WebCrypto, because the
   npm libraries are Node-only. On a 404/410 from `sendPush` the caller deletes the subscription.
 - `encoding.ts`: base64url and `sha256b64url` (PKCE S256, the magic-link verifier hash).

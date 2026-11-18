@@ -35,9 +35,21 @@ export function priceMap(env: Env): Record<ProductName, string> {
   };
 }
 
-// ponytail: `_env` is unused; it stays until routes/billing.ts stops passing it.
-export function isProductName(_env: Env, value: string): value is ProductName {
+export function isProductName(value: unknown): value is ProductName {
   return PRODUCT_NAMES.some((n) => n === value);
+}
+
+/** The customer's one active subscription, if any. */
+export async function activeSubscription(
+  stripe: Stripe,
+  stripeCustomerId: string,
+): Promise<Stripe.Subscription | undefined> {
+  const subscriptions = await stripe.subscriptions.list({
+    customer: stripeCustomerId,
+    status: "active",
+    limit: 1,
+  });
+  return subscriptions.data[0];
 }
 
 interface PriceInfo {
@@ -111,7 +123,7 @@ function knownInvoiceStatus(status: Stripe.Invoice.Status | null): KnownInvoiceS
  * `invoice.paid`: grava o plano e o customer de quem pagou. A chave `clerkUserId` na metadata da
  * assinatura é histórica (gravada no checkout desde o Clerk) e segue sendo o id do usuário.
  */
-export async function handleInvoicePaid(env: Env, invoice: Stripe.Invoice): Promise<void> {
+async function handleInvoicePaid(env: Env, invoice: Stripe.Invoice): Promise<void> {
   const userId = invoice.parent?.subscription_details?.metadata?.clerkUserId;
   const subId = subscriptionId(invoice.parent?.subscription_details?.subscription);
   // Sem linha de plano (fatura só de proration) ou preço desconhecido: não mexe no plano.
@@ -119,6 +131,33 @@ export async function handleInvoicePaid(env: Env, invoice: Stripe.Invoice): Prom
   if (typeof userId !== "string" || !subId || !role) return;
 
   await updateUserRole(env.DB, { userId, role, stripeCustomerId: customerId(invoice.customer) });
+}
+
+const PAYING = new Set<Stripe.Subscription.Status>(["active", "trialing", "past_due"]);
+
+/** A verified webhook event: `invoice.paid` and subscription changes set the plan. */
+export async function handleStripeEvent(env: Env, event: Stripe.Event): Promise<void> {
+  if (event.type === "invoice.paid") return handleInvoicePaid(env, event.data.object);
+  if (
+    event.type !== "customer.subscription.deleted" &&
+    event.type !== "customer.subscription.updated"
+  )
+    return;
+  const sub = event.data.object;
+  const clerkUserId = sub.metadata.clerkUserId;
+  // Stripe doesn't order events, so a stale `updated` can land after `deleted`: the plan follows
+  // the subscription as it is now, and only a paying status keeps a paid role.
+  const current = await stripeClient(env).subscriptions.retrieve(sub.id);
+  const role = PAYING.has(current.status)
+    ? roleForPrice(env, current.items.data[0]?.price.id ?? "")
+    : "free";
+  if (typeof clerkUserId === "string" && role) {
+    await updateUserRole(env.DB, {
+      userId: clerkUserId,
+      role,
+      stripeCustomerId: customerId(sub.customer),
+    });
+  }
 }
 
 /**
@@ -150,12 +189,7 @@ export async function getPaymentDetails(
   stripe: Stripe,
   stripeCustomerId: string,
 ): Promise<PaymentDetails | null> {
-  const subscriptions = await stripe.subscriptions.list({
-    customer: stripeCustomerId,
-    status: "active",
-    limit: 1,
-  });
-  const subscription = subscriptions.data[0];
+  const subscription = await activeSubscription(stripe, stripeCustomerId);
   if (!subscription) return null;
 
   const preview = await stripe.invoices.createPreview({
