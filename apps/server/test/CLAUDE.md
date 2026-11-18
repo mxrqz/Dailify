@@ -19,14 +19,18 @@ server's prettier, eslint and `tsc` gates. Its package-rename warning on every r
   VOICE 6, AUTH 5 per minute per key). Give each test its own user id
   (`` `eu-${crypto.randomUUID()}` `` in beforeEach) or filter assertions to its own ids. One id that
   makes more than 6 OpenAI-route calls in a file gets a 429 (`mew-chat.test.ts` switches ids for this).
-- Each D1 file applies migrations itself: `beforeAll` + `applyD1Migrations(env.DB, env.TEST_MIGRATIONS)`.
+- Migrations are applied per file by `apply-migrations.ts` (a `setupFiles` `beforeAll`); a file's own
+  `applyD1Migrations` hook is now redundant. The setup imports `cloudflare:test` inside the hook: a
+  static import there loads `src/` before the test file's `vi.mock` calls register.
+- `clearMocks`, `restoreMocks` and `unstubGlobals` are on: create spies and stubs in `beforeEach`
+  or the test, never in `beforeAll`.
 - Call the app with `app.request(path, init, env, ctx)`. Hono's `c.executionCtx` throws without a
   ctx, so `GET /tasks` (sync) and a linked PATCH/DELETE (propagate) need `createExecutionContext()`.
   A test that asserts that background work awaits `waitOnExecutionContext(ctx)` first (`send` in
   `integrations-propagate.test.ts`).
 - Wrangler loads `apps/server/.env` as secrets ("Using secrets defined in .env"). Every secret the
-  code reads needs a fake binding in `vitest.config.ts`; `OPENAI_API_KEY` has none, so an unmocked
-  OpenAI path calls the real API. `pricing-stripe.test.ts` hits live Stripe when `.env` holds an
+  code reads needs a fake binding in `vitest.config.ts` (`OPENAI_API_KEY` included, so an unmocked
+  OpenAI path fails instead of billing). `pricing-stripe.test.ts` hits live Stripe when `.env` holds an
   `sk_` key and all four price ids (the `LIVE_*` bindings), and skips otherwise.
 - workerd runs in UTC: `new Date(y, m, d)` is a UTC instant. Pass `?tz=`/`timezone` when the test is
   about the user's local day.
@@ -51,6 +55,6 @@ server's prettier, eslint and `tsc` gates. Its package-rename warning on every r
 
 1. Start from the closest sibling: `tasks-edit.test.ts` (route, one session), `db-tasks.test.ts`
    (queries), `integrations-propagate.test.ts` (fresh id per test, fetch router, `send`). Mocks go
-   first, migrations in `beforeAll`.
+   first; migrations come from the setup file.
 2. A new third-party API gets `fixtures/<provider>/` and a throwing fetch router.
 3. `bun run test test/<file>` from `apps/server`, then `bun run format`.
