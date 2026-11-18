@@ -21,8 +21,6 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   the Cloudflare `EMAIL` binding). Templates are pure, return `{ subject, text, html }`, and use
   inline styles with no images or tracking. `FROM` (`entrar@${APP_HOST}`) must be in wrangler.toml
   `allowed_sender_addresses`.
-- `user.ts`: raw queries on the Better Auth `"user"` table, whose `plan` and `stripeCustomerId`
-  only the server writes (`input: false`). `roleOf` maps an absent or unknown plan to `free`.
 - `origin.ts`: `appOrigin` returns the caller's origin when it is allowed, otherwise the first
   `ALLOWED_ORIGIN`. `returnBase` sends native callers to `${APP_URL}/app`, because Stripe can't
   reopen the app. `NATIVE_ORIGINS` repeats the tauri entries of `ALLOWED_ORIGIN` by hand and also
@@ -32,10 +30,11 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
 
 ## Input helpers: reuse before writing a guard
 
-- `isRecord`: routes import it from task-input.ts; openai.ts still has its own copy (merge them).
-  `isStringArray` is exported from openai.ts.
-- task-input.ts: `validZone`, `isRecord`, `readJson`, `isEpochMs`, `parseMonth`, `parseOccurrence`,
-  `isRepeatEvery`, `sanitizeLinks`, `parseClientId`, `parseTaskFields`, `parseNewTask`.
+- `isRecord`, `isStringArray`, `isRepeatEvery`, `isTimeZone`, `isDuration` come from
+  `@dailify/shared`.
+- task-input.ts: `validZone`, `readJson`, `isEpochMs`, `parseMonth`, `parseOccurrence`,
+  `sanitizeLinks`, `parseClientId`, `newTaskId` (every server-minted task id), `parseTaskFields`,
+  `parseNewTask`.
 - Contract: an absent key keeps the stored value and `null` clears it (`alert`, `repeatEvery`,
   `tags`, `links`). Optional parsers are tri-state: `undefined`, `"invalid"`, or the value.
   `updatedAt` passes through (the offline queue's LWW stamp). `id`, `completed` and `exdates` never

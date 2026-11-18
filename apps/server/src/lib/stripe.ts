@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import type { Invoice, PaymentDetails, Role } from "@dailify/shared";
 import type { Env } from "../index";
-import { updateUserRole } from "./user";
+import { updateUserRole } from "../db/user";
 
 export const stripeClient = (env: Env): Stripe =>
   new Stripe(env.STRIPE_SECRET_KEY, {

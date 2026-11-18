@@ -4,7 +4,7 @@ import { isRecord, limitsFor, type QuotaSnapshot } from "@dailify/shared";
 import type { AppEnv } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
-import { billingProfile, updateUserRole } from "../lib/user";
+import { billingProfile, updateUserRole } from "../db/user";
 import { readAllUsage } from "../db/limits";
 import {
   customerId,

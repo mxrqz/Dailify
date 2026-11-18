@@ -7,7 +7,11 @@ The Worker's SQL, hand-written over the raw `D1Database` binding (no ORM). Repo-
 ## Modules
 
 - `tasks.ts`: `tasks` rows, `TaskRow` + `rowToTask` (reused by push.ts and calendar-sync.ts), JSON
-  codecs, the LWW upsert, completions and occurrences, `USER_TABLES` + `deleteUserData`.
+  codecs, the LWW upsert, completions and occurrences.
+- `user.ts`: the Better Auth `"user"` row (`planOf`, `billingProfile`, `updateUserRole`; `roleOf`
+  maps an absent or unknown plan to `free`), the magic-link tables (`magic_link_sent`,
+  `magic_link_challenge`, `verification`) for `auth-options.ts`, and `USER_TABLES` +
+  `deleteUserData`.
 - `integrations.ts`: `integration_connections`, `oauth_states`, `integration_links` for the
   propagation and the web.
 - `calendar-sync.ts`: Google-only sync (claim, sync token, import batch), provider hardcoded as `P`.
@@ -18,9 +22,6 @@ The Worker's SQL, hand-written over the raw `D1Database` binding (no ORM). Repo-
 - `limits.ts`: quota policy. `aiQuota` answers `{ status, error }` or null (the route maps it with
   `fail`); `debitAi` spends one credit.
 - `mew.ts`: the `mew_actions` log, task ids only, never titles.
-
-SQL still outside db/, to move here: `lib/user.ts` and `middleware/auth.ts` (`"user"`),
-`auth-options.ts` (`magic_link_*`, `verification`).
 
 ## Conventions
 

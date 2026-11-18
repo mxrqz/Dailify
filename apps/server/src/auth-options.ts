@@ -9,27 +9,19 @@ import { sendEmail } from "./lib/email";
 import { magicLinkEmail } from "./lib/email/templates/magic-link";
 import { cancelSubscriptionsOf, stripeClient } from "./lib/stripe";
 import { revokeAll } from "./integrations/connection";
-import { deleteUserData } from "./db/tasks";
+import {
+  claimMagicLinkSend,
+  deleteUserData,
+  dropUsedMagicLinkChallenge,
+  forgetEmail,
+  getMagicLinkChallenge,
+  releaseMagicLinkSend,
+  saveMagicLinkChallenge,
+} from "./db/user";
 
 const LINK_TTL_S = 600;
 const EMAIL_COOLDOWN_MS = 60_000;
 const VERIFY = "/magic-link/verify";
-
-/**
- * Um e-mail por endereço por minuto, contado só nos que saíram (o plugin cria o token antes de
- * chamar a gente). Reserva atômica: quem perde a corrida não manda; a resposta não muda.
- */
-async function claimSend(db: D1Database, email: string, now: number): Promise<boolean> {
-  const row = await db
-    .prepare(
-      `INSERT INTO magic_link_sent (email, sent_at) VALUES (?, ?)
-       ON CONFLICT(email) DO UPDATE SET sent_at=excluded.sent_at WHERE sent_at<=?
-       RETURNING 1 AS ok`,
-    )
-    .bind(email, now, now - EMAIL_COOLDOWN_MS)
-    .first();
-  return row !== null;
-}
 
 /** `next` do link web: só path+search, e só se o callbackURL for da própria WEB_URL. */
 function nextOf(url: string, web: string): string {
@@ -48,53 +40,24 @@ async function sendMagicLink(
   const challenge = data.metadata?.challenge;
   const email = data.email.toLowerCase();
   const sentAt = Date.now();
-  if (!(await claimSend(env.DB, email, sentAt))) return;
+  if (!(await claimMagicLinkSend(env.DB, email, sentAt, EMAIL_COOLDOWN_MS))) return;
 
   // O link nunca é o GET de verify: scanner de e-mail (Safe Links) abriria e queimaria o token.
   const web = allowedOrigins(env)[0];
   let url = `${web}/verify#token=${data.token}${nextOf(data.url, web)}`;
   if (typeof challenge === "string") {
-    await env.DB.batch([
-      env.DB.prepare(`DELETE FROM magic_link_challenge WHERE expires_at<?`).bind(sentAt),
-      env.DB.prepare(
-        `INSERT INTO magic_link_challenge (token_hash, challenge, expires_at) VALUES (?, ?, ?)`,
-      ).bind(await sha256b64url(data.token), challenge, sentAt + LINK_TTL_S * 1000),
-    ]);
+    const hash = await sha256b64url(data.token);
+    await saveMagicLinkChallenge(env.DB, hash, challenge, sentAt, sentAt + LINK_TTL_S * 1000);
     url = `${web}/auth/app?token=${data.token}`;
   }
 
-  // Envio que falhou devolve a vaga: senão a pessoa espera um minuto por um e-mail que não saiu.
   const send = sendEmail(env, { to: data.email, ...magicLinkEmail(url, LINK_TTL_S / 60) }).catch(
     async (err) => {
-      await env.DB.prepare(`DELETE FROM magic_link_sent WHERE email=? AND sent_at=?`)
-        .bind(email, sentAt)
-        .run();
+      await releaseMagicLinkSend(env.DB, email, sentAt);
       throw err;
     },
   );
   await (ctx ? ctx.context.runInBackgroundOrAwait(send) : send);
-}
-
-/**
- * Conta apagada não deixa o e-mail para trás: links pendentes (e seus challenges), a vaga do
- * limite e, de carona, os `verification` vencidos de todo mundo.
- */
-async function forgetEmail(db: D1Database, email: string): Promise<void> {
-  const mine = `identifier LIKE 'magic-link:%' AND CASE WHEN json_valid(value)
-    THEN lower(json_extract(value, '$.email')) END = ?`;
-  const lower = email.toLowerCase();
-  await db.batch([
-    db
-      .prepare(
-        `DELETE FROM magic_link_challenge WHERE token_hash IN
-         (SELECT substr(identifier, 12) FROM verification WHERE ${mine})`,
-      )
-      .bind(lower),
-    db
-      .prepare(`DELETE FROM verification WHERE ${mine} OR expiresAt<?`)
-      .bind(lower, new Date().toISOString()),
-    db.prepare(`DELETE FROM magic_link_sent WHERE email=?`).bind(lower),
-  ]);
 }
 
 const isChallenge = (v: unknown) => typeof v === "string" && /^[\w-]{43}$/.test(v);
@@ -110,28 +73,17 @@ const requireVerifier = (db: D1Database) =>
     if (ctx.path === "/sign-in/magic-link" && challenge !== undefined && !isChallenge(challenge))
       throw new APIError("BAD_REQUEST", { message: "invalid challenge" });
     if (ctx.path !== VERIFY || typeof ctx.query?.token !== "string") return;
-    const row = await db
-      .prepare(`SELECT challenge FROM magic_link_challenge WHERE token_hash=?`)
-      .bind(await sha256b64url(ctx.query.token))
-      .first<{ challenge: string }>();
-    if (!row) return;
+    const stored = await getMagicLinkChallenge(db, await sha256b64url(ctx.query.token));
+    if (!stored) return;
     const verifier = ctx.headers?.get("x-mewki-verifier");
-    if (!verifier || (await sha256b64url(verifier)) !== row.challenge)
+    if (!verifier || (await sha256b64url(verifier)) !== stored)
       throw new APIError("FORBIDDEN", { message: "invalid verifier" });
   });
 
-/** Some só depois que o token foi consumido: se o verify falhou antes, o challenge continua valendo. */
 const dropChallenge = (db: D1Database) =>
   createAuthMiddleware(async (ctx) => {
     if (ctx.path !== VERIFY || typeof ctx.query?.token !== "string") return;
-    const hash = await sha256b64url(ctx.query.token);
-    await db
-      .prepare(
-        `DELETE FROM magic_link_challenge WHERE token_hash=?
-         AND NOT EXISTS (SELECT 1 FROM verification WHERE identifier='magic-link:' || ?)`,
-      )
-      .bind(hash, hash)
-      .run();
+    await dropUsedMagicLinkChallenge(db, await sha256b64url(ctx.query.token));
   });
 
 /** Pura (sem `cloudflare:workers`): a CLI do schema e os testes montam a instância a partir dela. */

@@ -26,8 +26,8 @@ vi.mock("../src/auth", () => import("./session"));
 import { mockSession } from "./session";
 mockSession(() => ({ id: "u1" }));
 
-vi.mock("../src/lib/user", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/lib/user")>();
+vi.mock("../src/db/user", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/db/user")>();
   return { ...actual, billingProfile: profileMock };
 });
 
