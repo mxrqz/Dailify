@@ -74,6 +74,8 @@ function usePlayer(dispatch: (action: ChatAction) => void) {
  * Public preview of the Mew chat (`/preview/mew`): a fake mobile dashboard whose composer opens the
  * chat drawer. Everything is simulated and kept in localStorage; nothing reaches the server.
  */
+const PREVIEW_CREDITS = 18;
+
 export default function MewPreview() {
   const [state, dispatch] = useReducer(
     chatReducer,
@@ -85,6 +87,11 @@ export default function MewPreview() {
   const [listening, setListening] = useState(false);
   const photo = useRef<HTMLInputElement>(null);
   const [focus, setFocus] = useState<string | null>(null);
+  const [credits, setCredits] = useState(PREVIEW_CREDITS);
+  const ask = (text: string, image?: string) => {
+    setCredits((n) => Math.max(0, n - 1));
+    send(text, image, state.tasks);
+  };
 
   // Once per finished reply (and per tap after it), not per event: the thread carries photo thumbnails.
   useEffect(() => {
@@ -130,7 +137,7 @@ export default function MewPreview() {
                   busy={busy}
                   listening={listening}
                   onListening={setListening}
-                  onSend={(text, image) => send(text, image, state.tasks)}
+                  onSend={ask}
                   file={photo}
                 />
               )
@@ -152,7 +159,8 @@ export default function MewPreview() {
         state={state}
         dispatch={dispatch}
         busy={busy}
-        onSend={(text, image) => send(text, image, state.tasks)}
+        credits={credits}
+        onSend={ask}
         onPhoto={() => photo.current?.click()}
         onOpenTask={(id) => {
           setOpen(false);

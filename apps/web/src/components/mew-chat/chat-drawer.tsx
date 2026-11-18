@@ -27,6 +27,7 @@ import { CheckCircle } from "@/components/dashboard/day-task-row";
 import { Chip } from "@/components/kit/chip";
 import { MessageBox } from "@/components/landing/kit/message-box";
 import { CalendarBadge } from "@/components/logos";
+import { Mew, type MewMood } from "@/components/mew/mew";
 import { MewStatic } from "@/components/mew/mew-static";
 import { Button } from "@/components/ui/button";
 import {
@@ -77,6 +78,8 @@ type Props = {
   dispatch: (action: ChatAction) => void;
   busy: boolean;
   listening: boolean;
+  /** AI credits left this month; `null` when unlimited or not loaded. */
+  credits: number | null;
   onSend: (text: string, image?: string) => void;
   onPhoto: () => void;
   onOpenTask: (id: string) => void;
@@ -84,6 +87,23 @@ type Props = {
 };
 
 const INPUT_ID = "mew-input";
+
+/** The header Mew reacts to the latest turn: thinks, waits for a confirmation, cheers, gets lost. */
+export function moodOf(last: Message | undefined, busy: boolean, listening: boolean): MewMood {
+  if (listening) return "listening";
+  if (last?.from !== "mew") return busy ? "thinking" : "idle";
+  if (busy && (last.typing || !last.text)) return "thinking";
+  const step = last.blocks.filter((b): b is ConfirmBlock => b.kind === "confirm").at(-1)?.step;
+  if (step === "status") return "thinking";
+  if (step === "draft") return "alert";
+  if (step === "done") return "happy";
+  // ponytail: the simulated engine has no intent; the real /mew/chat should send one.
+  if (last.text === t.reply.fallback || last.text === t.reply.notFound) return "confused";
+  return "idle";
+}
+
+const creditsLabel = (n: number) =>
+  n === 0 ? t.creditsNone : n === 1 ? t.creditsOne : fill(t.creditsMany, { n });
 
 /**
  * The Mew's chat: a near-full-height bottom sheet on the `z-chat` layer, under the floating dock,
@@ -123,6 +143,7 @@ function ChatPanel({
   dispatch,
   busy,
   listening,
+  credits,
   onSend,
   onPhoto,
   onOpenTask,
@@ -160,10 +181,7 @@ function ChatPanel({
     pinned.current = true;
   }, [messages.length]);
 
-  const last = messages.at(-1);
-  const happy =
-    last?.from === "mew" && last.blocks.some((b) => b.kind === "confirm" && b.step === "done");
-  const mood = listening ? "listening" : busy ? "thinking" : "idle";
+  const mood = moodOf(messages.at(-1), busy, listening);
 
   return (
     <>
@@ -182,11 +200,16 @@ function ChatPanel({
           </DropdownMenuContent>
         </DropdownMenu>
         <div className="flex flex-col items-center">
-          <MewStatic mood={mood} happy={happy && !busy} className="w-10" />
-          <SheetTitle className="mt-1 text-body">{t.title}</SheetTitle>
-          <p aria-live="polite" className="text-footnote text-ink-secondary">
-            {listening ? t.listeningNow : busy ? t.thinking : t.online}
+          <Mew mood={mood} className="w-14" />
+          <SheetTitle className="sr-only">{t.title}</SheetTitle>
+          <p aria-live="polite" className="sr-only">
+            {listening ? t.listeningNow : busy ? t.thinking : ""}
           </p>
+          {credits !== null && (
+            <p className="mt-1 text-footnote text-ink-secondary tabular-nums">
+              {creditsLabel(credits)}
+            </p>
+          )}
         </div>
         <SheetClose asChild>
           <Button variant="ghost" size="icon" aria-label={t.close} className="justify-self-end">
