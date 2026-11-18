@@ -65,6 +65,19 @@ function priceIdOf(line: Stripe.InvoiceLineItem | undefined): string | undefined
   return typeof price === "string" ? price : price.id;
 }
 
+/**
+ * The line billing the subscription's current price. After an upgrade/downgrade Stripe puts the
+ * proration lines (priced at the OLD plan) first, so `lines[0]` is the wrong plan. `undefined` for
+ * an invoice made only of prorations.
+ */
+function planLine(lines: Stripe.InvoiceLineItem[]): Stripe.InvoiceLineItem | undefined {
+  return lines.find(
+    (l) =>
+      l.parent?.type === "subscription_item_details" &&
+      !l.parent.subscription_item_details?.proration,
+  );
+}
+
 function paymentMethodOf(
   pm: string | Stripe.PaymentMethod | null | undefined,
 ): Stripe.PaymentMethod | undefined {
@@ -96,13 +109,11 @@ function knownInvoiceStatus(status: Stripe.Invoice.Status | null): KnownInvoiceS
 export async function handleInvoicePaid(env: Env, invoice: Stripe.Invoice): Promise<void> {
   const userId = invoice.parent?.subscription_details?.metadata?.clerkUserId;
   const subId = subscriptionId(invoice.parent?.subscription_details?.subscription);
-  if (typeof userId !== "string" || !subId) return;
+  // Sem linha de plano (fatura só de proration) ou preço desconhecido: não mexe no plano.
+  const role = roleForPrice(env, priceIdOf(planLine(invoice.lines.data)) ?? "");
+  if (typeof userId !== "string" || !subId || !role) return;
 
-  await updateUserRole(env.DB, {
-    userId,
-    role: priceInfo(env, priceIdOf(invoice.lines.data[0]) ?? "")?.role ?? "free",
-    stripeCustomerId: customerId(invoice.customer),
-  });
+  await updateUserRole(env.DB, { userId, role, stripeCustomerId: customerId(invoice.customer) });
 }
 
 /**
@@ -124,9 +135,9 @@ export async function cancelSubscriptionsOf(stripe: Stripe, clerkUserId: string)
   return active.length;
 }
 
-/** Resolves the role for a `customer.subscription.updated` event's current price. */
-export function roleForPrice(env: Env, priceId: string): Role {
-  return priceInfo(env, priceId)?.role ?? "free";
+/** Resolves the role for a price; `undefined` for a price we don't sell, so callers skip the write. */
+export function roleForPrice(env: Env, priceId: string): Role | undefined {
+  return priceInfo(env, priceId)?.role;
 }
 
 export async function getPaymentDetails(
@@ -146,12 +157,12 @@ export async function getPaymentDetails(
     customer: stripeCustomerId,
     subscription: subscription.id,
   });
-  const line = preview.lines.data[0];
+  const line = planLine(preview.lines.data);
   if (!line) return null;
 
   return {
-    amount: line.amount,
-    currency: line.currency,
+    amount: preview.amount_due,
+    currency: preview.currency,
     start: line.period.start,
     recurring: priceInfo(env, priceIdOf(line) ?? "")?.recurring ?? "month",
   };
@@ -172,7 +183,8 @@ export async function listInvoices(
         : undefined;
       const paymentMethod = paymentMethodOf(subscription?.default_payment_method);
       const card = paymentMethod?.card;
-      const priceId = subscription?.items.data[0]?.price.id;
+      const priceId =
+        priceIdOf(planLine(invoice.lines.data)) ?? subscription?.items.data[0]?.price.id;
 
       return {
         recurring: (priceId && priceInfo(env, priceId)?.recurring) || "month",
