@@ -1,8 +1,11 @@
 import {
+  canUseIntegration,
   isProviderId,
+  PROVIDER_IDS,
   TASK_LIMITS,
   type IntegrationLink,
   type ProviderId,
+  type Role,
   type Task,
 } from "@dailify/shared";
 import { getTask, insertStatement, setExdatesStatement } from "./tasks";
@@ -26,6 +29,16 @@ export async function listConnections(db: D1Database, userId: string): Promise<C
     .bind(userId)
     .all<ConnectionRow>();
   return results;
+}
+
+/** Active connections the plan unlocks: the only `targets` the AI may suggest. */
+export async function aiTargets(db: D1Database, userId: string, role: Role): Promise<ProviderId[]> {
+  const connections = await listConnections(db, userId);
+  return PROVIDER_IDS.filter(
+    (id) =>
+      canUseIntegration(role, id) &&
+      connections.some((r) => r.provider === id && r.status === "active"),
+  );
 }
 
 export async function getConnection(

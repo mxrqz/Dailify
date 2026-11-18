@@ -1,4 +1,10 @@
+import { IANAZone } from "luxon";
 import { DATE_RANGE, TASK_LIMITS, normalizeRepeat, type Task } from "@dailify/shared";
+
+/** Fuso vindo do cliente: sempre presente (Intl), mas é entrada de usuário — validar antes de usar. */
+export function validZone(value: unknown): string | undefined {
+  return typeof value === "string" && IANAZone.isValidZone(value) ? value : undefined;
+}
 
 /** Campos que o cliente pode ditar. `id`, `completed` e `exdates` são do servidor, nunca do body. */
 export type TaskFields = Partial<Omit<Task, "id" | "completed" | "exdates">>;

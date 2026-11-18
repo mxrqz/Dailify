@@ -1,5 +1,11 @@
 import type { Task, Repeat } from "@dailify/shared";
-import { startOfMonthMs, endOfMonthMs, stampUpdatedAt, taskHash } from "@dailify/shared";
+import {
+  endOfMonthMs,
+  expandRecurringTask,
+  stampUpdatedAt,
+  startOfMonthMs,
+  taskHash,
+} from "@dailify/shared";
 
 /** Linha crua de `tasks`. Exportada para `db/push.ts`, que faz o próprio SELECT com um campo extra. */
 export interface Row {
@@ -148,6 +154,23 @@ export async function getRecurringTasks(db: D1Database, userId: string): Promise
   return results.map(rowToTask);
 }
 
+/** The month as the agenda shows it: dated tasks plus expanded series, deduped by `id-date`. */
+export async function readMonth(
+  db: D1Database,
+  userId: string,
+  month: Date,
+  timeZone?: string,
+): Promise<Task[]> {
+  const [inRange, recurring] = await Promise.all([
+    getMonthTasks(db, userId, month, timeZone),
+    getRecurringTasks(db, userId),
+  ]);
+  const expanded = recurring.flatMap((t) => expandRecurringTask(t, month, timeZone));
+  const byKey = new Map<string, Task>();
+  for (const t of [...inRange, ...expanded]) byKey.set(`${t.id}-${t.date}`, t);
+  return [...byKey.values()];
+}
+
 export async function getUndatedTasks(db: D1Database, userId: string): Promise<Task[]> {
   const { results } = await db
     .prepare(`SELECT * FROM tasks WHERE user_id=? AND undated=1`)
@@ -190,6 +213,7 @@ export async function deleteUserData(db: D1Database, userId: string): Promise<vo
     db.prepare(`DELETE FROM integration_connections WHERE user_id=?`).bind(userId),
     db.prepare(`DELETE FROM integration_links WHERE user_id=?`).bind(userId),
     db.prepare(`DELETE FROM oauth_states WHERE user_id=?`).bind(userId),
+    db.prepare(`DELETE FROM mew_actions WHERE user_id=?`).bind(userId),
   ]);
 }
 

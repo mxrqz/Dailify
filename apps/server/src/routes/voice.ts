@@ -1,58 +1,20 @@
-import { Hono, type Context } from "hono";
-import { nanoid } from "nanoid";
-import { IANAZone } from "luxon";
+import { Hono } from "hono";
 import { TZDate } from "@date-fns/tz";
-import {
-  PROVIDER_IDS,
-  TASK_LIMITS,
-  canUseIntegration,
-  composeTaskInput,
-  limitsFor,
-  parseTaskText,
-  type AiParse,
-  type ParsedTaskWire,
-  type Role,
-  type Task,
-} from "@dailify/shared";
+import { TASK_LIMITS, parseTaskText, type AiParse, type Role, type Task } from "@dailify/shared";
 import type { Env } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { getSettings } from "../db/settings";
-import { interpretText, transcribe } from "../lib/openai";
+import { draftToTask, interpretText, transcribe } from "../lib/openai";
 import { insertTask } from "../db/tasks";
-import { enforce, enforceCreate } from "../db/limits";
-import { bumpStoredUsage, periodFor } from "../db/usage";
-import { listConnections } from "../db/integrations";
+import { aiQuotaError, debitAi, enforceCreate } from "../db/limits";
+import { aiTargets } from "../db/integrations";
 import { fail } from "../lib/errors";
+import { validZone } from "../lib/task-input";
 
 const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
 
 const voice = new Hono<{ Bindings: Env; Variables: { userId: string; plan: Role } }>();
-
-/** Fuso vindo do cliente: sempre presente (Intl), mas é entrada de usuário — validar antes de usar. */
-function validZone(value: unknown): string | undefined {
-  return typeof value === "string" && IANAZone.isValidZone(value) ? value : undefined;
-}
-
-type Ctx = Context<{ Bindings: Env; Variables: { userId: string; plan: Role } }>;
-
-/** Barra antes de qualquer chamada à OpenAI. Bloqueado (limite 0) e esgotado: sem crédito, 403/429. */
-async function aiQuotaError(c: Ctx, role: Role): Promise<Response | null> {
-  const limits = limitsFor(role);
-  const err = await enforce(c.env.DB, c.get("userId"), limits, "ai", new Date());
-  return err ? fail(c, limits.ai === 0 ? 403 : 429, err) : null;
-}
-
-/** Crédito só depois da IA responder dentro do contrato: falha, timeout ou lixo não custam nada. */
-const debitAi = (c: Ctx) =>
-  bumpStoredUsage(c.env.DB, c.get("userId"), "ai", periodFor("ai", new Date()));
-
-/** A voz cria direto, sem confirmação: mesma regra do composer do web (`composeTaskInput`). */
-function draftToTask(d: ParsedTaskWire, timezone: string, now: number): Task {
-  const date = d.date === null ? null : new TZDate(d.date, timezone);
-  const input = composeTaskInput({ ...d, date }, new TZDate(now, timezone));
-  return { ...input, id: nanoid(6), completed: [] };
-}
 
 /** Frase clara (sem `unsure`) o parser lê sozinho; o GPT só entra na dúvida. */
 function readLocally(text: string, timezone: string): AiParse | null {
@@ -79,15 +41,9 @@ voice.post("/parse", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const timezone = validZone(isRecord(body) ? body.timezone : undefined);
   if (!timezone) return fail(c, 400, "invalid timezone");
 
-  const role = c.get("plan");
-  const connections = await listConnections(c.env.DB, c.get("userId"));
-  const quotaError = await aiQuotaError(c, role);
+  const quotaError = await aiQuotaError(c);
   if (quotaError) return quotaError;
-  const allowed = PROVIDER_IDS.filter(
-    (id) =>
-      canUseIntegration(role, id) &&
-      connections.some((r) => r.provider === id && r.status === "active"),
-  );
+  const allowed = await aiTargets(c.env.DB, c.get("userId"), c.get("plan"));
 
   let result: AiParse;
   try {
@@ -102,7 +58,7 @@ voice.post("/parse", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
 
 voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const userId = c.get("userId");
-  const quotaError = await aiQuotaError(c, c.get("plan"));
+  const quotaError = await aiQuotaError(c);
   if (quotaError) return quotaError;
 
   const body = await c.req.parseBody();

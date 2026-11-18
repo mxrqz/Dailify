@@ -5,8 +5,7 @@ import type { Env } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import {
-  getMonthTasks,
-  getRecurringTasks,
+  readMonth,
   getUndatedTasks,
   insertTask,
   updateTask,
@@ -17,7 +16,7 @@ import {
   excludeOccurrence,
 } from "../db/tasks";
 import { enforceCreate } from "../db/limits";
-import { expandRecurringTask, type Role, type Task } from "@dailify/shared";
+import type { Role, Task } from "@dailify/shared";
 import { parseClientId, parseNewTask, parseTaskFields } from "../lib/task-input";
 import { fail } from "../lib/errors";
 import { linkedTask, propagate } from "../integrations/propagate";
@@ -58,14 +57,7 @@ tasks.get("/", async (c) => {
   // A Agenda entra no fundo (throttle de 60 s): o que ela trouxer aparece na próxima leitura.
   c.executionCtx.waitUntil(syncIfDue(c.env, userId));
 
-  const [inRange, recurring] = await Promise.all([
-    getMonthTasks(c.env.DB, userId, month, timeZone),
-    getRecurringTasks(c.env.DB, userId),
-  ]);
-  const expanded = recurring.flatMap((t) => expandRecurringTask(t, month, timeZone));
-  const byKey = new Map<string, Task>();
-  for (const t of [...inRange, ...expanded]) byKey.set(`${t.id}-${t.date}`, t);
-  return c.json({ tasks: [...byKey.values()] });
+  return c.json({ tasks: await readMonth(c.env.DB, userId, month, timeZone) });
 });
 
 tasks.get("/undated", async (c) =>

@@ -111,6 +111,13 @@ through here with a Better Auth session (cookie on the web, bearer in the Tauri 
   no fuso do cliente; sem `unsure` e com título, vira o rascunho direto e o GPT nem é chamado. Senão,
   `interpretText`. Os dois caminhos passam por `draftToTask` (= `composeTaskInput` do shared, a regra do composer) e custam o mesmo 1 crédito (a transcrição
   é IA); falha na transcrição não debita.
+- **Mew chat** (`routes/mew.ts`, `lib/mew.ts`): `POST /mew/chat` = one `responses.create` with
+  the agenda (undated + open tasks from the last 14 days + next 14 days, `ref|title|…` lines) in the
+  instructions; 403 `Mew Consent Required` until `user_settings.mew_consent_at`. The model only
+  names refs; `toBlocks` builds every `Task` server-side, dropping unknown refs, series in
+  move/delete and Google-linked tasks in delete. New tasks get server ids the web POSTs back as-is.
+  Same credit rule as `/parse` (`aiQuotaError`/`debitAi` in `db/limits.ts`). Each confirm block is a
+  `mew_actions` row (task ids only); `PATCH /mew/actions/:id` sets its status, owner only.
 - **Integrações**: o `redirect_uri` é **rota do SPA** (`${appOrigin}/integrations/<p>/callback`),
   não do worker — o SPA posta `{ code, state }` com o bearer, e o callback exige
   `state.user_id === userId` (o state é de uso único, `DELETE … RETURNING`, 10 min). Sem isso dá pra

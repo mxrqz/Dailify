@@ -133,6 +133,12 @@ describe("auth.api.deleteUser", () => {
       now,
     );
     await bumpStoredUsage(env.DB, id, "ai", "2026-11");
+    await env.DB.prepare(
+      `INSERT INTO mew_actions (id, user_id, action, task_ids, created_at)
+       VALUES ('mw-wiped', ?, 'create', '[]', 0)`,
+    )
+      .bind(id)
+      .run();
 
     const revoked: string[] = [];
     vi.spyOn(globalThis, "fetch").mockImplementation(async (_input, init) => {
@@ -144,7 +150,12 @@ describe("auth.api.deleteUser", () => {
 
     expect(revoked).toEqual(["r"]);
     expect(await readStoredUsage(env.DB, id, "ai", "2026-11")).toBe(0);
-    for (const table of ["integration_connections", "integration_links", "oauth_states"]) {
+    for (const table of [
+      "integration_connections",
+      "integration_links",
+      "oauth_states",
+      "mew_actions",
+    ]) {
       const { results } = await env.DB.prepare(`SELECT 1 FROM ${table} WHERE user_id=?`)
         .bind(id)
         .all();

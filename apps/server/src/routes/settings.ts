@@ -32,6 +32,11 @@ function parsePatch(body: unknown): Partial<UserSettings> | null {
     if (typeof hour12 !== "boolean") return null;
     patch.hour12 = hour12;
   }
+  if ("mewConsent" in body) {
+    const mewConsent = Reflect.get(body, "mewConsent");
+    if (typeof mewConsent !== "boolean") return null;
+    patch.mewConsent = mewConsent;
+  }
   return Object.keys(patch).length ? patch : null;
 }
 

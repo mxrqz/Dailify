@@ -48,19 +48,50 @@ describe("GET/PUT /settings", () => {
         weekStart: number;
         timeZone: string | null;
         hour12: boolean;
+        mewConsent: boolean;
       }>();
-    expect(await all()).toEqual({ weekStart: 1, timeZone: null, hour12: false });
+    expect(await all()).toEqual({
+      weekStart: 1,
+      timeZone: null,
+      hour12: false,
+      mewConsent: false,
+    });
 
     await put(JSON.stringify({ timeZone: "Europe/Lisbon" }));
     await put(JSON.stringify({ hour12: true }));
-    expect(await all()).toEqual({ weekStart: 1, timeZone: "Europe/Lisbon", hour12: true });
+    expect(await all()).toEqual({
+      weekStart: 1,
+      timeZone: "Europe/Lisbon",
+      hour12: true,
+      mewConsent: false,
+    });
 
     // null volta pro automático.
     await put(JSON.stringify({ timeZone: null }));
     expect((await all()).timeZone).toBeNull();
   });
 
-  it.each([{ timeZone: "Marte/Olimpo" }, { timeZone: 3 }, { hour12: "sim" }])(
+  it("mewConsent grava a hora do primeiro aceite e false apaga", async () => {
+    await deleteUserData(env.DB, "u1");
+    const consentAt = async () =>
+      (
+        await env.DB.prepare("SELECT mew_consent_at FROM user_settings WHERE user_id='u1'").first<{
+          mew_consent_at: number | null;
+        }>()
+      )?.mew_consent_at;
+    expect(await (await put(JSON.stringify({ mewConsent: true }))).json()).toMatchObject({
+      mewConsent: true,
+    });
+    const first = await consentAt();
+    expect(first).toBeTypeOf("number");
+    await env.DB.prepare("UPDATE user_settings SET mew_consent_at=1 WHERE user_id='u1'").run();
+    await put(JSON.stringify({ weekStart: 0 }));
+    expect(await consentAt()).toBe(1);
+    await put(JSON.stringify({ mewConsent: false }));
+    expect(await consentAt()).toBeNull();
+  });
+
+  it.each([{ timeZone: "Marte/Olimpo" }, { timeZone: 3 }, { hour12: "sim" }, { mewConsent: 1 }])(
     "PUT %j -> 400",
     async (body) => {
       expect((await put(JSON.stringify(body))).status).toBe(400);

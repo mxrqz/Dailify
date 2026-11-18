@@ -9,6 +9,7 @@ import voice from "./routes/voice";
 import settings from "./routes/settings";
 import push from "./routes/push";
 import integrations from "./routes/integrations";
+import mew from "./routes/mew";
 import { dispatchAlerts } from "./alerts";
 import { syncOldest } from "./integrations/google-calendar/sync";
 import { fail } from "./lib/errors";
@@ -68,6 +69,7 @@ app.route("/", billing);
 app.route("/", push);
 app.route("/", settings);
 app.route("/", integrations);
+app.route("/mew", mew);
 
 app.onError((err, c) => {
   console.error(err);
