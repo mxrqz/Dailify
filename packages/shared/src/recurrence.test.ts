@@ -1,5 +1,12 @@
 import { describe, it, test, expect } from "vitest";
-import { expandRecurringTask, normalizeRepeat, seriesOf } from "./recurrence";
+import {
+  expandRecurringTask,
+  isRepeatEvery,
+  normalizeRepeat,
+  seriesEvery,
+  seriesOf,
+} from "./recurrence";
+import { makeTask as sharedTask } from "./testing";
 import { zonedParts } from "./timezone";
 import type { Task } from "./types";
 
@@ -281,5 +288,18 @@ describe("seriesOf", () => {
     };
     expect(seriesOf({ ...anchor, date: 5_000, seriesStart: 1_000 })).toEqual(anchor);
     expect(seriesOf(anchor)).toBe(anchor);
+  });
+});
+
+describe("isRepeatEvery / seriesEvery", () => {
+  it("accepts only stored intervals, 2..repeatEveryMax", () => {
+    for (const n of [2, 365]) expect(isRepeatEvery(n)).toBe(true);
+    for (const n of [1, 0, 366, 2.5, "2", undefined]) expect(isRepeatEvery(n)).toBe(false);
+  });
+
+  it("reads an absent or 1 interval as every period", () => {
+    expect(seriesEvery(sharedTask())).toBe(1);
+    expect(seriesEvery(sharedTask({ repeatEvery: 1 }))).toBe(1);
+    expect(seriesEvery(sharedTask({ repeatEvery: 3 }))).toBe(3);
   });
 });

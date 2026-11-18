@@ -1,5 +1,13 @@
 import type { Task, Repeat } from "./types";
-import { daysInMonth, zonedEpoch, zonedParts, type ZonedParts } from "./timezone";
+import { TASK_LIMITS } from "./limits";
+import {
+  civilDay,
+  daysInMonth,
+  weekdayOf,
+  zonedEpoch,
+  zonedParts,
+  type ZonedParts,
+} from "./timezone";
 
 /** Sem fuso explícito vale o do runtime — que no browser é exatamente o do usuário. */
 function localParts(epochMs: number, timeZone?: string): ZonedParts {
@@ -32,9 +40,19 @@ function localEpoch(parts: ZonedParts, timeZone?: string): number {
 function weekdayIndex(epochMs: number, timeZone?: string): number {
   if (!timeZone) return new Date(epochMs).getDay();
   // O dia da semana tem que ser o do fuso do usuário: 22:00 de domingo em São Paulo já é segunda em UTC.
-  const p = zonedParts(epochMs, timeZone);
-  return new Date(Date.UTC(p.year, p.month, p.day)).getUTCDay();
+  return weekdayOf(zonedParts(epochMs, timeZone));
 }
+
+/** `Task.repeatEvery`: an integer 2..`repeatEveryMax`. 1 is never stored, it is the absence. */
+export const isRepeatEvery = (value: unknown): value is number =>
+  typeof value === "number" &&
+  Number.isInteger(value) &&
+  value >= 2 &&
+  value <= TASK_LIMITS.repeatEveryMax;
+
+/** The effective interval of a series: absent (or anything below 2) is every period. */
+export const seriesEvery = (task: Pick<Task, "repeatEvery">): number =>
+  task.repeatEvery && task.repeatEvery > 1 ? task.repeatEvery : 1;
 
 export const weekDays = [
   "Sunday",
@@ -123,10 +141,9 @@ function expandAll(task: Task, month: Date, timeZone?: string): Task[] {
       timeZone,
     );
   const instance = (date: number): Task => ({ ...task, date, seriesStart: task.date });
-  const every = task.repeatEvery && task.repeatEvery > 1 ? task.repeatEvery : 1;
+  const every = seriesEvery(task);
   const onPhase = (units: number) => units >= 0 && units % every === 0;
-  const daysFromStart = (day: number) =>
-    (Date.UTC(year, mon, day) - Date.UTC(original.year, original.month, original.day)) / 86_400_000;
+  const daysFromStart = (day: number) => civilDay({ year, month: mon, day }) - civilDay(original);
 
   const repeat = task.repeat;
 

@@ -49,6 +49,13 @@ export default defineConfig({
   // published .js.map files reference original .ts sources it doesn't ship. Cosmetic only — our own
   // sourcemaps are unaffected.
   logLevel: "error",
+  test: {
+    setupFiles: ["./test/apply-migrations.ts"],
+    // Calls cleared and spies/globals restored per test, so no hand-written vi.clearAllMocks().
+    clearMocks: true,
+    restoreMocks: true,
+    unstubGlobals: true,
+  },
   plugins: [
     cloudflareTest(async () => {
       const migrations = await readD1Migrations(path.join(__dirname, "migrations"));
@@ -56,7 +63,7 @@ export default defineConfig({
         wrangler: { configPath: "./wrangler.toml" },
         miniflare: {
           bindings: {
-            // Test-only binding so tests can apply migrations themselves (see beforeAll in tests).
+            // Test-only binding so tests can apply migrations themselves (test/apply-migrations.ts, the setupFiles entry).
             TEST_MIGRATIONS: migrations,
             // Fixo: senão o .env local (localhost) vaza pros testes de CORS/redirect do Stripe.
             ALLOWED_ORIGIN: "https://dailify.mxrqz.com,https://mewki.mxrqz.com",
@@ -74,6 +81,8 @@ export default defineConfig({
             // Stripe is mocked in billing tests (vi.mock("stripe")) — these are just deterministic
             // price-id fixtures, no real Stripe network call happens.
             STRIPE_SECRET_KEY: "sk_test_stripe",
+            // The local .env holds a real key: without this fake an unmocked path bills OpenAI.
+            OPENAI_API_KEY: "sk-test-openai",
             STRIPE_WEBHOOK_SECRET: "whsec_test",
             STRIPE_PRICE_PRO: "price_pro_month",
             STRIPE_PRICE_PRO_YEAR: "price_pro_year",

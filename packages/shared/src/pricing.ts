@@ -1,5 +1,8 @@
+import { sharedCopy } from "./copy";
+import type { Role } from "./types";
+
 /** Os planos que aparecem numa tabela de preço. `admin` é papel interno, não é vendido. */
-export type PlanRole = "free" | "pro" | "max";
+export type PlanRole = Exclude<Role, "admin">;
 
 /**
  * Preço dos planos pagos, em CENTAVOS — a mesma unidade do Stripe, que é quem cobra de verdade.
@@ -14,13 +17,16 @@ export type PlanRole = "free" | "pro" | "max";
 export const PLAN_PRICING = {
   pro: { monthly: 990, yearly: 9900 },
   max: { monthly: 1990, yearly: 19900 },
-} as const satisfies Record<"pro" | "max", { monthly: number; yearly: number }>;
+} as const satisfies Record<Exclude<PlanRole, "free">, { monthly: number; yearly: number }>;
 
 export const PRICING_CURRENCY = "brl";
 
 /** Centavos → "R$ 9,90". Um lugar só formata, então a vitrine inteira fala a mesma língua. */
 export function formatPrice(cents: number): string {
-  return (cents / 100).toLocaleString("pt-BR", { style: "currency", currency: "BRL" });
+  return (cents / 100).toLocaleString(sharedCopy.locale, {
+    style: "currency",
+    currency: PRICING_CURRENCY.toUpperCase(),
+  });
 }
 
 /** Quanto o anual economiza contra 12× o mensal, em centavos. Calculado, nunca digitado. */

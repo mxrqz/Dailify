@@ -23,7 +23,7 @@ import { parseWhen } from "./when";
  * independentemente dos outros, então pt-BR e inglês podem vir misturados na mesma frase, e o que
  * cada um consumiu é recortado do título pelos spans que devolve.
  *
- * `parseWhen`/`parseDuration` são os detectores por baixo, exportados pro teste. `parseWhen`
+ * `parseWhen`/`parseDuration` são os detectores por baixo (o teste importa do módulo). `parseWhen`
  * devolve `null` quando não reconhece nada e `hasTime: false` quando só achou o dia, pra quem
  * chama decidir o horário padrão.
  *
@@ -32,13 +32,8 @@ import { parseWhen } from "./when";
  * leitura pode estar errada); `vocab` e `spans` são as tabelas e o encanamento que todos dividem.
  */
 
-export { type ParsedDuration, parseDuration } from "./durations";
-export { parseInterval, parseRepeat } from "./repeat";
 export { type Span, remapSpans } from "./spans";
-export { cut } from "./title";
 export { type Unsure, type UnsureCode } from "./unsure";
-export { normalize } from "./vocab";
-export { type ParsedWhen, parseWhen } from "./when";
 
 export type Field = "day" | "time" | "duration" | "repeat" | "links";
 

@@ -39,6 +39,17 @@ function formatter(timeZone: string): Intl.DateTimeFormat {
   return dtf;
 }
 
+/** An IANA zone `Intl` knows; the cache only ever holds zones that constructed. */
+export function isTimeZone(value: unknown): value is string {
+  if (typeof value !== "string" || value === "") return false;
+  try {
+    formatter(value);
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export function zonedParts(epochMs: number, timeZone: string): ZonedParts {
   const values: Record<string, string> = {};
   for (const { type, value } of formatter(timeZone).formatToParts(new Date(epochMs))) {
@@ -79,6 +90,23 @@ export function zonedEpoch(parts: ZonedParts, timeZone: string): number {
   const guess = naive - offsetAt(naive, timeZone);
   return naive - offsetAt(guess, timeZone);
 }
+
+const pad = (n: number) => String(n).padStart(2, "0");
+
+/** "2026-12-31". */
+export const isoDate = (p: ZonedParts): string => `${p.year}-${pad(p.month + 1)}-${pad(p.day)}`;
+
+/** "2026-12-31T09:05:00", wall time with no offset. */
+export const isoWallTime = (p: ZonedParts): string =>
+  `${isoDate(p)}T${pad(p.hour)}:${pad(p.minute)}:${pad(p.second)}`;
+
+/** Day index of a civil date, so differences count calendar days whatever the DST. */
+export const civilDay = (p: Pick<ZonedParts, "year" | "month" | "day">): number =>
+  Date.UTC(p.year, p.month, p.day) / 86_400_000;
+
+/** 0 = Sunday … 6 = Saturday, of the civil date (not of an instant in the runtime zone). */
+export const weekdayOf = (p: Pick<ZonedParts, "year" | "month" | "day">): number =>
+  new Date(Date.UTC(p.year, p.month, p.day)).getUTCDay();
 
 /** Dias do mês — calendário gregoriano, não depende de fuso. */
 export const daysInMonth = (year: number, month: number): number =>

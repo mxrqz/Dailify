@@ -1,5 +1,5 @@
 import type { TZDate } from "@date-fns/tz";
-import { weekDays } from "../recurrence";
+import { isRepeatEvery, weekDays } from "../recurrence";
 import type { Repeat } from "../types";
 import { MONTH_FIRST_RE } from "./dates";
 import { type Span, hit, spanOf } from "./spans";
@@ -274,7 +274,7 @@ export function parseInterval(text: string, now: Date): RepeatHit | null {
     if (ORDINAL_OF_EVERY_RE.test(text)) return null;
     const [parsed, every] = read(match, now);
     let value = parsed;
-    if (!Number.isInteger(every) || every < 1 || every > 365) return null;
+    if (every !== 1 && !isRepeatEvery(every)) return null;
     const extra: Span[] = [];
     // "a cada 2 semanas na segunda e quarta": os dias colados são os da série.
     const end = spanOf(match)[1];

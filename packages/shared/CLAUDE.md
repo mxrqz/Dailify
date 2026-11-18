@@ -22,25 +22,32 @@ are in [Shared model](../../RULES.md#shared-model); required zones are in
   `ParsedTaskWire`, `AiIntent`/`AiParse`, Stripe `Invoice`/`PaymentDetails` (Unix seconds).
 - `mew.ts`: the Mew chat wire (`MewRequest`/`MewReply`/`MewBlock`) and the `MEW_*` caps, plus the
   `MEW_CONSENT_REQUIRED` error text the web compares.
-- `integrations.ts`: `ProviderId`/`INTEGRATIONS`/`PROVIDER_IDS`, `IntegrationStatus`,
-  `IntegrationLink`, `INTEGRATION_ERROR`, duration helpers, `calendarSlot`, Meet/Zoom link helpers,
-  `matchDuplicate`, and `calendarEventPreview`, whose pt-BR text is the web card and the server
-  action preview alike. `MISSING_SCOPE_ERROR` is a message the web compares: legacy, new errors get
-  a code.
-- `limits.ts`: `TASK_LIMITS`, `DATE_RANGE`. `pricing.ts`: `PLAN_PRICING` in cents, `formatPrice`.
+- `integrations.ts`: `ProviderId`/`INTEGRATIONS`/`PROVIDER_IDS`, `CalendarTarget`,
+  `IntegrationStatus`, `IntegrationLink`, `INTEGRATION_ERROR`, `calendarSlot`, `matchDuplicate`,
+  and `calendarEventPreview`, the web card and the server action preview alike.
+  `MISSING_SCOPE_ERROR` is a message the web compares: legacy, new errors get a code.
+- `copy.ts`: the pt-BR text shared code renders (`sharedCopy`, `{placeholder}` + `fillShared`),
+  not exported from the barrel. It is the file that gets an English pair (bd `Dailify-1xy`).
+- `duration.ts`: the `Task.duration` format (`DEFAULT_DURATION`, `DURATION_RE`/`isDuration`,
+  `durationMinutes`, `minutesToDuration`).
+- `testing.ts` (`@dailify/shared/testing`): `makeTask(over)` for tests; pure, no vitest import.
+- `limits.ts`: `TASK_LIMITS` (content caps, `repeatEveryMax`, `priorityMax`), `DATE_RANGE`.
+  `pricing.ts`: `PLAN_PRICING` in cents, `formatPrice`.
 - `quotas.ts`: `QUOTAS` per `Role`. Only `ai` has a limit (`tasks` is `-1` for every plan).
   `QuotaSnapshot` (`GET /permissions`) and `QUOTA_ERRORS`, the exhausted-quota error texts.
-- `timezone.ts`: `zonedParts`/`zonedEpoch` (two-pass DST fix, one cached formatter per zone).
-- `dates.ts`: `startOfMonthMs`/`endOfMonthMs`, legacy optional zone, no test.
+- `timezone.ts`: `zonedParts`/`zonedEpoch` (two-pass DST fix, one cached formatter per zone),
+  `isTimeZone`, and civil-date helpers `isoDate`, `isoWallTime`, `civilDay`, `weekdayOf`.
+- `dates.ts`: `startOfMonthMs`/`endOfMonthMs`, legacy optional zone (tested in `timezone.test.ts`).
 - `period.ts`: `WeekStart`, `UserSettings` (`/settings`), the 06:00 rollover, `periodStart`,
   `doneThisPeriod`.
 - `recurrence.ts`: `expandRecurringTask`, `seriesOf` (instance back to its stored series),
-  `normalizeRepeat`, `weekDays`/`dayMap`. `rrule.ts`:
+  `seriesEvery`, `isRepeatEvery`, `normalizeRepeat`, `weekDays`/`dayMap`. `rrule.ts`:
   `toRrule`/`fromRrule` for Google Calendar.
 - `hash.ts`: `taskHash`, `stampUpdatedAt` (LWW clock-skew clamp). Server-only today.
-- `compose-input.ts`: `composeTaskInput`, `undatedReminder`, `DEFAULT_HOUR`/`DEFAULT_DURATION`. The
-  web composer and the server voice/AI path (`draftToTask`) both turn a parse into a Task here.
-- `parse-links.ts`, `parse-task/`: the rule-based pt/en parser, see
+- `compose-input.ts`: `composeTaskInput`, `undatedReminder`, `fromWire` (AI draft to a parse),
+  `DEFAULT_HOUR`. The web composer and the server voice/AI path (`draftToTask`) both turn a parse
+  into a Task here.
+- `parse-links.ts` (also `videoLink`/`meetLink`/`isCalendarEventLink`), `parse-task/`: the rule-based pt/en parser, see
   [`src/parse-task/CLAUDE.md`](src/parse-task/CLAUDE.md). Its golden corpus sits at the `src/`
   root: `parse-task.corpus.ts`, `parse-task.corpus/`, `parse-task.known-failures{,.gen}.ts`.
 - `app-url.ts`: `APP_HOST`/`APP_URL`. Domain change steps are in the root `CLAUDE.md`.

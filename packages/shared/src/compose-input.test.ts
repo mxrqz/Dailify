@@ -1,7 +1,7 @@
 import { TZDate } from "@date-fns/tz";
 import { describe, expect, it } from "vitest";
 
-import { composeTaskInput } from "./compose-input";
+import { composeTaskInput, fromWire } from "./compose-input";
 import { parseTaskText } from "./parse-task";
 
 // Fuso explícito: o resultado não depende do fuso da máquina.
@@ -90,5 +90,25 @@ describe("composeTaskInput", () => {
       date: at(22, 9),
       alert: at(22, 9),
     });
+  });
+});
+
+describe("fromWire", () => {
+  it("dates the AI draft in the given zone, with no unsure reasons or fields", () => {
+    const wire = {
+      text: "dentista",
+      date: at(22, 16),
+      hasTime: true,
+      hasDay: true,
+      duration: null,
+      links: [],
+      repeat: "Off" as const,
+    };
+    const parsed = fromWire(wire, "America/Sao_Paulo");
+    expect(parsed.date?.getTime()).toBe(at(22, 16));
+    expect(parsed.date?.getHours()).toBe(16);
+    expect(parsed.unsure).toEqual([]);
+    expect(composeTaskInput(parsed, NOW).date).toBe(at(22, 16));
+    expect(fromWire({ ...wire, date: null }, "UTC").date).toBeNull();
   });
 });

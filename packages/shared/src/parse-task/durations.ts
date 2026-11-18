@@ -1,4 +1,5 @@
 import { TZDate } from "@date-fns/tz";
+import { minutesToDuration } from "../duration";
 import { type Span, mask, spanOf } from "./spans";
 import { parseTime } from "./times";
 import {
@@ -20,13 +21,6 @@ const ANY_NOW = new TZDate(0, "UTC");
 export interface ParsedDuration {
   duration: string;
   start: { hour: number; minute: number } | null;
-}
-
-/** minutos → "1h30m" / "45m" / "2h", o formato que `Task.duration` já usa. */
-function formatDuration(totalMinutes: number): string {
-  const hours = Math.floor(totalMinutes / 60);
-  const minutes = totalMinutes % 60;
-  return `${hours ? `${hours}h` : ""}${minutes ? `${minutes}m` : ""}` || "0m";
 }
 
 // Um lado do intervalo: "14h", "14:30", "3pm", "2 da tarde", "meio-dia". Sem grupo de captura de
@@ -142,7 +136,7 @@ function parseRange(text: string, original: string): (ParsedDuration & { spans: 
 
     return {
       spans: [[index, index + whole.length]],
-      duration: formatDuration(minutes),
+      duration: minutesToDuration(minutes),
       start: { hour: start % 24, minute: a.minute },
     };
   }
@@ -168,7 +162,9 @@ export function parseDuration(
   if (range) return range;
 
   const found = (match: RegExpMatchArray, minutes: number) =>
-    minutes > 0 ? { spans: [spanOf(match)], duration: formatDuration(minutes), start: null } : null;
+    minutes > 0
+      ? { spans: [spanOf(match)], duration: minutesToDuration(minutes), start: null }
+      : null;
 
   const half = text.match(
     new RegExp(`${NOT_DURATION}\\b${LASTS}(?:meia\\s+hora|half\\s+an?\\s+hour)\\b${NOT_FROM_NOW}`),
