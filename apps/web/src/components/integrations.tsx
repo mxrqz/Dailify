@@ -207,7 +207,6 @@ export function Integrations(): JSX.Element {
   const status = statuses?.find((s) => s.provider === GCAL);
   const connected = active(status);
   const disabled = !online || !status || busy;
-  const spinner = busy && <Loader2Icon className="size-4 animate-spin" />;
 
   const skipped = status?.skipped ?? 0;
   let account: ReactNode = status?.account;
@@ -224,8 +223,8 @@ export function Integrations(): JSX.Element {
     action = (
       <Dialog>
         <DialogTrigger asChild>
-          <Button variant="secondary" disabled={disabled}>
-            {spinner || t.disconnect}
+          <Button variant="secondary" disabled={disabled} loading={busy}>
+            {t.disconnect}
           </Button>
         </DialogTrigger>
         <DialogContent>
@@ -264,9 +263,10 @@ export function Integrations(): JSX.Element {
       <Button
         variant={revoked ? "soft-danger" : "default"}
         disabled={disabled}
+        loading={busy}
         onClick={() => void connect()}
       >
-        {spinner || (revoked ? t.reconnect : t.connect)}
+        {revoked ? t.reconnect : t.connect}
       </Button>
     );
   }

@@ -1,6 +1,5 @@
-import { Loader2Icon } from "lucide-react";
-
 import { copy } from "@/components/dashboard/copy";
+import { Switch } from "@/components/kit/switch";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -43,37 +42,26 @@ export function ConfirmAction({
           <MewStatic className="w-8 flex-none" />
           <div className="flex flex-col gap-1.5">
             <DialogTitle className="text-base">{t.title}</DialogTitle>
-            <DialogDescription className="text-content-secondary">{preview}</DialogDescription>
+            <DialogDescription className="text-ink-secondary">{preview}</DialogDescription>
           </div>
         </DialogHeader>
         {option && (
-          <label className="flex items-center justify-between gap-3 rounded-field bg-surface-panel px-3 py-2.5 text-sm">
-            {option.label}
-            <input
-              type="checkbox"
-              role="switch"
+          <div className="flex items-center justify-between gap-3 rounded-field bg-fill px-3 py-2.5 text-sm">
+            <span aria-hidden="true">{option.label}</span>
+            <Switch
+              aria-label={option.label}
               checked={option.checked}
               disabled={pending}
-              onChange={(e) => option.onChange(e.target.checked)}
-              className="size-4 accent-accent-primary"
+              onCheckedChange={option.onChange}
             />
-          </label>
+          </div>
         )}
         <DialogFooter className="gap-2">
-          <Button
-            variant="outline"
-            className="rounded-sm"
-            disabled={pending}
-            onClick={() => onOpenChange(false)}
-          >
+          <Button variant="secondary" disabled={pending} onClick={() => onOpenChange(false)}>
             {t.cancel}
           </Button>
-          <Button
-            className="rounded-sm bg-accent-primary text-primary-foreground hover:bg-accent-hover"
-            disabled={pending}
-            onClick={onConfirm}
-          >
-            {pending ? <Loader2Icon className="animate-spin" aria-label={t.confirm} /> : t.confirm}
+          <Button loading={pending} onClick={onConfirm}>
+            {t.confirm}
           </Button>
         </DialogFooter>
       </DialogContent>

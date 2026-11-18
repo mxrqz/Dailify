@@ -1,5 +1,6 @@
 import * as React from "react";
 import { Slot } from "@radix-ui/react-slot";
+import { Loader2Icon } from "lucide-react";
 import { cva, type VariantProps } from "class-variance-authority";
 
 import { cn } from "@/lib/utils";
@@ -8,6 +9,7 @@ import { cn } from "@/lib/utils";
  * Botões do DS: primário em `brand`, secundário em `fill`, ghost e o vermelho suave
  * (`soft-danger`, o "Encerrar"). O raio cresce com a altura: 32–44px → radius-sm, 52px → radius-md.
  * `outline` é legado (só tokens); em tela nova prefira `secondary`.
+ * `loading` (not with `asChild`) swaps the label for a spinner but keeps it as the accessible name.
  */
 const buttonVariants = cva(
   "inline-flex items-center cursor-pointer justify-center gap-2 whitespace-nowrap font-semibold transition-[color,background-color,border-color,box-shadow,scale] duration-fast active:scale-97 disabled:pointer-events-none disabled:opacity-50 [&_svg]:pointer-events-none shrink-0 [&_svg]:shrink-0 outline-none focus-visible:border-ring focus-visible:ring-ring/50 focus-visible:ring-3 aria-invalid:ring-destructive/20 dark:aria-invalid:ring-destructive/40 aria-invalid:border-destructive",
@@ -38,8 +40,25 @@ const buttonVariants = cva(
 
 const Button = React.forwardRef<
   HTMLButtonElement,
-  React.ComponentProps<"button"> & VariantProps<typeof buttonVariants> & { asChild?: boolean }
->(({ className, variant, size, asChild = false, ...props }, ref) => {
+  React.ComponentProps<"button"> &
+    VariantProps<typeof buttonVariants> & { asChild?: boolean; loading?: boolean }
+>(({ className, variant, size, asChild = false, loading = false, ...props }, ref) => {
+  if (loading && !asChild) {
+    const { children, disabled, ...rest } = props;
+    return (
+      <button
+        ref={ref}
+        data-slot="button"
+        className={cn(buttonVariants({ variant, size, className }))}
+        disabled={disabled || loading}
+        aria-busy="true"
+        {...rest}
+      >
+        <Loader2Icon className="animate-spin" aria-hidden="true" />
+        <span className="sr-only">{children}</span>
+      </button>
+    );
+  }
   const Comp = asChild ? Slot : "button";
 
   return (

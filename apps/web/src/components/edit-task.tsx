@@ -16,7 +16,7 @@ import { Button } from "./ui/button";
 import { replaceCalendarMeet, updateTask } from "@/functions/api";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import { ChevronLeftIcon, CheckIcon, Loader2, RotateCcwIcon } from "lucide-react";
+import { ChevronLeftIcon, CheckIcon, RotateCcwIcon } from "lucide-react";
 import { getCompletionDate, isTaskModified, upsertTaskWithRecurrence } from "@/functions/functions";
 import {
   FORM_VIEWS,
@@ -308,8 +308,8 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
       {view === "root" && (
         <SheetFooter className="gap-1 pb-4">
           {dirty && (
-            <Button type="submit" form={formId} size="lg" disabled={loading}>
-              {loading ? <Loader2 className="animate-spin" /> : copy.form.save}
+            <Button type="submit" form={formId} size="lg" loading={loading}>
+              {copy.form.save}
             </Button>
           )}
           {/* Concluída não desabilita o botão: ele vira o reabrir. */}

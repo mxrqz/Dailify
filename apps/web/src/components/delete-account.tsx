@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Loader2Icon } from "lucide-react";
 import { toast } from "sonner";
 
 import { copy } from "@/components/dashboard/copy";
@@ -98,14 +97,11 @@ export function DeleteAccount(): JSX.Element | null {
 
           <Button
             variant="soft-danger"
-            disabled={!confirmed || deleting}
+            disabled={!confirmed}
+            loading={deleting}
             onClick={() => void handleDelete()}
           >
-            {deleting ? (
-              <Loader2Icon className="size-4 animate-spin" />
-            ) : (
-              copy.profile.deleteConfirmCta
-            )}
+            {copy.profile.deleteConfirmCta}
           </Button>
         </DialogFooter>
       </DialogContent>
