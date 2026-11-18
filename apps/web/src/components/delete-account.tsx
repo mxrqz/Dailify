@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { fill } from "@/functions/functions";
 import { clearLocal } from "@/functions/offline";
 import { authClient, useSession } from "@/lib/auth";
 import { signOutAndReload } from "@/lib/native-auth";
@@ -78,9 +79,7 @@ export function DeleteAccount(): JSX.Element | null {
         </DialogHeader>
 
         <div className="flex flex-col gap-2">
-          <Label htmlFor="confirm-email">
-            {copy.profile.deleteConfirmPrompt.replace("{email}", email)}
-          </Label>
+          <Label htmlFor="confirm-email">{fill(copy.profile.deleteConfirmPrompt, { email })}</Label>
           <Input
             id="confirm-email"
             value={typed}
