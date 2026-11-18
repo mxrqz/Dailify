@@ -53,7 +53,8 @@ local here.
 
 - A demo of a real app surface (`ok-art` = the chat confirm box, `talk-art` = the chat thread)
   should render the chat's presentational parts with fake data. `mew-chat/bubbles.tsx` and
-  `confirm-box.tsx` export the parts (`Reply`, `ConfirmBody`); reuse them rather than redraw. When a demo must
+  `confirm-box.tsx` export the parts (`Reply`, `ConfirmBody`); they read `useDailify`, so make them
+  props-only before a demo renders them, rather than redraw them. When a demo must
   differ, say why in a comment.
 - Pricing numbers come only from `@dailify/shared` (`PLAN_PRICING`, `formatPrice`, `yearlySavings`,
   `QUOTAS`/`limitsFor`), reaching the copy through `{n}`/`{price}` placeholders. `sections/pricing`
