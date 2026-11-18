@@ -2,21 +2,21 @@ import { CheckIcon } from "lucide-react";
 import { motion, useInView, useReducedMotion } from "motion/react";
 import { type ComponentType, type SVGProps, useEffect, useRef, useState } from "react";
 
-import { GoogleCalendarLogo } from "@/components/logos";
-import { Mew } from "@/components/mew/mew";
-import { ease } from "@/consts/motion";
-import { cn } from "@/lib/utils";
-
-import { copy } from "./copy";
 import {
   GitHubLogo,
   GmailLogo,
+  GoogleCalendarLogo,
   GoogleDriveLogo,
   MicrosoftTeamsLogo,
   NotionLogo,
   SlackLogo,
   ZoomLogo,
-} from "./logos";
+} from "@/components/logos";
+import { Mew } from "@/components/mew/mew";
+import { ease } from "@/consts/motion";
+import { cn } from "@/lib/utils";
+
+import { copy } from "./copy";
 
 type App = {
   name: string;

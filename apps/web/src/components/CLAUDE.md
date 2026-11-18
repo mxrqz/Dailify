@@ -20,6 +20,8 @@ motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hoo
   `theme-select`, `push-toggle`, `delete-account`, `integrations`,
   `settings-list.tsx:accountPage/accountGroups`.
 - `dashboard/copy.ts` is the dictionary of the root components, `functions/` and `hooks/` too.
+- `logos/`: vendor brand SVGs (Google, Calendar, the landing's apps, the wallets), one file per
+  family, all re-exported by `logos/index.ts`. A new logo goes there.
 
 ## DailifyContext (`dailifyContext.tsx:DailifyContextType`)
 
@@ -96,4 +98,3 @@ It owns the task boot. Other code only re-triggers loads (`pages/integration-cal
 ## Legacy: don't copy or import
 
 - Settings rows are kit `ListGroup`/`ListRow`; `settings-list.tsx` keeps only the page widths.
-- `ui/applePayLogo.tsx`, `ui/googlePayLogo.tsx` are brand art in `ui/`; new logos go in `logos.tsx`.

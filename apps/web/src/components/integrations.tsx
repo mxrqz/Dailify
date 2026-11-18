@@ -18,10 +18,10 @@ import { SegmentedControl } from "@/components/kit/segmented-control";
 import {
   GitHubLogo,
   GmailLogo,
+  GoogleCalendarLogo,
   NotionLogo,
   SlackLogo,
-} from "@/components/landing/sections/world/logos";
-import { GoogleCalendarLogo } from "@/components/logos";
+} from "@/components/logos";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,

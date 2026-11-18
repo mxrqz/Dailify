@@ -53,7 +53,7 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
   subtree uses it today. Radix portals mount in `body` and take the `<html>` theme.
 - Hex that changes with `--canvas`/`--brand`/`--ink`: PWA manifest (`vite.config.ts`), Android
   `res/values{,-night}/themes.xml` (`src-tauri/gen/android`), `tauri.conf.json` `backgroundColor`,
-  `scripts/icons.ts`. Vendor hex: `components/logos.tsx`, `landing/sections/world/logos.tsx`.
+  `scripts/icons.ts`. Vendor hex: `components/logos/`.
 
 ## Materials and utilities
 

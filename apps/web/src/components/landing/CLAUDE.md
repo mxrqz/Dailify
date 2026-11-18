@@ -10,11 +10,10 @@ local here.
   holds its pt-BR strings `as const`, and a render test sits beside them (`<name>.render.test.tsx`
   or `index.render.test.tsx`). The CTA has no test file; `footer.render.test.tsx` renders it.
 - Private parts sit beside their section: `hero/scene.tsx` and `hero/script.ts`, the
-  `features/*-art.tsx` demos with `features/scene.tsx` (`useScene`, `Slot`, `Words`), and
-  `world/logos.tsx`.
+  `features/*-art.tsx` demos with `features/scene.tsx` (`useScene`, `Slot`, `Words`). The world
+  section's app logos live in `components/logos/apps.tsx`, shared with `integrations.tsx`.
 - The Mew speech kit (`Bubble`, `Ears`, `Tail`, `MessageBox`) lives in `components/mew/`, since
-  the app uses it too. `integrations.tsx` imports `world/logos.tsx`, a legacy placement: add no
-  new app -> landing import (RULES "Where code goes").
+  the app uses it too: add no app -> landing import (RULES "Where code goes").
 
 ## Add a section
 
@@ -60,7 +59,7 @@ local here.
   `QUOTAS`/`limitsFor`), reaching the copy through `{n}`/`{price}` placeholders. `sections/pricing`
   forks `components/pricing/plan-cards.tsx` (used by /premium). That fork is legacy; move to
   PlanCards and its copy when you touch it.
-- Hex colors are allowed only for vendor brand colors: `world/logos.tsx` and the `APPS` `color`
+- Hex colors are allowed only for vendor brand colors: `components/logos/` and the `APPS` `color`
   accents in `world/index.tsx`. The `#0000001a` in `BUBBLE_FILTER` is a stray.
 
 ## Tests

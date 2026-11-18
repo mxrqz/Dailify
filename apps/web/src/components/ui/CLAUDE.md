@@ -62,7 +62,6 @@ diff the output and re-apply them. App widgets live in `components/` or `kit/`, 
 
 - Deleted for lack of importers: `accordion`, `card`, `select`, `tabs`, `toggle-group`, `toggle`,
   `badge`, `CommandDialog`. Re-add one with the CLI when a screen needs it.
-- `applePayLogo.tsx`, `googlePayLogo.tsx` are not shadcn: brand SVGs for `pages/billing.tsx`.
 
 ## Tests
 

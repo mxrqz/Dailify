@@ -1,4 +1,4 @@
-export default function GooglePayLogo({ className }: { className?: string }) {
+export function GooglePayLogo({ className }: { className?: string }) {
   return (
     <svg
       version="1.1"
