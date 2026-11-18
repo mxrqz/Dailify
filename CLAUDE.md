@@ -136,5 +136,6 @@ App Links and the Stripe/e-mail return paths hang on one host. To move it:
 5. `allowed_sender_addresses` in `apps/server/wrangler.toml` must stay `entrar@<APP_HOST>`: the
    sender is built from `APP_HOST` (`apps/server/src/lib/email/providers/cloudflare.ts`), and a
    mismatch fails every magic-link e-mail, so nobody can sign in.
-6. Add `https://<new host>/integrations/google-calendar/callback` to the Google OAuth client's
-   authorized redirect URIs (the Calendar callback is an SPA route on the web origin).
+6. Add `https://<new host>/integrations/google-calendar/callback` and
+   `https://<APP_HOST>/app/integrations/google-calendar/callback` (the Tauri app's) to the Google
+   OAuth client's authorized redirect URIs (the Calendar callback is an SPA route on the web origin).

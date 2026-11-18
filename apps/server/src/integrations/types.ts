@@ -53,4 +53,6 @@ export interface Provider {
     before: Task | null,
     after: Task | null,
   ): Promise<"unlink" | void>;
+  /** The import right after connecting; the callback answers its `imported` count. */
+  sync?(env: Env, userId: string): Promise<{ imported: number }>;
 }

@@ -6,7 +6,7 @@ import { mockSession } from "./session";
 mockSession(() => ({ id: userId }));
 
 import { env, applyD1Migrations } from "cloudflare:test";
-import { INTEGRATIONS, PROVIDER_IDS, type IntegrationStatus } from "@dailify/shared";
+import { APP_URL, INTEGRATIONS, PROVIDER_IDS, type IntegrationStatus } from "@dailify/shared";
 import app from "../src/index";
 import { seal, unseal } from "../src/integrations/crypto";
 import { InvalidGrantError } from "../src/integrations/oauth";
@@ -131,6 +131,17 @@ describe("POST /integrations/:provider/connect", () => {
     expect(row?.user_id).toBe(userId);
     expect(await challengeOf(row?.code_verifier ?? "")).toBe(q.get("code_challenge"));
     expect(row?.expires_at).toBeGreaterThan(Date.now() + 9 * 60_000);
+  });
+
+  it("from the app, redirects through /app/* on the web domain, not the webview origin", async () => {
+    const res = await request("/integrations/google-calendar/connect", {
+      method: "POST",
+      headers: { origin: "tauri://localhost" },
+    });
+    const url = new URL((await res.json<{ url: string }>()).url);
+    expect(url.searchParams.get("redirect_uri")).toBe(
+      `${APP_URL}/app/integrations/google-calendar/callback`,
+    );
   });
 
   it("provider desconhecido -> 404", async () => {

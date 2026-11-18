@@ -18,7 +18,7 @@ event mapping and sync: `google-calendar/CLAUDE.md`.
 1. Id and `roles` in `INTEGRATIONS` (`packages/shared/src/integrations.ts`). That is the plan gate
    (`canUseIntegration`), not `QUOTAS`.
 2. `integrations/<id>/index.ts` exports a `Provider`: `oauth` (endpoints, `scopes`, `required`,
-   `credentials(env)`), `identify`, optional `onTaskChanged`. Expected action failures
+   `credentials(env)`), `identify`, optional `onTaskChanged` and `sync`. Expected action failures
    throw `ActionError(status, msg, extra)`, which the route maps to `fail`.
 3. Register it in `PROVIDERS`; `satisfies Record<ProviderId, Provider>` makes a missing entry a
    compile error.
@@ -27,10 +27,10 @@ event mapping and sync: `google-calendar/CLAUDE.md`.
 5. The "contrato dos providers" block in `test/integrations.test.ts` then checks https endpoints,
    `required` within `scopes`, credentials and `identify`.
 
-Gotcha: the registry is only half used. The generic `/:provider/callback` calls Google's
-`syncCalendar` directly, the action routes are hardcoded to Google (`withCalendar`, `createEvent`,
-`replaceMeet`; `createEvent` is a plain `{ parse, run }`). A second provider needs those routed
-through `PROVIDERS[id]` first.
+Gotcha: the registry is only half used. The generic `/:provider/callback` runs the optional
+`Provider.sync` (the first import), but the action routes are hardcoded to Google (`withCalendar`,
+`createEvent`, `replaceMeet`; `createEvent` is a plain `{ parse, run }`). A second provider needs
+those routed through `PROVIDERS[id]` first.
 
 ## Ctx.api and tokens
 
@@ -54,9 +54,9 @@ through `PROVIDERS[id]` first.
   and the provider, else 403.
 - A `required` scope left unticked on the consent screen answers 400 `code: missing_scope` and
   revokes the grant.
-- Plausible bug, not in bd yet: from the Tauri app `appOrigin` returns the webview origin (it is in
-  `ALLOWED_ORIGIN`), so the `redirect_uri` points at `tauri://localhost` or `tauri.localhost`
-  while the consent page opens in the system browser.
+- From the Tauri app the consent page opens in the system browser, so `redirect_uri` comes from
+  `returnBase`: `${APP_URL}/app/integrations/<id>/callback`, which `pages/app-return.tsx` hands to
+  `mewki://open`. That URI must be authorized on the Google OAuth client too.
 
 ## Propagation and sync
 

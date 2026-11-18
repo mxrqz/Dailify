@@ -13,7 +13,7 @@ import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { fail } from "../lib/errors";
 import { isRecord, readJson, validZone } from "../lib/task-input";
-import { appOrigin } from "../lib/origin";
+import { returnBase } from "../lib/origin";
 import { bytesToBase64url } from "../lib/push";
 import {
   consumeState,
@@ -43,7 +43,6 @@ import { loadCtx, makeCtx, revokeSealed, sealTokens } from "../integrations/conn
 import { pushLink } from "../integrations/propagate";
 import { getTask } from "../db/tasks";
 import { createEvent, replaceMeet } from "../integrations/google-calendar";
-import { syncCalendar } from "../integrations/google-calendar/sync";
 import { ActionError, type Ctx } from "../integrations/types";
 
 const STATE_TTL = 10 * 60 * 1000;
@@ -57,9 +56,11 @@ const reconnect = (c: Context<AppEnv>) =>
 const planBlocked = (c: Context<AppEnv>) => fail(c, 403, "Seu plano não inclui esta integração");
 
 // O Google volta pro SPA, que manda {code, state} com a sessão: é isso que amarra a conta
-// externa a quem está logado (redirect direto pro worker não tem como saber quem é).
+// externa a quem está logado (redirect direto pro worker não tem como saber quem é). From the app
+// the consent page opens in the system browser, which can't reach `tauri://`: `returnBase` sends it
+// through `/app/*`, which reopens the app on the callback.
 const redirectUri = (c: Context<AppEnv>, id: ProviderId) =>
-  `${appOrigin(c.env, c.req.header("origin"))}/integrations/${id}/callback`;
+  `${returnBase(c.env, c.req.header("origin"))}/integrations/${id}/callback`;
 
 function statusOf(
   env: Env,
@@ -186,7 +187,7 @@ integrations.post("/integrations/:provider/callback", async (c) => {
   // não desfaz a conexão — o cron e o próximo GET /tasks tentam de novo.
   let imported = 0;
   try {
-    ({ imported } = await syncCalendar(c.env, userId));
+    imported = (await provider.sync?.(c.env, userId))?.imported ?? 0;
   } catch (err) {
     console.error(`Falha no import inicial de ${id}`, err);
   }

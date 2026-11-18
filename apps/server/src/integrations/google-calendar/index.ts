@@ -19,6 +19,7 @@ import { appendLinks } from "../links";
 import { ActionError, type Ctx, type Provider } from "../types";
 import { EVENTS_API, field, json, text, updatedOf } from "./api";
 import { eventId, newMeet, toEvent, type GoogleEvent } from "./event";
+import { syncCalendar } from "./sync";
 
 const NO_DAY = "Tarefa sem dia não vira evento: escolha um dia antes";
 
@@ -292,4 +293,5 @@ export const googleCalendar: Provider = {
     return { accountId: sub, email: text(body, "email") ?? null };
   },
   onTaskChanged: syncEvent,
+  sync: (env, userId) => syncCalendar(env, userId),
 };
