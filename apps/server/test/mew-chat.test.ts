@@ -143,7 +143,8 @@ describe("POST /mew/chat", () => {
     expect(body.intent).toBe("propose");
 
     const [shown] = body.blocks;
-    expect(shown.kind === "tasks" && shown.tasks.map((t) => t.id)).toEqual(["plain1", "series1"]);
+    // plain1 is already in the move box, so it isn't listed again.
+    expect(shown.kind === "tasks" && shown.tasks.map((t) => t.id)).toEqual(["series1"]);
 
     const [move, del, create] = confirms(body.blocks);
     expect(confirms(body.blocks)).toHaveLength(3); // the series-only delete dropped

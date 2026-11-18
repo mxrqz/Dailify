@@ -175,6 +175,7 @@ export function toBlocks(
   now: number,
 ): MewReply {
   const pick = (refs: string[]) => [...new Set(refs)].flatMap((r) => agenda.get(r) ?? []);
+  const inBox = new Set<string>();
   const fresh = (p: GPTProposal, targets: readonly ProviderId[]) =>
     p.tasks.map((t) => toDraft(t, timezone, targets)).filter((d) => d.text);
 
@@ -185,6 +186,7 @@ export function toBlocks(
       case "steps": {
         const after = fresh(p, []).map((d) => draftToTask(d, timezone, now));
         const parent = p.action === "steps" ? pick(p.ids)[0] : undefined;
+        if (parent && after.length) inBox.add(parent.id);
         return after.length ? { ...base, after, ...(parent && { label: parent.title }) } : null;
       }
       case "event": {
@@ -227,8 +229,10 @@ export function toBlocks(
     }
   }
 
-  const shown = pick(out.show);
   const proposals = out.intent === "propose" ? out.proposals.flatMap((p) => confirm(p) ?? []) : [];
+  for (const b of proposals) if (b.kind === "confirm") b.before.forEach((t) => inBox.add(t.id));
+  // A task already in a confirm box would show twice in the same reply.
+  const shown = pick(out.show).filter((t) => !inBox.has(t.id));
   const blocks: MewBlock[] = [
     ...(shown.length ? [{ kind: "tasks" as const, tasks: shown }] : []),
     ...proposals,
