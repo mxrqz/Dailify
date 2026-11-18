@@ -20,9 +20,8 @@ applied to the agenda.
   the old step. Cancel goes only to the audit row (`setMewAction`); confirm and undo go through
   `apply`, and a `false` dispatches `settle` back to the previous step.
 - Persisted per user at localStorage `mewki:mew:<userId>:v1`, last 50 (`KEEP`); a reply still
-  typing is dropped on load. mew-chat.tsx saves only when no reply is in flight. `clearLocal`
-  (`functions/offline.ts`) does not remove this key yet
-  ([Security](../../../../../RULES.md#security-and-privacy)).
+  typing is dropped on load. mew-chat.tsx saves only when no reply is in flight. The key is
+  `chatKey` in `functions/offline.ts`, so `clearLocal` removes it.
 - `writes(out, into)` diffs by id (same id = update), `swap()` mirrors it into `tasks` and
   `undatedTasks`. An update sends only `title`, `date`, `alert`: widen that list if a box changes
   more.

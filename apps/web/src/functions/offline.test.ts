@@ -11,7 +11,18 @@ const api = vi.hoisted(() => ({
 }));
 vi.mock("./api", () => api);
 
-import { collapseQueue, enqueue, flushQueue, readQueue, type Mutation } from "./offline";
+import { saveChat } from "@/components/mew-chat/thread";
+import {
+  cacheTasks,
+  cacheUndated,
+  clearLocal,
+  collapseQueue,
+  enqueue,
+  flushQueue,
+  readQueue,
+  rememberUser,
+  type Mutation,
+} from "./offline";
 
 const input = {
   title: "Dentista",
@@ -224,5 +235,21 @@ describe("flushQueue", () => {
     ]);
     expect(out[0]).toMatchObject({ op: "create" });
     expect(out[0].op === "create" && out[0].input.alert).toBeUndefined();
+  });
+});
+
+describe("clearLocal", () => {
+  test("não deixa no aparelho nenhuma chave do usuário excluído", () => {
+    localStorage.clear();
+    cacheTasks("u-gone", []);
+    cacheUndated("u-gone", []);
+    enqueue("u-gone", create("t1"));
+    rememberUser({ id: "u-gone", name: "", email: "a@b.c" });
+    saveChat("u-gone", [{ id: "m1", from: "me", text: "oi" }]);
+    cacheTasks("u-other", []);
+    clearLocal("u-gone");
+    const keys = Object.keys(localStorage);
+    expect(keys.filter((k) => k.includes("u-gone") || k === "dailify:last-user")).toEqual([]);
+    expect(keys).toContain("dailify:tasks:u-other");
   });
 });

@@ -1,5 +1,7 @@
 import type { MewBlock, MewIntent, MewReply } from "@dailify/shared";
 
+import { chatKey } from "@/functions/offline";
+
 /** `draft` → `done` → `undone`, or `draft` → `cancelled`. */
 export type Step = "draft" | "done" | "cancelled" | "undone";
 
@@ -105,7 +107,6 @@ export function chatReducer(messages: Message[], action: ChatAction): Message[] 
 }
 
 const KEEP = 50;
-const keyOf = (userId: string) => `mewki:mew:${userId}:v1`;
 
 const isMessages = (value: unknown): value is Message[] => Array.isArray(value);
 
@@ -113,7 +114,7 @@ const isMessages = (value: unknown): value is Message[] => Array.isArray(value);
 export function loadChat(userId: string | undefined): Message[] {
   if (!userId) return [];
   try {
-    const raw: unknown = JSON.parse(localStorage.getItem(keyOf(userId)) ?? "null");
+    const raw: unknown = JSON.parse(localStorage.getItem(chatKey(userId)) ?? "null");
     return isMessages(raw) ? raw.filter((m) => !(m.from === "mew" && m.typing)) : [];
   } catch {
     return [];
@@ -122,7 +123,7 @@ export function loadChat(userId: string | undefined): Message[] {
 
 export function saveChat(userId: string, messages: Message[]): void {
   try {
-    localStorage.setItem(keyOf(userId), JSON.stringify(messages.slice(-KEEP)));
+    localStorage.setItem(chatKey(userId), JSON.stringify(messages.slice(-KEEP)));
   } catch {
     // Quota or private mode: the chat just stops remembering.
   }
