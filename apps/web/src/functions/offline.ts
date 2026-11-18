@@ -1,4 +1,4 @@
-import { isSameDay } from "date-fns";
+import { endOfDay, startOfDay } from "date-fns";
 import type { Task, TaskInput } from "@dailify/shared";
 
 import {
@@ -123,9 +123,13 @@ const writeQueue = (userId: string, queue: Mutation[]): void => write(key(userId
  *   criar e excluir offline é o mesmo que nunca ter existido;
  * - `complete` e `uncomplete` do mesmo dia se cancelam: só o último estado importa.
  */
-// The day a complete (its stamp) or an uncomplete (its `day`) is about, in the app zone.
-const checkDay = (m: Extract<Mutation, { op: "complete" | "uncomplete" }>) =>
-  zoned(m.op === "complete" ? m.at : m.day);
+// What a check is about: the day of a complete's stamp or an uncomplete's `day` (app zone), or
+// an undated uncomplete's whole [day, until] period.
+const checkSpan = (m: Extract<Mutation, { op: "complete" | "uncomplete" }>): [number, number] => {
+  if (m.op === "uncomplete" && m.until !== undefined) return [m.day, m.until];
+  const day = zoned(m.op === "complete" ? m.at : m.day);
+  return [+startOfDay(day), +endOfDay(day)];
+};
 
 export function collapseQueue(queue: Mutation[]): Mutation[] {
   const out: Mutation[] = [];
@@ -147,14 +151,13 @@ export function collapseQueue(queue: Mutation[]): Mutation[] {
 
     if (mutation.op === "complete" || mutation.op === "uncomplete") {
       // Per day: completion is read per occurrence, so reopening Tuesday never cancels Monday.
-      const day = checkDay(mutation);
+      const [from, to] = checkSpan(mutation);
+      const overlaps = (m: Extract<Mutation, { op: "complete" | "uncomplete" }>) => {
+        const [start, end] = checkSpan(m);
+        return start <= to && from <= end;
+      };
       const rest = out.filter(
-        (m) =>
-          !(
-            sameTask(m) &&
-            (m.op === "complete" || m.op === "uncomplete") &&
-            isSameDay(checkDay(m), day)
-          ),
+        (m) => !(sameTask(m) && (m.op === "complete" || m.op === "uncomplete") && overlaps(m)),
       );
       out.length = 0;
       out.push(...rest, mutation);

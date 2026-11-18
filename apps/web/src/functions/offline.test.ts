@@ -133,6 +133,13 @@ describe("collapseQueue", () => {
     setAppTimeZone(null);
   });
 
+  test("an undated uncomplete cancels a pending complete inside its period", () => {
+    const uncomplete: Mutation = { op: "uncomplete", taskId: "a", day: 0, until: 500, at: 500 };
+    expect(collapseQueue([{ op: "complete", taskId: "a", at: 400 }, uncomplete])).toEqual([
+      uncomplete,
+    ]);
+  });
+
   test("a delete does not touch another task's pending work", () => {
     const out = collapseQueue([patch("a", { title: "x" }), { op: "delete", taskId: "b", at: 5 }]);
     expect(out.map((m) => `${m.op}:${m.taskId}`)).toEqual(["patch:a", "delete:b"]);

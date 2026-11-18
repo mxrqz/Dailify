@@ -51,7 +51,7 @@ render test whose component now calls it (a factory mock throws on an export it 
   (`day`, or `[day, until]` for an undated period), `delete`, `delete-occurrence`.
 - `collapseQueue`: a `delete` drops its task's pending entries, and itself when a `create` was
   pending. The newest `complete`/`uncomplete` replaces a pending one only for the same day (the complete's
-  stamp, the uncomplete's `day`, in the app zone). Patches
+  stamp, the uncomplete's `day`, in the app zone) or inside an undated `[day, until]`. Patches
   merge per (task, occurrence); a series patch on a pending `create` folds into it.
   `delete-occurrence` is its own op so it never collapses like a delete.
 - `flushQueue` is single-flight per user (`flushing` map). The drain re-reads storage every step,
