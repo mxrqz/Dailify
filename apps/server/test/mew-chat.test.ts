@@ -35,7 +35,7 @@ beforeEach(() => {
   vi.clearAllMocks();
 });
 
-const used = (id: string) => readStoredUsage(env.DB, id, "ai", periodFor("ai", new Date()));
+const used = (id: string) => readStoredUsage(env.DB, id, "ai", periodFor(new Date()));
 const consent = (id: string) => saveSettings(env.DB, id, { mewConsent: true });
 
 function chat(body: Record<string, unknown>) {
@@ -221,7 +221,7 @@ describe("POST /mew/chat", () => {
     userId = "mw-429";
     await consent(userId);
     for (let i = 0; i < limitsFor("free").ai; i++)
-      await bumpStoredUsage(env.DB, userId, "ai", periodFor("ai", new Date()));
+      await bumpStoredUsage(env.DB, userId, "ai", periodFor(new Date()));
     const res = await chat({});
     expect(res.status).toBe(429);
     expect(await res.json()).toEqual({ error: "AI Credits Limit Reached" });

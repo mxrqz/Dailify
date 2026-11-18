@@ -36,7 +36,7 @@ describe("enforce", () => {
 
   it("conta créditos de IA do período corrente do servidor, seja qual for a data recebida", async () => {
     for (let i = 0; i < limitsFor("free").ai; i++) {
-      await bumpStoredUsage(env.DB, "le4", "ai", periodFor("ai", new Date()));
+      await bumpStoredUsage(env.DB, "le4", "ai", periodFor(new Date()));
     }
     // Crédito é ancorado em AGORA: o mês que o cliente pede não muda o período lido, senão navegar
     // pro mês que vem "devolveria" créditos que o servidor vai recusar.
@@ -57,7 +57,7 @@ describe("readAllUsage", () => {
   it("devolve todas as chaves", async () => {
     await insertTask(env.DB, "le5", task({ id: "le5-a" }));
     await insertTask(env.DB, "le5", task({ id: "le5-b", repeat: "Daily" }));
-    await bumpStoredUsage(env.DB, "le5", "ai", periodFor("ai", new Date()));
+    await bumpStoredUsage(env.DB, "le5", "ai", periodFor(new Date()));
 
     // O `at` é o mês pedido pelo cliente: vale pra `tasks`, mas crédito lê sempre o mês do servidor.
     const usage = await readAllUsage(env.DB, "le5", new Date(2026, 5, 15));

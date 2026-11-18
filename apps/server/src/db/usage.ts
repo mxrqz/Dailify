@@ -1,8 +1,8 @@
 import type { QuotaKey } from "@dailify/shared";
 
-/** Chave de período da quota: o mês-calendário local (toda quota é mensal, ver `QuotaScope`). */
-export function periodFor(_key: QuotaKey, at: Date): string {
-  return `${at.getFullYear()}-${String(at.getMonth() + 1).padStart(2, "0")}`;
+/** Quota period key: the UTC calendar month (every quota is monthly, see `QuotaScope`). */
+export function periodFor(at: Date): string {
+  return `${at.getUTCFullYear()}-${String(at.getUTCMonth() + 1).padStart(2, "0")}`;
 }
 
 export async function readStoredUsage(

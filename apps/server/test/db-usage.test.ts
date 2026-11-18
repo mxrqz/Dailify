@@ -9,11 +9,15 @@ beforeAll(async () => {
 
 describe("periodFor", () => {
   it("quota mensal vira YYYY-MM", () => {
-    expect(periodFor("ai", new Date(2026, 7, 31))).toBe("2026-08");
+    expect(periodFor(new Date(Date.UTC(2026, 7, 31)))).toBe("2026-08");
   });
 
   it("mês de um dígito ganha zero à esquerda", () => {
-    expect(periodFor("ai", new Date(2026, 0, 5))).toBe("2026-01");
+    expect(periodFor(new Date(Date.UTC(2026, 0, 5)))).toBe("2026-01");
+  });
+
+  it("uses the UTC month, not the machine zone", () => {
+    expect(periodFor(new Date(Date.UTC(2026, 0, 31, 23, 30)))).toBe("2026-01");
   });
 });
 

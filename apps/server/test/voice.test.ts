@@ -90,7 +90,7 @@ describe("POST /tasks/voice", () => {
     expect(meeting).toMatchObject({ priority: 0, duration: "30m" });
     expect(meeting.alert).toBeUndefined();
     expect(lunch.date).toBe(Date.UTC(2026, 7, 3, 12, 0, 0));
-    expect(await readStoredUsage(env.DB, "vu1", "ai", periodFor("ai", new Date()))).toBe(1);
+    expect(await readStoredUsage(env.DB, "vu1", "ai", periodFor(new Date()))).toBe(1);
 
     const saved = await getTask(env.DB, "vu1", meeting.id);
     expect(saved).toMatchObject({ title: "Reunião com o time", date: meeting.date });
@@ -140,7 +140,7 @@ describe("POST /tasks/voice", () => {
     // naive string as literal UTC) would wrongly yield Date.UTC(2026, 7, 3, 14, 0, 0) here.
     expect(body.tasks[0].date).toBe(Date.UTC(2026, 7, 3, 17, 0, 0));
     expect(openaiMock.responses.create).toHaveBeenCalledOnce();
-    expect(await readStoredUsage(env.DB, "vu3", "ai", periodFor("ai", new Date()))).toBe(1);
+    expect(await readStoredUsage(env.DB, "vu3", "ai", periodFor(new Date()))).toBe(1);
   });
 
   it.each([
@@ -168,7 +168,7 @@ describe("POST /tasks/voice", () => {
       });
       expect(body.tasks[0].undated).toBeUndefined();
       expect(openaiMock.responses.create).not.toHaveBeenCalled();
-      expect(await readStoredUsage(env.DB, id, "ai", periodFor("ai", new Date()))).toBe(1);
+      expect(await readStoredUsage(env.DB, id, "ai", periodFor(new Date()))).toBe(1);
     },
   );
 
@@ -227,7 +227,7 @@ describe("POST /tasks/voice — quota e tamanho", () => {
     userId = "vq2";
     await saveSettings(env.DB, "vq2", { timeZone: "UTC" });
     for (let i = 0; i < limitsFor("free").ai; i++) {
-      await bumpStoredUsage(env.DB, "vq2", "ai", periodFor("ai", new Date()));
+      await bumpStoredUsage(env.DB, "vq2", "ai", periodFor(new Date()));
     }
     const res = await audioRequest();
     expect(res.status).toBe(429);
@@ -247,7 +247,7 @@ describe("POST /tasks/voice — quota e tamanho", () => {
 
     const res = await audioRequest();
     expect(res.status).toBe(200);
-    const period = periodFor("ai", new Date());
+    const period = periodFor(new Date());
     expect(await readStoredUsage(env.DB, "vq3", "ai", period)).toBe(1);
   });
 
@@ -260,7 +260,7 @@ describe("POST /tasks/voice — quota e tamanho", () => {
     const res = await audioRequest();
     expect(res.status).toBe(502);
     expect(openaiMock.responses.create).not.toHaveBeenCalled();
-    expect(await readStoredUsage(env.DB, "vq4", "ai", periodFor("ai", new Date()))).toBe(0);
+    expect(await readStoredUsage(env.DB, "vq4", "ai", periodFor(new Date()))).toBe(0);
   });
 
   it("dia sem hora vira Sem data com lembrete às 09:00 locais", async () => {

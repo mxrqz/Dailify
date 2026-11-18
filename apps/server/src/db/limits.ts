@@ -25,7 +25,7 @@ export async function aiQuotaError(c: Ctx): Promise<Response | null> {
 
 /** Crédito só depois da IA responder dentro do contrato: falha, timeout ou lixo não custam nada. */
 export const debitAi = (c: Ctx) =>
-  bumpStoredUsage(c.env.DB, c.get("userId"), "ai", periodFor("ai", new Date()));
+  bumpStoredUsage(c.env.DB, c.get("userId"), "ai", periodFor(new Date()));
 
 type Counter = (db: D1Database, userId: string, at: Date) => Promise<number>;
 
@@ -35,7 +35,7 @@ const COUNTERS: Record<QuotaKey, Counter> = {
   // `at` é a âncora do que se CONTA: pra `tasks` é a data da tarefa, que varia de propósito. Crédito
   // de IA é ancorado em AGORA — "o mês em que o pedido foi feito" —, então ignora o `at` e lê o mês
   // do servidor; senão o cliente navegando pro mês que vem via o medidor de créditos zerar sozinho.
-  ai: (db, userId) => readStoredUsage(db, userId, "ai", periodFor("ai", new Date())),
+  ai: (db, userId) => readStoredUsage(db, userId, "ai", periodFor(new Date())),
 };
 
 export async function enforce(

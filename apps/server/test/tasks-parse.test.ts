@@ -33,7 +33,7 @@ beforeEach(() => {
   role = "free";
 });
 
-const used = (id: string) => readStoredUsage(env.DB, id, "ai", periodFor("ai", new Date()));
+const used = (id: string) => readStoredUsage(env.DB, id, "ai", periodFor(new Date()));
 
 function parse(body: unknown) {
   return app.request(
@@ -160,7 +160,7 @@ describe("POST /tasks/parse", () => {
   it("créditos esgotados → 429 sem chamar a OpenAI", async () => {
     userId = "pu3";
     for (let i = 0; i < limitsFor("free").ai; i++) {
-      await bumpStoredUsage(env.DB, "pu3", "ai", periodFor("ai", new Date()));
+      await bumpStoredUsage(env.DB, "pu3", "ai", periodFor(new Date()));
     }
     const res = await parse({ text: "comprar pão", timezone: "UTC" });
     expect(res.status).toBe(429);
