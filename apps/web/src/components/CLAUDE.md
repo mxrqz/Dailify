@@ -17,7 +17,7 @@ motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hoo
   UI: `edit-task`, `task-card` (legacy desktop row, rendered by `dashboard/day-task-row` when not
   sheet-editing), `add-to-calendar`, `clock-check`, `duplicates-sheet`, `sync-badge`. Settings
   widgets for `pages/`: `hour-format-select`, `week-start-select`, `time-zone-select`,
-  `mode-toggle.tsx:ThemeSelect`, `delete-account`, `integrations`,
+  `theme-select`, `push-toggle`, `delete-account`, `integrations`,
   `settings-list.tsx:accountPage/accountGroups`.
 - `dashboard/copy.ts` is the dictionary of the root components, `functions/` and `hooks/` too.
 

@@ -3,7 +3,7 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-import { copy } from "./copy";
+import { copy } from "@/components/dashboard/copy";
 
 const push = vi.hoisted(() => ({ pushState: vi.fn(), enablePush: vi.fn(), disablePush: vi.fn() }));
 const toast = vi.hoisted(() => ({ error: vi.fn() }));

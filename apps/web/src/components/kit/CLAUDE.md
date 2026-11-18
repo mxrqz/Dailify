@@ -57,7 +57,7 @@ Repo-wide rules: [/RULES.md](../../../../../RULES.md). This file adds only what 
   has no caller yet. The `Chip` inside `../task-card.tsx` is a file-local desktop metadata chip, not
   this one.
 - SegmentedControl never emits Radix's `""` on re-click and infers `T` from `options`, so
-  `onValueChange` needs no cast (`ThemeSelect` in `../mode-toggle.tsx`).
+  `onValueChange` needs no cast (`ThemeSelect` in `../theme-select.tsx`).
 - Refraction is mounted once, in `App.tsx`: a second copy duplicates the `refract` id. Only the
   `dock-veil` utility reads it (`apps/web/src/CLAUDE.md`). Keep it off `glass`, where re-filtering
   costs too much.

@@ -15,7 +15,7 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
   `calendar-chip.tsx` (`useCalendarChip`). The mobile dock is `mew-chat/dock.tsx`.
 - Editing: `task-form.tsx` (sheet: `components/edit-task.tsx`), `task-meta-menus.tsx`, pickers
   (`day-picker`, `date-time-picker`, `links-field`), `recurrence-scope-dialog.tsx` (copy over kit
-  `ActionSheet`). `push-toggle.tsx` is a settings row (`pages/settings.tsx`).
+  `ActionSheet`).
 - `copy.ts` is the dictionary of the whole authenticated app (see `components/CLAUDE.md`).
 - `styles.ts` holds only `calendarPanel`, shared by `task-meta-menus` and `anytime-block`.
 
