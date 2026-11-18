@@ -5,7 +5,6 @@ import { toast } from "sonner";
 import { API_ERROR, MEW_HISTORY_MAX, MEW_TEXT_MAX, type MewReply } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
-import { CreateDock } from "@/components/dashboard/composer-views";
 import { copy } from "@/components/dashboard/copy";
 import { fade } from "@/consts/motion";
 import { getSettings, mewChat, saveSettings, setMewAction } from "@/functions/api";
@@ -17,6 +16,7 @@ import { useSession } from "@/lib/auth";
 
 import { useMewApply } from "./apply";
 import { ChatDrawer, ChatInput, type Photo } from "./chat-drawer";
+import { CreateDock } from "./dock";
 import {
   type ChatAction,
   type ConfirmBlock,

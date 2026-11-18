@@ -11,8 +11,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
   `undated-column.tsx` is a reserved, empty desktop column (bd `Dailify-1td`).
 - Navigation: `week-strip.tsx` (`WeekDays`/`WeekStrip`), `month-calendar.tsx` (`MonthGrid`/
   `MonthCalendar`, the `?view=calendar` overlay of `pages/home.tsx`). Gesture: `swipe-actions.tsx`.
-- Creation: `create-fab.tsx`, `task-composer.tsx` (container), `composer-views.tsx` (views, plus the
-  `CreateDock`/`DockButton` that `mew-chat/` imports), `calendar-chip.tsx` (`useCalendarChip`).
+- Creation: `create-fab.tsx`, `task-composer.tsx` (container), `composer-views.tsx` (views),
+  `calendar-chip.tsx` (`useCalendarChip`). The mobile dock is `mew-chat/dock.tsx`.
 - Editing: `task-form.tsx` (sheet: `components/edit-task.tsx`), `task-meta-menus.tsx`, pickers
   (`day-picker`, `date-time-picker`, `links-field`), `recurrence-scope-dialog.tsx` (copy over kit
   `ActionSheet`). `push-toggle.tsx` is a settings row (`pages/settings.tsx`).

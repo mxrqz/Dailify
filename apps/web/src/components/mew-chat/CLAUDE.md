@@ -9,6 +9,8 @@ applied to the agenda.
 - `thread.ts`: pure state machine. `Message`/`Block` types, `chatReducer`, persistence.
 - `apply.ts`: pure `writes` plus the `useMewApply` hook that runs a box against the agenda.
 - `mew-chat.tsx`: container (session, API, quotas, consent, scrim, the dock).
+- `dock.tsx`: `CreateDock`, the mobile pill that opens the chat and becomes its input, and
+  `DockButton`.
 - `chat-drawer.tsx`: `ChatDrawer`, `ChatInput`, `moodOf` and the photo scaling. Its rows read `hour12`
   from `useDailify`, so it is not a provider-free View yet.
 
@@ -37,7 +39,7 @@ applied to the agenda.
   stored as a 320px thumb (localStorage quota) and uploaded at 1024px (`THUMB_PX`/`UPLOAD_PX`).
 - The drawer is a non-modal bottom `Sheet` so the dock stays usable; the scrim is rendered by
   mew-chat.tsx. The dock is the input (`CreateDock chat={<ChatInput/>}`, from
-  `dashboard/composer-views.tsx`), so `onInteractOutside` ignores `[data-slot="create-dock"]`.
+  `dock.tsx`), so `onInteractOutside` ignores `[data-slot="create-dock"]`.
 - One `ResizeObserver` is the only writer of `scrollTop` (pinned within 48px of the bottom; a new
   message re-pins). Only messages absent when the drawer opened animate (the `initial` set).
 - Enter animations are CSS tokens, not motion: `word-in` + `--i`, `delay-words`/`delay-words-lag` +

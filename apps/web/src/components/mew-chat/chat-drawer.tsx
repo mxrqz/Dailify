@@ -26,7 +26,7 @@ import { toast } from "sonner";
 import { isCalendarEventLink, MEW_IMAGE_MAX, MEW_TEXT_MAX, type Task } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
-import { DockButton } from "@/components/dashboard/composer-views";
+import { DockButton } from "./dock";
 import { copy } from "@/components/dashboard/copy";
 import { CheckCircle, TaskRow } from "@/components/dashboard/day-task-row";
 import { Chip } from "@/components/kit/chip";
