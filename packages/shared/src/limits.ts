@@ -17,6 +17,10 @@ export const TASK_LIMITS = {
   linksMax: 10,
   /** Limite histórico de navegador/proxy; nenhum link legítimo chega perto. */
   urlMax: 2048,
+  /** `Task.repeatEvery` is 2..this; 1 is never stored, it is the absence. */
+  repeatEveryMax: 365,
+  /** `Task.priority` is 0..this. */
+  priorityMax: 4,
 } as const;
 
 /**

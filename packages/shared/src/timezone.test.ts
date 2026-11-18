@@ -1,5 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { daysInMonth, zonedEpoch, zonedParts } from "./timezone";
+import { endOfMonthMs, startOfMonthMs } from "./dates";
+import {
+  civilDay,
+  daysInMonth,
+  isoDate,
+  isoWallTime,
+  isTimeZone,
+  weekdayOf,
+  zonedEpoch,
+  zonedParts,
+} from "./timezone";
 
 describe("zonedParts", () => {
   it("lê a hora-de-parede no fuso pedido, não no do runtime", () => {
@@ -63,5 +73,38 @@ describe("daysInMonth", () => {
     expect(daysInMonth(2028, 1)).toBe(29);
     expect(daysInMonth(2026, 3)).toBe(30);
     expect(daysInMonth(2026, 0)).toBe(31);
+  });
+});
+
+describe("civil-date helpers", () => {
+  const p = { year: 2026, month: 2, day: 8, hour: 9, minute: 5, second: 0 };
+
+  it("formats ISO date and wall time with zero padding", () => {
+    expect(isoDate(p)).toBe("2026-03-08");
+    expect(isoWallTime(p)).toBe("2026-03-08T09:05:00");
+  });
+
+  it("counts calendar days across a DST change and reads the civil weekday", () => {
+    expect(civilDay({ year: 2026, month: 2, day: 9 }) - civilDay(p)).toBe(1);
+    expect(
+      civilDay({ year: 2026, month: 3, day: 1 }) - civilDay({ year: 2026, month: 2, day: 31 }),
+    ).toBe(1);
+    expect(weekdayOf(p)).toBe(0); // 2026-03-08 is a Sunday
+  });
+
+  it("isTimeZone accepts IANA zones only", () => {
+    expect(isTimeZone("America/Sao_Paulo")).toBe(true);
+    expect(isTimeZone("UTC")).toBe(true);
+    for (const z of ["Mars/Olympus", "", 3, null]) expect(isTimeZone(z)).toBe(false);
+  });
+});
+
+describe("month window", () => {
+  it("starts and ends the month in the given zone, not the runtime's", () => {
+    const month = new Date(2026, 9, 15);
+    const start = startOfMonthMs(month, "America/Sao_Paulo");
+    const end = endOfMonthMs(month, "America/Sao_Paulo");
+    expect(start).toBe(Date.UTC(2026, 9, 1, 3));
+    expect(end).toBe(Date.UTC(2026, 10, 1, 2, 59, 59, 999));
   });
 });

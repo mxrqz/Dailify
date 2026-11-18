@@ -1,5 +1,5 @@
 import type { Repeat, Task } from "./types";
-import { zonedEpoch, zonedParts } from "./timezone";
+import { civilDay, weekdayOf, zonedEpoch, zonedParts } from "./timezone";
 
 /** 0 = domingo … 6 = sábado, como em `Date#getDay`. */
 export type WeekStart = 0 | 1 | 2 | 3 | 4 | 5 | 6;
@@ -46,7 +46,7 @@ export function periodStart(
   if (repeat === "Monthly") start = { year, month, day: 1 };
   else if (repeat === "Yearly") start = { year, month: 0, day: 1 };
   else if (typeof repeat === "object") {
-    const weekday = new Date(Date.UTC(year, month, day)).getUTCDay();
+    const weekday = weekdayOf(start);
     // Date.UTC normaliza dia <= 0 para o mês anterior.
     const d = new Date(Date.UTC(year, month, day - ((weekday - weekStart + 7) % 7)));
     start = {
@@ -57,9 +57,7 @@ export function periodStart(
   }
   if (every > 1) {
     const a = zonedParts(periodStart(repeat, anchor, weekStart, timeZone), timeZone);
-    const days =
-      (Date.UTC(start.year, start.month, start.day) - Date.UTC(a.year, a.month, a.day)) /
-      86_400_000;
+    const days = civilDay(start) - civilDay(a);
     const units =
       repeat === "Monthly"
         ? (start.year - a.year) * 12 + start.month - a.month

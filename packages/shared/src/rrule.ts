@@ -1,15 +1,18 @@
 import type { Task } from "./types";
-import { dayMap, expandRecurringTask, weekDays } from "./recurrence";
-import { zonedEpoch, zonedParts, type ZonedParts } from "./timezone";
+import { dayMap, expandRecurringTask, isRepeatEvery, seriesEvery, weekDays } from "./recurrence";
+import {
+  isoDate,
+  isoWallTime,
+  weekdayOf,
+  zonedEpoch,
+  zonedParts,
+  type ZonedParts,
+} from "./timezone";
 
 /** A série da tarefa no formato do `recurrence` de um evento do Google. */
 export type Recurrence = Pick<Task, "repeat" | "repeatEvery" | "repeatUntil" | "exdates">;
 
-const pad = (n: number) => String(n).padStart(2, "0");
-const ymd = (p: ZonedParts) => `${p.year}-${pad(p.month + 1)}-${pad(p.day)}`;
-const wall = (p: ZonedParts) => `${ymd(p)}T${pad(p.hour)}:${pad(p.minute)}:${pad(p.second)}`;
 const compact = (s: string) => s.replace(/[-:]/g, "");
-const weekday = (p: ZonedParts) => new Date(Date.UTC(p.year, p.month, p.day)).getUTCDay();
 const BYDAY = ["SU", "MO", "TU", "WE", "TH", "FR", "SA"];
 
 /** Dias 28..29–31 com BYSETPOS=-1: o último que o mês tiver, como o corte da Mewki. */
@@ -23,7 +26,7 @@ const clampDays = (day: number) => Array.from({ length: day - 27 }, (_, i) => 28
 export function toRrule(task: Task, start: ZonedParts, timeZone: string): string[] | null {
   const { repeat } = task;
   if (repeat === "Off") return null;
-  const every = task.repeatEvery && task.repeatEvery > 1 ? task.repeatEvery : 1;
+  const every = seriesEvery(task);
   const rule = [`FREQ=${typeof repeat === "object" ? "WEEKLY" : repeat.toUpperCase()}`];
   if (every > 1) rule.push(`INTERVAL=${every}`);
   if (typeof repeat === "object") {
@@ -31,14 +34,14 @@ export function toRrule(task: Task, start: ZonedParts, timeZone: string): string
     rule.push(`BYDAY=${days.map((d) => BYDAY[d]).join(",")}`);
     // A cada N semanas, a Mewki conta blocos de 7 dias a partir do dia da tarefa; com a semana do
     // RRULE começando nesse dia (WKST), os blocos batem.
-    if (every > 1) rule.push(`WKST=${BYDAY[weekday(start)]}`);
+    if (every > 1) rule.push(`WKST=${BYDAY[weekdayOf(start)]}`);
   }
   // Dia 29–31: a Mewki corta pro último dia do mês curto, o RRULE puro pularia o mês.
   if ((repeat === "Monthly" || repeat === "Yearly") && start.day > 28) {
     if (repeat === "Yearly") rule.push(`BYMONTH=${start.month + 1}`);
     rule.push(`BYMONTHDAY=${clampDays(start.day)}`, "BYSETPOS=-1");
   }
-  const day = (ms: number) => compact(ymd(zonedParts(ms, timeZone)));
+  const day = (ms: number) => compact(isoDate(zonedParts(ms, timeZone)));
   // Com horário o RFC exige UNTIL em UTC; no dia inteiro, só a data.
   const utc = (ms: number) => `${compact(new Date(ms).toISOString().slice(0, 19))}Z`;
   if (task.repeatUntil !== undefined)
@@ -47,7 +50,7 @@ export function toRrule(task: Task, start: ZonedParts, timeZone: string): string
   const lines = [`RRULE:${rule.join(";")}`];
   if (task.exdates?.length) {
     const dates = task.exdates.map((ms) =>
-      task.undated ? day(ms) : compact(wall(zonedParts(ms, timeZone))),
+      task.undated ? day(ms) : compact(isoWallTime(zonedParts(ms, timeZone))),
     );
     lines.push(task.undated ? `EXDATE;VALUE=DATE:${dates}` : `EXDATE;TZID=${timeZone}:${dates}`);
   }
@@ -166,7 +169,7 @@ function parseRecurrence(recurrence: string[], start: number, timeZone: string):
   if ([...rule.keys()].some((k) => !known.includes(k))) return null;
   const freq = rule.get("FREQ");
   const every = Number(rule.get("INTERVAL") ?? 1);
-  if (!Number.isInteger(every) || every < 1 || every > 365) return null;
+  if (every !== 1 && !isRepeatEvery(every)) return null;
   const byday = rule.get("BYDAY");
   const bymonthday = rule.get("BYMONTHDAY");
   const bymonth = rule.get("BYMONTH");
@@ -175,7 +178,7 @@ function parseRecurrence(recurrence: string[], start: number, timeZone: string):
   let repeat: Recurrence["repeat"];
   if (freq === "DAILY" && !byday && !bymonthday && !bymonth && !bysetpos) repeat = "Daily";
   else if (freq === "WEEKLY" && !bymonthday && !bymonth && !bysetpos) {
-    const startDay = weekday(s);
+    const startDay = weekdayOf(s);
     const days = byday ? byday.split(",").map((d) => BYDAY.indexOf(d)) : [startDay];
     const wkst = BYDAY.indexOf(rule.get("WKST") ?? "MO"); // o padrão do RFC
     if (days.some((d) => d < 0) || wkst < 0) return null; // "2TU" e afins
