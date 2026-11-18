@@ -7,7 +7,7 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
 
 - `openai.ts`: the AI kit. `openaiClient(env)` (a new client per call), `transcribe`, `PERSONA`,
   `clock(tz)`, `taskRules`/`taskSchema`, the guards, `readOutput`, `toEpoch`, `toDraft`,
-  `draftToTask`, and `interpretText` (shared by `/tasks/parse` and voice). `mew.ts` builds the chat
+  `draftToTask`, `structured` (the one Responses call), and `interpretText` (shared by `/tasks/parse` and voice). `mew.ts` builds the chat
   on top of it: `agendaOf`, `toBlocks`, `askMew`.
 - `stripe.ts`: `stripeClient(env)` with `createFetchHttpClient` (Workers has no Node http), the
   price maps, the expandable-field normalisers, the invoice and payment DTOs, `handleInvoicePaid`
@@ -31,8 +31,7 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
 
 ## Input helpers: reuse before writing a guard
 
-- `isRecord` (openai.ts). Its `isStringArray` is private and mew.ts copies it as `isStrings`:
-  export one instead of writing a third. `isEpochMs` (task-input.ts) is private too: export it.
+- `isRecord` and `isStringArray` (openai.ts). `isEpochMs` (task-input.ts) is private too: export it.
 - task-input.ts: `validZone`, `isRepeatEvery`, `sanitizeLinks`, `parseClientId`,
   `parseTaskFields`, `parseNewTask`.
 - Contract: an absent key keeps the stored value and `null` clears it (`alert`, `repeatEvery`,
@@ -44,17 +43,16 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
 
 ## AI calls
 
-- Every `responses.create` uses `model: "gpt-6-luna"`, `reasoning: { effort: "low" }`,
-  `store: false`, a strict `json_schema`, a `{ timeout }` and then `readOutput(text, guard)`. The
-  setup is copied in `interpretText` (20 s) and `askMew` (30 s); a third caller extracts a helper.
-- Budget gaps today: `transcribe` (`gpt-transcribe`) passes no timeout, and `openaiClient` keeps the
-  SDK default `maxRetries: 2`, so a call can take up to 3× its timeout.
+- Every Responses call goes through `structured(env, { name, schema, instructions, input, timeout },
+guard)`: `MODEL`, `reasoning: { effort: "low" }`, `store: false`, a strict `json_schema`, then
+  `readOutput`. `interpretText` passes 20 s, `askMew` 30 s, `transcribe` 20 s.
+- `openaiClient` sets `maxRetries: 1`; the SDK retries timeouts, so a call can take 2× its timeout.
 - The model gets naive local wall time (`clock`). `toEpoch(iso, tz)` reads its dates in the client
   zone, drops any `Z`/offset, and rejects values outside `DATE_RANGE`.
 - Mew agenda: ±`WINDOW_DAYS` (14) plus the undated tasks, capped at `AGENDA_MAX` (300). A series
   instance's ref is `id@yyyy-mm-dd`, and `toBlocks` resolves refs only through that map.
-- Known injection path: `lines()` puts agenda titles into `instructions`, and the client sends
-  `history`, assistant turns included. Don't add more untrusted text there.
+- Agenda titles are untrusted (Google invites): `lines()` goes in as the first user-role input
+  item, never into `instructions`. The client also sends `history`, assistant turns included.
 
 ## Stripe
 

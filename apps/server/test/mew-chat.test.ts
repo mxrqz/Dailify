@@ -184,11 +184,14 @@ describe("POST /mew/chat", () => {
     await chat({ image, history: [{ from: "mew", text: "Oi!" }] });
     const sent = openaiMock.responses.create.mock.calls[0][0];
     expect(sent).toMatchObject({ model: "gpt-6-luna", store: false });
-    expect(sent.instructions).toContain(
+    // Titles are untrusted: the agenda is user-role data, never part of `instructions`.
+    expect(sent.instructions).not.toContain("seen1");
+    expect(sent.input[0]).toMatchObject({ role: "user" });
+    expect(sent.input[0].content).toContain(
       `seen1|Pagar   luz|${local(1, 15, 30).toFormat("yyyy-MM-dd'T'HH:mm")}|aberta|-|-`,
     );
-    expect(sent.input[0]).toEqual({ role: "assistant", content: "Oi!" });
-    expect(sent.input[1].content[1]).toMatchObject({ type: "input_image", image_url: image });
+    expect(sent.input[1]).toEqual({ role: "assistant", content: "Oi!" });
+    expect(sent.input[2].content[1]).toMatchObject({ type: "input_image", image_url: image });
   });
 
   it("proposta que não sobrou nada vira notFound", async () => {

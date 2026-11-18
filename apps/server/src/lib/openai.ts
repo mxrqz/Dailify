@@ -19,15 +19,19 @@ import {
 import type { Env } from "../index";
 import { isRepeatEvery, sanitizeLinks } from "./task-input";
 
-export const openaiClient = (env: Env) => new OpenAI({ apiKey: env.OPENAI_API_KEY });
+// One retry: the SDK retries timeouts too, so the default 2 turned each `timeout` into 3× it.
+export const openaiClient = (env: Env) => new OpenAI({ apiKey: env.OPENAI_API_KEY, maxRetries: 1 });
+
+// gpt-4o-mini shuts down 2027-01-14. Luna reasons; "low" keeps the composer snappy.
+const MODEL = "gpt-6-luna";
 
 // gpt-4o-mini-transcribe shuts down 2027-02-26; gpt-transcribe is OpenAI's listed successor.
 // Billing is per audio DURATION, not file size — the client keeps clips short + Opus-compressed.
 export async function transcribe(env: Env, file: File): Promise<string> {
-  const r = await openaiClient(env).audio.transcriptions.create({
-    file,
-    model: "gpt-transcribe",
-  });
+  const r = await openaiClient(env).audio.transcriptions.create(
+    { file, model: "gpt-transcribe" },
+    { timeout: 20_000 },
+  );
   return r.text;
 }
 
@@ -58,7 +62,7 @@ export function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === "object" && v !== null;
 }
 
-function isStringArray(v: unknown): v is string[] {
+export function isStringArray(v: unknown): v is string[] {
   return Array.isArray(v) && v.every((x) => typeof x === "string");
 }
 
@@ -233,8 +237,7 @@ export function toDraft(
   if (t.date !== null && date === null) throw new Error("AI returned an invalid date");
   // Link a link: um `javascript:` inventado cai sozinho, sem levar os bons junto.
   const links = t.links
-    .flatMap((l) => sanitizeLinks([l]) ?? [])
-    .filter((l) => l !== "invalid")
+    .filter((l) => Array.isArray(sanitizeLinks([l])))
     .slice(0, TASK_LIMITS.linksMax);
   const repeat = normalizeRepeat(t.repeat);
   // O schema já restringe; isto vale pra quando ele não segurou. Um destino por provider.
@@ -275,6 +278,36 @@ export function readOutput<T>(text: string, guard: (v: unknown) => v is T): T {
 }
 
 /**
+ * The one Responses call: strict `json_schema` output through `guard`. Throws on any failure, so
+ * the caller answers 502 without a debit.
+ */
+export async function structured<T>(
+  env: Env,
+  req: {
+    name: string;
+    schema: Record<string, unknown>;
+    instructions: string;
+    input: OpenAI.Responses.ResponseCreateParamsNonStreaming["input"];
+    timeout: number;
+  },
+  guard: (v: unknown) => v is T,
+): Promise<T> {
+  const result = await openaiClient(env).responses.create(
+    {
+      model: MODEL,
+      reasoning: { effort: "low" },
+      // The Responses API keeps outputs 30 days by default; task text has no reason to stay there.
+      store: false,
+      instructions: req.instructions,
+      input: req.input,
+      text: { format: { type: "json_schema", name: req.name, strict: true, schema: req.schema } },
+    },
+    { timeout: req.timeout },
+  );
+  return readOutput(result.output_text, guard);
+}
+
+/**
  * Texto → rascunhos. Porta única da IA de criação: `POST /tasks/parse` e a voz (depois da
  * transcrição) passam por aqui. Lança quando a OpenAI falha ou devolve fora do contrato — e
  * quem chama só debita crédito depois que isto voltou. `allowed`: as integrações ativas que o plano
@@ -286,28 +319,17 @@ export async function interpretText(
   timezone: string,
   allowed: readonly ProviderId[],
 ): Promise<AiParse> {
-  const result = await openaiClient(env).responses.create(
+  const parsed = await structured(
+    env,
     {
-      // gpt-4o-mini shuts down 2027-01-14. Luna reasons; "low" keeps the composer snappy.
-      model: "gpt-6-luna",
-      reasoning: { effort: "low" },
-      // The Responses API keeps outputs 30 days by default; task text has no reason to stay there.
-      store: false,
+      name: "mewki_parse",
+      schema: schema(allowed),
       instructions: PROMPT(timezone, allowed),
       input: text,
-      text: {
-        format: {
-          type: "json_schema",
-          name: "mewki_parse",
-          strict: true,
-          schema: schema(allowed),
-        },
-      },
+      timeout: 20_000,
     },
-    { timeout: 20_000 },
+    isGPTResponse,
   );
-
-  const parsed = readOutput(result.output_text, isGPTResponse);
   const drafts =
     parsed.intent === "create"
       ? parsed.tasks.map((t) => toDraft(t, timezone, allowed)).filter((d) => d.text)
