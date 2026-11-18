@@ -1,23 +1,15 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 let userId = "mw1";
 
-const { openaiMock } = vi.hoisted(() => ({
-  openaiMock: { responses: { create: vi.fn() } },
-}));
-
-vi.mock("openai", () => {
-  function MockOpenAI() {
-    return openaiMock;
-  }
-  return { default: MockOpenAI };
-});
+vi.mock("openai", () => import("./openai"));
+import { openaiMock } from "./openai";
 
 vi.mock("../src/auth", () => import("./session"));
 import { mockSession } from "./session";
 mockSession(() => ({ id: userId, plan: "free" }));
 
-import { env, applyD1Migrations } from "cloudflare:test";
+import { env } from "cloudflare:test";
 import { DateTime } from "luxon";
 import app from "../src/index";
 import { MEW_IMAGE_MAX, limitsFor, type MewBlock, type MewReply, type Task } from "@dailify/shared";
@@ -26,14 +18,6 @@ import { insertTask } from "../src/db/tasks";
 import { saveSettings } from "../src/db/settings";
 
 const TZ = "America/Sao_Paulo";
-
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
-
-beforeEach(() => {
-  vi.clearAllMocks();
-});
 
 const used = (id: string) => readStoredUsage(env.DB, id, "ai", periodFor(new Date()));
 const consent = (id: string) => saveSettings(env.DB, id, { mewConsent: true });

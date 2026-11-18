@@ -1,31 +1,11 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
-const { stripeMock } = vi.hoisted(() => {
-  const stripeMock = {
-    checkout: { sessions: { create: vi.fn() } },
-    billingPortal: { sessions: { create: vi.fn() } },
-    subscriptions: { list: vi.fn(), retrieve: vi.fn() },
-    invoices: { createPreview: vi.fn(), list: vi.fn() },
-    webhooks: { constructEventAsync: vi.fn() },
-  };
-  return { stripeMock };
-});
+vi.mock("stripe", () => import("./stripe"));
+import { stripeMock } from "./stripe";
 
-vi.mock("stripe", () => {
-  function MockStripe() {
-    return stripeMock;
-  }
-  MockStripe.createFetchHttpClient = () => ({});
-  return { default: MockStripe };
-});
-
-import { env, applyD1Migrations } from "cloudflare:test";
+import { env } from "cloudflare:test";
 import app from "../src/index";
 import { seedUser } from "./session";
-
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
 
 /** O que o webhook grava: `plan`/`stripeCustomerId` na linha do Better Auth. */
 const billingOf = (id: string) =>
@@ -57,7 +37,6 @@ const invoicePaid = (lines: unknown[]) => ({
 
 describe("POST /webhooks/stripe", () => {
   beforeEach(async () => {
-    vi.clearAllMocks();
     await seedUser(env.DB, "u1");
   });
 

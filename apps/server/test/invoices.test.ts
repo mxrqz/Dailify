@@ -1,40 +1,16 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
-const { stripeMock } = vi.hoisted(() => {
-  const stripeMock = {
-    checkout: { sessions: { create: vi.fn() } },
-    billingPortal: { sessions: { create: vi.fn() } },
-    subscriptions: { list: vi.fn(), retrieve: vi.fn() },
-    invoices: { createPreview: vi.fn(), list: vi.fn() },
-    webhooks: { constructEventAsync: vi.fn() },
-  };
-  return { stripeMock };
-});
-
-vi.mock("stripe", () => {
-  function MockStripe() {
-    return stripeMock;
-  }
-  MockStripe.createFetchHttpClient = () => ({});
-  return { default: MockStripe };
-});
+vi.mock("stripe", () => import("./stripe"));
+import { stripeMock } from "./stripe";
 
 vi.mock("../src/auth", () => import("./session"));
 import { mockSession, seedUser } from "./session";
 mockSession(() => ({ id: "u1" }));
 
-import { env, applyD1Migrations } from "cloudflare:test";
+import { env } from "cloudflare:test";
 import app from "../src/index";
 
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
-
 describe("GET /billing/payment-details", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("400s when the user has no Stripe customer id", async () => {
     await seedUser(env.DB, "u1");
     const res = await app.request("/billing/payment-details", {}, env);
@@ -98,10 +74,6 @@ describe("GET /billing/payment-details", () => {
 });
 
 describe("GET /billing/invoices", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("400s when the user has no Stripe customer id", async () => {
     await seedUser(env.DB, "u1");
     const res = await app.request("/billing/invoices", {}, env);

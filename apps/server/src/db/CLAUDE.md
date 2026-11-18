@@ -79,7 +79,6 @@ JSON param (`IN (SELECT value FROM json_each(?))`, `markAlertsSent`), never one 
 2. Verb-first `(db, userId, ...)` functions, `*Statement` builders for batched writes.
 3. Its name in `USER_TABLES` (`deleteUserData`); `test/account-delete.test.ts` fails on any table
    with a `user_id` column that is missing there.
-4. A test on the real D1 (`applyD1Migrations(env.DB, env.TEST_MIGRATIONS)` in `beforeAll`) for the
-   epoch-ms/boolean shape and that another userId sees nothing. Existing: `db-tasks`, `db-usage`,
-   `limits`, `alerts`; calendar-sync and mew via `integrations-sync` and `mew-chat`. Harness:
+4. A test on the real D1 (migrated by `test/apply-migrations.ts`) for the epoch-ms/boolean shape
+   and that another userId sees nothing. Existing: `db-tasks`, `db-usage`, `limits`, `alerts`; calendar-sync and mew via `integrations-sync` and `mew-chat`. Harness:
    [test/CLAUDE.md](../../test/CLAUDE.md).

@@ -1,16 +1,11 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 vi.mock("../src/auth", () => import("./session"));
 import { mockSession } from "./session";
 
 import { env } from "cloudflare:workers";
-import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
 import { subscriptionsOf } from "../src/db/push";
-
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
 
 let userId = "";
 beforeEach(() => {

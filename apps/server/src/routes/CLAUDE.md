@@ -44,8 +44,8 @@ things.use("*", rateLimit("API_LIMITER")); // only if every route shares it, els
 - `API_LIMITER` 120/min per user: D1 and Stripe. `AI_LIMITER` 6/min per user: every OpenAI
   route (`/tasks/parse`, `/tasks/voice`, `/mew/chat`). `AUTH_LIMITER` 5/min per
   `cf-connecting-ip`: before login only.
-- Tests run the real bindings (`test/CLAUDE.md`), but none asserts a limiter's 429, and a missing
-  binding is a no-op: a forgotten `rateLimit(...)` passes the gate. `auth.test.ts` asserts that
+- Tests run the real bindings (`test/CLAUDE.md`); only `tasks-parse.test.ts` asserts a limiter's
+  429 (`AI_LIMITER`), and a missing binding is a no-op: a forgotten `rateLimit(...)` passes the gate. `auth.test.ts` asserts that
   `POST /tasks/parse` and `GET /integrations` read the session once.
 
 ## Bodies

@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 let userId = "eu1";
 let role: "free" | "pro" | "max" = "free";
@@ -6,7 +6,7 @@ vi.mock("../src/auth", () => import("./session"));
 import { mockSession } from "./session";
 mockSession(() => ({ id: userId, plan: role }));
 
-import { env, applyD1Migrations } from "cloudflare:test";
+import { env } from "cloudflare:test";
 import {
   INTEGRATIONS,
   zonedEpoch,
@@ -139,10 +139,6 @@ let calls: { url: string; method: string; body: string }[];
 // A PK de `tasks` é global: id fixo entre usuários de teste colidiria.
 let tid: string;
 
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
-
 beforeEach(() => {
   userId = `eu-${crypto.randomUUID()}`;
   role = "free";
@@ -160,8 +156,6 @@ beforeEach(() => {
     return route(init);
   });
 });
-
-afterEach(() => vi.restoreAllMocks());
 
 async function seed(over: { expiresAt?: number; links?: string[] } = {}) {
   const tokens = await sealTokens(env, userId, "google-calendar", {

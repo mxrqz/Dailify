@@ -1,30 +1,19 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
-const { stripeMock, sendEmail } = vi.hoisted(() => ({
-  stripeMock: { subscriptions: { search: vi.fn(), cancel: vi.fn() } },
+const { sendEmail } = vi.hoisted(() => ({
   sendEmail: vi.fn<(env: unknown, mail: { text: string }) => Promise<void>>(async () => {}),
 }));
 
-vi.mock("stripe", () => {
-  function MockStripe() {
-    return stripeMock;
-  }
-  MockStripe.createFetchHttpClient = () => ({});
-  return { default: MockStripe };
-});
+vi.mock("stripe", () => import("./stripe"));
+import { stripeMock } from "./stripe";
 vi.mock("../src/lib/email", () => ({ sendEmail }));
 
-import { env, applyD1Migrations } from "cloudflare:test";
+import { env } from "cloudflare:test";
 import { auth } from "../src/auth";
 import { insertTask, getTask, USER_TABLES } from "../src/db/tasks";
 import { bumpStoredUsage, readStoredUsage } from "../src/db/usage";
 import { insertState, upsertConnection } from "../src/db/integrations";
 import { sealTokens } from "../src/integrations/connection";
-
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
-beforeEach(() => vi.clearAllMocks());
 
 /** Entra por magic link e devolve o id + o header de sessão do app (bearer). */
 async function signedIn(email: string) {
@@ -154,7 +143,6 @@ describe("auth.api.deleteUser", () => {
       return new Response(null, { status: 200 });
     });
     await auth.api.deleteUser({ body: {}, headers });
-    vi.restoreAllMocks();
 
     expect(revoked).toEqual(["r"]);
     expect(await readStoredUsage(env.DB, id, "ai", "2026-11")).toBe(0);

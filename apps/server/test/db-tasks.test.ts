@@ -1,6 +1,5 @@
 import { env } from "cloudflare:test";
-import { beforeAll, describe, it, expect } from "vitest";
-import { applyD1Migrations } from "cloudflare:test";
+import { describe, it, expect } from "vitest";
 import {
   appendCompletion,
   excludeOccurrence,
@@ -10,10 +9,6 @@ import {
   updateTask,
 } from "../src/db/tasks";
 import type { Task } from "@dailify/shared";
-
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
 
 const t = (over: Partial<Task> = {}): Task => ({
   id: "a1",

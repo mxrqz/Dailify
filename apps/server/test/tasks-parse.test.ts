@@ -1,36 +1,30 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 
 let role: "free" | "pro" | "max" = "free";
 let userId = "pu1";
 
-const { openaiMock } = vi.hoisted(() => ({
-  openaiMock: { responses: { create: vi.fn() } },
-}));
-
-vi.mock("openai", () => {
-  function MockOpenAI() {
-    return openaiMock;
-  }
-  return { default: MockOpenAI };
-});
+vi.mock("openai", () => import("./openai"));
+import { openaiMock } from "./openai";
 
 vi.mock("../src/auth", () => import("./session"));
 import { mockSession } from "./session";
 mockSession(() => ({ id: userId, plan: role }));
 
-import { env, applyD1Migrations } from "cloudflare:test";
+import { env } from "cloudflare:test";
 import app from "../src/index";
 import { limitsFor, type AiParse } from "@dailify/shared";
 import { bumpStoredUsage, periodFor, readStoredUsage } from "../src/db/usage";
 import { markRevoked, upsertConnection } from "../src/db/integrations";
 
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
+beforeEach(() => {
+  role = "free";
+  // Mid-month, so the debit and `used` can't land on two sides of a month rollover.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(Date.UTC(2026, 10, 15, 12));
 });
 
-beforeEach(() => {
-  vi.clearAllMocks();
-  role = "free";
+afterEach(() => {
+  vi.useRealTimers();
 });
 
 const used = (id: string) => readStoredUsage(env.DB, id, "ai", periodFor(new Date()));
@@ -165,6 +159,18 @@ describe("POST /tasks/parse", () => {
     const res = await parse({ text: "comprar pão", timezone: "UTC" });
     expect(res.status).toBe(429);
     expect(await res.json()).toEqual({ error: "AI Credits Limit Reached", code: "ai_exhausted" });
+    expect(openaiMock.responses.create).not.toHaveBeenCalled();
+  });
+
+  it("answers the 7th call in a minute with 429 rate_limited, before OpenAI", async () => {
+    userId = `pu-rl-${crypto.randomUUID()}`;
+    openaiMock.responses.create.mockRejectedValue(new Error("timeout"));
+    for (let i = 0; i < 6; i++)
+      expect((await parse({ text: "comprar pão", timezone: "UTC" })).status).toBe(502);
+    openaiMock.responses.create.mockClear();
+    const res = await parse({ text: "comprar pão", timezone: "UTC" });
+    expect(res.status).toBe(429);
+    expect(await res.json()).toEqual({ error: "Too many requests", code: "rate_limited" });
     expect(openaiMock.responses.create).not.toHaveBeenCalled();
   });
 

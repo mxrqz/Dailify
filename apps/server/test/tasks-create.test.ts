@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 let role: "free" | "pro" | "max" = "free";
 
@@ -7,14 +7,9 @@ import { mockSession } from "./session";
 mockSession(() => ({ id: "u2", plan: role }));
 
 import { env } from "cloudflare:test";
-import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
 import { insertTask, getTask } from "../src/db/tasks";
 import type { Task, TaskInput } from "@dailify/shared";
-
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
 
 const taskInput = (over: Partial<TaskInput> = {}): TaskInput => ({
   title: "New task",

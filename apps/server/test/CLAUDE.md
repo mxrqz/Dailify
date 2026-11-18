@@ -9,7 +9,8 @@ server's prettier, eslint and `tsc` gates. Its package-rename warning on every r
 
 - `<area>-<feature>.test.ts`, flat (`tasks-edit`, `integrations-sync`, `db-tasks`). Route describes
   read `"METHOD /path — facet"`; unit describes use the function or `db/<module>` name.
-- `session.ts`: the replacement for `../src/auth` (`mockSession`, `seedUser`).
+- `session.ts`: the replacement for `../src/auth` (`mockSession`, `seedUser`). `stripe.ts` and
+  `openai.ts`: the SDK mocks.
 - `fixtures/<provider>/index.ts`: real responses reduced to the fields the server reads.
 - `env.d.ts`: adds `TEST_MIGRATIONS` and the optional `LIVE_*` bindings to `Cloudflare.Env`.
 
@@ -19,11 +20,11 @@ server's prettier, eslint and `tsc` gates. Its package-rename warning on every r
   AI 6, AUTH 5 per minute per key). Give each test its own user id
   (`` `eu-${crypto.randomUUID()}` `` in beforeEach) or filter assertions to its own ids. One id that
   makes more than 6 OpenAI-route calls in a file gets a 429 (`mew-chat.test.ts` switches ids for this).
-- Migrations are applied per file by `apply-migrations.ts` (a `setupFiles` `beforeAll`); a file's own
-  `applyD1Migrations` hook is now redundant. The setup never imports `cloudflare:test`: that loads
-  `src/` (before the file's `vi.mock` if static, ~8 s inside the hook if dynamic).
+- Migrations are applied per file by `apply-migrations.ts` (a `setupFiles` `beforeAll`); files
+  don't apply their own. The setup never imports `cloudflare:test`: that loads `src/` (before the
+  file's `vi.mock` if static, ~8 s inside the hook if dynamic).
 - `clearMocks`, `restoreMocks` and `unstubGlobals` are on: create spies and stubs in `beforeEach`
-  or the test, never in `beforeAll`.
+  or the test, never in `beforeAll`, and don't call `vi.clearAllMocks`/`restoreAllMocks` by hand.
 - Call the app with `app.request(path, init, env, ctx)`. Hono's `c.executionCtx` throws without a
   ctx, so `GET /tasks` (sync) and a linked PATCH/DELETE (propagate) need `createExecutionContext()`.
   A test that asserts that background work awaits `waitOnExecutionContext(ctx)` first (`send` in
@@ -35,8 +36,8 @@ server's prettier, eslint and `tsc` gates. Its package-rename warning on every r
 - workerd runs in UTC: `new Date(y, m, d)` is a UTC instant. Pass `?tz=`/`timezone` when the test is
   about the user's local day.
 - New files import `env` from `cloudflare:workers` (`session.ts`); the `cloudflare:test` export is
-  deprecated. Take only `applyD1Migrations`, `createExecutionContext` and `waitOnExecutionContext`
-  from `cloudflare:test`.
+  deprecated. Take only `createExecutionContext` and `waitOnExecutionContext` from
+  `cloudflare:test`.
 
 ## Mocking
 
@@ -44,8 +45,9 @@ server's prettier, eslint and `tsc` gates. Its package-rename warning on every r
   read on every request (`null` = 401). With `plan` it seeds the `"user"` row first, because
   `requireAuth` reads the plan from D1; `seedUser` covers `stripeCustomerId`. `magic-link` and
   `account-delete` use the real Better Auth via `auth.api.*` (captcha runs only in the HTTP handler).
-- `stripe`, `openai` and `../src/lib/email` are module mocks; the Stripe and OpenAI ones are copied
-  per file today (`checkout.test.ts`, `voice.test.ts`).
+- `stripe` and `openai` are module mocks shared like the session: `vi.mock("stripe", () =>
+import("./stripe"))` then `import { stripeMock } from "./stripe"` (`openai.ts`: `openaiMock`).
+  `../src/lib/email` is mocked per file.
 - Google goes through `vi.spyOn(globalThis, "fetch")`, set in beforeEach, restored in afterEach, and
   throwing on any URL it doesn't know (`integrations-propagate.test.ts`).
 - Legacy: `integrations-sync.test.ts` mocks shared `matchDuplicate` with a stale reason ("arrives in

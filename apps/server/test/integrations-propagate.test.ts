@@ -1,16 +1,11 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 let userId = "eu1";
 vi.mock("../src/auth", () => import("./session"));
 import { mockSession } from "./session";
 mockSession(() => ({ id: userId }));
 
-import {
-  env,
-  applyD1Migrations,
-  createExecutionContext,
-  waitOnExecutionContext,
-} from "cloudflare:test";
+import { env, createExecutionContext, waitOnExecutionContext } from "cloudflare:test";
 import { zonedEpoch, type IntegrationStatus, type Task } from "@dailify/shared";
 import app from "../src/index";
 import { sealTokens } from "../src/integrations/connection";
@@ -32,10 +27,6 @@ let google404 = false;
 let googleStatus = 200;
 let googleBody: Record<string, unknown> = {};
 
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
-
 beforeEach(() => {
   userId = `eu-${crypto.randomUUID()}`;
   tid = `t${crypto.randomUUID().slice(0, 8)}`;
@@ -56,8 +47,6 @@ beforeEach(() => {
       : Response.json({ updated: UPDATED, ...googleBody });
   });
 });
-
-afterEach(() => vi.restoreAllMocks());
 
 const base = (over: Partial<Task> = {}): Task => ({
   id: tid,

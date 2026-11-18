@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, vi } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 // Mutável e fechado pelo mock abaixo: cada teste assinala o seu próprio id (padrão de
 // voice.test.ts) para não dividir usuário — e portanto contagem de uso — com os outros.
@@ -9,14 +9,9 @@ import { mockSession } from "./session";
 mockSession(() => ({ id: userId }));
 
 import { env } from "cloudflare:test";
-import { applyD1Migrations } from "cloudflare:test";
 import { limitsFor } from "@dailify/shared";
 import { insertTask } from "../src/db/tasks";
 import app from "../src/index";
-
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
 
 describe("GET /permissions", () => {
   // Janeiro/2026 é um mês em que nenhum teste deste arquivo escreve: a asserção de zeros não

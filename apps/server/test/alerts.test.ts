@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // hoisted: o vi.mock abaixo sobe para o topo do módulo e precisa do mock já construído.
 // A assinatura no genérico é o que dá tipo a `sendPush.mock.calls[i][2]` (o payload).
@@ -18,7 +18,6 @@ import { mockSession } from "./session";
 mockSession(() => ({ id: "pushuser" }));
 
 import { env } from "cloudflare:test";
-import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
 import { dispatchAlerts } from "../src/alerts";
 import { insertTask } from "../src/db/tasks";
@@ -29,12 +28,7 @@ import {
   subscriptionsOf,
 } from "../src/db/push";
 
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
-
 beforeEach(async () => {
-  sendPush.mockClear();
   await env.DB.prepare("DELETE FROM tasks").run();
   await env.DB.prepare("DELETE FROM push_subscriptions").run();
 });

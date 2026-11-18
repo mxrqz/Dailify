@@ -1,18 +1,13 @@
-import { describe, it, expect, vi, beforeAll } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 vi.mock("../src/auth", () => import("./session"));
 import { mockSession } from "./session";
 mockSession(() => ({ id: "u4" }));
 
 import { env } from "cloudflare:test";
-import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
 import { insertTask } from "../src/db/tasks";
 import type { Task } from "@dailify/shared";
-
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
 
 describe("POST /tasks/:id/complete", () => {
   it("appends one epoch-ms completion entry", async () => {

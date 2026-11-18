@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 // O matcher real chega na Fase 1B; aqui basta o título igual pra provar que o `duplicate_of` grava.
 vi.mock("@dailify/shared", async (importOriginal) => {
@@ -10,7 +10,7 @@ vi.mock("@dailify/shared", async (importOriginal) => {
   };
 });
 
-import { env, applyD1Migrations } from "cloudflare:test";
+import { env } from "cloudflare:test";
 import { TASK_LIMITS, zonedEpoch, type Task } from "@dailify/shared";
 import { sealTokens } from "../src/integrations/connection";
 import { eventId } from "../src/integrations/google-calendar/event";
@@ -47,10 +47,6 @@ const ev = (id: string, over: object = {}) => ({
   ...over,
 });
 
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
-
 beforeEach(async () => {
   userId = `eu-${crypto.randomUUID()}`;
   lists = [];
@@ -76,8 +72,6 @@ beforeEach(async () => {
     Date.now(),
   );
 });
-
-afterEach(() => vi.restoreAllMocks());
 
 /** Libera o throttle: cada chamada aqui é uma passada nova. */
 async function sync(full = false) {

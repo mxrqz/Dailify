@@ -1,15 +1,10 @@
-import { describe, it, expect, vi, beforeAll } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 vi.mock("../src/auth", () => import("./session"));
 import { auth, mockSession } from "./session";
 
 import { env } from "cloudflare:workers";
-import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
-
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
 
 // Every authenticated route. A new one gets a row: without a session it must answer 401.
 const AUTHENTICATED: [method: string, path: string][] = [

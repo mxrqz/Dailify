@@ -1,22 +1,10 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 let role: "free" | "pro" | "max" = "free";
 let userId = "vu1";
 
-const { openaiMock } = vi.hoisted(() => {
-  const openaiMock = {
-    audio: { transcriptions: { create: vi.fn() } },
-    responses: { create: vi.fn() },
-  };
-  return { openaiMock };
-});
-
-vi.mock("openai", () => {
-  function MockOpenAI() {
-    return openaiMock;
-  }
-  return { default: MockOpenAI };
-});
+vi.mock("openai", () => import("./openai"));
+import { openaiMock } from "./openai";
 
 // Every plan has unlimited tasks today, so a quota stop mid-batch can only be staged.
 vi.mock("../src/db/limits", async (importOriginal) => {
@@ -31,19 +19,13 @@ mockSession(() => ({ id: userId, plan: role }));
 
 import { DateTime } from "luxon";
 import { env } from "cloudflare:test";
-import { applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
 import { getTask } from "../src/db/tasks";
 import { saveSettings } from "../src/db/settings";
 import { limitsFor, type Task } from "@dailify/shared";
 import { bumpStoredUsage, periodFor, readStoredUsage } from "../src/db/usage";
 
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
-
 beforeEach(async () => {
-  vi.clearAllMocks();
   // Sem fuso no form, a voz cai no `user_settings.time_zone`.
   await saveSettings(env.DB, "vu1", { timeZone: "UTC" });
 });

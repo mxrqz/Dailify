@@ -1,11 +1,6 @@
 import { env } from "cloudflare:test";
-import { beforeAll, describe, it, expect } from "vitest";
-import { applyD1Migrations } from "cloudflare:test";
+import { describe, it, expect } from "vitest";
 import { periodFor, readStoredUsage, bumpStoredUsage } from "../src/db/usage";
-
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
 
 describe("periodFor", () => {
   it("quota mensal vira YYYY-MM", () => {

@@ -1,17 +1,13 @@
-import { describe, it, expect, vi, beforeAll } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 vi.mock("../src/auth", () => import("./session"));
 import { mockSession } from "./session";
 mockSession(() => ({ id: "u1", plan: "max" }));
 
-import { env, applyD1Migrations, createExecutionContext } from "cloudflare:test";
+import { env, createExecutionContext } from "cloudflare:test";
 import app from "../src/index";
 import { insertTask } from "../src/db/tasks";
 import type { Task } from "@dailify/shared";
-
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
 
 const date = new Date(2026, 4, 15, 9).getTime();
 const base: Task = {
@@ -51,6 +47,15 @@ describe("tarefas Sem data", () => {
     });
     const { tasks } = await get("/tasks?month=2026-05");
     expect(tasks.filter((t) => t.id.startsWith("ud-"))).toEqual([]);
+  });
+
+  it("GET /tasks/undated returns a series as its one master row, unexpanded", async () => {
+    await insertTask(env.DB, "u1", { ...base, id: "ud-master", repeat: "Daily", undated: true });
+    const { tasks } = await get("/tasks/undated");
+    const rows = tasks.filter((t) => t.id === "ud-master");
+    expect(rows).toHaveLength(1);
+    expect(rows[0]).toMatchObject({ date, repeat: "Daily", undated: true });
+    expect(rows[0].seriesStart).toBeUndefined();
   });
 
   it("/undated não traz agenda nem outro usuário", async () => {

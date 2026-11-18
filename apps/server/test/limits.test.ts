@@ -1,15 +1,10 @@
 import { env } from "cloudflare:test";
-import { beforeAll, describe, it, expect } from "vitest";
-import { applyD1Migrations } from "cloudflare:test";
+import { describe, it, expect } from "vitest";
 import { limitsFor } from "@dailify/shared";
 import { enforce, readAllUsage } from "../src/db/limits";
 import { insertTask } from "../src/db/tasks";
 import { bumpStoredUsage, periodFor } from "../src/db/usage";
 import type { Task } from "@dailify/shared";
-
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
 
 const task = (over: Partial<Task> = {}): Task => ({
   id: "l1",

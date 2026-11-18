@@ -1,26 +1,11 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
-const { stripeMock, profileMock } = vi.hoisted(() => {
-  const stripeMock = {
-    checkout: { sessions: { create: vi.fn() } },
-    billingPortal: { sessions: { create: vi.fn() } },
-    subscriptions: { list: vi.fn(), retrieve: vi.fn() },
-    invoices: { createPreview: vi.fn(), list: vi.fn() },
-    webhooks: { constructEventAsync: vi.fn() },
-  };
-  return {
-    stripeMock,
-    profileMock: vi.fn<() => Promise<{ email?: string; stripeCustomerId?: string }>>(),
-  };
-});
+const { profileMock } = vi.hoisted(() => ({
+  profileMock: vi.fn<() => Promise<{ email?: string; stripeCustomerId?: string }>>(),
+}));
 
-vi.mock("stripe", () => {
-  function MockStripe() {
-    return stripeMock;
-  }
-  MockStripe.createFetchHttpClient = () => ({});
-  return { default: MockStripe };
-});
+vi.mock("stripe", () => import("./stripe"));
+import { stripeMock } from "./stripe";
 
 vi.mock("../src/auth", () => import("./session"));
 import { mockSession } from "./session";
@@ -31,13 +16,8 @@ vi.mock("../src/lib/user", async (importOriginal) => {
   return { ...actual, billingProfile: profileMock };
 });
 
-import { env, applyD1Migrations } from "cloudflare:test";
+import { env } from "cloudflare:test";
 import app from "../src/index";
-
-// O `requireAuth` lê o `plan` do D1.
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
 
 const post = (body: unknown, headers: Record<string, string> = {}) =>
   app.request(
@@ -51,10 +31,6 @@ const post = (body: unknown, headers: Record<string, string> = {}) =>
   );
 
 describe("POST /billing/checkout", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("400s on an unknown productName", async () => {
     const res = await post({ productName: "not-a-real-plan" });
     expect(res.status).toBe(400);
@@ -150,10 +126,6 @@ describe("POST /billing/checkout", () => {
 });
 
 describe("GET /billing/portal", () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it("400s when the user has no Stripe customer id", async () => {
     profileMock.mockResolvedValue({});
     const res = await app.request("/billing/portal", {}, env);

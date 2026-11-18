@@ -1,11 +1,11 @@
-import { describe, it, expect, vi, beforeAll, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 
 let userId = "iu1";
 vi.mock("../src/auth", () => import("./session"));
 import { mockSession } from "./session";
 mockSession(() => ({ id: userId }));
 
-import { env, applyD1Migrations } from "cloudflare:test";
+import { env } from "cloudflare:test";
 import { APP_URL, INTEGRATIONS, PROVIDER_IDS, type IntegrationStatus } from "@dailify/shared";
 import app from "../src/index";
 import { seal, unseal } from "../src/integrations/crypto";
@@ -25,10 +25,6 @@ const STATE_AGE = 11 * 60_000;
 let routes: Record<string, () => Response>;
 let calls: { url: string; body: string; auth: string | null }[];
 
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
-
 beforeEach(() => {
   userId = `iu-${crypto.randomUUID()}`;
   calls = [];
@@ -47,8 +43,6 @@ beforeEach(() => {
     return route();
   });
 });
-
-afterEach(() => vi.restoreAllMocks());
 
 const callsTo = (url: string) => calls.filter((c) => c.url === url);
 

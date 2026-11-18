@@ -1,12 +1,8 @@
-import { describe, it, expect, beforeAll } from "vitest";
-import { env, applyD1Migrations } from "cloudflare:test";
+import { describe, it, expect } from "vitest";
+import { env } from "cloudflare:test";
 import { insertTask, getTask, updateTask } from "../src/db/tasks";
 import { taskHash } from "@dailify/shared";
 import type { Task } from "@dailify/shared";
-
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
 
 const make = (over: Partial<Task> = {}): Task => ({
   id: "sync1",

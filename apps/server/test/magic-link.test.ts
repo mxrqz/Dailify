@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeAll, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 
 const { sendEmail } = vi.hoisted(() => ({
   sendEmail: vi.fn<(env: unknown, mail: { to: string; text: string }) => Promise<void>>(
@@ -7,14 +7,9 @@ const { sendEmail } = vi.hoisted(() => ({
 }));
 vi.mock("../src/lib/email", () => ({ sendEmail }));
 
-import { env, applyD1Migrations } from "cloudflare:test";
+import { env } from "cloudflare:test";
 import { auth } from "../src/auth";
 import { sha256b64url as challengeOf } from "../src/lib/encoding";
-
-beforeAll(async () => {
-  await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
-});
-beforeEach(() => sendEmail.mockClear());
 
 const web = env.ALLOWED_ORIGIN.split(",")[0];
 
