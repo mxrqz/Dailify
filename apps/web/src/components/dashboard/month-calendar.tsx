@@ -132,7 +132,7 @@ export function MonthCalendar({
   const title = format(month, "MMMM", { locale: ptBR });
 
   return (
-    <div className="fixed inset-0 z-30 overflow-y-auto overscroll-contain bg-canvas pb-30 md:static md:z-auto md:overflow-visible md:pb-10">
+    <div className="fixed inset-0 z-float overflow-y-auto overscroll-contain bg-canvas pb-30 md:static md:z-auto md:overflow-visible md:pb-10">
       {/* Not a landmark: two buttons, no links, and the Sidebar already owns "Navegação". */}
       <div className="sticky top-0 z-10 flex h-bar items-center justify-between bg-material-bar-solid px-2 md:top-10">
         <button

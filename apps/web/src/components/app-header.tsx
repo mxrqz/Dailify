@@ -67,7 +67,7 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
           <Button
             asChild
             variant="outline"
-            className="hidden h-6 rounded-md px-3 font-mono text-2xs uppercase tracking-[0.04em] md:inline-flex"
+            className="hidden h-6 rounded-md px-3 caps md:inline-flex"
           >
             <Link to="/premium" className="relative hit-target">
               {copy.header.upgrade}
@@ -76,11 +76,7 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
         )}
 
         {!isSignedIn && (
-          <Button
-            asChild
-            variant="outline"
-            className="h-6 rounded-md px-3 font-mono text-2xs uppercase tracking-[0.04em]"
-          >
+          <Button asChild variant="outline" className="h-6 rounded-md px-3 caps">
             <Link to="/login">{copy.header.signIn}</Link>
           </Button>
         )}

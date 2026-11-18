@@ -141,7 +141,7 @@ export function Sidebar(): JSX.Element {
   return (
     <nav
       aria-label={copy.profile.navLabel}
-      className="sticky top-10 hidden h-[calc(100dvh-2.5rem)] w-64 shrink-0 flex-col border-r border-separator px-3 pt-4 pb-5 md:flex"
+      className="sticky top-(--bar-desktop) hidden h-below-bar w-64 shrink-0 flex-col border-r border-separator px-3 pt-4 pb-5 md:flex"
     >
       <NavItems />
     </nav>

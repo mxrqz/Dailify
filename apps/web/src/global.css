@@ -250,7 +250,6 @@
   --radius-sm: 0.625rem;
   --radius-md: 0.875rem;
   --radius-lg: var(--radius-panel);
-  --radius-xl: var(--radius-panel); /* legacy alias: use rounded-lg */
   --radius-sheet: 2rem;
 
   --color-canvas: var(--canvas);
@@ -305,7 +304,6 @@
   --z-index-chat: var(--layer-chat);
   --z-index-dock: var(--layer-dock);
   --z-index-overlay: var(--layer-overlay);
-  --shadow-panel: var(--shadow-raised); /* legacy alias: use shadow-raised */
   /* Elevação 1 — o degrau mais baixo: o que flutua encostado na superfície (a toolbar do cartão).
      Duas camadas de BOX-shadow, contato + difusa; nunca `drop-shadow`, que é filtro e se empilha
      entre camadas — uma sombra acaba escurecendo a outra onde os elementos se sobrepõem. */

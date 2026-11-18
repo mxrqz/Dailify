@@ -275,7 +275,7 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
   return (
     // Folha de BAIXO: no desktop a edição acontece no próprio cartão; quem abre isto é o toque.
     // Altura pelo conteúdo, com teto em `svh` (o `dvh` encolheria com o teclado).
-    <SheetContent side="bottom" className="mx-auto max-h-[94svh] w-full max-w-lg">
+    <SheetContent side="bottom" className="mx-auto max-h-sheet w-full max-w-lg">
       <SheetTitle className="sr-only">{copy.form.editTitle}</SheetTitle>
       <SheetDescription className="sr-only">{copy.form.editDescription}</SheetDescription>
 

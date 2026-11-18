@@ -66,7 +66,7 @@ export function DuplicatesSheet({
 }): JSX.Element {
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent side="bottom" className="mx-auto max-h-[94svh] w-full max-w-lg">
+      <SheetContent side="bottom" className="mx-auto max-h-sheet w-full max-w-lg">
         <SheetHeader>
           <SheetTitle>
             {pairs.length > 1

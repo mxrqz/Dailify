@@ -79,10 +79,11 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
 
 - twMerge knows the custom `text-*`, `rounded-*`, `shadow-*`, `ease-*`, `duration-*`, `z-*`,
   `w-sheet|undated`, `max-w-bubble`, `max-h-sheet`, `h-bar|below-bar`, `pb-*`, `pt-safe`,
-  `top-safe`, `px-gutter`, `pr-gutter`. Still unregistered: `scroll-mt-bar`, `min-w-duration`.
-- Don't copy: `ring-[3px]` focus recipes (use `focus-ring`), `tracking-[0.04em]` caps labels (use
+  `top-safe`, `px-gutter`, `pr-gutter`, `scroll-mt-bar`, `min-w-duration`, and `caps` as a font
+  size (so it replaces a Button's `text-subhead`).
+- Don't use: `ring-[3px]` focus recipes (use `focus-ring`), `tracking-[0.04em]` caps labels (use
   `caps`), `max-h-[94svh]` (use `max-h-sheet`), `h-[calc(100dvh-…)]` (use `h-below-bar`),
-  `rounded-xl`/`shadow-panel` (legacy aliases of `rounded-lg`/`shadow-raised`). Scale forms:
+  `rounded-xl` (Tailwind's 12px, off the DS scale; panels are `rounded-lg`). Scale forms:
   `ring-3`, `min-w-32`, `max-h-75`, `top-1/2`, `-translate-1/2`.
 - Page layers: `z-bar` (20) < `z-float` (30) < `z-chat` (35) < `z-dock` (40) < `z-overlay` (50).
   Numeric z only for stacking inside one component.

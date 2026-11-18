@@ -24,7 +24,7 @@ const DOCKED_KEY = "dailify:composer-docked";
 // Botão, folha e campo fixo são a MESMA superfície: o framer morfa uma na outra pelo layoutId.
 const SURFACE = "composer-surface";
 
-// px of --radius-md (14: rounded-xl's 22 would make the 48px FAB nearly a circle) and --radius-panel
+// px of --radius-md (14: rounded-lg's 22 would make the 48px FAB nearly a circle) and --radius-panel
 // (22, so the inner rounded-field stays concentric). Numbers, because motion only corrects a radius
 // during the morph's scale when it comes through `style`.
 const RADIUS_FAB = 14;
@@ -188,13 +188,13 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
   return (
     <LayoutGroup id="composer">
       {docked ? (
-        <div className="sticky bottom-0 z-40 mt-auto px-6 pb-6">
+        <div className="sticky bottom-0 z-dock mt-auto px-6 pb-6">
           <motion.section
             layoutId={SURFACE}
             transition={morph}
             style={{ borderRadius: RADIUS_PANEL }}
             aria-label={label}
-            className="relative border border-separator bg-surface-raised p-1 shadow-panel"
+            className="relative border border-separator bg-surface-raised p-1 shadow-raised"
           >
             <motion.div {...content}>
               <TaskComposer
@@ -219,7 +219,7 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
           </motion.section>
         </div>
       ) : (
-        <div className="sticky bottom-0 z-40 mt-auto h-0">
+        <div className="sticky bottom-0 z-dock mt-auto h-0">
           {!open && (
             <motion.button
               ref={fabRef}
@@ -259,7 +259,7 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
                   changeOpen(false);
                 }}
                 style={{ borderRadius: RADIUS_PANEL }}
-                className="absolute right-6 bottom-6 w-sheet border border-separator bg-surface-raised p-1 shadow-panel"
+                className="absolute right-6 bottom-6 w-sheet border border-separator bg-surface-raised p-1 shadow-raised"
               >
                 <DialogTitle className="sr-only">{label}</DialogTitle>
                 <motion.div {...content}>{sheetComposer}</motion.div>
