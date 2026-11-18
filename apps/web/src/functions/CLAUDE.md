@@ -52,7 +52,8 @@ render test whose component now calls it (a factory mock throws on an export it 
   `crypto.randomUUID` on plain http), `patch` (optional `occurrence`), `complete`, `uncomplete`
   (`day`, or `[day, until]` for an undated period), `delete`, `delete-occurrence`.
 - `collapseQueue`: a `delete` drops its task's pending entries, and itself when a `create` was
-  pending. The newest `complete`/`uncomplete` replaces the pending one whatever its day. Patches
+  pending. The newest `complete`/`uncomplete` replaces a pending one only for the same day (the complete's
+  stamp, the uncomplete's `day`, in the app zone). Patches
   merge per (task, occurrence); a series patch on a pending `create` folds into it.
   `delete-occurrence` is its own op so it never collapses like a delete.
 - `flushQueue` is single-flight per user (`flushing` map). The drain re-reads storage every step,

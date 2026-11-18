@@ -1,3 +1,4 @@
+import { isSameDay } from "date-fns";
 import type { Task, TaskInput } from "@dailify/shared";
 
 import {
@@ -120,8 +121,12 @@ const writeQueue = (userId: string, queue: Mutation[]): void => write(key(userId
  * - `patch` + `patch` da mesma tarefa viram um só (o mais novo ganha campo a campo);
  * - `delete` apaga o que estava pendente daquela tarefa — e some junto com o `create` dela, porque
  *   criar e excluir offline é o mesmo que nunca ter existido;
- * - `complete` e `uncomplete` se cancelam: só o último estado importa.
+ * - `complete` e `uncomplete` do mesmo dia se cancelam: só o último estado importa.
  */
+// The day a complete (its stamp) or an uncomplete (its `day`) is about, in the app zone.
+const checkDay = (m: Extract<Mutation, { op: "complete" | "uncomplete" }>) =>
+  zoned(m.op === "complete" ? m.at : m.day);
+
 export function collapseQueue(queue: Mutation[]): Mutation[] {
   const out: Mutation[] = [];
 
@@ -141,8 +146,15 @@ export function collapseQueue(queue: Mutation[]): Mutation[] {
     }
 
     if (mutation.op === "complete" || mutation.op === "uncomplete") {
+      // Per day: completion is read per occurrence, so reopening Tuesday never cancels Monday.
+      const day = checkDay(mutation);
       const rest = out.filter(
-        (m) => !(sameTask(m) && (m.op === "complete" || m.op === "uncomplete")),
+        (m) =>
+          !(
+            sameTask(m) &&
+            (m.op === "complete" || m.op === "uncomplete") &&
+            isSameDay(checkDay(m), day)
+          ),
       );
       out.length = 0;
       out.push(...rest, mutation);
