@@ -36,9 +36,14 @@ import {
 import { connectIntegration, disconnectIntegration, getIntegrations } from "@/functions/api";
 import { fill } from "@/functions/functions";
 import { useCalendarDefault } from "@/hooks/useCalendarDefault";
-import { patchIntegration, setIntegrations, useIntegrations } from "@/hooks/useIntegrations";
+import {
+  patchIntegration,
+  setIntegrations,
+  useIntegration,
+  useIntegrations,
+} from "@/hooks/useIntegrations";
 import { useOnline } from "@/hooks/useOnline";
-import { isTauri } from "@/lib/native-auth";
+import { isTauri } from "@/lib/platform";
 import { openExternal } from "@/lib/open-external";
 
 const t = copy.integrations;
@@ -301,7 +306,7 @@ export function Integrations(): JSX.Element {
 
 /** O grupo Integrações de /settings: o resumo do Google Agenda e o caminho pra página inteira. */
 export function IntegrationsSummary(): JSX.Element {
-  const status = useIntegrations()?.find((s) => s.provider === GCAL);
+  const status = useIntegration(GCAL);
   const connected = active(status);
 
   return (

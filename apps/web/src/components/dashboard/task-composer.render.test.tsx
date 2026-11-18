@@ -68,7 +68,6 @@ const draft = (text: string, hour: number): ParsedTaskWire => ({
 const reads = (result: AiParse) => api.parseTaskAi.mockResolvedValue({ result });
 
 beforeEach(() => {
-  vi.clearAllMocks();
   voice.state = "idle";
   ctx.aiUsed = 5;
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);

@@ -1,4 +1,4 @@
-import { useEffect, useId, useMemo, useState, ReactNode } from "react";
+import { useEffect, useId, useMemo, useState, type ReactNode } from "react";
 import {
   Sheet,
   SheetContent,
@@ -9,7 +9,7 @@ import {
 } from "./ui/sheet";
 import { AddToCalendar } from "@/components/add-to-calendar";
 import { RecurrenceScopeDialog } from "@/components/dashboard/recurrence-scope-dialog";
-import { TaskProps } from "@/types/types";
+import type { Task } from "@dailify/shared";
 import { useSession } from "@/lib/auth";
 import { useDailify } from "./dailifyContext";
 import { Button } from "./ui/button";
@@ -17,7 +17,7 @@ import { replaceCalendarMeet, updateTask } from "@/functions/api";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { ChevronLeftIcon, CheckIcon, RotateCcwIcon } from "lucide-react";
-import { getCompletionDate, isTaskModified, upsertTaskWithRecurrence } from "@/functions/functions";
+import { getCompletionDate } from "@/functions/functions";
 import {
   FORM_VIEWS,
   TaskForm,
@@ -26,13 +26,13 @@ import {
 } from "@/components/dashboard/task-form";
 import { copy } from "@/components/dashboard/copy";
 import { useTaskActions } from "@/hooks/useTaskActions";
-import { useCalendarReady, useIntegrations } from "@/hooks/useIntegrations";
+import { useCalendarReady, useIntegration } from "@/hooks/useIntegrations";
 import { calendarRevoked, useApplyTask } from "@/hooks/useCalendarPush";
 import { INTEGRATION_ERROR, isCalendarEventLink, seriesOf } from "@dailify/shared";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
-import { editTaskInput } from "@/functions/edit-input";
-import { enqueue } from "@/functions/offline";
-import { removeUndated, upsertUndated } from "@/functions/undated";
+import { buildEdit } from "@/functions/edit-input";
+import { enqueue, shouldQueue } from "@/functions/offline";
+import { swapTasks, swapUndated } from "@/functions/task-lists";
 import { zoned } from "@/functions/zone";
 
 export function EditTask({
@@ -58,7 +58,7 @@ function UndatedFooterButtons({
   completeButton,
   deleteButton,
 }: {
-  task: TaskProps;
+  task: Task;
   onClose: () => void;
   completeButton: (done: boolean, toggle: () => Promise<unknown>) => JSX.Element;
   deleteButton: (onClick: () => void) => JSX.Element;
@@ -76,7 +76,7 @@ function UndatedFooterButtons({
 }
 
 interface EditTaskContentProps {
-  task: TaskProps;
+  task: Task;
   day: Date;
   /** Monta a folha no primeiro open; ao fechar, reabrir tem que cair na raiz, não na última página. */
   open: boolean;
@@ -119,10 +119,7 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
     onDeleted: onClose,
   });
   const wasUndated = task.undated === true;
-  const locked =
-    useIntegrations()
-      ?.find((s) => s.provider === "google-calendar")
-      ?.readonly?.includes(task.id) ?? false;
+  const locked = useIntegration("google-calendar")?.readonly?.includes(task.id) ?? false;
   const calendarReady = useCalendarReady();
   const applyTask = useApplyTask();
 
@@ -162,29 +159,10 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
 
     setLoading(true);
 
-    const input = editTaskInput(values, zoned());
-    // Sem data sem lembrete mantém a `date` (é a ordem da lista); salvar não a joga pro fim.
-    const date =
-      values.undated && !input.alert && wasUndated ? task.date : (input.date ?? task.date);
-    // Agenda: o alerta acompanha a tarefa; o lembrete das 09:00 de Sem data não vale lá.
-    const alert = values.undated ? input.alert : wasUndated ? date : (task.alert ?? date);
-    const at = Date.now();
-    const taskData = {
-      ...task,
-      ...input,
-      repeatEvery: input.repeatEvery ?? undefined,
-      date,
-      alert,
-      updatedAt: at,
-    };
+    const { input, taskData, unchanged } = buildEdit(task, values, zoned());
+    const { date, alert, updatedAt: at } = taskData;
 
     // Salvar sem mexer em nada ainda é "terminei aqui": a folha fecha do mesmo jeito.
-    // `isTaskModified` compara `alert ?? date`: em Sem data limpar o lembrete (date === alert)
-    // passaria por "sem alterações".
-    const unchanged =
-      !isTaskModified(task, taskData) &&
-      wasUndated === values.undated &&
-      (!values.undated || task.alert === alert);
     if (unchanged) {
       toast.info(copy.form.noChanges);
       setLoading(false);
@@ -204,8 +182,7 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
     const { series, error } = result;
     let updated = result.task;
 
-    // 401: a sessão caiu (aba velha, troca de conta), não a edição — espera na fila pelo login.
-    if ((error?.offline || error?.status === 401) && userId) {
+    if (shouldQueue(error) && userId) {
       enqueue(userId, { op: "patch", taskId: task.id, patch, at, occurrence });
       toast(copy.task.queued);
       if (occurrence !== undefined) {
@@ -219,12 +196,13 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
       }
       updated = { ...seriesOf(taskData), date: patch.date, alert: seriesAlert };
     } else if (error || !updated) {
+      // Only a quota refusal is fixed by a plan; any other failure gets no Upgrade button.
       toast(copy.form.createError, {
         description: error?.message,
-        action: {
-          label: copy.form.upgrade,
-          onClick: () => navigate("/premium"),
-        },
+        action:
+          error?.status === 429
+            ? { label: copy.form.upgrade, onClick: () => navigate("/premium") }
+            : undefined,
       });
       setLoading(false);
       return;
@@ -233,20 +211,12 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
     }
 
     // A série vem primeiro: reexpandi-la é o que tira da lista a ocorrência que virou tarefa
-    // própria (ela some pelo `exdates` novo), antes de inserir a tarefa destacada.
-    const saved = updated;
-    const base = (cur: TaskProps[] = []) =>
-      series ? upsertTaskWithRecurrence(cur, series, loadedMonths) : cur;
-    // Mudar de lado tira de uma lista e põe na outra; série só expande na agenda.
-    if (saved.undated) {
-      setTasks((cur) =>
-        occurrence === undefined ? base(cur).filter((t) => t.id !== saved.id) : base(cur),
-      );
-      setUndatedTasks((cur) => upsertUndated(cur ?? [], saved));
-    } else {
-      setTasks((cur) => upsertTaskWithRecurrence(base(cur), saved, loadedMonths));
-      if (wasUndated) setUndatedTasks((cur) => removeUndated(cur ?? [], saved.id));
-    }
+    // própria (ela some pelo `exdates` novo), antes de inserir a tarefa destacada. Mudar de lado
+    // tira de uma lista e põe na outra.
+    const into = series ? [series, updated] : [updated];
+    const gone = series || occurrence === undefined ? [task.id] : [];
+    setTasks((cur) => swapTasks(cur ?? [], gone, into, loadedMonths));
+    setUndatedTasks((cur) => swapUndated(cur ?? [], gone, into));
     onClose();
     setLoading(false);
   };

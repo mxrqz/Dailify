@@ -58,7 +58,6 @@ const task = (id: string): Task => ({
 });
 
 afterEach(() => {
-  vi.clearAllMocks();
   localStorage.clear();
   tasks = [];
   undated = [];

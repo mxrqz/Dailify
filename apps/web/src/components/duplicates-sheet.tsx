@@ -1,6 +1,4 @@
 import { useEffect, useState } from "react";
-import { format } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import { toast } from "sonner";
 
 import { useDailify } from "@/components/dailifyContext";
@@ -17,27 +15,27 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { resolveDuplicate } from "@/functions/api";
-import { capitalize, formatClock, upsertTaskWithRecurrence } from "@/functions/functions";
+import { clockAt, dayComma } from "@/functions/date-label";
+import { fill } from "@/functions/functions";
 import { repeatLabel } from "@/functions/repeat-label";
-import { removeUndated, upsertUndated } from "@/functions/undated";
+import { swapTasks, swapUndated } from "@/functions/task-lists";
 import { zoned } from "@/functions/zone";
-import { patchIntegration, useIntegrations } from "@/hooks/useIntegrations";
-import type { TaskProps } from "@/types/types";
+import { patchIntegration, useIntegration } from "@/hooks/useIntegrations";
+import type { Task } from "@dailify/shared";
 
 const t = copy.calendar;
 
 export interface DuplicatePair {
-  own: TaskProps;
-  imported: TaskProps;
+  own: Task;
+  imported: Task;
 }
 
 /** "Ter, 17 nov · 14:00 · Toda semana"; Sem data não tem hora. */
-function when(task: TaskProps, hour12: boolean): string {
+function when(task: Task, hour12: boolean): string {
   const at = zoned(task.date);
-  const day = format(at, "EEEEEE, d MMM", { locale: ptBR });
   return [
-    task.undated ? t.noDate : capitalize(day),
-    !task.undated && formatClock(format(at, "HH:mm"), hour12),
+    task.undated ? t.noDate : dayComma(at),
+    !task.undated && clockAt(at, hour12),
     repeatLabel(task.repeat, task.repeatEvery),
   ]
     .filter(Boolean)
@@ -69,9 +67,7 @@ export function DuplicatesSheet({
       <SheetContent side="bottom" className="mx-auto max-h-sheet w-full max-w-lg">
         <SheetHeader>
           <SheetTitle>
-            {pairs.length > 1
-              ? t.duplicatesTitle.replace("{n}", String(pairs.length))
-              : t.duplicateTitle}
+            {pairs.length > 1 ? fill(t.duplicatesTitle, { n: pairs.length }) : t.duplicateTitle}
           </SheetTitle>
           <SheetDescription>{t.duplicateHint}</SheetDescription>
         </SheetHeader>
@@ -119,7 +115,7 @@ let shown = false;
 /** O container: lê `duplicates` do status da Agenda, acha os pares nas tarefas e resolve. */
 export function Duplicates(): JSX.Element | null {
   const { tasks, setTasks, undatedTasks, setUndatedTasks, loadedMonths, hour12 } = useDailify();
-  const duplicates = useIntegrations()?.find((s) => s.provider === "google-calendar")?.duplicates;
+  const duplicates = useIntegration("google-calendar")?.duplicates;
   const [closed, setClosed] = useState(shown);
   const [pending, setPending] = useState<string>();
 
@@ -150,15 +146,9 @@ export function Duplicates(): JSX.Element | null {
     const { task, removedId } = res;
     if (action === "keep" || !task) return;
     // Como na edição: a própria volta com a agenda do Google e a importada sai das duas listas.
-    const dated = (tasks ?? []).filter((x) => x.id !== removedId && x.id !== task.id);
-    const undated = removeUndated(removeUndated(undatedTasks ?? [], removedId ?? ""), task.id);
-    if (task.undated) {
-      setTasks(dated);
-      setUndatedTasks(upsertUndated(undated, task));
-    } else {
-      setTasks(upsertTaskWithRecurrence(dated, task, loadedMonths));
-      setUndatedTasks(undated);
-    }
+    const gone = removedId ? [removedId, task.id] : [task.id];
+    setTasks((cur) => swapTasks(cur ?? [], gone, [task], loadedMonths));
+    setUndatedTasks((cur) => swapUndated(cur ?? [], gone, [task]));
     toast.success(t.merged, { description: task.title });
   };
 

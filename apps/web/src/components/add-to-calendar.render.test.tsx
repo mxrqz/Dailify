@@ -52,7 +52,6 @@ const setTasks = vi.fn((next: SetStateAction<Task[] | undefined>) => {
 });
 
 beforeEach(() => {
-  vi.clearAllMocks();
   store = [task];
   setIntegrations([GCAL]);
   useOnline.mockReturnValue(true);

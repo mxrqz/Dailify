@@ -17,7 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { fill } from "@/functions/functions";
 import { clearLocal } from "@/functions/offline";
-import { authClient, useSession } from "@/lib/auth";
+import { authClient, settle, useSession } from "@/lib/auth";
 import { signOutAndReload } from "@/lib/native-auth";
 
 /**
@@ -43,7 +43,7 @@ export function DeleteAccount(): JSX.Element | null {
     if (!confirmed) return;
     setDeleting(true);
 
-    const { error } = await authClient.deleteUser().catch(() => ({ error: { code: undefined } }));
+    const { error } = await settle(authClient.deleteUser());
     if (error) {
       setDeleting(false);
       // Sessão mais velha que o `freshAge` do servidor: só uma entrada nova autoriza excluir.

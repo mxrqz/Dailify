@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { fromWire, markSegments, onDay, withEdits } from "./compose-input";
+import { markSegments, onDay, withEdits } from "./compose-input";
 import { composeTaskInput, parseTaskText, type ParsedTask } from "@dailify/shared";
 import { zonedAt } from "./zone";
 
@@ -26,25 +26,6 @@ describe("onDay", () => {
     const input = composeTaskInput(onDay(parseTaskText("dentista", NOW), day), NOW);
     expect(input.undated).toBe(true);
     expect(input.alert).toBe(new Date(2026, 10, 12, 9).getTime());
-  });
-});
-
-describe("fromWire", () => {
-  it("epoch vira Date e o rascunho compõe como a frase local", () => {
-    const wire = {
-      text: "reunião",
-      date: at(22, 16),
-      hasTime: true,
-      hasDay: true,
-      duration: "1h",
-      links: [],
-      repeat: "Off" as const,
-    };
-    const parsed = fromWire(wire);
-    expect(parsed.date?.getTime()).toBe(at(22, 16));
-    expect(parsed.unsure).toEqual([]);
-    expect(composeTaskInput(parsed, NOW)).toMatchObject({ title: "reunião", date: at(22, 16) });
-    expect(fromWire({ ...wire, date: null }).date).toBeNull();
   });
 });
 

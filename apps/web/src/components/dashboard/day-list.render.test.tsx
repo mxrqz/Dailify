@@ -18,7 +18,9 @@ const loadMonth = vi.fn(() => Promise.resolve());
 let fire: (() => void) | undefined;
 
 beforeEach(() => {
-  loadMonth.mockClear();
+  // Mid-month noon: "today" and its months never move under the test.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(2026, 9, 21, 12));
   fire = undefined;
   vi.stubGlobal(
     "IntersectionObserver",
@@ -31,7 +33,7 @@ beforeEach(() => {
     },
   );
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => vi.useRealTimers());
 
 const now0 = () => new Date();
 
@@ -41,7 +43,7 @@ function setup(over: Record<string, unknown> = {}) {
     selectedDay: now,
     tasks: [],
     undatedTasks: [],
-    isLoading: null,
+    isLoading: false,
     loadedMonths: [startOfMonth(now), startOfMonth(addMonths(now, 1))],
     loadMonth,
     ...over,
@@ -75,13 +77,13 @@ describe("<DayList>", () => {
   });
 
   it("skeleton só no boot, antes de haver tarefas", () => {
-    setup({ isLoading: "x", tasks: undefined });
+    setup({ isLoading: true, tasks: undefined });
     const { getByTestId } = render(<DayList />);
     expect(getByTestId("skeleton")).toBeInTheDocument();
   });
 
   it("não observa nada enquanto carrega nem depois de 12 meses sem tarefa", () => {
-    const { now } = setup({ isLoading: "x" });
+    const { now } = setup({ isLoading: true });
     const { rerender, queryByTestId } = render(<DayList />);
     expect(fire).toBeUndefined();
     // Revalidação com lista na tela não troca por skeleton: a rolagem se perderia.

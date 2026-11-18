@@ -282,32 +282,40 @@ export async function removePushSubscription(endpoint: string): Promise<void> {
 // dailifyContext imports it from here.
 export type { QuotaSnapshot };
 
-export async function getQuotas(month: Date): Promise<QuotaSnapshot | undefined> {
-  const { data } = await request<QuotaSnapshot>(`/permissions?month=${monthKey(month)}`);
-  return data;
+export async function getQuotas(
+  month: Date,
+): Promise<{ quotas?: QuotaSnapshot; error?: ApiError }> {
+  const { data, error } = await request<QuotaSnapshot>(`/permissions?month=${monthKey(month)}`);
+  return { quotas: data, error };
 }
 
-export async function getPaymentDetails(): Promise<PaymentDetails | null> {
-  const { data } = await request<PaymentDetails>("/billing/payment-details");
-  return data ?? null;
+/** `paymentDetails: null` = no subscription; on `error` it is absent, so keep what was shown. */
+export async function getPaymentDetails(): Promise<{
+  paymentDetails?: PaymentDetails | null;
+  error?: ApiError;
+}> {
+  const { data, error } = await request<PaymentDetails>("/billing/payment-details");
+  return error ? { error } : { paymentDetails: data ?? null };
 }
 
-export async function getInvoices(): Promise<Invoice[]> {
-  const { data } = await request<Invoice[]>("/billing/invoices");
-  return data ?? [];
+export async function getInvoices(): Promise<{ invoices?: Invoice[]; error?: ApiError }> {
+  const { data, error } = await request<Invoice[]>("/billing/invoices");
+  return error ? { error } : { invoices: data ?? [] };
 }
 
-export async function checkout(productName: string): Promise<{ url: string | null }> {
-  const { data } = await request<{ url: string | null }>("/billing/checkout", {
+export async function checkout(
+  productName: string,
+): Promise<{ url: string | null; error?: ApiError }> {
+  const { data, error } = await request<{ url: string | null }>("/billing/checkout", {
     method: "POST",
     body: JSON.stringify({ productName }),
   });
-  return { url: data?.url ?? null };
+  return { url: data?.url ?? null, error };
 }
 
-export async function billingPortal(): Promise<{ url: string | null }> {
-  const { data } = await request<{ url: string | null }>("/billing/portal");
-  return { url: data?.url ?? null };
+export async function billingPortal(): Promise<{ url: string | null; error?: ApiError }> {
+  const { data, error } = await request<{ url: string | null }>("/billing/portal");
+  return { url: data?.url ?? null, error };
 }
 
 export async function getIntegrations(): Promise<{

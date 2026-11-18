@@ -1,6 +1,6 @@
-import { ReactNode, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
-import { useDailify } from "./dailifyContext";
+import { reportLoadError, useDailify } from "./dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { getQuotas, getUndatedTasks, getSettings } from "@/functions/api";
 import {
@@ -12,7 +12,7 @@ import {
   readLastUser,
   rememberUser,
 } from "@/functions/offline";
-import { initialMonths } from "@/functions/functions";
+import { fill, initialMonths } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { AnimatePresence } from "motion/react";
@@ -90,14 +90,9 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     if (!isLoaded || !userId) return;
     // Virada de mês ou releitura com fetch em voo: a resposta anterior não vale mais.
     let current = true;
-    (async () => {
-      try {
-        const snapshot = await getQuotas(zonedAt(quotaYear, quotaMonth));
-        if (current && snapshot) setQuotas(snapshot);
-      } catch {
-        /* sem sessão utilizável */
-      }
-    })();
+    void getQuotas(zonedAt(quotaYear, quotaMonth)).then(({ quotas }) => {
+      if (current && quotas) setQuotas(quotas);
+    });
     return () => {
       current = false;
     };
@@ -120,7 +115,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     const cached = readCachedTasks(userId);
     if (cached?.length) {
       setTasks(cached);
-      setIsLoading(null);
+      setIsLoading(false);
     }
   }, [userId, tasks, setTasks, setIsLoading]);
 
@@ -156,42 +151,29 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const getTasks = useEffectEvent(async () => {
     if (!userId) return;
 
-    setIsLoading(copy.loading.tasks);
+    setIsLoading(true);
     try {
       // A fila sobe ANTES da leitura: sem isso o servidor devolveria o estado velho e a tela
       // andaria pra trás por um instante.
       const { dropped } = await flushQueue(userId);
       // Descartada = o servidor recusou (quota, tarefa que já não existe). A tarefa vai sumir da
       // tela no fetch logo abaixo, e sumir sem explicação parece perda de dado.
-      if (dropped) {
-        toast.error(copy.sync.dropped.replace("{n}", String(dropped)));
-      }
+      if (dropped) toast.error(fill(copy.sync.dropped, { n: dropped }));
       // Depois da fila, nunca junto: lida antes, a Sem data voltava sem o que foi feito offline.
-      loadUndated();
+      void loadUndated();
 
       // Hoje e o seguinte já no boot: a lista contínua não pode esperar a rolagem chegar no fim.
       const error = await reloadMonths([...loadedMonths, ...initialMonths(zoned()), selectedDay]);
-
-      // Erro de carga não é mês vazio: sem o aviso, quem está sem rede lê "nada agendado" e acha
-      // que perdeu as tarefas. Offline com cache na tela é silencioso — o indicador já conta.
-      if (error) {
-        if (!error.offline || !tasks?.length) {
-          toast.error(copy.loading.tasksError, {
-            id: "tasks-load-error",
-            description: error.message,
-          });
-        }
-        return;
-      }
+      if (error) reportLoadError(error, Boolean(tasks?.length));
     } catch {
-      // Sem isto o app trava no spinner para sempre: a exceção pulava o `setIsLoading(null)` e o
+      // Sem isto o app trava no spinner para sempre: a exceção pulava o `setIsLoading(false)` e o
       // gate lá embaixo (`isLoading && !tasks`) nunca liberava. `setTasks([])` é o que destrava.
       // Mas só quando NÃO há nada na tela: zerar ali apagaria a agenda que o cache tinha acabado de
       // pintar.
       if (!tasks?.length) setTasks([]);
-      toast.error(copy.loading.tasksError, { id: "tasks-load-error" });
+      reportLoadError(undefined, false);
     } finally {
-      setIsLoading(null);
+      setIsLoading(false);
     }
   });
   const loadMonthOf = useEffectEvent(loadMonth);
@@ -201,11 +183,11 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   useEffect(() => {
     if (!isLoaded || !userId) return;
     if (booted.current) {
-      loadMonthOf(selectedDay);
+      void loadMonthOf(selectedDay);
       return;
     }
     booted.current = true;
-    getTasks();
+    void getTasks();
   }, [selectedDay, isLoaded, userId]);
 
   // O celular passa horas em segundo plano e volta com a lista de antes; tarefa criada no desktop
@@ -219,7 +201,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
       if (document.visibilityState !== "visible") return;
       if (!force && Date.now() - lastFetch.current < REVALIDATE_AFTER_MS) return;
       lastFetch.current = Date.now();
-      getTasks();
+      void getTasks();
       setQuotaNonce((n) => n + 1);
     };
 
@@ -237,7 +219,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
 
   // O splash sai assim que os dados chegam, mas não antes do pulinho de entrada da Mew (senão
   // pisca). Só quem montou carregando segura: trocar de rota com tudo em mãos não ganha splash.
-  const loading = !isLoaded || Boolean(isLoading && !tasks);
+  const loading = !isLoaded || (isLoading && !tasks);
   const [held, setHeld] = useState(loading);
   useEffect(() => {
     if (!held) return;

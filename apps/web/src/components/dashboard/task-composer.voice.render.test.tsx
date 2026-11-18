@@ -71,7 +71,6 @@ const setup = () => {
 };
 
 beforeEach(() => {
-  vi.clearAllMocks();
   ctx.aiUsed = 0;
   prefs.reduce = false;
   vi.stubGlobal("MediaRecorder", FakeRecorder);

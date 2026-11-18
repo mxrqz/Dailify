@@ -5,21 +5,23 @@ import { DEFAULT_HOUR, parseTaskText, type Task } from "@dailify/shared";
 import { useDailify } from "@/components/dailifyContext";
 import { CheckHistory, periodKind } from "@/components/dashboard/check-history";
 import { copy } from "@/components/dashboard/copy";
-import { CheckCircle, SHEET_EDITING } from "@/components/dashboard/day-task-row";
+import { CheckCircle } from "@/components/dashboard/day-task-row";
 import { TimeWheel } from "@/components/dashboard/date-time-picker";
 import { calendarPanel } from "@/components/dashboard/styles";
 import { SwipeActions } from "@/components/dashboard/swipe-actions";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
-import { formatClock } from "@/functions/functions";
+import { NO_DRAG, SHEET_EDITING } from "@/consts/media";
+import { countLabel } from "@/functions/count-label";
+import { clockAt, dayDot } from "@/functions/date-label";
+import { fill } from "@/functions/functions";
 import { repeatLabel } from "@/functions/repeat-label";
 import { pendingUndated, splitUndated } from "@/functions/undated";
 import { useCreateTask } from "@/hooks/useCreateTask";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
-import { format, isSameDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { isSameDay } from "date-fns";
 import { cn } from "@/lib/utils";
 import { zoned } from "@/functions/zone";
 
@@ -27,8 +29,6 @@ const weekday = (day: number) => copy.form.repeatDays[day].toLowerCase();
 
 /** Só uma linha daqui vira alvo de soltar: arquivo ou texto arrastado de fora não. */
 export const DRAG_TYPE = "application/x-mewki-task";
-/** Arrastar é do mouse: no toque a linha já desliza (swipe) e segue só com a folha de edição. */
-const NO_DRAG = "(max-width: 767px), (pointer: coarse)";
 
 /**
  * Uma linha do card A qualquer hora (props → markup): o círculo à esquerda, título e meta. O
@@ -138,8 +138,7 @@ function AnytimeRow({
     ) : task.alert ? (
       <>
         <Bell role="img" aria-label={copy.undated.reminder} />
-        {weekday(zoned(task.alert).getDay())}{" "}
-        {formatClock(format(zoned(task.alert), "HH:mm"), hour12)}
+        {weekday(zoned(task.alert).getDay())} {clockAt(task.alert, hour12)}
       </>
     ) : (
       copy.day.noDate
@@ -213,7 +212,7 @@ function CaptureField(): JSX.Element {
 }
 
 const pendingLabel = (n: number): string =>
-  n === 1 ? copy.undated.onePending : copy.undated.manyPending.replace("{n}", String(n));
+  countLabel(n, copy.undated.onePending, copy.undated.manyPending);
 
 /** Topo de hoje: recorrentes (marcadas por período), afazeres sem data e o campo de anotar. */
 export function AnytimeBlock(): JSX.Element {
@@ -294,10 +293,7 @@ export function ScheduleDrop({ day, children }: { day: Date; children: ReactNode
   const [over, setOver] = useState(false);
   const [dropped, setDropped] = useState<Task | null>(null);
   const accepts = (e: DragEvent) => e.dataTransfer.types.includes(DRAG_TYPE);
-  const label = copy.undated.scheduleTitle.replace(
-    "{day}",
-    format(day, "EEEEEE · d MMM", { locale: ptBR }),
-  );
+  const label = fill(copy.undated.scheduleTitle, { day: dayDot(day) });
 
   return (
     <Popover open={dropped !== null} onOpenChange={(open) => !open && setDropped(null)}>

@@ -52,7 +52,6 @@ const status = (duplicates: IntegrationStatus["duplicates"]): IntegrationStatus 
 });
 
 beforeEach(async () => {
-  vi.clearAllMocks();
   vi.resetModules();
   ({ Duplicates } = await import("./duplicates-sheet"));
   ({ setIntegrations } = await import("@/hooks/useIntegrations"));
@@ -77,7 +76,8 @@ describe("<Duplicates>", () => {
 
     await waitFor(() => expect(resolveDuplicate).toHaveBeenCalledWith("imp", "merge"));
     await waitFor(() => expect(dailify.setTasks).toHaveBeenCalled());
-    const next: Task[] = dailify.setTasks.mock.calls[0][0];
+    const update: (cur: Task[]) => Task[] = dailify.setTasks.mock.calls[0][0];
+    const next = update(dailify.tasks);
     expect(next.map((x) => x.id)).toEqual(["own"]);
     expect(next[0].links).toEqual(["https://g/ev"]);
     expect(toast.success).toHaveBeenCalledWith(t.merged, { description: "Psico" });

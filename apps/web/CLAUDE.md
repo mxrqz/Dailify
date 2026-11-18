@@ -17,7 +17,7 @@ What goes where is in RULES.md "Where code goes"; this is the map, each folder w
   `mew-chat/apply.ts:useMewApply`.
 - `functions/` API client, offline queue, app time zone, domain helpers; `lib/` Better Auth client,
   Tauri and browser adapters, `cn()`; `consts/` `apiURL`, plan map, priority classes, motion
-  mirrors; `types/` legacy aliases of `@dailify/shared` (import from shared instead); `pages/`.
+  mirrors; `pages/`. Model types come from `@dailify/shared`.
   Beside `src/`, `src-tauri/` is the native shell.
 
 ## Tooling (`vite.config.ts`)
@@ -61,6 +61,9 @@ Naming, pragma, clock, mocking and query rules: RULES.md "Testing". The harness 
 - `globals: true` stays although every file imports from `vitest`: RTL needs it to set the act
   environment and register auto-cleanup. `execArgv: ["--no-experimental-webstorage"]` keeps Node
   25+'s empty global `localStorage` from shadowing jsdom's.
+- The config sets `clearMocks`, `restoreMocks` and `unstubGlobals`: don't call
+  `vi.clearAllMocks()`/`vi.restoreAllMocks()` by hand. Clearing keeps a `mockResolvedValue`, so a
+  test that needs a fresh one sets it.
 - Mocks: build in `vi.hoisted`, return from `vi.mock`, import the module under test after
   (`protected-route.render.test.tsx`); partial mocks spread `importOriginal`
   (`pages/billing.render.test.tsx`). `Link`s and router hooks need a `MemoryRouter`.
@@ -78,8 +81,8 @@ Naming, pragma, clock, mocking and query rules: RULES.md "Testing". The harness 
 ## Gotchas
 
 - `tsconfig.json` `lib` is ES2022 + DOM. `@types/node` globals still leak into `src` because
-  `types` is unset; setting it breaks `consts/motion.test.ts` (`node:fs`). TS is pinned ~5.6 (a
-  Tauri template leftover).
+  `types` is unset; setting it breaks `consts/motion.test.ts` (`node:fs`). TS 5.9 with
+  `verbatimModuleSyntax`: a type-only import is `import type` (or an inline `type`).
 - `typecheck` also runs `tsconfig.node.json` (`vite.config.ts`, `noEmit`); `format` and `lint`
   cover `src`, `scripts`, the configs and the tsconfigs.
 - `eslint.config.js` enables only `rules-of-hooks` and `exhaustive-deps` from react-hooks; `lint`

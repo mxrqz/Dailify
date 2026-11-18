@@ -92,7 +92,6 @@ export const copy = {
   },
 
   loading: {
-    tasks: "Carregando tarefas",
     /** Legenda do splash, só depois de 2s: antes disso a Mew caçando o laser já basta. */
     slow: "Buscando suas tarefas…",
     tasksError: "Não foi possível carregar suas tarefas",

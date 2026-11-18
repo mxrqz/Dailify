@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { StrictMode } from "react";
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HelmetProvider } from "react-helmet-async";
@@ -13,9 +13,6 @@ vi.mock("@/lib/auth", () => ({
 
 import Verify from "./verify";
 import { copy } from "@/components/auth/copy";
-
-beforeEach(() => vi.clearAllMocks());
-
 const renderAt = (hash: string) => {
   window.history.replaceState(null, "", `/verify${hash}`);
   return render(

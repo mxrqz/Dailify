@@ -16,7 +16,6 @@ import { MobileNav } from "./mobile-nav";
 import { copy } from "@/components/dashboard/copy";
 
 beforeEach(() => {
-  vi.clearAllMocks();
   useSession.mockReturnValue({
     data: { user: { id: "u1", name: "Seu", email: "seu@mewki.app", image: null } },
   });

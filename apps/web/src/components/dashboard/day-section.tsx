@@ -1,25 +1,20 @@
 import { duration, ease } from "@/consts/motion";
-import { format, isSameWeek, isToday, isTomorrow } from "date-fns";
-import { ptBR } from "date-fns/locale";
+import { format, isToday, isTomorrow } from "date-fns";
 import { motion, useReducedMotion, type Variants } from "motion/react";
-import { durationMinutes, type WeekStart } from "@dailify/shared";
+import { durationMinutes } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { AnytimeBlock, ScheduleDrop } from "@/components/dashboard/anytime-block";
 import { copy } from "@/components/dashboard/copy";
-import { DayTaskRow, NowLine, SHEET_EDITING } from "@/components/dashboard/day-task-row";
+import { DayTaskRow, NowLine } from "@/components/dashboard/day-task-row";
+import { SHEET_EDITING } from "@/consts/media";
 import { TaskCard } from "@/components/task-card";
-import {
-  capitalize,
-  formatClock,
-  getTasksForDay,
-  getTime,
-  groupTasksByHour,
-  timeToMinutes,
-} from "@/functions/functions";
+import { countLabel } from "@/functions/count-label";
+import { clockAt, dayLabel, weekdayDate } from "@/functions/date-label";
+import { getTasksForDay, getTime, groupTasksByHour, timeToMinutes } from "@/functions/functions";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNow } from "@/hooks/useNow";
-import type { TaskProps } from "@/types/types";
+import type { Task } from "@dailify/shared";
 
 const SKELETON_ROWS = 3;
 
@@ -44,26 +39,10 @@ export function TaskSkeletons(): JSX.Element {
   );
 }
 
-/** "Terça, 17 nov": o date-fns em pt-BR, com maiúscula e sem o "-feira". */
-export const weekdayDate = (day: Date, pattern: string) =>
-  capitalize(format(day, pattern, { locale: ptBR }).replace("-feira", ""));
-
-/**
- * Hoje é "Agenda" (a página já se chama Hoje), amanhã tem nome próprio, o resto da semana corrente
- * vira o dia da semana e daí em diante o dia com a data: "sexta" só situa dentro da semana.
- */
-function dayLabel(day: Date, now: Date, weekStart: WeekStart): string {
-  if (isToday(day)) return copy.day.agenda;
-  if (isTomorrow(day)) return copy.day.tomorrow;
-  // Same week as the WeekStrip (`useWeek`), which honors the configured first day.
-  if (!isSameWeek(day, now, { weekStartsOn: weekStart })) return weekdayDate(day, "EEEE, d MMM");
-  return weekdayDate(day, "EEEE");
-}
-
 const itemCount = (count: number): string =>
-  count === 1 ? copy.day.oneItem : copy.day.manyItems.replace("{n}", String(count));
+  countLabel(count, copy.day.oneItem, copy.day.manyItems);
 
-type Row = { at: number; task: TaskProps; hour?: string } | { at: number; now: true };
+type Row = { at: number; task: Task; hour?: string } | { at: number; now: true };
 
 /**
  * Um dia: cabeçalho (rótulo + contagem) e as linhas embaixo — tarefas e, hoje, o fio do agora. É o bloco que a `DayList` empilha; o scroll é da página, não daqui.
@@ -95,7 +74,7 @@ export function DaySection({
   );
   if (isCurrentDay && rows.length) rows.push({ at: nowAt - 0.5, now: true });
   rows.sort((a, b) => a.at - b.at);
-  const live = (row: { at: number; task: TaskProps }) =>
+  const live = (row: { at: number; task: Task }) =>
     isCurrentDay && row.at <= nowAt && nowAt < row.at + durationMinutes(row.task.duration);
   const count = dayTasks.length;
   const sub =
@@ -158,7 +137,7 @@ export function DaySection({
                 </motion.li>
               ) : (
                 <li key="now">
-                  <NowLine time={formatClock(format(now, "HH:mm"), hour12)} />
+                  <NowLine time={clockAt(now, hour12)} />
                 </li>
               ),
             )}

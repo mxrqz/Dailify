@@ -37,7 +37,7 @@ Each area's `CLAUDE.md` loads when you touch a file in it and holds only that fo
 | API client, offline queue, pure helpers       | `apps/web/src/functions`                       | `functions/CLAUDE.md`            |
 | Auth client, Tauri and browser adapters       | `apps/web/src/lib`                             | `lib/CLAUDE.md`                  |
 | Routes and pages                              | `apps/web/src/pages`                           | `pages/CLAUDE.md`                |
-| Constants, legacy type aliases                | `apps/web/src/{consts,types}`                  | one per folder                   |
+| Constants                                     | `apps/web/src/consts`                          | `consts/CLAUDE.md`               |
 | Tauri shell, Android build and release        | `apps/web/src-tauri`                           | `src-tauri/CLAUDE.md`            |
 | API server: layout, auth, cron, bindings      | `apps/server`                                  | `apps/server/CLAUDE.md`          |
 | HTTP routes, D1 queries, services, providers  | `apps/server/src/{routes,db,lib,integrations}` | one per folder                   |
@@ -64,8 +64,8 @@ Each area's `CLAUDE.md` loads when you touch a file in it and holds only that fo
 - Vite holds port 1420 with `strictPort`, and the main checkout's dev server often has it. Start a
   worktree's web elsewhere (`bun run dev --port 1425` in `apps/web`) and check `ss -tlnp | grep 142`
   before trusting the screen.
-- Toolchain: bun 1.3.9 with the isolated linker. TypeScript is 5.9 at the root and in shared, 5.6 in
-  `apps/web` and 7 in `apps/server`; typescript-eslint can't load TS 7, which is why ESLint for
+- Toolchain: bun 1.3.9 with the isolated linker. TypeScript is 5.9 at the root, in shared and in
+  `apps/web`, and 7 in `apps/server`; typescript-eslint can't load TS 7, which is why ESLint for
   shared and server lives in the root `eslint.config.js`.
 - Plans are Free/Pro/Max and the only quota is AI credits (`QUOTAS` in
   `packages/shared/src/quotas.ts`). The server is the real gate; the client check is cosmetic.

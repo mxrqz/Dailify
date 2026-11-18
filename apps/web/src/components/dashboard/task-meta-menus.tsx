@@ -19,7 +19,8 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { priorityText, priorityTextColor } from "@/consts/conts";
 import { cn } from "@/lib/utils";
-import { everyLabel, everyOptions } from "@/functions/repeat-label";
+import { REPEAT_MODES, everyLabel, everyOptions } from "@/functions/repeat-label";
+import { durationOptions } from "@/functions/task-options";
 import { zoned } from "@/functions/zone";
 
 /**
@@ -61,9 +62,6 @@ export function PriorityMenu({
   );
 }
 
-/** Duração: os passos que a captura rápida já usa, mais o valor atual quando é um fora da régua. */
-export const DURATIONS = ["10m", "15m", "30m", "45m", "1h", "1h30m", "2h"];
-
 export function DurationMenu({
   value,
   onChange,
@@ -73,7 +71,7 @@ export function DurationMenu({
   onChange: (duration: string) => void;
   children: ReactNode;
 }): JSX.Element {
-  const options = DURATIONS.includes(value) ? DURATIONS : [value, ...DURATIONS];
+  const options = durationOptions(value);
 
   return (
     <DropdownMenu>
@@ -90,14 +88,6 @@ export function DurationMenu({
     </DropdownMenu>
   );
 }
-
-const REPEATS = [
-  { value: "Off", label: copy.form.repeatOff },
-  { value: "Daily", label: copy.form.repeatDaily },
-  { value: "Weekly", label: copy.form.repeatWeekly },
-  { value: "Monthly", label: copy.form.repeatMonthly },
-  { value: "Yearly", label: copy.form.repeatYearly },
-] as const;
 
 /**
  * "Semanal" aqui vira o dia da semana da própria tarefa — escolher OUTROS dias continua sendo
@@ -136,7 +126,7 @@ export function RepeatMenu({
             );
           }}
         >
-          {REPEATS.map(({ value: option, label }) => (
+          {REPEAT_MODES.map(({ value: option, label }) => (
             <DropdownMenuRadioItem key={option} value={option}>
               {label}
             </DropdownMenuRadioItem>

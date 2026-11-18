@@ -1,3 +1,5 @@
+import type { AuthErrorKey } from "./auth-state";
+
 /**
  * Dicionário de copy pt-BR das telas de auth, espelhando `landing/copy.ts` e `dashboard/copy.ts`.
  *
@@ -85,7 +87,7 @@ export const copy = {
     // Excluir a conta pede uma sessão recente: o /profile sai e volta pra cá com `?error=SESSION_EXPIRED`.
     reauth: "Por segurança, entre de novo e repita a exclusão.",
     generic: "Algo deu errado. Tente de novo.",
-  },
+  } satisfies Record<AuthErrorKey, string>,
 } as const;
 
 /** O contrato que um locale futuro precisa cumprir (bd Dailify-1xy). */

@@ -78,6 +78,10 @@ export default defineConfig(({ mode }) => ({
     // jsdom is opt-in per file (`@vitest-environment jsdom`); vitest 4 dropped environmentMatchGlobs.
     environment: "node",
     setupFiles: ["./src/test/setup.ts"],
+    // Every test starts with clean call counts, its spies restored and no stubbed global left.
+    clearMocks: true,
+    restoreMocks: true,
+    unstubGlobals: true,
     // Node >= 25's global `localStorage` would shadow jsdom's in render tests.
     execArgv: ["--no-experimental-webstorage"],
   },

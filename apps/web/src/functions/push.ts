@@ -16,7 +16,8 @@ export function pushSupported(): boolean {
   );
 }
 
-function base64urlToBytes(value: string): Uint8Array {
+// `ArrayBuffer`, not `ArrayBufferLike`: `applicationServerKey` takes a BufferSource.
+function base64urlToBytes(value: string): Uint8Array<ArrayBuffer> {
   const padded = value.replace(/-/g, "+").replace(/_/g, "/");
   const binary = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
   return Uint8Array.from(binary, (c) => c.charCodeAt(0));

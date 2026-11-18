@@ -9,6 +9,7 @@ import { CreateDock } from "@/components/dashboard/composer-views";
 import { copy } from "@/components/dashboard/copy";
 import { fade } from "@/consts/motion";
 import { getSettings, mewChat, saveSettings, setMewAction } from "@/functions/api";
+import { creditsLabel } from "@/functions/quota-label";
 import { appTimeZone, zoned } from "@/functions/zone";
 import { useOnline } from "@/hooks/useOnline";
 import { useQuotas } from "@/hooks/useQuotas";
@@ -136,16 +137,7 @@ export function MewChat({ onCompose, onVoice }: { onCompose: () => void; onVoice
       );
   };
 
-  const credits = ai.unlimited
-    ? null
-    : ai.exhausted
-      ? copy.mew.exhausted
-      : copy.mew.credits.replace(
-          "{left}",
-          ai.remaining === 1
-            ? copy.mew.remainingOne
-            : copy.mew.remainingMany.replace("{n}", String(ai.remaining)),
-        );
+  const credits = creditsLabel(ai);
 
   const voice =
     onVoice &&

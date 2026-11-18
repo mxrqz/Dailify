@@ -31,6 +31,15 @@ export function repeatLabel(repeat: Repeat, every = 1): string {
   return days || copy.form.repeatWeekly;
 }
 
+/** The repeat choices of the editors; `Weekly` stands for any weekday set. */
+export const REPEAT_MODES = [
+  { value: "Off", label: copy.form.repeatOff },
+  { value: "Daily", label: copy.form.repeatDaily },
+  { value: "Weekly", label: copy.form.repeatWeekly },
+  { value: "Monthly", label: copy.form.repeatMonthly },
+  { value: "Yearly", label: copy.form.repeatYearly },
+] as const;
+
 /** Só a unidade e o intervalo, sem os dias: as opções do seletor "a cada N". */
 export const everyLabel = (repeat: Repeat, every: number): string =>
   repeatLabel(typeof repeat === "object" ? { Weekly: [] } : repeat, every);

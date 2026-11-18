@@ -24,6 +24,7 @@ import {
   shouldQueue,
   type Mutation,
 } from "./offline";
+import { setAppTimeZone } from "./zone";
 
 describe("shouldQueue", () => {
   test("queues offline and 401 errors, nothing else", () => {
@@ -118,6 +119,18 @@ describe("collapseQueue", () => {
       { op: "complete", taskId: "a", at: 3 },
     ]);
     expect(out).toEqual([{ op: "complete", taskId: "a", at: 3 }]);
+  });
+
+  test("checks on different days of a series don't cancel each other", () => {
+    setAppTimeZone("UTC");
+    const monday = Date.UTC(2026, 10, 16, 10);
+    const tuesday = Date.UTC(2026, 10, 17, 10);
+    const queue: Mutation[] = [
+      { op: "complete", taskId: "a", at: monday },
+      { op: "uncomplete", taskId: "a", day: Date.UTC(2026, 10, 17), at: tuesday },
+    ];
+    expect(collapseQueue(queue)).toEqual(queue);
+    setAppTimeZone(null);
   });
 
   test("a delete does not touch another task's pending work", () => {

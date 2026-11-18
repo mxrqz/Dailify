@@ -1,13 +1,12 @@
 import {
-  FormEvent,
   useEffect,
   useMemo,
   useState,
   type ComponentProps,
+  type FormEvent,
   type ReactNode,
 } from "react";
 import { addDays, addMinutes, format, isSameDay } from "date-fns";
-import { ptBR } from "date-fns/locale";
 import {
   BellIcon,
   CalendarIcon,
@@ -40,18 +39,19 @@ import {
 
 import { copy } from "@/components/dashboard/copy";
 import { LinksField, MeetEditor } from "@/components/dashboard/links-field";
-import { DURATIONS } from "@/components/dashboard/task-meta-menus";
 import { Chip } from "@/components/kit/chip";
 import { ListGroup, ListRow } from "@/components/kit/list";
 import { Switch } from "@/components/kit/switch";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { priorityText } from "@/consts/conts";
-import { capitalize, fill, formatClock } from "@/functions/functions";
-import { linkLabel } from "@/functions/link-label";
-import { everyLabel, everyOptions, repeatLabel } from "@/functions/repeat-label";
+import { clockAt, dayComma } from "@/functions/date-label";
+import { fill } from "@/functions/functions";
+import { linkHost, linkLabel } from "@/functions/link-label";
+import { REPEAT_MODES, everyLabel, everyOptions, repeatLabel } from "@/functions/repeat-label";
+import { durationOptions } from "@/functions/task-options";
 import { cn } from "@/lib/utils";
-import type { TaskProps } from "@/types/types";
+import type { Task } from "@dailify/shared";
 import { fromDateInput, zoned, zonedAt } from "@/functions/zone";
 
 export interface TaskFormValues {
@@ -87,17 +87,9 @@ export const FORM_VIEWS: Record<FormView, { title: string }> = {
   meet: { title: copy.form.meet },
 };
 
-const REPEAT_MODES = [
-  { value: "Off", label: copy.form.repeatOff },
-  { value: "Daily", label: copy.form.repeatDaily },
-  { value: "Weekly", label: copy.form.repeatWeekly },
-  { value: "Monthly", label: copy.form.repeatMonthly },
-  { value: "Yearly", label: copy.form.repeatYearly },
-];
-
 interface TaskFormProps {
   id: string;
-  task?: TaskProps;
+  task?: Task;
   defaultDate?: Date;
   className?: string;
   view: FormView;
@@ -127,9 +119,6 @@ const reminderHour = `${String(DEFAULT_HOUR).padStart(2, "0")}:00`;
 // Frameless field, text only: the line under it is a sibling `Separator`.
 const bareFieldClass =
   "h-11 rounded-none border-0 bg-transparent px-0 text-base shadow-none focus-visible:border-0 focus-visible:ring-0";
-
-/** "Ter, 17 nov" — EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso. */
-const shortDay = (day: Date) => capitalize(format(day, "EEEEEE, d MMM", { locale: ptBR }));
 
 /** Uma linha da lista com o controle nativo por cima: a linha mostra o valor, o sistema escolhe. */
 function NativeRow({
@@ -304,10 +293,7 @@ export function TaskForm({
   const repeatMode = typeof repeat === "string" ? repeat : "Weekly";
   const weekly = typeof repeat === "string" ? [] : repeat.Weekly;
 
-  const durations = useMemo(
-    () => (DURATIONS.includes(duration) ? DURATIONS : [duration, ...DURATIONS]),
-    [duration],
-  );
+  const durations = durationOptions(duration);
 
   /** Tags que já existem em outras tarefas: a busca filtra estas antes de oferecer criar uma nova. */
   const knownTags = useMemo(
@@ -334,28 +320,26 @@ export function TaskForm({
 
   // Mostra o que o salvar grava: 09:00 passado avança na série e some na avulsa.
   const shownReminder = reminder && undatedReminder(reminder, repeat, zoned());
-  const clock = (at: Date) => formatClock(format(at, "HH:mm"), hour12);
+  const clock = (at: Date) => clockAt(at, hour12);
   const now = zoned();
   // "Amanhã, 15:00 às 16:00": o fim sai da duração, como no evento do Google.
   const when = undated
     ? copy.form.undatedChip
-    : copy.form.when
-        .replace(
-          "{day}",
-          isSameDay(date, now)
-            ? copy.day.today
-            : isSameDay(date, addDays(now, 1))
-              ? copy.day.tomorrow
-              : shortDay(date),
-        )
-        .replace("{start}", clock(date))
-        .replace("{end}", clock(addMinutes(date, durationMinutes(duration))));
+    : fill(copy.form.when, {
+        day: isSameDay(date, now)
+          ? copy.day.today
+          : isSameDay(date, addDays(now, 1))
+            ? copy.day.tomorrow
+            : dayComma(date),
+        start: clock(date),
+        end: clock(addMinutes(date, durationMinutes(duration))),
+      });
   const repeatValue =
     repeatMode === "Weekly" && weekly.length
       ? fill(copy.form.repeatWeeklyDays, { days: repeatLabel({ Weekly: weekly }) })
       : REPEAT_MODES.find((mode) => mode.value === repeatMode)?.label;
   const linkName = link ? linkLabel(link) : copy.form.links;
-  const linkHost = link && URL.canParse(link) ? new URL(link).hostname.replace(/^www\./, "") : "";
+  const host = link ? linkHost(link) : "";
 
   const generateMeet = async () => {
     setMeetPending(true);
@@ -432,7 +416,7 @@ export function TaskForm({
                   icon={<CalendarIcon />}
                   label={copy.form.date}
                   disabled={locked}
-                  value={shortDay(date)}
+                  value={dayComma(date)}
                   control={
                     <input
                       type="date"
@@ -517,7 +501,7 @@ export function TaskForm({
                 value={
                   shownReminder
                     ? fill(copy.form.reminderValue, {
-                        day: shortDay(shownReminder),
+                        day: dayComma(shownReminder),
                         time: reminderHour,
                       })
                     : copy.form.noReminder
@@ -649,7 +633,7 @@ export function TaskForm({
               icon={link && videoLink([link]) ? <VideoIcon /> : <LinkIcon />}
               label={linkName}
               aria-label={copy.form.links}
-              value={linkHost && linkHost !== linkName ? linkHost : undefined}
+              value={host && host !== linkName ? host : undefined}
               accessory="chevron"
               onClick={() => onView(meet ? "meet" : "links")}
             />

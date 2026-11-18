@@ -25,8 +25,8 @@ motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hoo
 
 ## DailifyContext (`dailifyContext.tsx:DailifyContextType`)
 
-- `tasks`, `undatedTasks`: `undefined` until fetched or hydrated from the cache. `isLoading` is a
-  string or null; only its truthiness is read.
+- `tasks`, `undatedTasks`: `undefined` until fetched or hydrated from the cache. `isLoading` is true
+  while the boot's task load runs; load errors toast through `reportLoadError`.
 - `loadedMonths`; `loadMonth(month)` waits on a loaded or in-flight month instead of refetching;
   `reloadMonths(months)` forces a refetch and returns the first error; `goToDay(day)` loads every
   month between today and `day`, then sets `selectedDay` and a fresh `targetDay`.

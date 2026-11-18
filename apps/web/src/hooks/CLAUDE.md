@@ -15,14 +15,12 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 
 ## Write contract details
 
-- Settle: no error keeps the optimistic state; `error.offline || status === 401` with a userId calls
-  `enqueue(userId, mutation)` and keeps it (a 401 is a dead session, not a refused edit); anything
-  else rolls back and shows `toast.error(copy.task.*Error, { description: error.message })`.
-  Model: `run` in `useUndatedActions.ts`.
-- That predicate is copied in `useTaskActions`, `useUndatedActions`, `useCreateTask`,
-  `components/edit-task.tsx` (save) and `drainQueue` (`functions/offline.ts`); `useCreateTask.ts`
-  keeps one file-local `queueable` for `create` and `useShowCreated`'s Undo. Change all five
-  together; a sixth caller exports it from `functions/offline.ts` instead of copying it.
+- Settle: no error keeps the optimistic state; `shouldQueue(error)` (`functions/offline.ts`: offline
+  or 401) with a userId calls `enqueue(userId, mutation)` and keeps it (a 401 is a dead session, not
+  a refused edit); anything else rolls back and shows
+  `toast.error(copy.task.*Error, { description: error.message })`. Model: `run` in
+  `useUndatedActions.ts`. Every settle, `edit-task.tsx` and `drainQueue` included, calls
+  `shouldQueue`; never re-spell the predicate.
 - Writes a caller reacts to return `Promise<boolean>` = the write stands (on the server or queued).
 - Take `at = Date.now()` once per action and reuse it as `updatedAt` in the optimistic state, the
   request and the `Mutation` (server LWW, also on a late replay). Ids come from `newTaskId()`, so a
@@ -43,8 +41,7 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 - A series-scope `onPatch` with a `date` shifts the anchor (`seriesOf(task).date + new - task.date`);
   Undo of a series delete re-creates `seriesOf(task)` without completions (the server drops them).
 - Writes use functional updates; a rollback is `revertTask(cur, previous, id)`
-  (`functions/revert-task.ts`), never `setTasks(previous)`. Debt: the `latest` ref mirror in
-  `useMewApply` (`mew-chat/apply.ts`) predates the widened setters. Fix when touched.
+  (`functions/revert-task.ts`), never `setTasks(previous)`.
 
 ## Other writers
 
@@ -65,11 +62,12 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
   values from `zoned()`. `"day"` is the start of the day and changes identity only at midnight.
   Never disable it under reduced motion: the now line's position is data.
 - `useIntegrations`: `undefined` until read; fetches only when nothing is cached or in flight and
-  online (`useOnline`, so reconnecting retries), a failure retries on the next mount. Writers: `setIntegrations`/`patchIntegration`.
+  online (`useOnline`, so reconnecting retries), a failure retries on the next mount. Writers: `setIntegrations`/`patchIntegration`. One provider:
+  `useIntegration(id)`; `isActive(status)` = connected and `status === "active"`.
 - `useOnline` lies upward (connected, no internet): use it to warn; `error.offline` decides.
 - `useEffectEvent` polyfills React 19.2's hook; the lint knows the name, so call it only in effects.
-- `useMediaQuery`: pass a named constant (`SHEET_EDITING`, `dashboard/day-task-row.tsx`) and read
-  it once per list. `ui/sonner.tsx` and `dashboard/create-fab.tsx` still pass literals.
+- `useMediaQuery`: pass a named constant from `consts/media.ts` (`DESKTOP`, `MOBILE`,
+  `SHEET_EDITING`, `NO_DRAG`) and read it once per list.
 - `useStoredFlag(key)`: device-wide `"1"`/`"0"` under `dailify:<name>`, so not in `clearLocal`;
   `useCalendarDefault` is one. `useCalendarReady` = Google Calendar connected and active.
 

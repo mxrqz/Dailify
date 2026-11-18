@@ -17,10 +17,10 @@ import { ToolbarButton } from "@/components/task-card";
 import { createCalendarEvent, syncCalendarEvent } from "@/functions/api";
 import { appTimeZone } from "@/functions/zone";
 import { calendarRevoked, useApplyTask } from "@/hooks/useCalendarPush";
-import { patchIntegration, useCalendarReady, useIntegrations } from "@/hooks/useIntegrations";
+import { patchIntegration, useCalendarReady, useIntegration } from "@/hooks/useIntegrations";
 import { useOnline } from "@/hooks/useOnline";
 import { openExternal } from "@/lib/open-external";
-import type { TaskProps } from "@/types/types";
+import type { Task } from "@dailify/shared";
 
 const t = copy.calendar;
 
@@ -33,11 +33,11 @@ export function AddToCalendar({
   task,
   variant,
 }: {
-  task: TaskProps;
+  task: Task;
   variant: "toolbar" | "sheet";
 }): JSX.Element | null {
   const ready = useCalendarReady();
-  const staleIds = useIntegrations()?.find((s) => s.provider === "google-calendar")?.stale ?? [];
+  const staleIds = useIntegration("google-calendar")?.stale ?? [];
   const stale = staleIds.includes(task.id);
   const online = useOnline();
   const applyTask = useApplyTask();

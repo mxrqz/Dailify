@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render } from "@testing-library/react";
 import type { Task } from "@dailify/shared";
 import { addMonths, startOfMonth } from "date-fns";
@@ -34,8 +34,12 @@ function mount() {
 }
 
 beforeEach(() => {
+  // Mid-month noon: "today" and the months goToDay walks never move under the test.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(2026, 9, 21, 12));
   api.getTasksForMonth.mockReset();
 });
+afterEach(() => vi.useRealTimers());
 
 describe("<DailifyProvider>", () => {
   it("resposta velha do mesmo mês não sobrescreve a releitura mais nova", async () => {

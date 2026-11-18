@@ -11,7 +11,7 @@ are in [Shared model](../../RULES.md#shared-model); required zones are in
   same source:
   - shared: TS 5.9, `lib: ["ESNext"]`, no DOM. `src/globals.d.ts` declares the only host APIs
     (`URL`, `console`). This is the only checker that catches both DOM and Workers leaks.
-  - web: TS 5.6, ES2022 + DOM.
+  - web: TS 5.9, ES2022 + DOM.
   - server: TS 7, ESNext + `@cloudflare/workers-types` (has `fetch`, `caches`, `crypto`).
 - `*.gen.ts` are bun dev scripts excluded from tsc; they are the only place Node APIs may appear.
 - One runtime dependency, `@date-fns/tz` (Intl only, runs on the Worker), for the parser.

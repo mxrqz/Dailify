@@ -3,21 +3,19 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useDailify } from "@/components/dailifyContext";
 import { DayList } from "@/components/dashboard/day-list";
-import { weekdayDate } from "@/components/dashboard/day-section";
 import { MonthCalendar } from "@/components/dashboard/month-calendar";
 import { UndatedColumn, useUndatedOpen } from "@/components/dashboard/undated-column";
 import { WeekStrip } from "@/components/dashboard/week-strip";
 import { CreateFab } from "@/components/dashboard/create-fab";
 import { copy } from "@/components/dashboard/copy";
 import { PageHeader } from "@/components/kit/page-header";
+import { CALENDAR_VIEW } from "@/consts/conts";
 import { ProgressRing } from "@/components/kit/progress-ring";
-import { getCompletionDate, getTasksForDay } from "@/functions/functions";
+import { weekdayDate } from "@/functions/date-label";
+import { fill, getCompletionDate, getTasksForDay } from "@/functions/functions";
 import { useCreateTask } from "@/hooks/useCreateTask";
 import { useNow } from "@/hooks/useNow";
 import { cn } from "@/lib/utils";
-
-/** `?view=calendar` abre o mês: o voltar do aparelho fecha. */
-export const CALENDAR_VIEW = "calendar";
 
 /** "Hoje", a data e o anel do placar (feitas/total das tarefas de hoje); sem tarefa, sem anel. */
 export function TodayHeader({
@@ -40,9 +38,7 @@ export function TodayHeader({
             value={done}
             max={total}
             className="mb-0.5"
-            label={copy.day.progress
-              .replace("{done}", String(done))
-              .replace("{total}", String(total))}
+            label={fill(copy.day.progress, { done, total })}
           />
         )
       }

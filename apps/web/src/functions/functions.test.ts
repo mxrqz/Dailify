@@ -17,9 +17,9 @@ import {
   monthsBetween,
 } from "./functions";
 import { setAppTimeZone, zoned, zonedAt } from "./zone";
-import type { TaskProps } from "@/types/types";
+import type { Task } from "@dailify/shared";
 
-function makeTask(over: Partial<TaskProps> = {}): TaskProps {
+function makeTask(over: Partial<Task> = {}): Task {
   return {
     id: "1",
     title: "t",
@@ -122,7 +122,7 @@ describe("índice por dia e faixas numéricas ≡ comparação por TZDate", () =
   afterEach(() => setAppTimeZone(null));
   // Mês com virada de horário de verão (NY, nov), tarefas perto da meia-noite e históricos longos.
   const start = Date.UTC(2026, 9, 1);
-  const tasks: TaskProps[] = Array.from({ length: 120 }, (_, i) => {
+  const tasks: Task[] = Array.from({ length: 120 }, (_, i) => {
     const date = start + ((i * 7919 * 60_000) % (92 * 86_400_000));
     return makeTask({
       id: String(i),

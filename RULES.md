@@ -84,7 +84,7 @@ relative to the package they name (`apps/web/src`, `apps/server/src`, `packages/
 - Task writes never import `@/functions/api` from a component; they go through
   `hooks/useTaskActions`, `useUndatedActions` or `useCreateTask`, which keep the shared lists in
   sync. Contract: apply optimistically, call, then settle (success keeps it, `offline` or 401
-  enqueues it, anything else rolls back and toasts). See `run` in `hooks/useUndatedActions.tsx`.
+  enqueues it, anything else rolls back and toasts). See `run` in `hooks/useUndatedActions.ts`.
 - After an `await` or from an Undo, never set a shared list from a render-time snapshot; it reverts
   every write that landed meanwhile. Use a functional update, widening the setter type in
   `components/dailifyContext.tsx` to `Dispatch<SetStateAction<...>>` instead of adding another

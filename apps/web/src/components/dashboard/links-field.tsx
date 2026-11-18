@@ -1,11 +1,12 @@
 import { useState, type ComponentProps } from "react";
 import { LinkIcon, Trash2Icon, VideoIcon, XIcon } from "lucide-react";
 
-import { TASK_LIMITS, meetLink, parseLinks } from "@dailify/shared";
+import { TASK_LIMITS, meetLink } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { ListGroup, ListRow } from "@/components/kit/list";
 import { Input } from "@/components/ui/input";
+import { normalizeUrl } from "@/functions/link-label";
 import { cn } from "@/lib/utils";
 
 // A régua é uma só (`@dailify/shared`): estes dois números eram cópia do servidor, com o
@@ -36,25 +37,6 @@ function UrlInput({
       {...props}
     />
   );
-}
-
-/**
- * A mesma regra do detector do composer decide o que é URL aqui — sem segunda definição.
- * `parseLinks` não cobre tamanho nem credencial embutida quando o esquema é explícito (fica pra
- * validação do servidor, por design dele) — replicados aqui pra não estourar um 400 só no salvar.
- */
-export function normalizeUrl(raw: string): string | null {
-  const input = raw.trim();
-  const { urls } = parseLinks(input);
-  if (urls.length !== 1) return null;
-  // `parseLinks` apara pontuação final porque no composer a URL vem no meio de prosa ("(veja
-  // x.com)"); aqui o campo só recebe URL, então token único com esquema explícito vale inteiro —
-  // aparar corromperia ".../Java_(linguagem_de_programação)" e ".../path.".
-  const url = /^https?:\/\/\S+$/i.test(input) ? input : urls[0];
-  if (url.length > MAX_URL_LEN || !URL.canParse(url)) return null;
-  const { username, password } = new URL(url);
-  if (username || password) return null;
-  return url;
 }
 
 /**

@@ -6,9 +6,10 @@ import { PageHeader } from "@/components/kit/page-header";
 import { PlanCards, type Cycle } from "@/components/pricing/plan-cards";
 import { Button } from "@/components/ui/button";
 import { PLAN_ID } from "@/consts/conts";
-import type { PlanRole } from "@/consts/pricing";
+import type { PlanRole } from "@dailify/shared";
 import { copy } from "@/components/pricing/copy";
 import { checkout } from "@/functions/api";
+import { fill } from "@/functions/functions";
 import { planOf, useSession } from "@/lib/auth";
 import { openExternal } from "@/lib/open-external";
 
@@ -58,7 +59,7 @@ export function PlansView({
               className="w-full"
               onClick={() => onSelect(role, cycle)}
             >
-              {copy.page.choosePlan.replace("{plan}", name)}
+              {fill(copy.page.choosePlan, { plan: name })}
             </Button>
           );
         }}
@@ -98,9 +99,9 @@ export default function PremiumPage(): JSX.Element {
     // After the login, `redirectTarget` brings them back here to pick the plan again.
     if (!user) return navigate("/login", { state: { from: location } });
 
-    const { url } = await checkout(cycle === "yearly" ? `${role}-year` : role);
+    const { url, error } = await checkout(cycle === "yearly" ? `${role}-year` : role);
     if (url) await openExternal(url);
-    else toast.error(copy.page.checkoutFailed);
+    else toast.error(copy.page.checkoutFailed, { description: error?.message });
   };
 
   return <PlansView currentPlan={user ? planOf(user) : undefined} onSelect={handleSelectPlan} />;

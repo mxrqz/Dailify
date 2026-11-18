@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 const { useSession, listSessions } = vi.hoisted(() => ({
@@ -21,9 +21,6 @@ const row = (id: string) => ({
   ipAddress: null,
   updatedAt: new Date(0),
 });
-
-beforeEach(() => vi.clearAllMocks());
-
 describe("<SecurityPage>", () => {
   it("marks this device and offers no sign-out-others when it is the only session", async () => {
     listSessions.mockResolvedValue({ data: [row("s1")], error: null });

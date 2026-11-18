@@ -1,5 +1,4 @@
 import { useState, type ReactNode } from "react";
-import { format } from "date-fns";
 import { BellIcon, CheckIcon, RepeatIcon, VideoIcon } from "lucide-react";
 import { durationMinutes, isCalendarEventLink, videoLink } from "@dailify/shared";
 
@@ -19,30 +18,22 @@ import { CalendarBadge } from "@/components/logos";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
 import { TaskCard } from "@/components/task-card";
 import { useDailify } from "@/components/dailifyContext";
-import { formatClock, taskToCardData } from "@/functions/functions";
+import { clockAt } from "@/functions/date-label";
+import { fill, formatClock, taskToCardData } from "@/functions/functions";
 import { repeatLabel } from "@/functions/repeat-label";
 import { useTaskActions } from "@/hooks/useTaskActions";
-import type { TaskProps } from "@/types/types";
+import type { Task } from "@dailify/shared";
 import { zoned } from "@/functions/zone";
 import { cn } from "@/lib/utils";
 
-/**
- * Sem hover não há como alcançar a toolbar do cartão nem os chips, então é aí — e só aí — que o
- * cartão inteiro vira um alvo que abre a folha, e a edição no cartão é desligada INTEIRA (título
- * incluído): dois caminhos de edição no toque só dariam campo aberto sem querer. Com hover
- * (desktop) é o inverso — edita-se tudo no cartão e um clique no meio dele não faz nada. O
- * `max-width` cobre a janela estreita com mouse, onde a linha de metadados já está apertada demais
- * pra editar em cima dela.
- */
-export const SHEET_EDITING = "(hover: none), (max-width: 639px)";
-
 /** 15 → "15 min", 60 → "1h", 90 → "1h30": a duração embaixo do horário. */
 export function durationText(minutes: number): string {
-  if (minutes < 60) return copy.day.minutes.replace("{n}", String(minutes));
+  if (minutes < 60) return fill(copy.day.minutes, { n: minutes });
   const m = minutes % 60;
-  return copy.day.hours
-    .replace("{h}", String(Math.floor(minutes / 60)))
-    .replace("{m}", m ? String(m).padStart(2, "0") : "");
+  return fill(copy.day.hours, {
+    h: Math.floor(minutes / 60),
+    m: m ? String(m).padStart(2, "0") : "",
+  });
 }
 
 /** O círculo de concluir: 24px dentro de um alvo de 44, cheio de `brand` quando feito. */
@@ -184,7 +175,7 @@ export function NowLine({ time }: { time: string }): JSX.Element {
   return (
     <div
       role="separator"
-      aria-label={copy.day.nowAt.replace("{time}", time)}
+      aria-label={fill(copy.day.nowAt, { time })}
       className="flex h-3 items-center gap-2 pr-1.5 pl-3"
     >
       <b className="w-11 flex-none text-right text-xs font-semibold text-brand-text tabular-nums">
@@ -196,7 +187,7 @@ export function NowLine({ time }: { time: string }): JSX.Element {
 }
 
 /** "Agenda · Seg, Qua · Lembrete 30 min antes · Meet" com os ícones neutros na frente. */
-function taskMeta(task: TaskProps, live: boolean, hour12: boolean): ReactNode {
+function taskMeta(task: Task, live: boolean, hour12: boolean): ReactNode {
   const calendar = task.links?.some(isCalendarEventLink);
   const repeat = repeatLabel(task.repeat, task.repeatEvery);
   const meet = videoLink(task.links);
@@ -204,13 +195,13 @@ function taskMeta(task: TaskProps, live: boolean, hour12: boolean): ReactNode {
     task.alert === undefined ? undefined : Math.round((task.date - task.alert) / 60_000);
   const end = task.date + durationMinutes(task.duration) * 60_000;
   const text = [
-    live && copy.day.until.replace("{time}", formatClock(format(zoned(end), "HH:mm"), hour12)),
+    live && fill(copy.day.until, { time: clockAt(end, hour12) }),
     calendar && copy.calendar.name,
     repeat,
     before !== undefined &&
       (before <= 0
         ? copy.day.reminderOnTime
-        : copy.day.reminderBefore.replace("{n}", durationText(before))),
+        : fill(copy.day.reminderBefore, { n: durationText(before) })),
     meet && copy.day.meet,
   ].filter(Boolean);
   if (!text.length) return undefined;
@@ -241,7 +232,7 @@ export function DayTaskRow({
   live = false,
   sheetEditing,
 }: {
-  task: TaskProps;
+  task: Task;
   day: Date;
   /** `SHEET_EDITING`, lido uma vez pela seção e não um matchMedia por linha. */
   sheetEditing: boolean;

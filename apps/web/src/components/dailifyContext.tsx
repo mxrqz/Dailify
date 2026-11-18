@@ -1,12 +1,18 @@
-import { InvoicesProps, PaymentDetailsProps, TaskProps } from "@/types/types";
-import { createContext, useContext, useRef, useState, ReactNode } from "react";
+import { createContext, useContext, useRef, useState, type ReactNode } from "react";
 import type { Dispatch, SetStateAction } from "react";
 import { addDays, endOfMonth, startOfDay, startOfMonth } from "date-fns";
 import { toast } from "sonner";
 import { DEFAULT_WEEK_START } from "@dailify/shared";
-import type { QuotaKey, WeekStart } from "@dailify/shared";
+import type {
+  Invoice,
+  PaymentDetails,
+  QuotaKey,
+  QuotaSnapshot,
+  Task,
+  WeekStart,
+} from "@dailify/shared";
 import { getTasksForMonth } from "@/functions/api";
-import type { ApiError, QuotaSnapshot } from "@/functions/api";
+import type { ApiError } from "@/functions/api";
 import { initialMonths, mergeMonth, monthsBetween } from "@/functions/functions";
 import { copy } from "@/components/dashboard/copy";
 import { appTimeZone, setAppTimeZone, zoned } from "@/functions/zone";
@@ -17,25 +23,26 @@ interface DailifyContextType {
   targetDay: Date | undefined;
   /** Carrega os meses até o dia e só então o marca como alvo, pra ele já estar na lista. */
   goToDay: (day: Date) => Promise<void>;
-  tasks: TaskProps[] | undefined;
+  tasks: Task[] | undefined;
   /** Functional form after an await or from an Undo: a snapshot reverts writes that landed since. */
-  setTasks: Dispatch<SetStateAction<TaskProps[] | undefined>>;
-  isLoading: string | null;
-  setIsLoading: (isLoading: string | null) => void;
+  setTasks: Dispatch<SetStateAction<Task[] | undefined>>;
+  /** The boot's task load is in flight. */
+  isLoading: boolean;
+  setIsLoading: (isLoading: boolean) => void;
   /** Inícios dos meses na tela, em ordem; quem reconstrói recorrência expande neles. */
   loadedMonths: Date[];
   /** Busca e mescla o mês; já carregado ou em voo não refaz. */
   loadMonth: (month: Date) => Promise<void>;
   /** Rebusca os meses à força (boot, volta do segundo plano); devolve o primeiro erro. */
   reloadMonths: (months: Date[]) => Promise<ApiError | undefined>;
-  paymentDetails: PaymentDetailsProps | null | undefined;
-  setPaymentDetails: (paymentDetails: PaymentDetailsProps | null) => void;
-  invoices: InvoicesProps[] | undefined;
-  setInvoices: (invoices: InvoicesProps[]) => void;
+  paymentDetails: PaymentDetails | null | undefined;
+  setPaymentDetails: (paymentDetails: PaymentDetails | null) => void;
+  invoices: Invoice[] | undefined;
+  setInvoices: (invoices: Invoice[]) => void;
   quotas: QuotaSnapshot | undefined;
   setQuotas: (quotas: QuotaSnapshot) => void;
-  undatedTasks: TaskProps[] | undefined;
-  setUndatedTasks: Dispatch<SetStateAction<TaskProps[] | undefined>>;
+  undatedTasks: Task[] | undefined;
+  setUndatedTasks: Dispatch<SetStateAction<Task[] | undefined>>;
   weekStart: WeekStart;
   setWeekStart: (weekStart: WeekStart) => void;
   /** Fuso escolhido em /settings; null = automático (o do aparelho). */
@@ -58,15 +65,15 @@ const DailifyContext = createContext<DailifyContextType | undefined>(undefined);
 export function DailifyProvider({ children }: { children: ReactNode }) {
   const [selectedDay, setSelectedDay] = useState<Date>(() => zoned());
   const [targetDay, setTargetDay] = useState<Date>();
-  const [tasks, setTasks] = useState<TaskProps[]>();
-  const [isLoading, setIsLoading] = useState<null | string>(null);
+  const [tasks, setTasks] = useState<Task[]>();
+  const [isLoading, setIsLoading] = useState(false);
   // Já começa com os do boot: com o cache na tela antes da 1ª leitura, `[]` apagava as instâncias.
   const [loadedMonths, setLoadedMonths] = useState<Date[]>(() => initialMonths(zoned()));
-  const [paymentDetails, setPaymentDetails] = useState<PaymentDetailsProps | null>();
+  const [paymentDetails, setPaymentDetails] = useState<PaymentDetails | null>();
   const [quotas, setQuotas] = useState<QuotaSnapshot>();
-  const [invoices, setInvoices] = useState<InvoicesProps[]>();
+  const [invoices, setInvoices] = useState<Invoice[]>();
 
-  const [undatedTasks, setUndatedTasks] = useState<TaskProps[]>();
+  const [undatedTasks, setUndatedTasks] = useState<Task[]>();
   const [weekStart, setWeekStart] = useState<WeekStart>(DEFAULT_WEEK_START);
   const [timeZone, setTimeZoneState] = useState<string | null>(null);
   const [hour12, setHour12] = useState(false);

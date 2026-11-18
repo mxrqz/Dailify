@@ -17,6 +17,10 @@ describe("formatPrice", () => {
   it("zero", () => {
     expect(normalizeSpaces(formatPrice(0))).toBe("R$ 0,00");
   });
+  it("formats a Stripe currency code in any case", () => {
+    expect(normalizeSpaces(formatPrice(990, "brl"))).toBe("R$ 9,90");
+    expect(normalizeSpaces(formatPrice(990, "usd"))).toBe("US$ 9,90");
+  });
 });
 
 describe("yearlySavings", () => {

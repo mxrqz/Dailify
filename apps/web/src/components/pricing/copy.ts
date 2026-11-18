@@ -1,4 +1,4 @@
-import type { QuotaKey } from "@dailify/shared";
+import type { Invoice, QuotaKey } from "@dailify/shared";
 
 /**
  * Copy de planos e cobrança — landing, `/premium` e `/billing` leem daqui, então o que a página de
@@ -57,7 +57,6 @@ export const copy = {
     choosePlan: "Assinar {plan}",
     startFree: "Começar grátis",
     currentPlan: "Seu plano atual",
-    signInFirst: "Entre na sua conta pra assinar.",
     checkoutFailed: "Não foi possível abrir o checkout. Tente de novo.",
     checkoutSuccess: "Pagamento confirmado. Seu plano é atualizado em instantes.",
     checkoutCanceled: "Checkout cancelado — nada foi cobrado.",
@@ -90,13 +89,21 @@ export const copy = {
     changePlan: "Trocar de plano",
     changePlanValue: "Free, Pro ou Max",
     manage: "Gerenciar assinatura",
+    portalFailed: "Não foi possível abrir a gestão da assinatura. Tente de novo.",
     manageNote:
       "Troque o cartão, mude o ciclo ou cancele. Você continua com acesso até o fim do período pago.",
     seePlans: "Ver planos",
     seePlansNote: "Assine o Pro ou o Max pra ter mais créditos de IA.",
     history: "Histórico de pagamentos",
     noInvoices: "Nenhuma fatura ainda.",
-    paid: "Pago",
+    /** Stripe's invoice status, never shown raw. */
+    status: {
+      draft: "Rascunho",
+      open: "Em aberto",
+      paid: "Pago",
+      uncollectible: "Não cobrado",
+      void: "Anulada",
+    } satisfies Record<NonNullable<Invoice["status"]>, string>,
     viewInvoice: "Ver fatura de {date}",
   },
 } as const;

@@ -13,12 +13,15 @@ Each has a colocated `<module>.test.ts`, except `push.ts`.
   `fromDateInput`), so the parser, the queue and the API read one zone.
 - `functions.ts`: legacy grab-bag (`fill`, `formatClock`, `getTasksForDay`,
   `upsertTaskWithRecurrence`, `mergeMonth`, ...). No new exports; a new helper gets its own module.
-- One concept each: `repeat-label`, `link-label`, `quota-label`, `undated`, `user-agent`,
-  `compose-input` (composer chip state: `onDay`, `fromWire`, `markSegments`, `withEdits`; not
-  shared's `composeTaskInput`), `edit-input` (edit form to `TaskInput`), `billing-sections`,
+- One concept each: `repeat-label` (+ `REPEAT_MODES`), `link-label` (+ `linkHost`,
+  `normalizeUrl`), `quota-label` (+ `creditsLabel`), `count-label`, `date-label` (day and clock
+  labels), `task-options` (editor choice lists), `task-lists` (`swapTasks`/`swapUndated`),
+  `undated`, `user-agent`,
+  `compose-input` (composer chip state: `onDay`, `markSegments`, `withEdits`; `fromWire` and
+  `composeTaskInput` are shared's), `edit-input` (edit form to `TaskInput`, `buildEdit`), `billing-sections`,
   `revert-task`.
 - Imports: shared, date libs, `@/consts`, `@/lib`, siblings, `components/*/copy.ts`, `import type`
-  from components. `@/types` is a legacy alias layer; new code imports `@dailify/shared`.
+  from components.
 - A `month: Date` parameter (`getTasksForMonth`, `getQuotas`, `mergeMonth`, the `months` of
   `upsertTaskWithRecurrence`) must be a zoned month: its year and month are read in its own zone.
 
@@ -33,8 +36,6 @@ Each has a colocated `<module>.test.ts`, except `push.ts`.
 - Auth is `credentials: "include"` (web cookie) plus `authHeaders()` (Tauri bearer); no function
   takes a token. In PATCH bodies `null` clears and an absent key keeps (`updateTask`'s `alert`).
 - `authed()` skips the JSON Content-Type for a `FormData` body (`createTaskVoice`).
-- Legacy, don't copy: `getQuotas`, `getPaymentDetails`, `getInvoices`, `checkout`, `billingPortal`
-  drop `error`.
 
 Adding an endpoint: name the wire type in `@dailify/shared`
 ([TypeScript](../../../../RULES.md#typescript)); wrap `request<T>()` here and `encodeURIComponent`
@@ -49,15 +50,16 @@ render test whose component now calls it (a factory mock throws on an export it 
   `crypto.randomUUID` on plain http), `patch` (optional `occurrence`), `complete`, `uncomplete`
   (`day`, or `[day, until]` for an undated period), `delete`, `delete-occurrence`.
 - `collapseQueue`: a `delete` drops its task's pending entries, and itself when a `create` was
-  pending. The newest `complete`/`uncomplete` replaces the pending one whatever its day. Patches
+  pending. The newest `complete`/`uncomplete` replaces a pending one only for the same day (the complete's
+  stamp, the uncomplete's `day`, in the app zone). Patches
   merge per (task, occurrence); a series patch on a pending `create` folds into it.
   `delete-occurrence` is its own op so it never collapses like a delete.
 - `flushQueue` is single-flight per user (`flushing` map). The drain re-reads storage every step,
   stops at the first offline or 401 (kept for the next sign-in) and drops what the server refused.
   Entries are removed by value, not index: another tab may have sent the head meanwhile.
 - `enqueue` doesn't collapse during a flush: a delete folded into an in-flight create is lost.
-- `shouldQueue(error)` is the settle predicate (offline or 401); `drainQueue` uses it, the four
-  copies in hooks and `edit-task.tsx` should too (`hooks/CLAUDE.md`).
+- `shouldQueue(error)` is the settle predicate (offline or 401), used by `drainQueue`, the write
+  hooks and `edit-task.tsx` (`hooks/CLAUDE.md`).
 - Storage keys are a persisted contract (renaming drops queued writes):
   `dailify:{tasks,outbox,undated}:<userId>`, `dailify:last-user`, `mewki:mew:<userId>:v1`
   (`chatKey`, read by `components/mew-chat/thread.ts`); `clearLocal` removes all but device-wide ones

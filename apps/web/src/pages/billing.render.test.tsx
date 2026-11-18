@@ -1,18 +1,22 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import { limitsFor, type QuotaUsage } from "@dailify/shared";
 
-const { useSession, dailify, api } = vi.hoisted(() => ({
+const { useSession, dailify, api, toast } = vi.hoisted(() => ({
   useSession: vi.fn(),
   dailify: vi.fn(),
   api: {
     billingPortal: vi.fn(),
-    getPaymentDetails: vi.fn(async () => null),
-    getInvoices: vi.fn(async () => []),
+    getPaymentDetails: vi.fn(async (): Promise<unknown> => ({ paymentDetails: null })),
+    getInvoices: vi.fn(async (): Promise<unknown> => ({ invoices: [] })),
   },
+  toast: { error: vi.fn(), success: vi.fn(), info: vi.fn() },
 }));
+
+vi.mock("sonner", () => ({ toast }));
 
 vi.mock("@/lib/auth", async (importOriginal) => ({
   ...(await importOriginal<typeof import("@/lib/auth")>()),
@@ -47,7 +51,6 @@ function context(over: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
   session({});
   dailify.mockReturnValue(context());
 });
@@ -148,8 +151,40 @@ describe("<BillingPage>", () => {
     renderPage();
 
     await waitFor(() => expect(ctx.setInvoices).toHaveBeenCalledWith([]));
-    expect(ctx.setPaymentDetails).toHaveBeenCalledWith(null);
+    await waitFor(() => expect(ctx.setPaymentDetails).toHaveBeenCalledWith(null));
     expect(api.getPaymentDetails).toHaveBeenCalled();
+  });
+
+  it("keeps the shown billing when its load fails", async () => {
+    const offline = { error: { message: "", offline: true } };
+    api.getPaymentDetails.mockResolvedValueOnce(offline);
+    api.getInvoices.mockResolvedValueOnce(offline);
+    const ctx = context({ quotas: FREE });
+    dailify.mockReturnValue(ctx);
+    renderPage();
+
+    await waitFor(() => expect(api.getInvoices).toHaveBeenCalled());
+    expect(ctx.setInvoices).not.toHaveBeenCalled();
+    expect(ctx.setPaymentDetails).not.toHaveBeenCalled();
+  });
+
+  it("says so when the subscription portal won't open", async () => {
+    session({ plan: "max" });
+    api.billingPortal.mockResolvedValueOnce({ url: null, error: { message: "boom" } });
+    dailify.mockReturnValue(
+      context({
+        quotas: MAX,
+        paymentDetails: { amount: 1990, currency: "brl", start: 0, recurring: "month" },
+      }),
+    );
+    renderPage();
+
+    await userEvent.click(screen.getByRole("button", { name: pricingCopy.account.manage }));
+    await waitFor(() =>
+      expect(toast.error).toHaveBeenCalledWith(pricingCopy.account.portalFailed, {
+        description: "boom",
+      }),
+    );
   });
 
   /**

@@ -12,7 +12,13 @@ import { FaCcAmex, FaCcVisa } from "react-icons/fa";
 import { RiMastercardFill } from "react-icons/ri";
 import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
-import { QUOTA_KEYS, type Quotas } from "@dailify/shared";
+import {
+  QUOTA_KEYS,
+  formatPrice,
+  type Invoice,
+  type PaymentDetails,
+  type Quotas,
+} from "@dailify/shared";
 
 import { toast } from "sonner";
 
@@ -29,12 +35,12 @@ import { Progress } from "@/components/ui/progress";
 import { planMap } from "@/consts/conts";
 import { billingPortal, getInvoices, getPaymentDetails } from "@/functions/api";
 import { billingSections } from "@/functions/billing-sections";
+import { fill } from "@/functions/functions";
 import { quotaLabel } from "@/functions/quota-label";
 import { useQuotas } from "@/hooks/useQuotas";
 import { planOf, useSession } from "@/lib/auth";
 import { openExternal } from "@/lib/open-external";
 import { zoned } from "@/functions/zone";
-import type { InvoicesProps, PaymentDetailsProps } from "@/types/types";
 
 const brandIcons: Record<string, JSX.Element> = {
   visa: <FaCcVisa className="size-4" />,
@@ -47,11 +53,8 @@ const walletIcons: Record<string, JSX.Element> = {
   google_pay: <GooglePayLogo className="h-4 fill-ink-secondary" />,
 };
 
-const money = (amount: number, currency: string) =>
-  (amount / 100).toLocaleString("pt-BR", { style: "currency", currency });
-
 /** "Mastercard •••• 8421" (ou o logo da carteira), como a fatura mostra. */
-function cardLabel(invoice: InvoicesProps): JSX.Element {
+function cardLabel(invoice: Invoice): JSX.Element {
   return (
     <span className="inline-flex items-center gap-1.5">
       {walletIcons[invoice.walletType ?? ""] ?? brandIcons[invoice.brandName ?? ""]}
@@ -70,8 +73,8 @@ export function BillingView({
 }: {
   currentPlan: string;
   quotas: Quotas;
-  paymentDetails: PaymentDetailsProps | null | undefined;
-  invoices: InvoicesProps[] | undefined;
+  paymentDetails: PaymentDetails | null | undefined;
+  invoices: Invoice[] | undefined;
   onManage: () => void;
 }): JSX.Element {
   const sections = billingSections(paymentDetails, invoices);
@@ -87,7 +90,7 @@ export function BillingView({
       <section className="card mx-4 mt-5 rounded-lg p-5 md:mx-0">
         <div className="flex items-center justify-between gap-3">
           <h2 className="text-title-3 font-semibold">
-            {copy.account.currentPlan.replace("{plan}", planMap[currentPlan] ?? currentPlan)}
+            {fill(copy.account.currentPlan, { plan: planMap[currentPlan] ?? currentPlan })}
           </h2>
           {paymentDetails && (
             <span className="inline-flex h-6 items-center rounded-xs bg-fill px-2 text-xs font-medium">
@@ -97,10 +100,9 @@ export function BillingView({
         </div>
         <p className="mt-0.5 text-subhead text-ink-secondary tabular-nums">
           {paymentDetails
-            ? copy.account.price[paymentDetails.recurring].replace(
-                "{amount}",
-                money(paymentDetails.amount, paymentDetails.currency),
-              )
+            ? fill(copy.account.price[paymentDetails.recurring], {
+                amount: formatPrice(paymentDetails.amount, paymentDetails.currency),
+              })
             : copy.account.freePrice}
         </p>
 
@@ -130,9 +132,7 @@ export function BillingView({
                     <div className="flex items-baseline justify-between text-subhead">
                       <span>{name}</span>
                       <span className="font-semibold tabular-nums">
-                        {copy.account.meter
-                          .replace("{used}", String(state.used))
-                          .replace("{limit}", String(state.limit))}
+                        {fill(copy.account.meter, { used: state.used, limit: state.limit })}
                       </span>
                     </div>
                     <Progress
@@ -141,9 +141,7 @@ export function BillingView({
                       aria-label={quotaLabel(state, name)}
                     />
                     <p className="mt-2 text-footnote text-ink-secondary">
-                      {copy.account.remaining
-                        .replace("{n}", String(state.remaining))
-                        .replace("{month}", renewMonth)}
+                      {fill(copy.account.remaining, { n: state.remaining, month: renewMonth })}
                     </p>
                   </div>
                 );
@@ -160,7 +158,7 @@ export function BillingView({
             sublabel={format(zoned(paymentDetails.start * 1000), "d 'de' MMMM 'de' yyyy", {
               locale: ptBR,
             })}
-            value={money(paymentDetails.amount, paymentDetails.currency)}
+            value={formatPrice(paymentDetails.amount, paymentDetails.currency)}
           />
           {sorted[0] && (
             <ListRow
@@ -209,20 +207,20 @@ export function BillingView({
                 trailing={
                   <span className="flex items-center gap-3">
                     <span className="text-subhead font-medium tabular-nums">
-                      {money(invoice.amount_paid, invoice.currency)}
+                      {formatPrice(invoice.amount_paid, invoice.currency)}
                     </span>
                     <span className="inline-flex items-center gap-1 text-footnote text-ink-secondary">
                       {invoice.status === "paid" && (
                         <CheckIcon aria-hidden="true" className="size-3.5" strokeWidth={2.5} />
                       )}
-                      {invoice.status === "paid" ? copy.account.paid : invoice.status}
+                      {invoice.status && copy.account.status[invoice.status]}
                     </span>
                     {invoice.hosted_invoice_url && (
                       <a
                         href={invoice.hosted_invoice_url}
                         target="_blank"
                         rel="noreferrer"
-                        aria-label={copy.account.viewInvoice.replace("{date}", date)}
+                        aria-label={fill(copy.account.viewInvoice, { date })}
                         className="-mr-2 grid size-11 place-items-center rounded-full text-ink-secondary transition-colors duration-fast hover:bg-fill hover:text-ink"
                       >
                         <ReceiptIcon className="size-5" />
@@ -266,18 +264,19 @@ export default function BillingPage(): JSX.Element {
   // por abertura do app. O contexto guarda o último valor, então voltar aqui pinta na hora.
   useEffect(() => {
     if (!userId) return;
-    (async () => {
-      // allSettled: uma falha não derruba a vizinha.
-      const [payment, list] = await Promise.allSettled([getPaymentDetails(), getInvoices()]);
-
-      if (payment.status === "fulfilled") setPaymentDetails(payment.value);
-      if (list.status === "fulfilled") setInvoices(list.value);
-    })();
+    // Each settles alone; a failed read keeps what the context already shows.
+    void getPaymentDetails().then(({ paymentDetails }) => {
+      if (paymentDetails !== undefined) setPaymentDetails(paymentDetails);
+    });
+    void getInvoices().then(({ invoices }) => {
+      if (invoices) setInvoices(invoices);
+    });
   }, [userId, setPaymentDetails, setInvoices]);
 
   const getBillingPortalUrl = async () => {
-    const { url } = await billingPortal();
+    const { url, error } = await billingPortal();
     if (url) await openExternal(url);
+    else toast.error(copy.account.portalFailed, { description: error?.message });
   };
 
   return (

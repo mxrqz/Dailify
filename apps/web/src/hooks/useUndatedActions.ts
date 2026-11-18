@@ -13,7 +13,7 @@ import {
 import type { ApiError } from "@/functions/api";
 import { upsertTaskWithRecurrence } from "@/functions/functions";
 import { revertTask } from "@/functions/revert-task";
-import { enqueue, type Mutation } from "@/functions/offline";
+import { enqueue, shouldQueue, type Mutation } from "@/functions/offline";
 import { removeUndated, upsertUndated } from "@/functions/undated";
 import { appTimeZone } from "@/functions/zone";
 import { useSession } from "@/lib/auth";
@@ -42,8 +42,7 @@ export function useUndatedActions(task: Task) {
     const { error } = await call();
     if (!error) return true;
 
-    // 401: a sessão caiu (aba velha, troca de conta), não a edição — espera na fila pelo login.
-    if ((error.offline || error.status === 401) && userId) {
+    if (shouldQueue(error) && userId) {
       enqueue(userId, mutation);
       return true;
     }

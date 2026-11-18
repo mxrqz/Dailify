@@ -36,6 +36,7 @@ vi.mock("@/components/mew-chat/mew-chat", () => ({
   ),
 }));
 
+import { copy } from "./copy";
 import { CreateFab } from "./create-fab";
 
 const setup = () => {
@@ -71,20 +72,20 @@ describe("<CreateFab> mobile", () => {
   it("o Nova tarefa do chat abre a folha com o campo focado; Cancelar fecha", async () => {
     const { user } = setup();
 
-    await user.click(screen.getByRole("button", { name: "Nova tarefa" }));
-    expect(screen.getByRole("dialog", { name: "Nova tarefa" })).toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: copy.composer.open }));
+    expect(screen.getByRole("dialog", { name: copy.composer.open })).toBeInTheDocument();
     expect(screen.getByRole("textbox")).toHaveFocus();
 
-    await user.click(screen.getByRole("button", { name: "Cancelar" }));
+    await user.click(screen.getByRole("button", { name: copy.kit.cancel }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
   it("⏎ cria e fecha; o modo fixo do desktop não vale aqui", async () => {
     localStorage.setItem("dailify:composer-docked", "1");
     const { user, onSubmit } = setup();
-    expect(screen.queryByRole("region", { name: "Nova tarefa" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("region", { name: copy.composer.open })).not.toBeInTheDocument();
 
-    await user.click(screen.getByRole("button", { name: "Nova tarefa" }));
+    await user.click(screen.getByRole("button", { name: copy.composer.open }));
     await user.keyboard("Comprar pão{Enter}");
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
@@ -95,14 +96,14 @@ describe("<CreateFab> mobile", () => {
     env.voice = true;
     const { user } = setup();
 
-    await user.click(screen.getByRole("button", { name: "Falar com a Mewki" }));
+    await user.click(screen.getByRole("button", { name: copy.composer.dockVoice }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(env.start).toHaveBeenCalledTimes(1);
 
     cleanup();
     env.voice = false;
     setup();
-    expect(screen.queryByRole("button", { name: "Falar com a Mewki" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: copy.composer.dockVoice })).not.toBeInTheDocument();
   });
 });
 
@@ -110,11 +111,11 @@ describe("<CreateFab> desktop", () => {
   it("Manter aberto fixa o campo, e o modo sobrevive a remontar", async () => {
     const { user } = setup();
 
-    await user.click(screen.getByRole("button", { name: "Nova tarefa" }));
-    await user.click(screen.getByRole("button", { name: "Manter aberto" }));
+    await user.click(screen.getByRole("button", { name: copy.composer.open }));
+    await user.click(screen.getByRole("button", { name: copy.composer.pin }));
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByRole("region", { name: "Nova tarefa" })).toContainElement(
+    expect(screen.getByRole("region", { name: copy.composer.open })).toContainElement(
       screen.getByRole("textbox"),
     );
     expect(localStorage.getItem("dailify:composer-docked")).toBe("1");
@@ -122,7 +123,7 @@ describe("<CreateFab> desktop", () => {
     cleanup();
     setup();
     expect(screen.getByRole("textbox")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Nova tarefa" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: copy.composer.open })).not.toBeInTheDocument();
   });
 
   it("aberto: n foca o campo", async () => {
@@ -138,21 +139,21 @@ describe("<CreateFab> desktop", () => {
     localStorage.setItem("dailify:composer-docked", "1");
     const { user } = setup();
 
-    await user.click(screen.getByRole("button", { name: "Minimizar" }));
+    await user.click(screen.getByRole("button", { name: copy.composer.minimize }));
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(localStorage.getItem("dailify:composer-docked")).toBe("0");
 
     await user.hover(screen.getByRole("dialog"));
     await user.unhover(screen.getByRole("dialog"));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: "Nova tarefa" })).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: copy.composer.open })).toBeInTheDocument();
   });
 
   it("desfixada com texto pela metade, sair com o mouse não fecha", async () => {
     localStorage.setItem("dailify:composer-docked", "1");
     const { user } = setup();
 
-    await user.click(screen.getByRole("button", { name: "Minimizar" }));
+    await user.click(screen.getByRole("button", { name: copy.composer.minimize }));
     await user.type(screen.getByRole("textbox"), "comprar");
     await user.hover(screen.getByRole("dialog"));
     await user.unhover(screen.getByRole("dialog"));
@@ -163,7 +164,7 @@ describe("<CreateFab> desktop", () => {
   it("aberta pelo +, sair com o mouse não fecha", async () => {
     const { user } = setup();
 
-    await user.click(screen.getByRole("button", { name: "Nova tarefa" }));
+    await user.click(screen.getByRole("button", { name: copy.composer.open }));
     await user.hover(screen.getByRole("dialog"));
     await user.unhover(screen.getByRole("dialog"));
 
@@ -183,7 +184,7 @@ describe("<CreateFab> desktop", () => {
   it("clicar abre a folha com o campo focado", async () => {
     const { user } = setup();
 
-    await user.click(screen.getByRole("button", { name: "Nova tarefa" }));
+    await user.click(screen.getByRole("button", { name: copy.composer.open }));
 
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByRole("textbox")).toHaveFocus();
@@ -221,7 +222,7 @@ describe("<CreateFab> desktop", () => {
   it("⏎ cria e fecha", async () => {
     const { user, onSubmit } = setup();
 
-    await user.click(screen.getByRole("button", { name: "Nova tarefa" }));
+    await user.click(screen.getByRole("button", { name: copy.composer.open }));
     await user.keyboard("Comprar pão{Enter}");
 
     expect(onSubmit).toHaveBeenCalledWith(
@@ -234,7 +235,7 @@ describe("<CreateFab> desktop", () => {
     const { user, onSubmit } = setup();
     onSubmit.mockResolvedValue(false);
 
-    await user.click(screen.getByRole("button", { name: "Nova tarefa" }));
+    await user.click(screen.getByRole("button", { name: copy.composer.open }));
     await user.keyboard("Comprar pão amanhã{Enter}");
 
     expect(await screen.findByRole("dialog")).toBeInTheDocument();
@@ -244,7 +245,7 @@ describe("<CreateFab> desktop", () => {
   it("⇧⏎ cria, limpa o campo e mantém a folha aberta", async () => {
     const { user, onSubmit } = setup();
 
-    await user.click(screen.getByRole("button", { name: "Nova tarefa" }));
+    await user.click(screen.getByRole("button", { name: copy.composer.open }));
     await user.keyboard("Comprar pão{Shift>}{Enter}{/Shift}");
 
     expect(onSubmit).toHaveBeenCalledTimes(1);
@@ -254,7 +255,7 @@ describe("<CreateFab> desktop", () => {
 
   it("mostra o destino: com horário vai para a Agenda; sem horário, A qualquer hora", async () => {
     const { user } = setup();
-    await user.click(screen.getByRole("button", { name: "Nova tarefa" }));
+    await user.click(screen.getByRole("button", { name: copy.composer.open }));
     await user.keyboard("Reunião amanhã às 16h");
     expect(screen.getByRole("dialog")).toHaveTextContent("Vai para Agenda");
 

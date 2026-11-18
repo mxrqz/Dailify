@@ -1,17 +1,28 @@
 /** @vitest-environment jsdom */
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 import { addDays, startOfWeek } from "date-fns";
 import type { Task } from "@dailify/shared";
 
+import { copy } from "@/components/dashboard/copy";
 import { dayAnchorId } from "@/components/dashboard/day-section";
+import { weekdayDate } from "@/functions/date-label";
+import { fill } from "@/functions/functions";
 
 const dailify = vi.hoisted(() => vi.fn());
 vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
 
 import { WeekStrip } from "./week-strip";
 
-const sunday = startOfWeek(new Date());
+// Wednesday noon: the week under test never straddles a real midnight.
+const NOW = new Date(2026, 9, 21, 12).getTime();
+const sunday = startOfWeek(NOW);
+
+beforeEach(() => {
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(NOW);
+});
+afterEach(() => vi.useRealTimers());
 const task = (date: Date): Task => ({
   id: String(date.getTime()),
   title: "x",
@@ -44,8 +55,10 @@ describe("WeekStrip", () => {
     expect(days).toHaveLength(7);
     expect(days[2]).toHaveAttribute("aria-pressed", "true");
     expect(days[0]).toHaveAttribute("aria-pressed", "false");
-    expect(days[3].getAttribute("aria-label")).toMatch(/com tarefas$/);
-    expect(days[1].getAttribute("aria-label")).not.toMatch(/com tarefas$/);
+    const withTasks = (day: Date) =>
+      fill(copy.day.withTasks, { day: weekdayDate(day, "EEEE, d 'de' MMMM") });
+    expect(days[3]).toHaveAccessibleName(withTasks(addDays(sunday, 3)));
+    expect(days[1]).toHaveAccessibleName(weekdayDate(addDays(sunday, 1), "EEEE, d 'de' MMMM"));
 
     fireEvent.click(days[5]);
     expect(goToDay).toHaveBeenCalledWith(addDays(sunday, 5));
