@@ -5,7 +5,7 @@ in [Where code goes](../../../../RULES.md#where-code-goes). Only local invariant
 
 ## Modules
 
-Each has a colocated `<module>.test.ts`, except `api.ts` and `push.ts`.
+Each has a colocated `<module>.test.ts`, except `push.ts`.
 
 - `api.ts`: the only HTTP boundary to `apps/server`. `push.ts`: Web Push for this device.
 - `offline.ts`: per-user cache, outbox queue, last signed-in user, `newTaskId`, `clearLocal`.
@@ -32,16 +32,16 @@ Each has a colocated `<module>.test.ts`, except `api.ts` and `push.ts`.
   from it.
 - Auth is `credentials: "include"` (web cookie) plus `authHeaders()` (Tauri bearer); no function
   takes a token. In PATCH bodies `null` clears and an absent key keeps (`updateTask`'s `alert`).
-- Legacy, don't copy: `createTaskVoice` (FormData; `authed()` forces JSON Content-Type) and the push
-  trio call `fetch` directly, so push throws offline and voice errors lack `status`/`code`.
-  `getQuotas`, `getPaymentDetails`, `getInvoices`, `checkout`, `billingPortal` drop `error`. The
-  `/tasks/${id}` routes skip `encodeURIComponent`.
+- `authed()` skips the JSON Content-Type for a `FormData` body (`createTaskVoice`).
+- Legacy, don't copy: `getQuotas`, `getPaymentDetails`, `getInvoices`, `checkout`, `billingPortal`
+  drop `error`.
 
 Adding an endpoint: name the wire type in `@dailify/shared`
 ([TypeScript](../../../../RULES.md#typescript)); wrap `request<T>()` here and `encodeURIComponent`
 every path segment; add the function to the `vi.mock("@/functions/api", () => api)` object of each
-render test whose component now calls it (a factory mock throws on an export it lacks). api.ts
-itself is testable with `vi.stubGlobal("fetch", ...)` plus `vi.mock("@/lib/auth")`.
+render test whose component now calls it (a factory mock throws on an export it lacks).
+`api.test.ts` pins the `request()` contract with `vi.stubGlobal("fetch", ...)` plus
+`vi.mock("@/lib/auth")`.
 
 ## Offline queue (`offline.ts`)
 
