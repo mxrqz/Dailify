@@ -8,9 +8,9 @@ import mkcert from 'vite-plugin-mkcert'
 import { VitePWA } from 'vite-plugin-pwa'
 
 const host = process.env.TAURI_DEV_HOST;
-// `bun run android`: the phone reaches this server through `adb reverse`. Tauri serves it as
-// http://tauri.localhost by intercepting requests, and Android's interception drops POST bodies, so
-// the app calls the real API directly (as the release build does) instead of the /api proxy.
+// `bun run android`: the phone reaches this server and the local API (`wrangler dev`, Stripe test
+// mode) through `adb reverse`. Tauri serves the app as http://tauri.localhost by intercepting
+// requests, and Android's interception drops POST bodies, so the app calls the API directly.
 const mobileDev = /android|ios/.test(process.env.TAURI_ENV_PLATFORM ?? "");
 
 // Proxy de API em dev: HTTPS (mkcert) -> HTTP (wrangler :8787) seria mixed content. bd Dailify-6aq
@@ -87,7 +87,7 @@ export default defineConfig(async ({ mode }) => ({
   },
 
   define: {
-    "import.meta.env.VITE_DEV_API": JSON.stringify(mobileDev ? "https://api.mewki.mxrqz.com" : "/api"),
+    "import.meta.env.VITE_DEV_API": JSON.stringify(mobileDev ? "http://127.0.0.1:8787" : "/api"),
   },
 
   clearScreen: false,
