@@ -7,8 +7,7 @@ import {
   taskHash,
 } from "@dailify/shared";
 
-/** Linha crua de `tasks`. Exportada para `db/push.ts`, que faz o próprio SELECT com um campo extra. */
-export interface Row {
+export interface TaskRow {
   id: string;
   user_id: string;
   title: string;
@@ -27,6 +26,13 @@ export interface Row {
   exdates: string | null;
   undated: number;
 }
+
+/** What an edit may change: id, completions and `exdates` each have their own write path. */
+export type TaskFields = Partial<Omit<Task, "id" | "completed" | "exdates">>;
+
+// A corrupt JSON column counts as `[]` in SQL too, as `numberArray` does on read.
+const jsonOrEmpty = (col: string) => `CASE WHEN json_valid(${col}) THEN ${col} ELSE '[]' END`;
+const COMPLETED = jsonOrEmpty("completed");
 
 function repeatToCols(repeat: Repeat): { kind: string; days: string | null } {
   if (typeof repeat === "string") return { kind: repeat, days: null };
@@ -67,7 +73,7 @@ function colsToRepeat(kind: string, days: string | null): Repeat {
   return "Off";
 }
 
-export function rowToTask(r: Row): Task {
+export function rowToTask(r: TaskRow): Task {
   const task = {
     id: r.id,
     title: r.title,
@@ -127,10 +133,14 @@ export function insertStatement(db: D1Database, userId: string, task: Task): D1P
 
 /** `null` = o id existe e é de OUTRA conta: o upsert não tocou na linha e nada foi criado. */
 export async function insertTask(db: D1Database, userId: string, task: Task): Promise<Task | null> {
-  await insertStatement(db, userId, task).run();
-  // Lê de volta: numa reentrada da fila o upsert pode ter recusado a escrita por ser mais velha
-  // que a linha, e quem chamou precisa do que ficou GRAVADO, não do que tentou gravar.
-  return getTask(db, userId, task.id);
+  // Read back in the same batch: a replayed queue write may be refused as older than the row, and
+  // the caller needs what is STORED. A SELECT, not RETURNING: a refused upsert returns no row.
+  const [, read] = await db.batch<TaskRow>([
+    insertStatement(db, userId, task),
+    db.prepare(`SELECT * FROM tasks WHERE user_id=? AND id=?`).bind(userId, task.id),
+  ]);
+  const r = read.results[0];
+  return r ? rowToTask(r) : null;
 }
 
 export async function getMonthTasks(
@@ -142,7 +152,7 @@ export async function getMonthTasks(
   const { results } = await db
     .prepare(`SELECT * FROM tasks WHERE user_id=? AND undated=0 AND date>=? AND date<=?`)
     .bind(userId, startOfMonthMs(month, timeZone), endOfMonthMs(month, timeZone))
-    .all<Row>();
+    .all<TaskRow>();
   return results.map(rowToTask);
 }
 
@@ -150,7 +160,7 @@ export async function getRecurringTasks(db: D1Database, userId: string): Promise
   const { results } = await db
     .prepare(`SELECT * FROM tasks WHERE user_id=? AND undated=0 AND repeat_kind!='Off'`)
     .bind(userId)
-    .all<Row>();
+    .all<TaskRow>();
   return results.map(rowToTask);
 }
 
@@ -175,7 +185,7 @@ export async function getUndatedTasks(db: D1Database, userId: string): Promise<T
   const { results } = await db
     .prepare(`SELECT * FROM tasks WHERE user_id=? AND undated=1`)
     .bind(userId)
-    .all<Row>();
+    .all<TaskRow>();
   return results.map(rowToTask);
 }
 
@@ -195,7 +205,7 @@ export async function getTask(db: D1Database, userId: string, id: string): Promi
   const r = await db
     .prepare(`SELECT * FROM tasks WHERE user_id=? AND id=?`)
     .bind(userId, id)
-    .first<Row>();
+    .first<TaskRow>();
   return r ? rowToTask(r) : null;
 }
 
@@ -223,23 +233,19 @@ export async function appendCompletion(
   id: string,
   at: number,
 ): Promise<Task | null> {
-  const task = await getTask(db, userId, id);
-  if (!task) return null;
-  // Já concluída neste instante: a fila reenviou a mesma conclusão, não é uma segunda.
-  if (task.completed.includes(at)) return task;
-
-  const completed = [...task.completed, at];
-  const updatedAt = stampUpdatedAt(at);
-  await db
-    .prepare(`UPDATE tasks SET completed=?, updated_at=? WHERE user_id=? AND id=?`)
-    .bind(JSON.stringify(completed), updatedAt, userId, id)
-    .run();
-  return {
-    ...task,
-    completed,
-    updatedAt,
-    hash: taskHash({ ...task, completed }),
-  };
+  // Merged in SQL so two crossing completions keep both. MAX: a queued `at` can be in the past, and
+  // lowering the stamp would let an older queued edit beat a newer one. An `at` already present is
+  // the queue replaying the same completion: no row changes and the stored task comes back.
+  const r = await db
+    .prepare(
+      `UPDATE tasks SET completed=json_insert(${COMPLETED},'$[#]',?1), updated_at=MAX(updated_at,?2)
+       WHERE user_id=?3 AND id=?4
+         AND NOT EXISTS (SELECT 1 FROM json_each(${COMPLETED}) WHERE value=?1)
+       RETURNING *`,
+    )
+    .bind(at, stampUpdatedAt(at), userId, id)
+    .first<TaskRow>();
+  return r ? rowToTask(r) : getTask(db, userId, id);
 }
 
 /**
@@ -253,26 +259,36 @@ export async function removeCompletions(
   from: number,
   to: number,
 ): Promise<Task | null> {
-  const task = await getTask(db, userId, id);
-  if (!task) return null;
-  const completed = task.completed.filter((at) => at < from || at > to);
-  const updatedAt = stampUpdatedAt(undefined);
-  await db
-    .prepare(`UPDATE tasks SET completed=?, updated_at=? WHERE user_id=? AND id=?`)
-    .bind(JSON.stringify(completed), updatedAt, userId, id)
-    .run();
-  return {
-    ...task,
-    completed,
-    updatedAt,
-    hash: taskHash({ ...task, completed }),
-  };
+  const r = await db
+    .prepare(
+      `UPDATE tasks SET updated_at=?, completed=(
+         SELECT json_group_array(value) FROM json_each(${COMPLETED}) WHERE value<? OR value>?
+       ) WHERE user_id=? AND id=? RETURNING *`,
+    )
+    .bind(stampUpdatedAt(undefined), from, to, userId, id)
+    .first<TaskRow>();
+  return r ? rowToTask(r) : null;
 }
 
-function exdatesWith(master: Task, occurrence: number): number[] {
-  return [...new Set([...(master.exdates ?? []), occurrence])];
+// Merged in SQL: a read-merge-write in JS drops a date written meanwhile (a PATCH ?occurrence=
+// racing the Calendar sync) and that occurrence comes back.
+export function addExdatesStatement(
+  db: D1Database,
+  userId: string,
+  id: string,
+  dates: number[],
+): D1PreparedStatement {
+  return db
+    .prepare(
+      `UPDATE tasks SET exdates=(SELECT json_group_array(value) FROM (
+         SELECT value FROM json_each(${jsonOrEmpty("tasks.exdates")})
+         UNION SELECT value FROM json_each(?)
+       )) WHERE user_id=? AND id=? RETURNING *`,
+    )
+    .bind(JSON.stringify(dates), userId, id);
 }
 
+/** Replaces the whole list: only for a caller holding the complete one (the import batch). */
 export function setExdatesStatement(
   db: D1Database,
   userId: string,
@@ -297,9 +313,8 @@ export async function excludeOccurrence(
   const master = await getTask(db, userId, id);
   if (!master || master.repeat === "Off") return null;
 
-  const exdates = exdatesWith(master, occurrence);
-  await setExdatesStatement(db, userId, id, exdates).run();
-  return { ...master, exdates };
+  const r = await addExdatesStatement(db, userId, id, [occurrence]).first<TaskRow>();
+  return r ? rowToTask(r) : null;
 }
 
 /**
@@ -311,13 +326,12 @@ export async function detachOccurrence(
   userId: string,
   id: string,
   occurrence: number,
-  fields: Partial<Omit<Task, "id" | "completed" | "exdates">>,
+  fields: TaskFields,
   newId: string,
 ): Promise<{ task: Task; series: Task } | null> {
   const master = await getTask(db, userId, id);
   if (!master || master.repeat === "Off") return null;
 
-  const exdates = exdatesWith(master, occurrence);
   const detached: Task = {
     ...master,
     ...fields,
@@ -332,19 +346,20 @@ export async function detachOccurrence(
 
   // batch = atômico: sem isso, um insert que falha deixaria a ocorrência apagada da série e sem
   // substituta — o dia simplesmente perderia a tarefa.
-  await db.batch([
-    setExdatesStatement(db, userId, id, exdates),
+  const [series] = await db.batch<TaskRow>([
+    addExdatesStatement(db, userId, id, [occurrence]),
     insertStatement(db, userId, detached),
   ]);
   // A série volta junto: o cliente precisa do `exdates` novo para reexpandir o mês sem a ocorrência.
-  return { task: detached, series: { ...master, exdates } };
+  const r = series.results[0];
+  return r ? { task: detached, series: rowToTask(r) } : null;
 }
 
 export async function updateTask(
   db: D1Database,
   userId: string,
   id: string,
-  patch: Partial<Omit<Task, "id" | "completed" | "exdates">>,
+  patch: TaskFields,
 ): Promise<Task | null> {
   const cur = await getTask(db, userId, id);
   if (!cur) return null;
@@ -369,10 +384,11 @@ export async function updateTask(
   // Mesmo conteúdo: não gasta escrita nem carimbo novo.
   if (taskHash(next) === taskHash(cur)) return cur;
   const { kind, days } = repeatToCols(next.repeat);
-  await db
+  const r = await db
     .prepare(
       // Lembrete novo/mudado precisa poder disparar: o envio avulso exige `alert_sent IS NULL`.
-      `UPDATE tasks SET title=?,date=?,alert=?,duration=?,priority=?,repeat_kind=?,repeat_days=?,repeat_every=?,repeat_until=?,tags=?,links=?,updated_at=?,undated=?,alert_sent=CASE WHEN ? THEN NULL ELSE alert_sent END WHERE user_id=? AND id=?`,
+      // LWW again in the WHERE: another write may land between the getTask above and this UPDATE.
+      `UPDATE tasks SET title=?,date=?,alert=?,duration=?,priority=?,repeat_kind=?,repeat_days=?,repeat_every=?,repeat_until=?,tags=?,links=?,updated_at=?,undated=?,alert_sent=CASE WHEN ? THEN NULL ELSE alert_sent END WHERE user_id=? AND id=? AND updated_at<=? RETURNING *`,
     )
     .bind(
       next.title,
@@ -391,7 +407,8 @@ export async function updateTask(
       next.alert !== cur.alert ? 1 : 0,
       userId,
       id,
+      updatedAt,
     )
-    .run();
-  return { ...next, undated: next.undated || undefined, hash: taskHash(next) };
+    .first<TaskRow>();
+  return r ? rowToTask(r) : getTask(db, userId, id);
 }

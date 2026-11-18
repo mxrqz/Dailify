@@ -1,6 +1,6 @@
 import { DEFAULT_WEEK_START, isWeekStart, type Task, type WeekStart } from "@dailify/shared";
 import type { PushSubscriptionKeys } from "../lib/push";
-import { rowToTask, type Row } from "./tasks";
+import { rowToTask, type TaskRow } from "./tasks";
 
 export interface StoredSubscription extends PushSubscriptionKeys {
   userId: string;
@@ -160,7 +160,9 @@ export async function recurringAlertCandidates(
        LIMIT ?`,
     )
     .bind(limit)
-    .all<Row & { alert_sent: number | null; timezone: string | null; week_start: number | null }>();
+    .all<
+      TaskRow & { alert_sent: number | null; timezone: string | null; week_start: number | null }
+    >();
 
   return results.map((r) => ({
     task: rowToTask(r),

@@ -1,5 +1,5 @@
 import type { Task } from "@dailify/shared";
-import { insertStatement, rowToTask, setExdatesStatement, type Row } from "./tasks";
+import { insertStatement, rowToTask, setExdatesStatement, type TaskRow } from "./tasks";
 
 const P = "google-calendar";
 
@@ -122,7 +122,7 @@ export async function unlinkedTasks(db: D1Database, userId: string): Promise<Tas
          SELECT 1 FROM integration_links l WHERE l.user_id=t.user_id AND l.task_id=t.id)`,
     )
     .bind(userId)
-    .all<Row>();
+    .all<TaskRow>();
   return results.map(rowToTask);
 }
 

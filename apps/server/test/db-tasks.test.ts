@@ -1,7 +1,14 @@
 import { env } from "cloudflare:test";
 import { beforeAll, describe, it, expect } from "vitest";
 import { applyD1Migrations } from "cloudflare:test";
-import { insertTask, getMonthTasks, getTask, updateTask } from "../src/db/tasks";
+import {
+  appendCompletion,
+  excludeOccurrence,
+  getMonthTasks,
+  getTask,
+  insertTask,
+  updateTask,
+} from "../src/db/tasks";
 import type { Task } from "@dailify/shared";
 
 beforeAll(async () => {
@@ -54,6 +61,45 @@ describe("db/tasks", () => {
     await updateTask(env.DB, "u3", "a3", { title: "renamed" });
     const saved = await getTask(env.DB, "u3", "a3");
     expect(saved).toMatchObject({ title: "renamed", completed: [completedAt] });
+  });
+});
+
+describe("escritas concorrentes", () => {
+  const T0 = Date.now() - 60_000;
+
+  it("updateTask: a edição mais velha não pisa na nova quando as duas se cruzam", async () => {
+    await insertTask(env.DB, "c1", t({ id: "c1", updatedAt: T0 }));
+    await Promise.all([
+      updateTask(env.DB, "c1", "c1", { title: "nova", updatedAt: T0 + 2000 }),
+      updateTask(env.DB, "c1", "c1", { title: "velha", updatedAt: T0 + 1000 }),
+    ]);
+    expect((await getTask(env.DB, "c1", "c1"))?.title).toBe("nova");
+  });
+
+  it("appendCompletion de um instante passado não abaixa o updatedAt", async () => {
+    await insertTask(env.DB, "c2", t({ id: "c2", updatedAt: T0 + 2000 }));
+    const done = await appendCompletion(env.DB, "c2", "c2", T0 + 1000);
+    expect(done?.updatedAt).toBe(T0 + 2000);
+    expect((await getTask(env.DB, "c2", "c2"))?.updatedAt).toBe(T0 + 2000);
+  });
+
+  it("duas conclusões simultâneas ficam as duas", async () => {
+    await insertTask(env.DB, "c3", t({ id: "c3", updatedAt: T0 }));
+    await Promise.all([
+      appendCompletion(env.DB, "c3", "c3", T0 + 1000),
+      appendCompletion(env.DB, "c3", "c3", T0 + 2000),
+    ]);
+    expect((await getTask(env.DB, "c3", "c3"))?.completed.sort()).toEqual([T0 + 1000, T0 + 2000]);
+  });
+
+  it("duas exclusões de ocorrência simultâneas ficam as duas", async () => {
+    await insertTask(env.DB, "c4", t({ id: "c4", repeat: "Daily" }));
+    const [a, b] = [t().date + 86_400_000, t().date + 2 * 86_400_000];
+    await Promise.all([
+      excludeOccurrence(env.DB, "c4", "c4", a),
+      excludeOccurrence(env.DB, "c4", "c4", b),
+    ]);
+    expect((await getTask(env.DB, "c4", "c4"))?.exdates?.sort()).toEqual([a, b]);
   });
 });
 
