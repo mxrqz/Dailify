@@ -11,7 +11,7 @@ const link =
   "flex min-h-8 items-center text-sm text-ink-secondary transition-colors hover:text-ink";
 const heading = "mb-1.5 text-sm font-semibold text-ink";
 
-export function FooterV2() {
+export function Footer() {
   const { theme, setTheme } = useTheme();
 
   return (

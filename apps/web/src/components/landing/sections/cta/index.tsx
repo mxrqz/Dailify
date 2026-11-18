@@ -7,7 +7,7 @@ import { cn } from "@/lib/utils";
 
 import { copy } from "./copy";
 
-export function CtaV2() {
+export function Cta() {
   const [pet, setPet] = useState(false);
   const [hold, setHold] = useState(false);
 

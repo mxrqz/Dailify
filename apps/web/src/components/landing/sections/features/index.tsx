@@ -39,7 +39,7 @@ function Card({ text, art, className, artClassName, textClassName }: CardProps) 
   );
 }
 
-export function FeaturesV2() {
+export function Features() {
   return (
     <section className="px-5 py-16 md:pt-20 md:pb-28">
       <div className="mx-auto flex max-w-6xl flex-col gap-7 md:gap-9">

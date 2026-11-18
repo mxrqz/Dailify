@@ -59,7 +59,7 @@ const wait = (ms: number, signal: AbortSignal) =>
 
 const at = (i: number) => [CELL[i % 3], CELL[Math.floor(i / 3)]] as const;
 
-export function WorldV2() {
+export function World() {
   const gridRef = useRef<HTMLDivElement>(null);
   const tiles = useRef<(HTMLSpanElement | null)[]>([]);
   const target = useRef<Element | null>(null);

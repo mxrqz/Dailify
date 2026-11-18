@@ -4,13 +4,13 @@ import { MemoryRouter } from "react-router-dom";
 import { describe, expect, it } from "vitest";
 
 import { copy } from "./copy";
-import { SiteHeaderV2 } from "./index";
+import { SiteHeader } from "./index";
 
-describe("<SiteHeaderV2>", () => {
+describe("<SiteHeader>", () => {
   it("Entrar leva ao login", () => {
     render(
       <MemoryRouter>
-        <SiteHeaderV2 />
+        <SiteHeader />
       </MemoryRouter>,
     );
     expect(screen.getByRole("link", { name: copy.signIn })).toHaveAttribute("href", "/login");

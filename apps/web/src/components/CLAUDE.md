@@ -80,7 +80,7 @@ It owns the task boot. Other code only re-triggers loads (`pages/integration-cal
 - `PlanCards` and `planFeatures(role)` derive bullets from `QUOTAS`: a limit of 0 gets no bullet,
   -1 the unlimited phrase. `currentPlan` is `string` on purpose: it is the session's free-text
   `user.plan` written by the Stripe webhook, and an unknown id just matches no card.
-- Only `pages/premium.tsx` uses it; the landing forks it (`PricingV2`), so don't fork it again.
+- Only `pages/premium.tsx` uses it; the landing forks it (`landing/sections/pricing`), so don't fork it again.
 
 ## Legacy: don't copy or import
 
