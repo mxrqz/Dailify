@@ -140,11 +140,11 @@ billing.post("/webhooks/stripe", async (c) => {
   } else if (event.type === "customer.subscription.updated") {
     const sub = event.data.object;
     const clerkUserId = sub.metadata.clerkUserId;
-    const priceId = sub.items.data[0]?.price.id;
-    if (typeof clerkUserId === "string" && priceId) {
+    const role = roleForPrice(c.env, sub.items.data[0]?.price.id ?? "");
+    if (typeof clerkUserId === "string" && role) {
       await updateUserRole(c.env.DB, {
         userId: clerkUserId,
-        role: roleForPrice(c.env, priceId),
+        role,
         stripeCustomerId: customerId(sub.customer),
       });
     }

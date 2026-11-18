@@ -52,14 +52,31 @@ describe("GET /billing/payment-details", () => {
   it("maps the Stripe invoice preview to the PaymentDetails DTO", async () => {
     await seedUser(env.DB, "u1", { stripeCustomerId: "cus_1" });
     stripeMock.subscriptions.list.mockResolvedValue({ data: [{ id: "sub_1" }] });
+    // After a Max -> Pro downgrade the preview leads with a proration credit at the old price.
     stripeMock.invoices.createPreview.mockResolvedValue({
+      amount_due: 1999,
+      currency: "usd",
       lines: {
         data: [
           {
-            amount: 1999,
+            amount: -3000,
+            currency: "usd",
+            period: { start: 1735000000, end: 1735689600 },
+            pricing: { price_details: { price: "price_max_year", product: "prod_2" } },
+            parent: {
+              type: "subscription_item_details",
+              subscription_item_details: { proration: true },
+            },
+          },
+          {
+            amount: 4999,
             currency: "usd",
             period: { start: 1735689600, end: 1738368000 },
             pricing: { price_details: { price: "price_pro_month", product: "prod_1" } },
+            parent: {
+              type: "subscription_item_details",
+              subscription_item_details: { proration: false },
+            },
           },
         ],
       },
@@ -102,6 +119,7 @@ describe("GET /billing/invoices", () => {
           created: 1735689600,
           hosted_invoice_url: "https://invoice.stripe.com/i/1",
           parent: { subscription_details: { subscription: "sub_1" } },
+          lines: { data: [] },
         },
       ],
     });
