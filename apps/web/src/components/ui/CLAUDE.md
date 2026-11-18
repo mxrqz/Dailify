@@ -45,8 +45,10 @@ diff the output and re-apply them. App widgets live in `components/` or `kit/`, 
   the motion tokens (`duration-base|slow`, `ease-out|exit`).
 - cva only for exported variant functions (`buttonVariants`, `badgeVariants`). App code renders
   `<Button>`, or calls `buttonVariants()` on a non-button, and never copies its class string.
-- Focus: the generator's `focus-visible:ring-[3px] ring-ring/50` is still in most files; edited
-  code writes `ring-3`. The `/opacity` focus and `aria-invalid` rings stay until bd `Dailify-k00`.
+- Focus: `focus-ring` (button, dialog close). `input.tsx` keeps the spelled-out
+  `focus-visible:ring-3 ring-ring/50` because callers cancel it with `focus-visible:ring-0`, which
+  twMerge can't match against a custom utility. The `aria-invalid` rings stay until bd
+  `Dailify-k00`.
 
 ## Adding a primitive (`bunx shadcn add <name>` in apps/web)
 

@@ -416,7 +416,7 @@ export function TaskForm({
               onClick={() => onView("title")}
               disabled={locked}
               className={cn(
-                "self-start rounded-xs text-left text-title-3 font-semibold outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                "self-start rounded-xs text-left text-title-3 font-semibold focus-ring",
                 !title && "text-ink-secondary",
               )}
             >

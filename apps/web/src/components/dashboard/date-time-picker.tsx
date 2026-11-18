@@ -202,7 +202,7 @@ function Wheel({
         perspective: "240px",
         maskImage: "linear-gradient(to bottom, transparent, black 40%, black 60%, transparent)",
       }}
-      className="relative h-16 w-10 cursor-grab snap-y snap-mandatory overflow-y-auto scrollbar-none py-5.5 outline-none select-none active:cursor-grabbing focus-visible:ring-[3px] focus-visible:ring-ring/50"
+      className="relative h-16 w-10 cursor-grab snap-y snap-mandatory overflow-y-auto scrollbar-none py-5.5 focus-ring select-none active:cursor-grabbing"
     >
       {values.map((v, i) => (
         <div

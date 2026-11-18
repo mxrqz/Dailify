@@ -43,7 +43,7 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(function Chip(
     pressed ? "bg-ink text-canvas" : "bg-fill text-ink hover:bg-fill-pressed",
   );
   const press = cn(
-    "relative hit-target inline-flex h-full cursor-pointer items-center gap-1.5 outline-none focus-visible:ring-3 focus-visible:ring-ring/50 disabled:cursor-default disabled:text-ink-tertiary",
+    "relative hit-target inline-flex h-full cursor-pointer items-center gap-1.5 focus-ring disabled:cursor-default disabled:text-ink-tertiary",
     shape,
   );
 

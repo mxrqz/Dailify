@@ -46,7 +46,7 @@ function OverlayClose({ className, plain }: { className?: string; plain?: boolea
   return (
     <DialogPrimitive.Close
       className={cn(
-        "absolute grid size-11 cursor-pointer place-items-center rounded-full text-ink-secondary outline-none transition-colors hover:text-ink focus-visible:ring-3 focus-visible:ring-ring/50",
+        "absolute grid size-11 cursor-pointer place-items-center rounded-full text-ink-secondary focus-ring transition-colors hover:text-ink",
         className,
       )}
     >
