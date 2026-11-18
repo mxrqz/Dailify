@@ -1,10 +1,9 @@
-import { useState } from "react";
+import { useState, type ComponentProps } from "react";
 import { LinkIcon, Trash2Icon, VideoIcon, XIcon } from "lucide-react";
 
 import { TASK_LIMITS, meetLink, parseLinks } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
-import { fieldClass } from "@/components/dashboard/styles";
 import { ListGroup, ListRow } from "@/components/kit/list";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
@@ -12,6 +11,32 @@ import { cn } from "@/lib/utils";
 // A régua é uma só (`@dailify/shared`): estes dois números eram cópia do servidor, com o
 // comentário apontando pra um arquivo que o refactor já tinha movido.
 const { urlMax: MAX_URL_LEN } = TASK_LIMITS;
+
+const iconButtonClass =
+  "flex size-8 shrink-0 items-center justify-center rounded-md text-ink-secondary transition-colors duration-fast hover:bg-fill hover:text-ink";
+
+// The error shows on the border (and title), not on a line below, so the panel never grows.
+function UrlInput({
+  invalid,
+  error,
+  className,
+  ...props
+}: ComponentProps<typeof Input> & { invalid: boolean; error: string }) {
+  return (
+    <Input
+      autoFocus
+      maxLength={MAX_URL_LEN}
+      aria-invalid={invalid}
+      title={invalid ? error : undefined}
+      className={cn(
+        "h-10 min-w-0 flex-1 truncate border-separator focus-visible:border-brand-text focus-visible:ring-0",
+        invalid && "border-brand-text",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
 
 /**
  * A mesma regra do detector do composer decide o que é URL aqui — sem segunda definição.
@@ -68,7 +93,7 @@ export function LinksField({
           target="_blank"
           rel="noopener noreferrer"
           aria-label={copy.form.linkOpen}
-          className="flex size-8 shrink-0 items-center justify-center rounded-md text-ink-secondary transition-colors hover:bg-fill hover:text-ink"
+          className={iconButtonClass}
         >
           <LinkIcon className="size-4" />
         </a>
@@ -77,32 +102,20 @@ export function LinksField({
           <LinkIcon className="size-4" aria-hidden="true" />
         </span>
       )}
-      <Input
-        autoFocus
+      <UrlInput
         value={draft}
         placeholder={copy.form.linkPlaceholder}
-        maxLength={MAX_URL_LEN}
         onChange={(e) => change(e.target.value)}
         aria-label={copy.form.links}
-        aria-invalid={invalid}
-        // Erro na própria borda (e no title), não numa linha embaixo: o painel não cresce nem
-        // ganha um respiro desigual só pra guardar lugar pra mensagem.
-        title={invalid ? copy.form.linkInvalid : undefined}
-        className={cn(
-          "h-10 min-w-0 flex-1 truncate",
-          fieldClass,
-          invalid && "border-destructive focus-visible:border-destructive",
-        )}
+        invalid={invalid}
+        error={copy.form.linkInvalid}
       />
       {/* Sempre no lugar (invisível sem texto): sumir com ele mudava a largura do campo. */}
       <button
         type="button"
         aria-label={copy.form.linkRemove}
         onClick={() => change("")}
-        className={cn(
-          "flex size-8 shrink-0 items-center justify-center rounded-md text-ink-secondary transition-colors hover:bg-fill hover:text-ink",
-          !draft && "invisible",
-        )}
+        className={cn(iconButtonClass, !draft && "invisible")}
       >
         <XIcon className="size-4" />
       </button>
@@ -143,20 +156,13 @@ export function MeetEditor({
       <ListGroup compact footer={copy.form.meetHint}>
         <div className="flex items-center gap-2 px-3.5 py-1.5">
           <VideoIcon className="size-4 shrink-0 text-ink-secondary" aria-hidden="true" />
-          <Input
-            autoFocus
+          <UrlInput
             value={draft}
             placeholder={copy.form.meetPlaceholder}
-            maxLength={MAX_URL_LEN}
             onChange={(e) => change(e.target.value)}
             aria-label={copy.form.meet}
-            aria-invalid={invalid}
-            title={invalid ? copy.form.meetInvalid : undefined}
-            className={cn(
-              "h-10 min-w-0 flex-1 truncate",
-              fieldClass,
-              invalid && "border-destructive focus-visible:border-destructive",
-            )}
+            invalid={invalid}
+            error={copy.form.meetInvalid}
           />
         </div>
       </ListGroup>
