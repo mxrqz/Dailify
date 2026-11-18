@@ -25,6 +25,10 @@ export const authClient = createAuthClient({
 
 export const useSession = authClient.useSession;
 
+/** Better Auth calls resolve to `{ data, error }`; a network throw becomes the same shape. */
+export const settle = <T>(p: Promise<T>) =>
+  p.catch(() => ({ data: null, error: { status: 0, code: undefined } }));
+
 /** Quem nunca assinou não tem `plan` gravado. */
 export const planOf = (user: { plan?: string | null } | null | undefined): string =>
   user?.plan || PLAN_ID.free;

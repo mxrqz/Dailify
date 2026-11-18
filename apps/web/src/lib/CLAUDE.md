@@ -5,7 +5,7 @@ rules: [/RULES.md](../../../../RULES.md).
 
 ## Files
 
-- `auth.ts`: the Better Auth client, `setBearer`/`authHeaders`, `useSession`, `planOf`. With
+- `auth.ts`: the Better Auth client, `setBearer`/`authHeaders`, `useSession`, `planOf`, `settle`. With
   `native-auth.ts` it is the only `better-auth` import, so tests mock `@/lib/auth` alone.
 - `platform.ts`: `isTauri`, `signedOutPath`, `internalPath` (the open-redirect guard). No imports,
   so `components/auth/auth-state.ts` and the pages take the guard from here.

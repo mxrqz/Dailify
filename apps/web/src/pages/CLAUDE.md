@@ -76,6 +76,6 @@ One file per route. `src/App.tsx` declares the routes; each page owns its own I/
 
 ## Tests
 
-`billing`, `premium`, `verify`, `auth-app`, `app-return` and `integration-callback` have render
+`billing`, `premium`, `security`, `verify`, `auth-app`, `app-return` and `integration-callback` have render
 tests. Their `it` names are
 legacy pt-BR; new ones are English.
