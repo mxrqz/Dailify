@@ -7,10 +7,11 @@
     "deploy": "CI=1 wrangler d1 migrations apply dailify --remote && wrangler deploy",
     "vapid": "bun run scripts/vapid.ts",
     "test": "vitest run",
-    "lint": "eslint src test",
-    "format": "prettier --write src test",
-    "format:check": "prettier --check src test",
-    "check": "prettier --check src test && eslint src test && tsc --noEmit && vitest run"
+    "lint": "eslint --max-warnings 0 src test scripts vitest.config.ts",
+    "format": "prettier --write src test scripts vitest.config.ts",
+    "format:check": "prettier --check src test scripts vitest.config.ts",
+    "typecheck": "tsc --noEmit",
+    "check": "bun run format:check && bun run lint && bun run typecheck && bun run test"
   },
   "dependencies": {
     "@dailify/shared": "workspace:*",

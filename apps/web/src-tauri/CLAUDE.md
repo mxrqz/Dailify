@@ -25,7 +25,6 @@ A thin native shell around the web app, for desktop and Android. Repo-wide rules
 - `opener`: its init script sends `<a target="_blank">` clicks (http, https, mailto, tel) to the
   system browser; `openExternal` covers code (RULES.md › Security and privacy).
 - `haptics`: mobile only (`cfg(mobile)`), permissions in `capabilities/mobile.json`.
-- `notification`: registered, granted, installed from npm, never called from JS: wire or remove it.
 - `core:app:allow-exit`: `exit(0)` of the Android back button (`apps/web/src/lib/back-button.ts`).
 
 Adding a plugin touches four places in one commit, and removing one touches the same four:
@@ -42,8 +41,10 @@ Flow and keyring accounts: `apps/web/src/lib/CLAUDE.md`; contract:
 
 - A bearer, not a cookie (it doesn't cross the webview origin), read from `set-auth-token` and
   kept in the keyring. The magic link is device-bound: opened elsewhere, it never makes a session.
-- `tauri.conf.json` sets `"csp": null`, so any script injected into the webview can read that
-  bearer from the keyring.
+- `tauri.conf.json` sets a CSP (defense in depth: any script injected into the webview could read
+  that bearer from the keyring). Tauri hashes the inline theme script of `index.html` at build
+  time; a new origin (API host, captcha, CDN) goes in its directive there. It applies to built
+  assets only: the dev server proxy sends no CSP, so check a change on a release build.
 - The server accepts the webview origins (`tauri://localhost`, `http(s)://tauri.localhost`) in
   `ALLOWED_ORIGIN` and `apps/server/src/lib/origin.ts`; its CORS allows `x-mewki-verifier` and
   exposes `set-auth-token` (`apps/server/src/index.ts`).
@@ -87,4 +88,3 @@ Flow and keyring accounts: `apps/web/src/lib/CLAUDE.md`; contract:
   `apps/web/src/global.css`, along with `backgroundColor` (the dark one) in `tauri.conf.json`.
 - The manifest's deep-link intent filters (between the `DEEP LINK PLUGIN` markers) are regenerated
   from `tauri.conf.json` on build: edit the config, not the manifest.
-- Unused template leftovers: the leanback (Android TV) feature and category, `values/colors.xml`.

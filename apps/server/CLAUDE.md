@@ -52,8 +52,8 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
 - The `*/5` cron is the alert granularity.
 - Ratelimit `namespace_id`s (1001-1003) are per account; reusing one in another Worker shares its
   counters. Limits and which routes use each: `src/routes/CLAUDE.md`.
-- There is no `[observability]` block, and `wrangler deploy` turns off what the file omits, so
-  enable logs here, not in the dashboard.
+- `[observability]` is on and source maps upload: `wrangler deploy` turns off what the file omits,
+  so change logging here, not in the dashboard.
 - New binding or secret: the files are in RULES.md "Backend and API"; vitest reads `wrangler.toml`
   via `configPath`. Type it optional in `Env` only when the code runs without it (the limiters).
   `test/env.d.ts` adds `TEST_MIGRATIONS`/`LIVE_*`.

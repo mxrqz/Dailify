@@ -2,16 +2,21 @@
   "name": "dailify",
   "private": true,
   "type": "module",
-  "workspaces": ["apps/*", "packages/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*"
+  ],
   "scripts": {
     "dev": "bun --filter '*' dev",
     "dev:frontend": "bun --filter @dailify/web dev",
     "dev:api": "bun --filter @dailify/server dev",
     "build": "bun --filter @dailify/web build",
     "test": "bun --filter '*' test",
-    "format": "bun --filter '*' format",
+    "format": "prettier --write package.json eslint.config.js .github && bun --filter '*' format",
+    "format:check": "prettier --check package.json eslint.config.js .github && bun --filter '*' format:check",
     "lint": "bun --filter '*' lint",
-    "check": "bun --filter '*' check"
+    "typecheck": "bun --filter '*' typecheck",
+    "check": "prettier --check package.json eslint.config.js .github && bun --filter '*' check"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

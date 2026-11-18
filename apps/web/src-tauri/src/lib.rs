@@ -16,7 +16,6 @@ pub fn run() {
     builder
         .plugin(tauri_plugin_deep_link::init())
         .plugin(tauri_plugin_keyring_store::init())
-        .plugin(tauri_plugin_notification::init())
         .plugin(tauri_plugin_opener::init())
         .setup(|_app| {
             // Linux e Windows-debug não registram o scheme pelo instalador.
