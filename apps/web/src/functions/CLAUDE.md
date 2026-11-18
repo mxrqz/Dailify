@@ -21,7 +21,7 @@ Each has a colocated `<module>.test.ts`, except `push.ts`.
   shared's `composeTaskInput`), `edit-input` (edit form to `TaskInput`, `buildEdit`), `billing-sections`,
   `revert-task`.
 - Imports: shared, date libs, `@/consts`, `@/lib`, siblings, `components/*/copy.ts`, `import type`
-  from components. `@/types` is a legacy alias layer; new code imports `@dailify/shared`.
+  from components.
 - A `month: Date` parameter (`getTasksForMonth`, `getQuotas`, `mergeMonth`, the `months` of
   `upsertTaskWithRecurrence`) must be a zoned month: its year and month are read in its own zone.
 
@@ -36,8 +36,6 @@ Each has a colocated `<module>.test.ts`, except `push.ts`.
 - Auth is `credentials: "include"` (web cookie) plus `authHeaders()` (Tauri bearer); no function
   takes a token. In PATCH bodies `null` clears and an absent key keeps (`updateTask`'s `alert`).
 - `authed()` skips the JSON Content-Type for a `FormData` body (`createTaskVoice`).
-- Legacy, don't copy: `getQuotas`, `getPaymentDetails`, `getInvoices`, `checkout`, `billingPortal`
-  drop `error`.
 
 Adding an endpoint: name the wire type in `@dailify/shared`
 ([TypeScript](../../../../RULES.md#typescript)); wrap `request<T>()` here and `encodeURIComponent`

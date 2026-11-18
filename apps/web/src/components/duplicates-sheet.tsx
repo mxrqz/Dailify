@@ -21,17 +21,17 @@ import { repeatLabel } from "@/functions/repeat-label";
 import { swapTasks, swapUndated } from "@/functions/task-lists";
 import { zoned } from "@/functions/zone";
 import { patchIntegration, useIntegrations } from "@/hooks/useIntegrations";
-import type { TaskProps } from "@/types/types";
+import type { Task } from "@dailify/shared";
 
 const t = copy.calendar;
 
 export interface DuplicatePair {
-  own: TaskProps;
-  imported: TaskProps;
+  own: Task;
+  imported: Task;
 }
 
 /** "Ter, 17 nov · 14:00 · Toda semana"; Sem data não tem hora. */
-function when(task: TaskProps, hour12: boolean): string {
+function when(task: Task, hour12: boolean): string {
   const at = zoned(task.date);
   return [
     task.undated ? t.noDate : dayComma(at),

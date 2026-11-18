@@ -11,7 +11,7 @@ import { copy } from "@/components/dashboard/copy";
 import { PageHeader } from "@/components/kit/page-header";
 import { ProgressRing } from "@/components/kit/progress-ring";
 import { weekdayDate } from "@/functions/date-label";
-import { getCompletionDate, getTasksForDay } from "@/functions/functions";
+import { fill, getCompletionDate, getTasksForDay } from "@/functions/functions";
 import { useCreateTask } from "@/hooks/useCreateTask";
 import { useNow } from "@/hooks/useNow";
 import { cn } from "@/lib/utils";
@@ -40,9 +40,7 @@ export function TodayHeader({
             value={done}
             max={total}
             className="mb-0.5"
-            label={copy.day.progress
-              .replace("{done}", String(done))
-              .replace("{total}", String(total))}
+            label={fill(copy.day.progress, { done, total })}
           />
         )
       }

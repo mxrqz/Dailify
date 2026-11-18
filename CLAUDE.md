@@ -37,7 +37,7 @@ Each area's `CLAUDE.md` loads when you touch a file in it and holds only that fo
 | API client, offline queue, pure helpers       | `apps/web/src/functions`                       | `functions/CLAUDE.md`            |
 | Auth client, Tauri and browser adapters       | `apps/web/src/lib`                             | `lib/CLAUDE.md`                  |
 | Routes and pages                              | `apps/web/src/pages`                           | `pages/CLAUDE.md`                |
-| Constants, legacy type aliases                | `apps/web/src/{consts,types}`                  | one per folder                   |
+| Constants                                     | `apps/web/src/consts`                          | `consts/CLAUDE.md`               |
 | Tauri shell, Android build and release        | `apps/web/src-tauri`                           | `src-tauri/CLAUDE.md`            |
 | API server: layout, auth, cron, bindings      | `apps/server`                                  | `apps/server/CLAUDE.md`          |
 | HTTP routes, D1 queries, services, providers  | `apps/server/src/{routes,db,lib,integrations}` | one per folder                   |

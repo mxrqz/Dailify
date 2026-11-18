@@ -7,6 +7,7 @@ import { isProviderId, MISSING_SCOPE_ERROR } from "@dailify/shared";
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { completeIntegration } from "@/functions/api";
+import { fill } from "@/functions/functions";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 
 const t = copy.integrations;
@@ -25,7 +26,7 @@ export default function IntegrationCallback(): JSX.Element {
     const code = params.get("code");
     const state = params.get("state");
     const fail = (message: string) => {
-      toast.error(message.replace("{name}", name));
+      toast.error(fill(message, { name }));
       navigate("/integrations", { replace: true });
     };
 
@@ -39,7 +40,7 @@ export default function IntegrationCallback(): JSX.Element {
 
     // O servidor já importou os eventos da Agenda: a lista relê os meses pra eles aparecerem.
     void reloadMonths(loadedMonths);
-    toast.success(t.connected.replace("{name}", name));
+    toast.success(fill(t.connected, { name }));
     navigate("/integrations", { replace: true });
   });
 
@@ -52,7 +53,7 @@ export default function IntegrationCallback(): JSX.Element {
   return (
     <main className="flex flex-col items-center gap-3 pt-24" aria-busy="true">
       <Loader2Icon className="size-6 animate-spin text-ink-secondary" aria-hidden="true" />
-      <p className="text-subhead text-ink-secondary">{t.connecting.replace("{name}", name)}</p>
+      <p className="text-subhead text-ink-secondary">{fill(t.connecting, { name })}</p>
     </main>
   );
 }

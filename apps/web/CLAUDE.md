@@ -17,7 +17,7 @@ What goes where is in RULES.md "Where code goes"; this is the map, each folder w
   `mew-chat/apply.ts:useMewApply`.
 - `functions/` API client, offline queue, app time zone, domain helpers; `lib/` Better Auth client,
   Tauri and browser adapters, `cn()`; `consts/` `apiURL`, plan map, priority classes, motion
-  mirrors; `types/` legacy aliases of `@dailify/shared` (import from shared instead); `pages/`.
+  mirrors; `pages/`. Model types come from `@dailify/shared`.
   Beside `src/`, `src-tauri/` is the native shell.
 
 ## Tooling (`vite.config.ts`)

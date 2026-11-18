@@ -11,6 +11,7 @@ import type { QuotaState } from "@dailify/shared";
 import { copy } from "@/components/dashboard/copy";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PLAN_ID, planMap } from "@/consts/conts";
+import { fill } from "@/functions/functions";
 import { useQuotas } from "@/hooks/useQuotas";
 import { planOf, useSession } from "@/lib/auth";
 import { signOutAndReload } from "@/lib/native-auth";
@@ -49,9 +50,7 @@ export function CreditsMeter({ used, limit, ratio }: Credits): JSX.Element {
         <div className="h-full rounded-full bg-ink" style={{ width: `${(ratio ?? 0) * 100}%` }} />
       </div>
       <p className="mt-2 text-footnote text-ink-secondary">
-        {copy.profile.creditsSummary
-          .replace("{used}", String(used))
-          .replace("{limit}", String(limit))}
+        {fill(copy.profile.creditsSummary, { used, limit })}
       </p>
     </div>
   );

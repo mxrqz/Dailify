@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/command";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { saveSettings } from "@/functions/api";
+import { fill } from "@/functions/functions";
 import { deviceTimeZone } from "@/functions/zone";
 import { cn } from "@/lib/utils";
 
@@ -52,7 +53,8 @@ export function TimeZoneSelect(): JSX.Element {
     }
   };
 
-  const label = timeZone ?? copy.profile.timeZoneAuto.replace("{zone}", device);
+  const auto = fill(copy.profile.timeZoneAuto, { zone: device });
+  const label = timeZone ?? auto;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
@@ -66,7 +68,7 @@ export function TimeZoneSelect(): JSX.Element {
             <CommandEmpty>{copy.profile.timeZoneEmpty}</CommandEmpty>
             <CommandItem value={`${AUTO} ${device}`} onSelect={() => void choose(null)}>
               <CheckIcon className={cn("size-4", timeZone !== null && "invisible")} />
-              {copy.profile.timeZoneAuto.replace("{zone}", device)}
+              {auto}
             </CommandItem>
             {zones.map(({ zone, offset }) => (
               <CommandItem

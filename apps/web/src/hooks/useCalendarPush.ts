@@ -8,7 +8,7 @@ import { createCalendarEvent } from "@/functions/api";
 import { fill, upsertTaskWithRecurrence } from "@/functions/functions";
 import { upsertUndated } from "@/functions/undated";
 import { patchIntegration } from "@/hooks/useIntegrations";
-import type { TaskProps } from "@/types/types";
+import type { Task } from "@dailify/shared";
 
 const t = copy.calendar;
 
@@ -17,7 +17,7 @@ const t = copy.calendar;
  * Lê as listas de agora, não as do render: a resposta do Google chega depois, e várias seguidas
  * não podem apagar uma à outra.
  */
-export function useApplyTask(): (task: TaskProps) => void {
+export function useApplyTask(): (task: Task) => void {
   const { setTasks, setUndatedTasks, loadedMonths } = useDailify();
 
   return (task) =>

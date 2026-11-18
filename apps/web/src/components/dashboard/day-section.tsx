@@ -13,7 +13,7 @@ import { clockAt, dayLabel, weekdayDate } from "@/functions/date-label";
 import { getTasksForDay, getTime, groupTasksByHour, timeToMinutes } from "@/functions/functions";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNow } from "@/hooks/useNow";
-import type { TaskProps } from "@/types/types";
+import type { Task } from "@dailify/shared";
 
 const SKELETON_ROWS = 3;
 
@@ -41,7 +41,7 @@ export function TaskSkeletons(): JSX.Element {
 const itemCount = (count: number): string =>
   countLabel(count, copy.day.oneItem, copy.day.manyItems);
 
-type Row = { at: number; task: TaskProps; hour?: string } | { at: number; now: true };
+type Row = { at: number; task: Task; hour?: string } | { at: number; now: true };
 
 /**
  * Um dia: cabeçalho (rótulo + contagem) e as linhas embaixo — tarefas e, hoje, o fio do agora. É o bloco que a `DayList` empilha; o scroll é da página, não daqui.
@@ -73,7 +73,7 @@ export function DaySection({
   );
   if (isCurrentDay && rows.length) rows.push({ at: nowAt - 0.5, now: true });
   rows.sort((a, b) => a.at - b.at);
-  const live = (row: { at: number; task: TaskProps }) =>
+  const live = (row: { at: number; task: Task }) =>
     isCurrentDay && row.at <= nowAt && nowAt < row.at + durationMinutes(row.task.duration);
   const count = dayTasks.length;
   const sub =

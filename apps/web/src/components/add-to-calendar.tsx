@@ -20,7 +20,7 @@ import { calendarRevoked, useApplyTask } from "@/hooks/useCalendarPush";
 import { patchIntegration, useCalendarReady, useIntegrations } from "@/hooks/useIntegrations";
 import { useOnline } from "@/hooks/useOnline";
 import { openExternal } from "@/lib/open-external";
-import type { TaskProps } from "@/types/types";
+import type { Task } from "@dailify/shared";
 
 const t = copy.calendar;
 
@@ -33,7 +33,7 @@ export function AddToCalendar({
   task,
   variant,
 }: {
-  task: TaskProps;
+  task: Task;
   variant: "toolbar" | "sheet";
 }): JSX.Element | null {
   const ready = useCalendarReady();

@@ -1,6 +1,7 @@
 import { periodStart, type Task, type WeekStart } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
+import { fill } from "@/functions/functions";
 import { appTimeZone } from "@/functions/zone";
 import { cn } from "@/lib/utils";
 
@@ -58,10 +59,11 @@ export function CheckHistory({
     const end = starts[i + 1] ?? Infinity;
     return task.completed.some((c) => c >= start && c < end);
   });
-  const label = copy.undated.history
-    .replace("{done}", String(filled.filter(Boolean).length))
-    .replace("{total}", String(starts.length))
-    .replace("{unit}", copy.undated[`unit${periodKind(task.repeat)}`]);
+  const label = fill(copy.undated.history, {
+    done: filled.filter(Boolean).length,
+    total: starts.length,
+    unit: copy.undated[`unit${periodKind(task.repeat)}`],
+  });
 
   return (
     <span role="img" aria-label={label} className="ml-1 flex items-center gap-0.75">

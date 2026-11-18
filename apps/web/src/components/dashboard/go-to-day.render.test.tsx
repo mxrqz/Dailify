@@ -24,7 +24,7 @@ describe("ir até o dia", () => {
       selectedDay: now,
       tasks: [],
       undatedTasks: [],
-      isLoading: null,
+      isLoading: false,
       loadedMonths: [startOfMonth(now), startOfMonth(addMonths(now, 1))],
       loadMonth: vi.fn(() => Promise.resolve()),
       targetDay: undefined,

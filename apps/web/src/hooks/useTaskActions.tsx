@@ -14,7 +14,7 @@ import { fill, upsertTaskWithRecurrence } from "@/functions/functions";
 import { revertTask } from "@/functions/revert-task";
 import { enqueue, shouldQueue, type Mutation } from "@/functions/offline";
 import { isCalendarEventLink, seriesOf, type TaskInput } from "@dailify/shared";
-import type { TaskProps } from "@/types/types";
+import type { Task } from "@dailify/shared";
 import { zoned } from "@/functions/zone";
 
 /**
@@ -25,7 +25,7 @@ import { zoned } from "@/functions/zone";
  * porque aí a recusa é definitiva.
  */
 export function useTaskActions(
-  task: TaskProps,
+  task: Task,
   day: Date = zoned(),
   { onDeleted }: { onDeleted?: () => void } = {},
 ) {
@@ -36,12 +36,12 @@ export function useTaskActions(
   const linked = task.links?.some(isCalendarEventLink) ?? false;
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const rollback = (previous: TaskProps[]) =>
+  const rollback = (previous: Task[]) =>
     setTasks((cur) => revertTask(cur ?? [], previous, task.id));
 
   const settle = (
     error: ApiError | undefined,
-    previous: TaskProps[],
+    previous: Task[],
     mutation: Mutation,
     message: string,
   ): boolean => {
@@ -62,7 +62,7 @@ export function useTaskActions(
     // Completion is read per day (`getCompletionDate`): another day's card stamps its own date.
     const stamp = isSameDay(day, zoned(at)) ? at : task.date;
     const previous = tasks ?? [];
-    const done: TaskProps = { ...task, completed: [...task.completed, stamp], updatedAt: at };
+    const done: Task = { ...task, completed: [...task.completed, stamp], updatedAt: at };
     setTasks((cur) => upsertTaskWithRecurrence(cur ?? [], done, loadedMonths));
     haptic("success");
 
@@ -77,7 +77,7 @@ export function useTaskActions(
     const previous = tasks ?? [];
     const from = zoned(day).setHours(0, 0, 0, 0);
     const to = zoned(day).setHours(23, 59, 59, 999);
-    const reopened: TaskProps = {
+    const reopened: Task = {
       ...task,
       completed: task.completed.filter((done) => done < from || done > to),
       updatedAt: at,

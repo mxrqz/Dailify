@@ -22,7 +22,7 @@ import { clockAt } from "@/functions/date-label";
 import { fill, formatClock, taskToCardData } from "@/functions/functions";
 import { repeatLabel } from "@/functions/repeat-label";
 import { useTaskActions } from "@/hooks/useTaskActions";
-import type { TaskProps } from "@/types/types";
+import type { Task } from "@dailify/shared";
 import { zoned } from "@/functions/zone";
 import { cn } from "@/lib/utils";
 
@@ -197,7 +197,7 @@ export function NowLine({ time }: { time: string }): JSX.Element {
 }
 
 /** "Agenda · Seg, Qua · Lembrete 30 min antes · Meet" com os ícones neutros na frente. */
-function taskMeta(task: TaskProps, live: boolean, hour12: boolean): ReactNode {
+function taskMeta(task: Task, live: boolean, hour12: boolean): ReactNode {
   const calendar = task.links?.some(isCalendarEventLink);
   const repeat = repeatLabel(task.repeat, task.repeatEvery);
   const meet = videoLink(task.links);
@@ -242,7 +242,7 @@ export function DayTaskRow({
   live = false,
   sheetEditing,
 }: {
-  task: TaskProps;
+  task: Task;
   day: Date;
   /** `SHEET_EDITING`, lido uma vez pela seção e não um matchMedia por linha. */
   sheetEditing: boolean;

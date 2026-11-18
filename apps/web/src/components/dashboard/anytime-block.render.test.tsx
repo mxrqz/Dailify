@@ -72,7 +72,7 @@ const context = (undatedTasks: Task[] | undefined) => {
     bumpUsage: vi.fn(),
     selectedDay: new Date(FRIDAY),
     quotas: undefined,
-    isLoading: null,
+    isLoading: false,
     loadedMonths: [new Date(FRIDAY)],
     loadMonth: vi.fn(),
   });

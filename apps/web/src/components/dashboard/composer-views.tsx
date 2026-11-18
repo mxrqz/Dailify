@@ -22,6 +22,7 @@ import { Mew } from "@/components/mew/mew";
 import { MewStatic } from "@/components/mew/mew-static";
 import { Button } from "@/components/ui/button";
 import type { Segment } from "@/functions/compose-input";
+import { fill } from "@/functions/functions";
 import { cn } from "@/lib/utils";
 
 // As peças da criação, só props → markup: o `TaskComposer` liga nos hooks, as stories em mocks.
@@ -436,7 +437,7 @@ function VoiceTimer({ maxMs }: { maxMs: number }): JSX.Element {
     <p className="mt-4 text-title-3 font-semibold tabular-nums">
       {clock(seconds)}{" "}
       <small className="text-subhead font-normal text-ink-secondary">
-        {copy.voice.timerOf.replace("{max}", clock(maxMs / 1000))}
+        {fill(copy.voice.timerOf, { max: clock(maxMs / 1000) })}
       </small>
     </p>
   );

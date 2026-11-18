@@ -51,7 +51,7 @@ import { linkHost, linkLabel } from "@/functions/link-label";
 import { REPEAT_MODES, everyLabel, everyOptions, repeatLabel } from "@/functions/repeat-label";
 import { durationOptions } from "@/functions/task-options";
 import { cn } from "@/lib/utils";
-import type { TaskProps } from "@/types/types";
+import type { Task } from "@dailify/shared";
 import { fromDateInput, zoned, zonedAt } from "@/functions/zone";
 
 export interface TaskFormValues {
@@ -89,7 +89,7 @@ export const FORM_VIEWS: Record<FormView, { title: string }> = {
 
 interface TaskFormProps {
   id: string;
-  task?: TaskProps;
+  task?: Task;
   defaultDate?: Date;
   className?: string;
   view: FormView;

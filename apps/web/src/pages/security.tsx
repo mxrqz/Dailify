@@ -9,6 +9,7 @@ import { ListGroup, ListRow } from "@/components/kit/list";
 import { PageHeader } from "@/components/kit/page-header";
 import { accountGroups, accountPage } from "@/components/settings-list";
 import { Button } from "@/components/ui/button";
+import { fill } from "@/functions/functions";
 import { parseUserAgent } from "@/functions/user-agent";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { authClient, settle, useSession } from "@/lib/auth";
@@ -108,9 +109,7 @@ export default function SecurityPage(): JSX.Element {
                   label={[browser, os].filter(Boolean).join(" · ") || copy.profile.unknownDevice}
                   meta={
                     session.ipAddress
-                      ? copy.profile.sessionMeta
-                          .replace("{place}", session.ipAddress)
-                          .replace("{when}", when)
+                      ? fill(copy.profile.sessionMeta, { place: session.ipAddress, when })
                       : when
                   }
                   current={session.id === currentId}

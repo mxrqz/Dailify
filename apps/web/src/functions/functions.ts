@@ -1,4 +1,4 @@
-import { TaskProps } from "@/types/types";
+import type { Task } from "@dailify/shared";
 import { addMonths, eachDayOfInterval, endOfMonth, isSameMonth, startOfMonth } from "date-fns";
 import type { TaskCardData } from "@/components/task-card";
 import { expandRecurringTask, seriesOf, zonedParts } from "@dailify/shared";
@@ -21,7 +21,7 @@ export function getTime(time: number, format: "HH:MM"): string {
 }
 
 /** Concluída no dia do calendário de `selectedDay`: faixa numérica, sem formatar cada `completed`. */
-export function getCompletionDate(task: TaskProps, selectedDay: Date) {
+export function getCompletionDate(task: Task, selectedDay: Date) {
   if (!Array.isArray(task.completed)) return;
   const [y, m, d] = [selectedDay.getFullYear(), selectedDay.getMonth(), selectedDay.getDate()];
   const from = +zonedAt(y, m, d);
@@ -33,19 +33,19 @@ const dayKey = (ms: number, zone: string) => {
   const p = zonedParts(ms, zone);
   return `${p.year}-${p.month}-${p.day}`;
 };
-const NO_TASKS: readonly TaskProps[] = [];
+const NO_TASKS: readonly Task[] = [];
 // O array de tarefas é imutável (todo setTasks troca a referência), então o índice vale enquanto ele viver.
-const dayIndex = new WeakMap<TaskProps[], { zone: string; byDay: Map<string, TaskProps[]> }>();
+const dayIndex = new WeakMap<Task[], { zone: string; byDay: Map<string, Task[]> }>();
 
 /**
  * As tarefas do dia (no fuso do app). Chamado dias × renders: um índice por array troca o
  * `isSameDay` por tarefa por uma consulta. Devolve arrays compartilhados — não mutar.
  */
-export function getTasksForDay(tasks: TaskProps[], day: Date): readonly TaskProps[] {
+export function getTasksForDay(tasks: Task[], day: Date): readonly Task[] {
   const zone = appTimeZone();
   let index = dayIndex.get(tasks);
   if (index?.zone !== zone) {
-    const byDay = new Map<string, TaskProps[]>();
+    const byDay = new Map<string, Task[]>();
     for (const task of tasks) {
       const key = dayKey(task.date, zone);
       const bucket = byDay.get(key);
@@ -64,11 +64,7 @@ export function getTasksForDay(tasks: TaskProps[], day: Date): readonly TaskProp
  * trocaria só a primeira. Sem isto, virar "não repetir" em "diária" (ou renomear uma recorrente) só aparecia no
  * próximo carregamento.
  */
-export function upsertTaskWithRecurrence(
-  tasks: TaskProps[],
-  task: TaskProps,
-  months: Date[],
-): TaskProps[] {
+export function upsertTaskWithRecurrence(tasks: Task[], task: Task, months: Date[]): Task[] {
   // An on-screen instance would re-anchor the series on itself and drop the earlier occurrences.
   const series = seriesOf(task);
   const others = tasks.filter((t) => t.id !== series.id);
@@ -94,7 +90,7 @@ export function listDays({
 }: {
   start: Date;
   end: Date;
-  tasks: TaskProps[];
+  tasks: Task[];
   extra?: Date[];
   keepStart?: boolean;
 }): Date[] {
@@ -123,13 +119,13 @@ export function monthsBetween(from: Date, to: Date): Date[] {
 }
 
 /** Troca as tarefas de `month` pelas que o servidor devolveu; os outros meses ficam como estão. */
-export function mergeMonth(tasks: TaskProps[], month: Date, fetched: TaskProps[]): TaskProps[] {
+export function mergeMonth(tasks: Task[], month: Date, fetched: Task[]): Task[] {
   const from = +startOfMonth(month);
   const to = +endOfMonth(month);
   return [...tasks.filter((t) => t.date < from || t.date > to), ...fetched];
 }
 
-export function isTaskModified(task: TaskProps, updated: TaskProps): boolean {
+export function isTaskModified(task: Task, updated: Task): boolean {
   if (task.title !== updated.title) return true;
   if (task.duration !== updated.duration) return true;
   if (task.priority !== updated.priority) return true;
@@ -150,14 +146,14 @@ export function isTaskModified(task: TaskProps, updated: TaskProps): boolean {
 export interface TimeGroup {
   /** "HH:MM" zero-padded, o mesmo formato de `getTime(date, "HH:MM")`. */
   time: string;
-  tasks: TaskProps[];
+  tasks: Task[];
 }
 
 /** Agrupa as tarefas do dia pela hora cheia ("16:00" junta 16:00 e 16:45), em ordem. Não muta. */
-export function groupTasksByHour(tasks: ReadonlyArray<TaskProps>): TimeGroup[] {
+export function groupTasksByHour(tasks: ReadonlyArray<Task>): TimeGroup[] {
   // One day's tasks: epoch order is clock order.
   const sorted = [...tasks].sort((a, b) => a.date - b.date);
-  const byHour = new Map<string, TaskProps[]>();
+  const byHour = new Map<string, Task[]>();
   for (const task of sorted) {
     const hour = `${getTime(task.date, "HH:MM").slice(0, 2)}:00`;
     const bucket = byHour.get(hour);
@@ -179,7 +175,7 @@ export function timeToMinutes(time: string): number {
  * tarefa conta como concluída (uma recorrente é concluída por ocorrência, não de uma vez).
  */
 export function taskToCardData(
-  task: TaskProps,
+  task: Task,
   day: Date,
 ): TaskCardData & { completed: boolean; priority: number; links: string[]; repeat: string } {
   return {
