@@ -18,8 +18,3 @@ const twMerge = extendTailwindMerge({
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }
-
-/** Campos opcionais chegam como `unknown` — evita um `as string` por leitura. */
-export function toText(value: unknown, fallback = ""): string {
-  return typeof value === "string" ? value : fallback;
-}

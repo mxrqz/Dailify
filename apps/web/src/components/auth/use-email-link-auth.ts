@@ -9,7 +9,8 @@ import {
 } from "@/components/auth/auth-state";
 import { useTurnstile } from "@/components/auth/turnstile";
 import { authClient } from "@/lib/auth";
-import { isTauri, startNativeMagicLink } from "@/lib/native-auth";
+import { startNativeMagicLink } from "@/lib/native-auth";
+import { isTauri } from "@/lib/platform";
 
 /**
  * Liga o Better Auth ao reducer de `auth-state.ts`. Nada de lógica mora aqui — se você for escrever

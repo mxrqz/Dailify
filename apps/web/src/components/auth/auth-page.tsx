@@ -8,7 +8,7 @@ import { EmailForm } from "@/components/auth/email-form";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import { useEmailLinkAuth } from "@/components/auth/use-email-link-auth";
 import { useSession } from "@/lib/auth";
-import { isTauri } from "@/lib/native-auth";
+import { isTauri } from "@/lib/platform";
 
 /**
  * Corpo comum de /login e /signup. As duas rotas são a MESMA mecânica — a separação é de

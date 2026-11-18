@@ -7,16 +7,16 @@ import { APP_HOST } from "@dailify/shared";
 import { apiURL } from "@/consts/conts";
 import { forgetUser } from "@/functions/offline";
 import { authClient, setBearer } from "@/lib/auth";
+import { internalPath, isTauri, signedOutPath } from "@/lib/platform";
+
+// ponytail: re-export for components/integrations.tsx, outside this change; drop once it imports
+// @/lib/platform.
+export { isTauri };
 
 const SESSION_ACCOUNT = "mewki.session";
 const VERIFIER_ACCOUNT = "mewki.magic-link-verifier";
 // Token do magic link do Better Auth: 32 letras; a folga cobre mudança de tamanho sem abrir a porta.
 const TOKEN_RE = /^[A-Za-z0-9_-]{16,128}$/;
-
-export const isTauri = (): boolean => Reflect.get(globalThis, "isTauri") === true;
-
-// The app has no landing page: signing out lands on the login screen.
-export const signedOutPath = (): string => (isTauri() ? "/login" : "/");
 
 export const base64url = (bytes: Uint8Array): string =>
   btoa(String.fromCharCode(...bytes))
@@ -66,9 +66,9 @@ export function parseOpenLink(raw: string): string | null {
   )
     path = url.pathname.slice("/app".length);
   else return null;
-  // Only same-app paths: `//host` would be read as another origin.
-  if (!path.startsWith("/") || path.startsWith("//") || path.startsWith("/\\")) return "/dashboard";
-  return path + url.search;
+  const safe = internalPath(path);
+  // A rejected path drops its query too: it belonged to somewhere else.
+  return safe === path ? path + url.search : safe;
 }
 
 async function vaultGet(account: string): Promise<string | null> {
@@ -102,12 +102,12 @@ export async function startNativeMagicLink(email: string, captchaToken: string) 
 
 async function verifyLink(token: string): Promise<void> {
   const verifier = await vaultGet(VERIFIER_ACCOUNT);
-  if (!verifier) throw new Error("magic link aberto sem pedido deste aparelho");
+  if (!verifier) throw new Error("magic link opened without a request from this device");
   const url = new URL(`${apiURL}/auth/magic-link/verify`, window.location.origin);
   url.searchParams.set("token", token);
   const res = await fetch(url, { headers: { "x-mewki-verifier": verifier } });
   const session = res.headers.get("set-auth-token");
-  if (!res.ok || !session) throw new Error(`verify falhou (${res.status})`);
+  if (!res.ok || !session) throw new Error(`magic link verify failed (${res.status})`);
   await vaultSet(SESSION_ACCOUNT, session);
   setBearer(session);
   await vaultDelete(VERIFIER_ACCOUNT);
@@ -149,7 +149,7 @@ export async function initNativeAuth(onError: (error: unknown) => void): Promise
   return unlisten;
 }
 
-export async function signOutNative(): Promise<void> {
+async function signOutNative(): Promise<void> {
   try {
     await authClient.signOut();
   } finally {

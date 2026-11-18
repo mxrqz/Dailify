@@ -14,7 +14,7 @@ import { ErrorBoundary } from "./components/error-boundary";
 import { AppLayout } from "./components/app-layout";
 import { Refraction } from "@/components/kit/refraction";
 import { ScrollRestoration } from "@/components/scroll-restoration";
-import { isTauri } from "@/lib/native-auth";
+import { isTauri } from "@/lib/platform";
 
 // Só o dashboard (start_url do PWA) vai no bundle de entrada; o resto baixa quando a rota abre.
 const LandingPage = lazy(() => import("./pages/landingPage"));

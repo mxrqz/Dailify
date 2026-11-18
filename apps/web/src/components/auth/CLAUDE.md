@@ -11,8 +11,8 @@ The `/login` and `/signup` screens, plus the shell the hand-off pages reuse. Rep
 - `auth-shell.tsx` owns the layout (back, Mew bubble, title, cross-link, legal or spam footer).
   `/verify`, `/auth/app` and `/app/*` render it with every prop omitted.
 - `email-form.tsx`, `check-inbox.tsx`, `oauth-buttons.tsx`: props-only bodies.
-- `auth-state.ts`: the pure reducer, `classifyAuthError`, `canResend`, `internalPath`,
-  `redirectTarget`. `use-email-link-auth.ts` only wires Better Auth to it. `turnstile.ts` is the
+- `auth-state.ts`: the pure reducer, `classifyAuthError`, `canResend`, `redirectTarget` (on top of
+  `internalPath` from `lib/platform.ts`). `use-email-link-auth.ts` only wires Better Auth to it. `turnstile.ts` is the
   captcha hook.
 - `copy.ts`: every string here, plus those of `pages/verify.tsx`, `auth-app.tsx`, `app-return.tsx`,
   the auth `<title>`s in `App.tsx` and the invalid-link toast in `main.tsx`.

@@ -1,4 +1,4 @@
-import { isTauri } from "@/lib/native-auth";
+import { isTauri } from "@/lib/platform";
 
 /** Leaves for an external URL (Stripe, OAuth). In the app the system browser opens it: navigating
  * the webview away would strand the user outside the app with no way back. */

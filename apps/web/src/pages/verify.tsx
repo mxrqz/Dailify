@@ -2,11 +2,12 @@ import { Loader2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 
-import { internalPath, type AuthErrorKey } from "@/components/auth/auth-state";
+import type { AuthErrorKey } from "@/components/auth/auth-state";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { copy } from "@/components/auth/copy";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth";
+import { internalPath } from "@/lib/platform";
 
 type Status = "ready" | "verifying" | "invalid" | AuthErrorKey;
 

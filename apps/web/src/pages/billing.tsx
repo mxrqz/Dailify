@@ -32,7 +32,6 @@ import { quotaLabel } from "@/functions/quota-label";
 import { useQuotas } from "@/hooks/useQuotas";
 import { planOf, useSession } from "@/lib/auth";
 import { openExternal } from "@/lib/open-external";
-import { toText } from "@/lib/utils";
 import { zoned } from "@/functions/zone";
 import type { InvoicesProps, PaymentDetailsProps } from "@/types/types";
 
@@ -54,7 +53,7 @@ const money = (amount: number, currency: string) =>
 function cardLabel(invoice: InvoicesProps): JSX.Element {
   return (
     <span className="inline-flex items-center gap-1.5">
-      {walletIcons[toText(invoice.walletType)] ?? brandIcons[toText(invoice.brandName)]}
+      {walletIcons[invoice.walletType ?? ""] ?? brandIcons[invoice.brandName ?? ""]}
       •••• {invoice.cardLast4}
     </span>
   );
