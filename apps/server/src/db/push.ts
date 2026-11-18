@@ -146,7 +146,9 @@ export async function dueAlerts(
  */
 export async function recurringAlertCandidates(
   db: D1Database,
-  limit = 200, // ponytail: teto por passada; acima disso o certo é uma fila (Queues)
+  // ponytail: no ORDER BY, so past the 200th series the rest are starved, not delayed (ended
+  // series hold slots too); the upgrade is a Queues fan-out or a cursor carried across passes.
+  limit = 200,
 ): Promise<RecurringCandidate[]> {
   const { results } = await db
     .prepare(
@@ -187,7 +189,15 @@ export async function markOccurrenceAlerted(
   id: string,
   alertAt: number,
 ): Promise<void> {
-  await db.prepare(`UPDATE tasks SET alert_sent=? WHERE id=?`).bind(alertAt, id).run();
+  await markOccurrenceAlertedStatement(db, id, alertAt).run();
+}
+
+export function markOccurrenceAlertedStatement(
+  db: D1Database,
+  id: string,
+  alertAt: number,
+): D1PreparedStatement {
+  return db.prepare(`UPDATE tasks SET alert_sent=? WHERE id=?`).bind(alertAt, id);
 }
 
 // Os ids vão num único parâmetro JSON: um `?` por id estoura o teto de 100 parâmetros do D1.
