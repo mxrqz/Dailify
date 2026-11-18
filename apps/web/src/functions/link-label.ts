@@ -17,7 +17,7 @@ const NAMES: Record<string, string> = {
 /** Nome do serviço quando conhecido, senão o próprio host sem "www." — nunca faz rede. */
 export function linkLabel(url: string): string {
   if (!URL.canParse(url)) return url;
-  // O `htmlLink` do evento vem como www.google.com/calendar/event: o host sozinho diria "google.com".
+  // An event's `htmlLink` is www.google.com/calendar/event: the host alone would say "google.com".
   if (isCalendarEventLink(url)) return copy.calendar.name;
   const { hostname } = new URL(url);
   return NAMES[hostname] ?? hostname.replace(/^www\./, "");
