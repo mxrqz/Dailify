@@ -56,7 +56,12 @@ let form: Partial<typeof values> = {};
 describe("<EditTaskContent> offline", () => {
   it("edição sem rede entra na fila e sobe como PATCH com a hora da edição", async () => {
     const setTasks = vi.fn();
-    dailify.mockReturnValue({ tasks: [task], setTasks, loadedMonths: [new Date(task.date)] });
+    dailify.mockReturnValue({
+      tasks: [task],
+      setTasks,
+      setUndatedTasks: vi.fn(),
+      loadedMonths: [new Date(task.date)],
+    });
     api.updateTask.mockResolvedValueOnce({ error: { message: "rede", offline: true } });
 
     render(
@@ -117,7 +122,12 @@ describe("<EditTaskContent> series", () => {
     );
     if (!instance) throw new Error("no instance");
     form = { date: new Date(instance.date), repeat: "Daily" };
-    dailify.mockReturnValue({ tasks: [], setTasks: vi.fn(), loadedMonths: [month] });
+    dailify.mockReturnValue({
+      tasks: [],
+      setTasks: vi.fn(),
+      setUndatedTasks: vi.fn(),
+      loadedMonths: [month],
+    });
     api.updateTask.mockResolvedValueOnce({ error: { message: "rede", offline: true } });
 
     render(
