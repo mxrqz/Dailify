@@ -62,8 +62,9 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   `paymentMethodOf`. Narrow open Stripe enums to a DTO set (`knownInvoiceStatus`).
 - Webhook writes never throw for a missing user: `updateUserRole` becomes a zero-row UPDATE. A
   throw makes Stripe retry and eventually disable the endpoint.
-- Known bugs, don't copy: the plan comes from `lines.data[0]` / `items.data[0]` and an unknown price
-  falls back to `free`; `isProductName` uses `in` (accepts `"toString"`); `stripeClient` sets no
+- The plan comes from `planLine` (the first non-proration subscription line): after a plan change
+  Stripe lists the prorations, priced at the old plan, first. An unknown price never writes a role.
+- Known bugs, don't copy: `isProductName` uses `in` (accepts `"toString"`); `stripeClient` sets no
   timeout (SDK default 80 s).
 
 ## occurrence-alert
