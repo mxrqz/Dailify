@@ -7,16 +7,15 @@ import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { createTask, deleteTask, type ApiError } from "@/functions/api";
 import { fill, upsertTaskWithRecurrence } from "@/functions/functions";
-import { enqueue, newTaskId } from "@/functions/offline";
+import { enqueue, newTaskId, shouldQueue } from "@/functions/offline";
 import { upsertUndated } from "@/functions/undated";
 import { useCalendarPush, type CalendarPick } from "@/hooks/useCalendarPush";
 import { useQuotas } from "@/hooks/useQuotas";
 import { zoned } from "@/functions/zone";
 import { useSession } from "@/lib/auth";
 
-// 401 is a dead session (old tab, account switch), not a refused write: it waits for the login.
 const queueable = (error: ApiError | undefined, userId: string | undefined): userId is string =>
-  Boolean((error?.offline || error?.status === 401) && userId);
+  shouldQueue(error) && !!userId;
 
 /**
  * Tarefas que já existem no servidor (a voz, os rascunhos da Mew): põe na agenda ou no A qualquer

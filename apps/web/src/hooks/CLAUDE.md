@@ -15,14 +15,12 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 
 ## Write contract details
 
-- Settle: no error keeps the optimistic state; `error.offline || status === 401` with a userId calls
-  `enqueue(userId, mutation)` and keeps it (a 401 is a dead session, not a refused edit); anything
-  else rolls back and shows `toast.error(copy.task.*Error, { description: error.message })`.
-  Model: `run` in `useUndatedActions.ts`.
-- That predicate is copied in `useTaskActions`, `useUndatedActions`, `useCreateTask`,
-  `components/edit-task.tsx` (save) and `drainQueue` (`functions/offline.ts`); `useCreateTask.ts`
-  keeps one file-local `queueable` for `create` and `useShowCreated`'s Undo. Change all five
-  together; a sixth caller exports it from `functions/offline.ts` instead of copying it.
+- Settle: no error keeps the optimistic state; `shouldQueue(error)` (`functions/offline.ts`: offline
+  or 401) with a userId calls `enqueue(userId, mutation)` and keeps it (a 401 is a dead session, not
+  a refused edit); anything else rolls back and shows
+  `toast.error(copy.task.*Error, { description: error.message })`. Model: `run` in
+  `useUndatedActions.ts`. Every settle, `edit-task.tsx` and `drainQueue` included, calls
+  `shouldQueue`; never re-spell the predicate.
 - Writes a caller reacts to return `Promise<boolean>` = the write stands (on the server or queued).
 - Take `at = Date.now()` once per action and reuse it as `updatedAt` in the optimistic state, the
   request and the `Mutation` (server LWW, also on a late replay). Ids come from `newTaskId()`, so a
@@ -43,8 +41,7 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 - A series-scope `onPatch` with a `date` shifts the anchor (`seriesOf(task).date + new - task.date`);
   Undo of a series delete re-creates `seriesOf(task)` without completions (the server drops them).
 - Writes use functional updates; a rollback is `revertTask(cur, previous, id)`
-  (`functions/revert-task.ts`), never `setTasks(previous)`. Debt: the `latest` ref mirror in
-  `useMewApply` (`mew-chat/apply.ts`) predates the widened setters. Fix when touched.
+  (`functions/revert-task.ts`), never `setTasks(previous)`.
 
 ## Other writers
 

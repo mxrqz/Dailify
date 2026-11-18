@@ -1,11 +1,12 @@
 import { useEffect, useState, type ReactNode } from "react";
-import { eachDayOfInterval, endOfWeek, format, isSameDay, isToday, startOfWeek } from "date-fns";
+import { format, isSameDay, isToday } from "date-fns";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { ScheduleDrop } from "@/components/dashboard/anytime-block";
-import { dayAnchorId, weekdayDate } from "@/components/dashboard/day-section";
-import { getTasksForDay } from "@/functions/functions";
+import { dayAnchorId } from "@/components/dashboard/day-section";
+import { weekdayDate, weekOf } from "@/functions/date-label";
+import { fill, getTasksForDay } from "@/functions/functions";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { useNow } from "@/hooks/useNow";
 import { cn } from "@/lib/utils";
@@ -98,7 +99,7 @@ export function WeekDays({
                 onClick={() => onPick(day)}
                 aria-pressed={on}
                 aria-current={isToday(day) ? "date" : undefined}
-                aria-label={has ? copy.day.withTasks.replace("{day}", label) : label}
+                aria-label={has ? fill(copy.day.withTasks, { day: label }) : label}
                 className={cn(
                   "flex h-13 w-full cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md transition-colors duration-fast",
                   "data-drop-over:outline-2 data-drop-over:-outline-offset-2 data-drop-over:outline-brand",
@@ -137,9 +138,7 @@ export function WeekDays({
 /** A semana de hoje (respeitando o primeiro dia da config); muda só à meia-noite. */
 export function useWeek(): Date[] {
   const { weekStart } = useDailify();
-  const now = useNow("day");
-  const opts = { weekStartsOn: weekStart };
-  return eachDayOfInterval({ start: startOfWeek(now, opts), end: endOfWeek(now, opts) });
+  return weekOf(useNow("day"), weekStart);
 }
 
 /** A semana da Hoje: a pílula acompanha o dia que se está lendo na lista; tocar rola até ele. */

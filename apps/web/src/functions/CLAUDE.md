@@ -13,9 +13,12 @@ Each has a colocated `<module>.test.ts`, except `push.ts`.
   `fromDateInput`), so the parser, the queue and the API read one zone.
 - `functions.ts`: legacy grab-bag (`fill`, `formatClock`, `getTasksForDay`,
   `upsertTaskWithRecurrence`, `mergeMonth`, ...). No new exports; a new helper gets its own module.
-- One concept each: `repeat-label`, `link-label`, `quota-label`, `undated`, `user-agent`,
+- One concept each: `repeat-label` (+ `REPEAT_MODES`), `link-label` (+ `linkHost`,
+  `normalizeUrl`), `quota-label` (+ `creditsLabel`), `count-label`, `date-label` (day and clock
+  labels), `task-options` (editor choice lists), `task-lists` (`swapTasks`/`swapUndated`),
+  `undated`, `user-agent`,
   `compose-input` (composer chip state: `onDay`, `fromWire`, `markSegments`, `withEdits`; not
-  shared's `composeTaskInput`), `edit-input` (edit form to `TaskInput`), `billing-sections`,
+  shared's `composeTaskInput`), `edit-input` (edit form to `TaskInput`, `buildEdit`), `billing-sections`,
   `revert-task`.
 - Imports: shared, date libs, `@/consts`, `@/lib`, siblings, `components/*/copy.ts`, `import type`
   from components. `@/types` is a legacy alias layer; new code imports `@dailify/shared`.
@@ -56,8 +59,8 @@ render test whose component now calls it (a factory mock throws on an export it 
   stops at the first offline or 401 (kept for the next sign-in) and drops what the server refused.
   Entries are removed by value, not index: another tab may have sent the head meanwhile.
 - `enqueue` doesn't collapse during a flush: a delete folded into an in-flight create is lost.
-- `shouldQueue(error)` is the settle predicate (offline or 401); `drainQueue` uses it, the four
-  copies in hooks and `edit-task.tsx` should too (`hooks/CLAUDE.md`).
+- `shouldQueue(error)` is the settle predicate (offline or 401), used by `drainQueue`, the write
+  hooks and `edit-task.tsx` (`hooks/CLAUDE.md`).
 - Storage keys are a persisted contract (renaming drops queued writes):
   `dailify:{tasks,outbox,undated}:<userId>`, `dailify:last-user`, `mewki:mew:<userId>:v1`
   (`chatKey`, read by `components/mew-chat/thread.ts`); `clearLocal` removes all but device-wide ones

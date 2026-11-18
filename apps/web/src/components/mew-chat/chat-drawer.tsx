@@ -43,7 +43,8 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { spring } from "@/consts/motion";
-import { fill, formatClock, getCompletionDate } from "@/functions/functions";
+import { clockAt } from "@/functions/date-label";
+import { fill, getCompletionDate } from "@/functions/functions";
 import { fromDateInput, zoned } from "@/functions/zone";
 import { cn } from "@/lib/utils";
 
@@ -67,11 +68,9 @@ function dayName(ms: number): string {
 }
 
 const dayOf = (task: Task) => (task.undated ? copy.undated.title : dayName(task.date));
-const clockOf = (task: Task, hour12: boolean) =>
-  formatClock(format(zoned(task.date), "HH:mm"), hour12);
 /** "sexta-feira · 10:00". */
 const whenOf = (task: Task, hour12: boolean) =>
-  task.undated ? dayOf(task) : `${dayOf(task)} · ${clockOf(task, hour12)}`;
+  task.undated ? dayOf(task) : `${dayOf(task)} · ${clockAt(task.date, hour12)}`;
 
 /** The thread keeps a thumbnail (a full photo would blow the localStorage quota); the upload is bigger. */
 export interface Photo {
@@ -593,7 +592,7 @@ function Row({ task, meta, onOpen }: { task: Task; meta?: ReactNode; onOpen?: ()
   const calendar = task.links?.some(isCalendarEventLink);
   return (
     <TaskRow
-      time={task.undated ? "" : clockOf(task, hour12)}
+      time={task.undated ? "" : clockAt(task.date, hour12)}
       title={task.title}
       done={getCompletionDate(task, zoned(task.date)) === true}
       meta={

@@ -5,7 +5,7 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
 
 ## File map
 
-- Agenda: `day-list.tsx` → `day-section.tsx` (`dayAnchorId`, `weekdayDate`) → `day-task-row.tsx`
+- Agenda: `day-list.tsx` → `day-section.tsx` (`dayAnchorId`) → `day-task-row.tsx`
   (`DayTaskRow` container; `TaskRow`, `CheckCircle`, `NowLine` views; `SHEET_EDITING`).
 - Undated: `anytime-block.tsx` (today's card, `ScheduleDrop`), `check-history.tsx`;
   `undated-column.tsx` is a reserved, empty desktop column (bd `Dailify-1td`).
@@ -64,7 +64,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
   (text field, calendar, wheel), because a menu item closes on the first click.
 - Popover editors buffer and call `onChange` once on close, only if changed: callers PATCH in
   `onChange` (`DayPopover` is pick-and-close). Option lists keep an off-grid current value
-  (`DURATIONS`, `minuteOptions`, `everyOptions`) so it never snaps.
+  (`functions/task-options.ts`, `everyOptions`) so it never snaps. Day and clock labels come from
+  `functions/date-label.ts` (`clockAt`, `dayDot`, `dayComma`, `weekdayDate`, `weekOf`).
 
 ## TaskForm (`task-form.tsx`)
 

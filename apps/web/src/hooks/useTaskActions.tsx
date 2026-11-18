@@ -12,7 +12,7 @@ import { completeTask, createTask, deleteTask, uncompleteTask, updateTask } from
 import type { ApiError } from "@/functions/api";
 import { fill, upsertTaskWithRecurrence } from "@/functions/functions";
 import { revertTask } from "@/functions/revert-task";
-import { enqueue, type Mutation } from "@/functions/offline";
+import { enqueue, shouldQueue, type Mutation } from "@/functions/offline";
 import { isCalendarEventLink, seriesOf, type TaskInput } from "@dailify/shared";
 import type { TaskProps } from "@/types/types";
 import { zoned } from "@/functions/zone";
@@ -47,8 +47,7 @@ export function useTaskActions(
   ): boolean => {
     if (!error) return true;
 
-    // 401: a sessão caiu (aba velha, troca de conta), não a edição — espera na fila pelo login.
-    if ((error.offline || error.status === 401) && userId) {
+    if (shouldQueue(error) && userId) {
       enqueue(userId, mutation);
       return true;
     }

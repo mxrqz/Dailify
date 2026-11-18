@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BellIcon, CalendarIcon, ClockIcon, LinkIcon, Loader2Icon, RepeatIcon } from "lucide-react";
@@ -56,7 +56,9 @@ import {
   RepeatMenu,
 } from "@/components/dashboard/task-meta-menus";
 import { useDailify } from "@/components/dailifyContext";
-import { fill, formatClock } from "@/functions/functions";
+import { clockAt, dayDot } from "@/functions/date-label";
+import { fill } from "@/functions/functions";
+import { remainingLabel } from "@/functions/quota-label";
 import { zoned } from "@/functions/zone";
 
 export interface ComposerValues {
@@ -90,9 +92,6 @@ interface TaskComposerProps {
 
 /** O campo da frase; `create-fab` o foca pelo id (atalhos `n` e `/`, dia escolhido no calendário). */
 export const COMPOSER_TEXT_ID = "composer-text";
-
-// EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
-const dayOf = (date: Date) => format(date, "EEEEEE · d MMM", { locale: ptBR });
 
 /**
  * A frase da folha de criação. O que o parser tirou dela aparece em chips logo acima (ou abaixo, no
@@ -187,15 +186,14 @@ export function TaskComposer({
     focusText();
   };
 
-  const dayLabel = parsed.date && dayOf(parsed.date);
-  const timeLabel =
-    parsed.hasTime && parsed.date ? formatClock(format(parsed.date, "HH:mm"), hour12) : null;
-  const clockAt = zoned(parsed.date ?? undefined);
-  if (!timeLabel) clockAt.setHours(DEFAULT_HOUR, 0, 0, 0);
+  const dayLabel = parsed.date && dayDot(parsed.date);
+  const timeLabel = parsed.hasTime && parsed.date ? clockAt(parsed.date, hour12) : null;
+  const wheelAt = zoned(parsed.date ?? undefined);
+  if (!timeLabel) wheelAt.setHours(DEFAULT_HOUR, 0, 0, 0);
   const alertLabel = (alert: number) =>
     fill(copy.composer.alertAt, {
       day: format(zoned(alert), "EEEEEE", { locale: ptBR }),
-      time: formatClock(format(zoned(alert), "HH:mm"), hour12),
+      time: clockAt(alert, hour12),
     });
 
   const submit = (again: boolean) => {
@@ -225,12 +223,7 @@ export function TaskComposer({
     });
   };
 
-  const remaining =
-    mew.remaining === null
-      ? null
-      : mew.remaining === 1
-        ? copy.mew.remainingOne
-        : copy.mew.remainingMany.replace("{n}", String(mew.remaining));
+  const remaining = mew.remaining === null ? null : remainingLabel(mew.remaining);
 
   if (voice.state !== "idle")
     return (
@@ -251,7 +244,7 @@ export function TaskComposer({
       disabled={!canSubmit}
     >
       {(submitting || many.submitting) && <Loader2Icon className="animate-spin" />}
-      {multi ? copy.mew.confirmMany.replace("{n}", String(drafts.length)) : copy.composer.submit}
+      {multi ? fill(copy.mew.confirmMany, { n: drafts.length }) : copy.composer.submit}
     </Button>
   );
 
@@ -285,17 +278,16 @@ export function TaskComposer({
         />
         <p className="mt-2 text-body text-ink-secondary">{input}</p>
         <MewDrafts
-          say={mew.result?.reply || copy.mew.found.replace("{n}", String(drafts.length))}
+          say={mew.result?.reply || fill(copy.mew.found, { n: drafts.length })}
           drafts={drafts.map((draft, i) => {
             const t = draftTasks[i];
-            const time =
-              draft.hasTime && draft.date ? formatClock(format(draft.date, "HH:mm"), hour12) : null;
+            const time = draft.hasTime && draft.date ? clockAt(draft.date, hour12) : null;
             return {
               title: draft.text,
               meta: (
                 <>
                   <DraftMeta icon={<CalendarIcon aria-hidden="true" />}>
-                    {draft.date ? dayOf(draft.date) : copy.composer.toUndated}
+                    {draft.date ? dayDot(draft.date) : copy.composer.toUndated}
                     {time && (
                       <>
                         <ClockIcon aria-hidden="true" className="ml-1" />
@@ -310,7 +302,7 @@ export function TaskComposer({
                   )}
                   {t.alert !== undefined && (
                     <DraftMeta icon={<BellIcon aria-hidden="true" />}>
-                      {copy.composer.reminderAt.replace("{value}", alertLabel(t.alert))}
+                      {fill(copy.composer.reminderAt, { value: alertLabel(t.alert) })}
                     </DraftMeta>
                   )}
                 </>
@@ -319,7 +311,7 @@ export function TaskComposer({
             };
           })}
         />
-        <MewCredits credits={remaining && copy.mew.credits.replace("{left}", remaining)} />
+        <MewCredits credits={remaining && fill(copy.mew.credits, { left: remaining })} />
         <ComposerActions large>
           <Button
             variant="secondary"
@@ -380,10 +372,9 @@ export function TaskComposer({
           <MetaChip
             {...size}
             icon={<RepeatIcon aria-hidden="true" className="text-meta-repeat" />}
-            editLabel={copy.composer.editRepeat.replace(
-              "{value}",
-              repeatLabel(parsed.repeat, parsed.repeatEvery),
-            )}
+            editLabel={fill(copy.composer.editRepeat, {
+              value: repeatLabel(parsed.repeat, parsed.repeatEvery),
+            })}
             removeLabel={copy.composer.removeRepeat}
             onRemove={() => remove("repeat")}
             editor={(trigger) => (
@@ -404,7 +395,7 @@ export function TaskComposer({
             {...size}
             ghost={!dayLabel}
             icon={dayLabel && <CalendarIcon aria-hidden="true" className="text-meta-date" />}
-            editLabel={dayLabel ? copy.composer.editDay.replace("{value}", dayLabel) : undefined}
+            editLabel={dayLabel ? fill(copy.composer.editDay, { value: dayLabel }) : undefined}
             removeLabel={copy.composer.removeDay}
             onRemove={dayLabel && parsed.hasDay ? () => remove("day") : undefined}
             editor={(trigger) => (
@@ -420,13 +411,13 @@ export function TaskComposer({
           {...size}
           ghost={!timeLabel}
           icon={timeLabel && <ClockIcon aria-hidden="true" className="text-meta-time" />}
-          editLabel={timeLabel ? copy.composer.editTime.replace("{value}", timeLabel) : undefined}
+          editLabel={timeLabel ? fill(copy.composer.editTime, { value: timeLabel }) : undefined}
           removeLabel={copy.composer.removeTime}
           onRemove={timeLabel ? () => remove("time") : undefined}
           editor={(trigger) => (
             <DateTimePopover
               timeOnly
-              value={clockAt}
+              value={wheelAt}
               onChange={(at) => edit({ time: { hour: at.getHours(), minute: at.getMinutes() } })}
             >
               {trigger}
@@ -440,7 +431,7 @@ export function TaskComposer({
           ghost={!parsed.duration}
           editLabel={
             parsed.duration
-              ? copy.composer.editDuration.replace("{value}", parsed.duration)
+              ? fill(copy.composer.editDuration, { value: parsed.duration })
               : undefined
           }
           removeLabel={copy.composer.removeDuration}
@@ -468,7 +459,7 @@ export function TaskComposer({
             key={url}
             {...size}
             icon={<LinkIcon aria-hidden="true" />}
-            editLabel={copy.composer.editLinks.replace("{value}", linkLabel(url))}
+            editLabel={fill(copy.composer.editLinks, { value: linkLabel(url) })}
             removeLabel={copy.composer.removeLinks}
             onRemove={() => remove("links")}
             editor={(trigger) => (

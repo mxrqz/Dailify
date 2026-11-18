@@ -4,12 +4,12 @@ import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { DayPicker } from "@/components/dashboard/day-picker";
 import { cn } from "@/lib/utils";
+import { minuteOptions } from "@/functions/task-options";
 import { zoned } from "@/functions/zone";
 
 // h-5 de cada linha; a roda tem h-16 e a linha do meio (py-5.5 acima e abaixo) é a escolhida.
 const ROW_PX = 20;
 const SETTLE_MS = 90;
-const MINUTE_STEP = 5;
 // O cilindro: cada linha longe do centro gira e apaga mais. Calibrado no olho.
 const TILT_DEG = 20;
 const FADE_PER_ROW = 0.3;
@@ -24,12 +24,6 @@ const HOURS = Array.from({ length: 24 }, (_, h) => h);
 const HOURS_12 = Array.from({ length: 12 }, (_, i) => i + 1);
 const MERIDIEM = [0, 1];
 const pad = (n: number) => String(n).padStart(2, "0");
-
-/** Minutos de 5 em 5, mais o minuto atual se ele não cair num deles (16:37 não vira 16:35 sozinho). */
-export function minuteOptions(current: number): number[] {
-  const steps = Array.from({ length: 60 / MINUTE_STEP }, (_, i) => i * MINUTE_STEP);
-  return steps.includes(current) ? steps : [...steps, current].sort((a, b) => a - b);
-}
 
 /**
  * Uma coluna da roda: rola com snap, a linha que para no centro é o valor. As linhas giram em

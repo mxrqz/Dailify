@@ -1,7 +1,8 @@
 import { describe, expect, it } from "vitest";
+import type { Task } from "@dailify/shared";
 
 import type { TaskFormValues } from "@/components/dashboard/task-form";
-import { editTaskInput } from "./edit-input";
+import { buildEdit, editTaskInput } from "./edit-input";
 import { zonedAt } from "./zone";
 
 const now = zonedAt(2026, 9, 21, 14, 0); // qua 21/out 14:00
@@ -39,5 +40,36 @@ describe("editTaskInput", () => {
     expect(editTaskInput(today, now)).not.toHaveProperty("alert");
     const next = new Date(2026, 9, 22, 9).getTime();
     expect(editTaskInput({ ...today, repeat: "Daily" }, now)).toMatchObject({ alert: next });
+  });
+});
+
+describe("buildEdit", () => {
+  const task: Task = {
+    id: "t",
+    title: values.title,
+    date: values.date.getTime(),
+    duration: values.duration,
+    priority: 0,
+    repeat: "Off",
+    completed: [],
+  };
+
+  it("reads the untouched form as unchanged and stamps the edit time", () => {
+    const { unchanged, taskData } = buildEdit(task, values, now);
+    expect(unchanged).toBe(true);
+    expect(taskData.updatedAt).toBe(now.getTime());
+  });
+
+  it("keeps an undated task's date when the reminder is cleared, and sees the change", () => {
+    const undated = { ...task, undated: true, alert: task.date };
+    const { unchanged, taskData } = buildEdit(undated, { ...values, undated: true }, now);
+    expect(taskData).toMatchObject({ date: task.date, alert: undefined });
+    expect(unchanged).toBe(false);
+  });
+
+  it("gives a task moved to the agenda an alert at its date", () => {
+    const undated = { ...task, undated: true };
+    const { taskData } = buildEdit(undated, values, now);
+    expect(taskData).toMatchObject({ date: values.date.getTime(), alert: values.date.getTime() });
   });
 });

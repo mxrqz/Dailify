@@ -17,9 +17,10 @@ import type { WeekStart } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { DaySection, weekdayDate } from "@/components/dashboard/day-section";
+import { DaySection } from "@/components/dashboard/day-section";
 import { Button } from "@/components/ui/button";
-import { capitalize, getTasksForDay } from "@/functions/functions";
+import { weekdayDate, weekdayInitials } from "@/functions/date-label";
+import { capitalize, fill, getTasksForDay } from "@/functions/functions";
 import { zoned } from "@/functions/zone";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { cn } from "@/lib/utils";
@@ -54,13 +55,13 @@ export function MonthGrid({
       aria-label={format(month, "MMMM 'de' yyyy", { locale: ptBR })}
       className="grid grid-cols-7 gap-y-0.5 px-4 pt-3"
     >
-      {copy.aside.weekDayInitials.map((_, i) => (
+      {weekdayInitials(weekStart).map((initial, i) => (
         <div
           key={i}
           aria-hidden="true"
           className="pb-1.5 text-center text-xs font-medium text-ink-secondary"
         >
-          {copy.aside.weekDayInitials[(i + weekStart) % 7]}
+          {initial}
         </div>
       ))}
       {Array.from({ length: lead }, (_, i) => (
@@ -76,7 +77,7 @@ export function MonthGrid({
             type="button"
             aria-pressed={on}
             aria-current={isToday(day) ? "date" : undefined}
-            aria-label={has ? copy.day.withTasks.replace("{day}", label) : label}
+            aria-label={has ? fill(copy.day.withTasks, { day: label }) : label}
             onClick={() => onPick(day)}
             className="group/day flex h-13 cursor-pointer flex-col items-center gap-1 pt-0.5"
           >
@@ -196,7 +197,7 @@ export function MonthCalendar({
         <DaySection calendar day={startOfDay(selectedDay)} />
         <Button variant="secondary" className="w-full" onClick={() => onCreateOn(selectedDay)}>
           <PlusIcon aria-hidden="true" />
-          {copy.day.createOn.replace("{day}", format(selectedDay, "EEE, d MMM", { locale: ptBR }))}
+          {fill(copy.day.createOn, { day: format(selectedDay, "EEE, d MMM", { locale: ptBR }) })}
         </Button>
       </div>
     </div>

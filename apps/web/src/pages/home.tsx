@@ -3,7 +3,6 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
 import { useDailify } from "@/components/dailifyContext";
 import { DayList } from "@/components/dashboard/day-list";
-import { weekdayDate } from "@/components/dashboard/day-section";
 import { MonthCalendar } from "@/components/dashboard/month-calendar";
 import { UndatedColumn, useUndatedOpen } from "@/components/dashboard/undated-column";
 import { WeekStrip } from "@/components/dashboard/week-strip";
@@ -11,6 +10,7 @@ import { CreateFab } from "@/components/dashboard/create-fab";
 import { copy } from "@/components/dashboard/copy";
 import { PageHeader } from "@/components/kit/page-header";
 import { ProgressRing } from "@/components/kit/progress-ring";
+import { weekdayDate } from "@/functions/date-label";
 import { getCompletionDate, getTasksForDay } from "@/functions/functions";
 import { useCreateTask } from "@/hooks/useCreateTask";
 import { useNow } from "@/hooks/useNow";

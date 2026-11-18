@@ -7,7 +7,7 @@ applied to the agenda.
 ## Layout
 
 - `thread.ts`: pure state machine. `Message`/`Block` types, `chatReducer`, persistence.
-- `apply.ts`: pure `writes`/`swap` plus the `useMewApply` hook that runs a box against the agenda.
+- `apply.ts`: pure `writes` plus the `useMewApply` hook that runs a box against the agenda.
 - `mew-chat.tsx`: container (session, API, quotas, consent, scrim, the dock).
 - `chat-drawer.tsx`: `ChatDrawer`, `ChatInput`, `moodOf` and the photo scaling. Its rows read `hour12`
   from `useDailify`, so it is not a provider-free View yet.
@@ -22,14 +22,14 @@ applied to the agenda.
 - Persisted per user at localStorage `mewki:mew:<userId>:v1`, last 50 (`KEEP`); a reply still
   typing is dropped on load. mew-chat.tsx saves only when no reply is in flight. The key is
   `chatKey` in `functions/offline.ts`, so `clearLocal` removes it.
-- `writes(out, into)` diffs by id (same id = update), `swap()` mirrors it into `tasks` and
-  `undatedTasks`. An update sends only `title`, `date`, `alert`: widen that list if a box changes
+- `writes(out, into)` diffs by id (same id = update); `swapTasks`/`swapUndated`
+  (`functions/task-lists.ts`) mirror it into `tasks` and `undatedTasks`. An update sends only `title`, `date`, `alert`: widen that list if a box changes
   more.
 - `useMewApply` calls `@/functions/api` itself instead of a `hooks/` writer, because a box applies
   all-or-nothing. It has no offline queue: any refused write, offline included, rolls everything
   back and returns `false` (ponytail: partial failure). `ChatInput` is disabled offline. On success
   it bumps usage, records `setMewAction` and pushes Google Calendar targets. Both the apply and
-  the rollback are functional `swap`s (the rollback swaps back), so writes landing meanwhile stay.
+  the rollback are functional swaps (the rollback swaps back), so writes landing meanwhile stay.
 - mew-chat.tsx matches the server's error texts, shared with it: `MEW_CONSENT_REQUIRED` and
   `QUOTA_ERRORS.ai` from `@dailify/shared` (texts, not codes, so the wire stays as it was).
   A send refused for consent is dropped, kept in `pending` and resent after accept: nothing
@@ -57,7 +57,6 @@ applied to the agenda.
 - Copy lives in `dashboard/copy.ts` under `mewChat`; move it to a local `copy.ts` when touching it.
 - `MessageBox` comes from `components/landing/kit`, against the dependency direction in
   [Where code goes](../../../../../RULES.md#where-code-goes).
-- The credits line uses `.replace` instead of `fill()`.
 
 ## Tests
 

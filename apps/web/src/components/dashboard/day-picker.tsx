@@ -17,6 +17,7 @@ import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
+import { weekdayInitials, weekOf } from "@/functions/date-label";
 import { zoned } from "@/functions/zone";
 import { cn } from "@/lib/utils";
 
@@ -49,7 +50,7 @@ export function DayPicker({
         start: startOfWeek(startOfMonth(viewMonth), opts),
         end: endOfWeek(endOfMonth(viewMonth), opts),
       })
-    : eachDayOfInterval({ start: startOfWeek(value, opts), end: endOfWeek(value, opts) });
+    : weekOf(value, weekStart);
 
   return (
     <div className="flex flex-col gap-2">
@@ -94,13 +95,11 @@ export function DayPicker({
       </div>
 
       <ul className="grid grid-cols-7 justify-items-center gap-1">
-        {copy.aside.weekDayInitials
-          .map((_, index) => copy.aside.weekDayInitials[(index + weekStart) % 7])
-          .map((initial, index) => (
-            <li key={index} className="font-mono text-2xs uppercase text-ink-secondary">
-              {initial}
-            </li>
-          ))}
+        {weekdayInitials(weekStart).map((initial, index) => (
+          <li key={index} className="font-mono text-2xs uppercase text-ink-secondary">
+            {initial}
+          </li>
+        ))}
         {days.map((day) => {
           const selected = isSameDay(day, value);
           return (
