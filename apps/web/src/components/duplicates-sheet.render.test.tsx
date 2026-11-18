@@ -21,6 +21,9 @@ vi.mock("@/functions/api", () => ({ resolveDuplicate, getIntegrations: vi.fn() }
 vi.mock("sonner", () => ({ toast }));
 
 import { copy } from "@/components/dashboard/copy";
+// Carrega o grafo frio (Radix/motion) na coleta, sem hookTimeout; o resetModules do beforeEach
+// só reavalia os módulos de src.
+import "./duplicates-sheet";
 
 // "Uma vez por sessão" mora no módulo: cada teste carrega o seu, como um app recém-aberto.
 let Duplicates: typeof import("./duplicates-sheet").Duplicates;

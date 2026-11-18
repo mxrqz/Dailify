@@ -1,5 +1,5 @@
 import { afterEach, describe, test, expect } from "vitest";
-import { addDays, endOfMonth, format, isSameDay, isSameMonth, startOfMonth } from "date-fns";
+import { addDays, endOfMonth, format, isSameMonth, startOfDay, startOfMonth } from "date-fns";
 import {
   getNextTask,
   isTaskModified,
@@ -166,13 +166,21 @@ describe("índice por dia e faixas numéricas ≡ comparação por TZDate", () =
 
   test.each(["America/Sao_Paulo", "America/New_York", "Asia/Tokyo", "UTC"])("%s", (tz) => {
     setAppTimeZone(tz);
+    // O oráculo de sempre, sem reconstruir TZDate por tarefa × dia: `isSameDay(zoned(t.date), day)`
+    // é, no date-fns 4, `+startOfDay(zoned(t.date)) === +startOfDay(zoned(day))` (o 2º argumento
+    // vira TZDate no fuso do 1º), então o lado da tarefa sai uma vez por fuso e o do dia, uma por dia.
+    const taskDay = new Map(tasks.map((t) => [t, +startOfDay(zoned(t.date))]));
+    const doneKeys = new Map(
+      tasks.map((t) => [t, new Set(t.completed.map((c) => format(zoned(c), "P")))]),
+    );
     for (let i = 0; i < 95; i += 3) {
       for (const day of [addDays(zonedAt(2026, 9, 1), i), new Date(2026, 9, 1 + i)]) {
-        const before = tasks.filter((t) => isSameDay(zoned(t.date), day));
+        const dayStart = +startOfDay(zoned(day));
+        const before = tasks.filter((t) => taskDay.get(t) === dayStart);
         expect(getTasksForDay(tasks, day)).toEqual(before);
+        const key = format(day, "P");
         for (const t of before.concat(tasks.slice(i, i + 3))) {
-          const was = t.completed.some((c) => format(zoned(c), "P") === format(day, "P"));
-          expect(getCompletionDate(t, day)).toBe(was);
+          expect(getCompletionDate(t, day)).toBe(doneKeys.get(t)?.has(key));
         }
       }
     }
