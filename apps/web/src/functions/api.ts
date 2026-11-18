@@ -38,7 +38,8 @@ const authed = (init: RequestInit = {}): RequestInit => ({
   ...init,
   credentials: "include",
   headers: {
-    "Content-Type": "application/json",
+    // FormData sets its own multipart boundary; a JSON Content-Type would break the upload.
+    ...(init.body instanceof FormData ? {} : { "Content-Type": "application/json" }),
     ...authHeaders(),
     ...(init.headers ?? {}),
   },
@@ -95,8 +96,12 @@ async function request<T>(
   return { data: body };
 }
 
+// ponytail: also hand-formatted in the server's db/usage.ts; move to shared dates.ts when touched.
+const monthKey = (month: Date) =>
+  `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+
 export async function getTasksForMonth(month: Date): Promise<{ tasks: Task[]; error?: ApiError }> {
-  const m = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
+  const m = monthKey(month);
   // O fuso vai junto: o Worker roda em UTC e sem isto a expansão da recorrência e a janela do mês
   // saem na hora errada para quem não está em Greenwich.
   const tz = encodeURIComponent(appTimeZone());
@@ -126,7 +131,7 @@ export async function saveSettings(
 }
 
 export async function createTask(input: TaskInput): Promise<{ task?: Task; error?: ApiError }> {
-  const { data, error } = await request<{ task?: Task; error?: string }>("/tasks", {
+  const { data, error } = await request<{ task?: Task }>("/tasks", {
     method: "POST",
     body: JSON.stringify(input),
   });
@@ -145,10 +150,13 @@ export async function updateTask(
   occurrence?: number,
 ): Promise<{ task?: Task; series?: Task; error?: ApiError }> {
   const query = occurrence === undefined ? "" : `?occurrence=${occurrence}`;
-  const { data, error } = await request<OccurrenceEdit>(`/tasks/${id}${query}`, {
-    method: "PATCH",
-    body: JSON.stringify(patch),
-  });
+  const { data, error } = await request<OccurrenceEdit>(
+    `/tasks/${encodeURIComponent(id)}${query}`,
+    {
+      method: "PATCH",
+      body: JSON.stringify(patch),
+    },
+  );
   return { task: data?.task, series: data?.series, error };
 }
 
@@ -158,10 +166,13 @@ export async function completeTask(
 ): Promise<{ task?: Task; error?: ApiError }> {
   // `at` vai no corpo: uma conclusão feita offline aconteceu na hora do toque, não na hora em que
   // a fila conseguiu subir.
-  const { data, error } = await request<{ task?: Task }>(`/tasks/${id}/complete`, {
-    method: "POST",
-    body: JSON.stringify({ at }),
-  });
+  const { data, error } = await request<{ task?: Task }>(
+    `/tasks/${encodeURIComponent(id)}/complete`,
+    {
+      method: "POST",
+      body: JSON.stringify({ at }),
+    },
+  );
   return { task: data?.task, error };
 }
 
@@ -186,7 +197,7 @@ export async function uncompleteTaskRange(
   to: number,
 ): Promise<{ task?: Task; error?: ApiError }> {
   const { data, error } = await request<{ task?: Task }>(
-    `/tasks/${id}/complete?from=${from}&to=${to}`,
+    `/tasks/${encodeURIComponent(id)}/complete?from=${from}&to=${to}`,
     { method: "DELETE" },
   );
   return { task: data?.task, error };
@@ -199,9 +210,12 @@ export async function deleteTask(
   occurrence?: number,
 ): Promise<{ series?: Task; error?: ApiError }> {
   const query = occurrence === undefined ? "" : `?occurrence=${occurrence}`;
-  const { data, error } = await request<OccurrenceEdit>(`/tasks/${id}${query}`, {
-    method: "DELETE",
-  });
+  const { data, error } = await request<OccurrenceEdit>(
+    `/tasks/${encodeURIComponent(id)}${query}`,
+    {
+      method: "DELETE",
+    },
+  );
   return { series: data?.series, error };
 }
 
@@ -231,34 +245,19 @@ export async function setMewAction(id: string, status: MewActionStatus): Promise
   });
 }
 
-/** Sem `request`: o corpo é FormData, e o Content-Type JSON dele quebraria o upload. */
 export async function createTaskVoice(
   formData: FormData,
 ): Promise<{ tasks: Task[]; response?: string; error?: ApiError }> {
-  let res: Response;
-  try {
-    res = await fetch(`${apiURL}/tasks/voice`, {
-      method: "POST",
-      credentials: "include",
-      headers: authHeaders(),
-      body: formData,
-    });
-  } catch {
-    return { tasks: [], error: OFFLINE };
-  }
-  const body = await res.json().catch(() => undefined);
-  if (!res.ok) {
-    const message = serverMessage(body) ?? `O servidor falhou (${res.status}).`;
-    return { tasks: [], error: { message, offline: false } };
-  }
-  return { tasks: body?.tasks ?? [], response: body?.response };
+  const { data, error } = await request<{ tasks?: Task[]; response?: string }>("/tasks/voice", {
+    method: "POST",
+    body: formData,
+  });
+  return { tasks: data?.tasks ?? [], response: data?.response, error };
 }
 
 export async function getPushKey(): Promise<string | null> {
-  const res = await fetch(`${apiURL}/push/key`);
-  if (!res.ok) return null;
-  const data = await res.json();
-  return data.key ?? null;
+  const { data } = await request<{ key?: string }>("/push/key");
+  return data?.key ?? null;
 }
 
 export async function savePushSubscription(subscription: {
@@ -267,26 +266,22 @@ export async function savePushSubscription(subscription: {
   auth: string;
   timezone: string;
 }): Promise<boolean> {
-  const res = await fetch(
-    `${apiURL}/push/subscription`,
-    authed({ method: "POST", body: JSON.stringify(subscription) }),
-  );
-  return res.ok;
+  const { error } = await request("/push/subscription", {
+    method: "POST",
+    body: JSON.stringify(subscription),
+  });
+  return !error;
 }
 
 export async function removePushSubscription(endpoint: string): Promise<void> {
-  await fetch(
-    `${apiURL}/push/subscription`,
-    authed({ method: "DELETE", body: JSON.stringify({ endpoint }) }),
-  );
+  await request("/push/subscription", { method: "DELETE", body: JSON.stringify({ endpoint }) });
 }
 
 // dailifyContext imports it from here.
 export type { QuotaSnapshot };
 
 export async function getQuotas(month: Date): Promise<QuotaSnapshot | undefined> {
-  const m = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;
-  const { data } = await request<QuotaSnapshot>(`/permissions?month=${m}`);
+  const { data } = await request<QuotaSnapshot>(`/permissions?month=${monthKey(month)}`);
   return data;
 }
 

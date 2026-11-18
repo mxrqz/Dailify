@@ -5,7 +5,7 @@ in [Where code goes](../../../../RULES.md#where-code-goes). Only local invariant
 
 ## Modules
 
-Each has a colocated `<module>.test.ts`, except `api.ts` and `push.ts`.
+Each has a colocated `<module>.test.ts`, except `push.ts`.
 
 - `api.ts`: the only HTTP boundary to `apps/server`. `push.ts`: Web Push for this device.
 - `offline.ts`: per-user cache, outbox queue, last signed-in user, `newTaskId`, `clearLocal`.
@@ -32,16 +32,16 @@ Each has a colocated `<module>.test.ts`, except `api.ts` and `push.ts`.
   from it.
 - Auth is `credentials: "include"` (web cookie) plus `authHeaders()` (Tauri bearer); no function
   takes a token. In PATCH bodies `null` clears and an absent key keeps (`updateTask`'s `alert`).
-- Legacy, don't copy: `createTaskVoice` (FormData; `authed()` forces JSON Content-Type) and the push
-  trio call `fetch` directly, so push throws offline and voice errors lack `status`/`code`.
-  `getQuotas`, `getPaymentDetails`, `getInvoices`, `checkout`, `billingPortal` drop `error`. The
-  `/tasks/${id}` routes skip `encodeURIComponent`.
+- `authed()` skips the JSON Content-Type for a `FormData` body (`createTaskVoice`).
+- Legacy, don't copy: `getQuotas`, `getPaymentDetails`, `getInvoices`, `checkout`, `billingPortal`
+  drop `error`.
 
 Adding an endpoint: name the wire type in `@dailify/shared`
 ([TypeScript](../../../../RULES.md#typescript)); wrap `request<T>()` here and `encodeURIComponent`
 every path segment; add the function to the `vi.mock("@/functions/api", () => api)` object of each
-render test whose component now calls it (a factory mock throws on an export it lacks). api.ts
-itself is testable with `vi.stubGlobal("fetch", ...)` plus `vi.mock("@/lib/auth")`.
+render test whose component now calls it (a factory mock throws on an export it lacks).
+`api.test.ts` pins the `request()` contract with `vi.stubGlobal("fetch", ...)` plus
+`vi.mock("@/lib/auth")`.
 
 ## Offline queue (`offline.ts`)
 
@@ -56,7 +56,8 @@ itself is testable with `vi.stubGlobal("fetch", ...)` plus `vi.mock("@/lib/auth"
   stops at the first offline or 401 (kept for the next sign-in) and drops what the server refused.
   Entries are removed by value, not index: another tab may have sent the head meanwhile.
 - `enqueue` doesn't collapse during a flush: a delete folded into an in-flight create is lost.
-- `drainQueue` holds one of the five copies of the settle predicate (`hooks/CLAUDE.md`).
+- `shouldQueue(error)` is the settle predicate (offline or 401); `drainQueue` uses it, the four
+  copies in hooks and `edit-task.tsx` should too (`hooks/CLAUDE.md`).
 - Storage keys are a persisted contract (renaming drops queued writes):
   `dailify:{tasks,outbox,undated}:<userId>`, `dailify:last-user`, `mewki:mew:<userId>:v1`
   (`chatKey`, read by `components/mew-chat/thread.ts`); `clearLocal` removes all but device-wide ones
@@ -73,8 +74,9 @@ itself is testable with `vi.stubGlobal("fetch", ...)` plus `vi.mock("@/lib/auth"
 
 ## Copy and tests
 
-- Helpers read pt-BR from `@/components/dashboard/copy`. The `.replace` chains in `repeat-label` and
-  `quota-label` and the api.ts fallback messages are legacy
+- Helpers read pt-BR from `@/components/dashboard/copy`. The `.replace` in `repeat-label` (its
+  value is a number; `fill` would be a cycle with `functions.ts`) and the api.ts fallback messages
+  are legacy
   ([Copy](../../../../RULES.md#copy-and-i18n)).
 - Harness and jsdom opt-in: `apps/web/CLAUDE.md`. A module that calls the API mocks `./api` through
   `vi.hoisted`, as `offline.test.ts` does.

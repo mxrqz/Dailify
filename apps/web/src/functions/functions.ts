@@ -1,13 +1,5 @@
 import { TaskProps } from "@/types/types";
-import {
-  addMonths,
-  eachDayOfInterval,
-  endOfMonth,
-  format,
-  isSameMonth,
-  startOfMonth,
-} from "date-fns";
-import { enUS, ptBR } from "date-fns/locale";
+import { addMonths, eachDayOfInterval, endOfMonth, isSameMonth, startOfMonth } from "date-fns";
 import type { TaskCardData } from "@/components/task-card";
 import { expandRecurringTask, seriesOf, zonedParts } from "@dailify/shared";
 
@@ -20,36 +12,13 @@ export const capitalize = (value: string) => value.charAt(0).toUpperCase() + val
 export const fill = (template: string, values: Record<string, string | number>) =>
   template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""));
 
-export const returnFractedDate = (date: Date) => {
-  const day = date.getDate();
-  const month = date.getMonth() + 1;
-  const year = date.getFullYear();
+const pad2 = (n: number) => String(n).padStart(2, "0");
 
-  return { day, month, year };
-};
-
-export function getTime(
-  time: number,
-  format: "{hours, minutes}",
-): { hours: number; minutes: number };
-export function getTime(time: number, format: "HH:MM"): string;
-export function getTime(time: number, format: "{hours, minutes}" | "HH:MM") {
+/** Zero-padded "HH:MM" in the app zone. */
+export function getTime(time: number, format: "HH:MM"): string {
   const date = zoned(time);
-  const hours = date.getHours();
-  const minutes = date.getMinutes();
-
-  if (format === "{hours, minutes}") return { hours, minutes };
-  if (format === "HH:MM") {
-    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
-  }
-
-  return "";
+  return format.replace("HH", pad2(date.getHours())).replace("MM", pad2(date.getMinutes()));
 }
-
-export const formatDateByLocale = (date: Date, locale: string) => {
-  const dateLocale = locale.startsWith("pt") ? ptBR : enUS;
-  return format(date, "PPPP", { locale: dateLocale });
-};
 
 /** Concluída no dia do calendário de `selectedDay`: faixa numérica, sem formatar cada `completed`. */
 export function getCompletionDate(task: TaskProps, selectedDay: Date) {
@@ -89,19 +58,10 @@ export function getTasksForDay(tasks: TaskProps[], day: Date): readonly TaskProp
   return index.byDay.get(dayKey(+day, zone)) ?? NO_TASKS;
 }
 
-/** Append `task` to the list, or replace the existing entry with the same id. */
-export function upsertTaskById(tasks: TaskProps[], task: TaskProps): TaskProps[] {
-  const i = tasks.findIndex((t) => t.id === task.id);
-  if (i === -1) return [...tasks, task];
-  const next = [...tasks];
-  next[i] = task;
-  return next;
-}
-
 /**
  * Troca a tarefa e reconstrói as instâncias recorrentes do mês visível. O servidor só expande a
- * recorrência no GET, e as instâncias dividem o id da original — `upsertTaskById` trocaria só a
- * primeira. Sem isto, virar "não repetir" em "diária" (ou renomear uma recorrente) só aparecia no
+ * recorrência no GET, e as instâncias dividem o id da original — trocar só a entrada com o id
+ * trocaria só a primeira. Sem isto, virar "não repetir" em "diária" (ou renomear uma recorrente) só aparecia no
  * próximo carregamento.
  */
 export function upsertTaskWithRecurrence(
@@ -139,9 +99,12 @@ export function listDays({
   keepStart?: boolean;
 }): Date[] {
   // Uma passada nas tarefas, não uma por dia: com meses carregados o filtro virava O(dias × tarefas).
-  const keep = new Set([...tasks.map((t) => t.date), ...extra].map((d) => zoned(d).toDateString()));
+  const zone = appTimeZone();
+  const keep = new Set(
+    [...tasks.map((t) => t.date), ...extra.map(Number)].map((ms) => dayKey(ms, zone)),
+  );
   return eachDayOfInterval({ start, end }).filter(
-    (day, i) => (keepStart && i === 0) || keep.has(day.toDateString()),
+    (day, i) => (keepStart && i === 0) || keep.has(dayKey(+day, zone)),
   );
 }
 
@@ -166,14 +129,6 @@ export function mergeMonth(tasks: TaskProps[], month: Date, fetched: TaskProps[]
   return [...tasks.filter((t) => t.date < from || t.date > to), ...fetched];
 }
 
-export function getNextTask(currentMonthTasks: TaskProps[]) {
-  const now = Date.now();
-  const orderedTasks = [...currentMonthTasks].sort((a, b) => a.date - b.date);
-  const nextTask = orderedTasks.find((task) => task.date > now);
-
-  return nextTask;
-}
-
 export function isTaskModified(task: TaskProps, updated: TaskProps): boolean {
   if (task.title !== updated.title) return true;
   if (task.duration !== updated.duration) return true;
@@ -192,10 +147,6 @@ export function isTaskModified(task: TaskProps, updated: TaskProps): boolean {
   return false;
 }
 
-export function unixToDate(unix: number): Date {
-  return zoned(unix * 1000);
-}
-
 export interface TimeGroup {
   /** "HH:MM" zero-padded, o mesmo formato de `getTime(date, "HH:MM")`. */
   time: string;
@@ -204,9 +155,8 @@ export interface TimeGroup {
 
 /** Agrupa as tarefas do dia pela hora cheia ("16:00" junta 16:00 e 16:45), em ordem. Não muta. */
 export function groupTasksByHour(tasks: ReadonlyArray<TaskProps>): TimeGroup[] {
-  const sorted = [...tasks].sort(
-    (a, b) => timeToMinutes(getTime(a.date, "HH:MM")) - timeToMinutes(getTime(b.date, "HH:MM")),
-  );
+  // One day's tasks: epoch order is clock order.
+  const sorted = [...tasks].sort((a, b) => a.date - b.date);
   const byHour = new Map<string, TaskProps[]>();
   for (const task of sorted) {
     const hour = `${getTime(task.date, "HH:MM").slice(0, 2)}:00`;
@@ -250,14 +200,4 @@ export function formatClock(time: string, hour12: boolean): string {
   const [hours, minutes] = time.split(":");
   const h = Number(hours);
   return `${String(h % 12 || 12).padStart(2, "0")}:${minutes} ${h < 12 ? "AM" : "PM"}`;
-}
-
-/** Minutos daqui até o "HH:MM" de hoje. Negativo quando o horário já passou. */
-export function minutesUntil(time: string, now: Date): number {
-  return timeToMinutes(time) - (now.getHours() * 60 + now.getMinutes());
-}
-
-/** Índice do primeiro grupo que ainda não começou; -1 quando o dia inteiro já passou. */
-export function nextGroupIndex(groups: ReadonlyArray<Pick<TimeGroup, "time">>, now: Date): number {
-  return groups.findIndex((group) => minutesUntil(group.time, now) >= 0);
 }

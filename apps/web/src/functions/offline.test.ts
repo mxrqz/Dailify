@@ -21,8 +21,18 @@ import {
   flushQueue,
   readQueue,
   rememberUser,
+  shouldQueue,
   type Mutation,
 } from "./offline";
+
+describe("shouldQueue", () => {
+  test("queues offline and 401 errors, nothing else", () => {
+    expect(shouldQueue({ message: "", offline: true })).toBe(true);
+    expect(shouldQueue({ message: "", offline: false, status: 401 })).toBe(true);
+    expect(shouldQueue({ message: "", offline: false, status: 500 })).toBe(false);
+    expect(shouldQueue(undefined)).toBe(false);
+  });
+});
 
 const input = {
   title: "Dentista",

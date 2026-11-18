@@ -1,19 +1,14 @@
 import { afterEach, describe, test, expect } from "vitest";
 import { addDays, endOfMonth, format, isSameMonth, startOfDay, startOfMonth } from "date-fns";
 import {
-  getNextTask,
   isTaskModified,
   getCompletionDate,
   getTasksForDay,
-  upsertTaskById,
   getTime,
-  returnFractedDate,
-  unixToDate,
   fill,
   formatClock,
   groupTasksByHour,
   taskToCardData,
-  nextGroupIndex,
   upsertTaskWithRecurrence,
   mergeMonth,
   initialMonths,
@@ -36,31 +31,6 @@ function makeTask(over: Partial<TaskProps> = {}): TaskProps {
     ...over,
   };
 }
-
-describe("getNextTask", () => {
-  test("does not mutate the input array", () => {
-    const a = makeTask({ id: "a", date: new Date(2026, 7, 10).getTime() });
-    const b = makeTask({ id: "b", date: new Date(2026, 7, 5).getTime() });
-    const input = [a, b];
-    getNextTask(input);
-    expect(input.map((t) => t.id)).toEqual(["a", "b"]);
-  });
-
-  test("returns the nearest future task, ignoring past ones", () => {
-    const past = makeTask({ id: "past", date: Date.now() - 86_400_000 });
-    const soon = makeTask({ id: "soon", date: Date.now() + 3_600_000 });
-    const later = makeTask({ id: "later", date: Date.now() + 7_200_000 });
-    expect(getNextTask([later, past, soon])?.id).toBe("soon");
-  });
-
-  test("returns undefined when every task is in the past", () => {
-    expect(getNextTask([makeTask({ date: Date.now() - 86_400_000 })])).toBeUndefined();
-  });
-
-  test("returns undefined for an empty list", () => {
-    expect(getNextTask([])).toBeUndefined();
-  });
-});
 
 describe("isTaskModified", () => {
   test("returns false when nothing changed", () => {
@@ -194,27 +164,8 @@ describe("índice por dia e faixas numéricas ≡ comparação por TZDate", () =
 });
 
 describe("small date helpers", () => {
-  test("returnFractedDate splits a date", () => {
-    expect(returnFractedDate(new Date(2026, 7, 1))).toEqual({ day: 1, month: 8, year: 2026 });
-  });
-
   test("getTime formats HH:MM zero-padded", () => {
     expect(getTime(new Date(2026, 7, 1, 9, 5).getTime(), "HH:MM")).toBe("09:05");
-  });
-
-  test("unixToDate converts seconds to a Date", () => {
-    expect(unixToDate(0).getTime()).toBe(0);
-  });
-});
-
-describe("upsertTaskById", () => {
-  test("appends a new id and replaces an existing one", () => {
-    const a = makeTask({ id: "a", title: "old" });
-    const b = makeTask({ id: "b" });
-    expect(upsertTaskById([a], b).map((t) => t.id)).toEqual(["a", "b"]);
-    const out = upsertTaskById([a], makeTask({ id: "a", title: "new" }));
-    expect(out).toHaveLength(1);
-    expect(out[0].title).toBe("new");
   });
 });
 
@@ -284,32 +235,6 @@ describe("taskToCardData", () => {
 
   test("completed is false (never undefined) for an empty completed list", () => {
     expect(taskToCardData(makeTask({ completed: [] }), day).completed).toBe(false);
-  });
-});
-
-describe("nextGroupIndex", () => {
-  const at = (h: number, m: number) => new Date(2026, 7, 10, h, m);
-  const groups = [{ time: "09:00" }, { time: "11:00" }, { time: "14:30" }];
-
-  test("0 when nothing has started yet", () => {
-    expect(nextGroupIndex(groups, at(7, 0))).toBe(0);
-  });
-
-  test("the first group still ahead", () => {
-    expect(nextGroupIndex(groups, at(10, 0))).toBe(1);
-    expect(nextGroupIndex(groups, at(12, 0))).toBe(2);
-  });
-
-  test("-1 when the whole day is behind — everything on screen is past", () => {
-    expect(nextGroupIndex(groups, at(18, 0))).toBe(-1);
-  });
-
-  test("a group starting exactly now is the next one, not a past one", () => {
-    expect(nextGroupIndex(groups, at(11, 0))).toBe(1);
-  });
-
-  test("-1 on an empty day", () => {
-    expect(nextGroupIndex([], at(12, 0))).toBe(-1);
   });
 });
 
