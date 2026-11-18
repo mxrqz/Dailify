@@ -68,8 +68,8 @@ Naming, pragma, clock, mocking and query rules: RULES.md "Testing". The harness 
   `setAppTimeZone(tz)` and reset it to `null` in `afterEach` (`functions/functions.test.ts`).
 - Timeouts are vitest's defaults (5 s per test, 10 s per hook), which the parallel root `check`
   stretches. `vi.resetModules()` plus a dynamic import in `beforeEach` cold-loads the module graph
-  inside the hook; also import that module statically so it loads at collection.
-  `components/duplicates-sheet.render.test.tsx` doesn't yet and times out there (bd `Dailify-nhp`).
+  inside the hook; also import that module statically so it loads at collection, as
+  `components/duplicates-sheet.render.test.tsx` does.
 - `userEvent.setup({ pointerEventsCheck: 0 })` only where a Radix overlay needs it (create-fab).
 - A facet needing its own mocks gets its own `<name>.<facet>.render.test.tsx`
   (`dashboard/task-composer.calendar`, `.voice`) instead of another `describe`.
