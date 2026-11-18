@@ -15,8 +15,10 @@ import { useQuotas } from "@/hooks/useQuotas";
 import { useSession } from "@/lib/auth";
 
 import { useMewApply } from "./apply";
-import { ChatDrawer, ChatInput, type Photo } from "./chat-drawer";
+import { ChatDrawer } from "./chat-drawer";
+import { ChatInput } from "./chat-input";
 import { CreateDock } from "./dock";
+import type { Photo } from "./photo";
 import {
   type ChatAction,
   type ConfirmBlock,

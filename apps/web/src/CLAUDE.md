@@ -73,7 +73,7 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
 - `focus-ring` is the only focus style (`ring-3 ring-ring/50` on `focus-visible`); group-driven
   focus spells out the same values. `caps` is the mono uppercase label.
 - `word-in` reads `--i`, `delay-words(-lag)` reads `--words`, set through the typed `cssVar()` in
-  `components/mew-chat/chat-drawer.tsx`.
+  `components/mew-chat/bubbles.tsx`.
 
 ## cn(), offenders, z layers
 
@@ -95,7 +95,7 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
   via `getComputedStyle`. `ease-out` overrides Tailwind's default curve; a `transition-*` with no
   duration gets `duration-fast` and `ease-out`.
 - Exceptions to transform/opacity: the `grid-template-rows` reveal (`starting:grid-rows-[0fr]`, the
-  Reveal in chat-drawer) and the side column's width and margin (`dashboard/undated-column.tsx`).
+  Reveal in `mew-chat/bubbles.tsx`) and the side column's width and margin (`dashboard/undated-column.tsx`).
 - Motion corrects a radius during a layout morph only when it comes through `style`, so a morphing
   surface takes a px number equal to its token: `radius.panel` from `@/consts/motion` (tested).
   `create-fab.tsx`: `RADIUS_PANEL` = 22 (`--radius-panel`), `RADIUS_FAB` = 14 (`--radius-md`).

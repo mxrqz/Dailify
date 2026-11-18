@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import type { MewIntent } from "@dailify/shared";
 
-import { moodOf } from "./chat-drawer";
+import { moodOf } from "./mood";
 import type { Message, Step } from "./thread";
 
 const mew = (

@@ -11,8 +11,10 @@ applied to the agenda.
 - `mew-chat.tsx`: container (session, API, quotas, consent, scrim, the dock).
 - `dock.tsx`: `CreateDock`, the mobile pill that opens the chat and becomes its input, and
   `DockButton`.
-- `chat-drawer.tsx`: `ChatDrawer`, `ChatInput`, `moodOf` and the photo scaling. Its rows read `hour12`
-  from `useDailify`, so it is not a provider-free View yet.
+- `chat-drawer.tsx`: `ChatDrawer` (header, log, empty state, consent card). `bubbles.tsx`: `Mine`,
+  `Reply`, `Reveal`. `confirm-box.tsx`: `ConfirmBody` and the task `Row`, which read `hour12` from
+  `useDailify`, so they are not provider-free Views yet. `chat-input.tsx`: `ChatInput`.
+  `photo.ts`: thumbnail and upload scaling. `mood.ts`: `moodOf`.
 
 ## Invariants
 
@@ -51,7 +53,7 @@ applied to the agenda.
 - A chat action: a `ChatAction` member and its `chatReducer` case, a `thread.test.ts` case; if it
   writes, wire it in `act()`.
 - A server block kind: add it to `MewBlock` (shared `mew.ts`), widen `Block` in thread.ts, render it
-  in `Reply`, and update `moodOf` if it should change the mood.
+  in `Reply` (`bubbles.tsx`), and update `moodOf` if it should change the mood.
 
 ## Known debt
 
