@@ -65,6 +65,8 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
 - The plan comes from `planLine` (the first non-proration subscription line): after a plan change
   Stripe lists the prorations, priced at the old plan, first. An unknown price never writes a role.
   `listInvoices` reads each invoice's own plan line and fetches a shared subscription once.
+- Stripe doesn't order events: `handleInvoicePaid` and the subscription webhook re-read the
+  subscription and grant a paid role only for a `PAYING` status.
 - `stripeClient` sets a 20 s timeout (SDK default 80 s).
 
 ## occurrence-alert

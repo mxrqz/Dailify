@@ -12,6 +12,7 @@ import {
   handleInvoicePaid,
   isProductName,
   listInvoices,
+  PAYING,
   priceMap,
   roleForPrice,
   stripeClient,
@@ -105,8 +106,6 @@ billing.get("/billing/invoices", async (c) => {
   return c.json(invoices);
 });
 
-const PAYING = new Set<Stripe.Subscription.Status>(["active", "trialing", "past_due"]);
-
 billing.post("/webhooks/stripe", async (c) => {
   const sig = c.req.header("stripe-signature");
   const raw = await c.req.text();
@@ -121,7 +120,7 @@ billing.post("/webhooks/stripe", async (c) => {
   }
 
   if (event.type === "invoice.paid") {
-    await handleInvoicePaid(c.env, event.data.object);
+    await handleInvoicePaid(c.env, stripe, event.data.object);
   } else if (
     event.type === "customer.subscription.deleted" ||
     event.type === "customer.subscription.updated"
