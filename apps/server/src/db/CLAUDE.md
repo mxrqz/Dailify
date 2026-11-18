@@ -41,7 +41,7 @@ SQL still outside db/, to move here: `lib/user.ts` and `middleware/auth.ts` (`"u
 - integrations, calendar-sync and mew take `now: number`; `saveSubscription` and `saveSettings`
   still call `Date.now()`.
 - New names: verb first, `get*` one or null, `list*` many, `count*` a number. Outliers, renamed when
-  touched: `getMonthTasks`/`getUndatedTasks` (many), `subscriptionsOf` (a count), `dueAlerts`.
+  touched: `getMonthTasks`/`getUndatedTasks` (many), `dueAlerts`.
 
 ## Invariants
 

@@ -166,7 +166,14 @@ export async function sendPush(
   subscription: PushSubscriptionKeys,
   payload: unknown,
 ): Promise<number> {
-  const body = await encryptPayload(JSON.stringify(payload), subscription);
+  let body: Uint8Array;
+  try {
+    body = await encryptPayload(JSON.stringify(payload), subscription);
+  } catch (err) {
+    // Keys that can't encrypt never will: answer as a dead subscription so the caller drops it.
+    console.error("push keys unusable", subscription.endpoint, err);
+    return 410;
+  }
   const res = await fetch(subscription.endpoint, {
     method: "POST",
     headers: {

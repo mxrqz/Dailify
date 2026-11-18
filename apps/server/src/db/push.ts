@@ -43,7 +43,7 @@ export async function deleteSubscriptionByEndpoint(
   await db.prepare(`DELETE FROM push_subscriptions WHERE endpoint=?`).bind(endpoint).run();
 }
 
-export async function subscriptionsOf(db: D1Database, userId: string): Promise<number> {
+export async function countSubscriptions(db: D1Database, userId: string): Promise<number> {
   const row = await db
     .prepare(`SELECT COUNT(*) as n FROM push_subscriptions WHERE user_id=?`)
     .bind(userId)
@@ -146,8 +146,10 @@ export async function dueAlerts(
  */
 export async function recurringAlertCandidates(
   db: D1Database,
-  // ponytail: no ORDER BY, so past the 200th series the rest are starved, not delayed (ended
-  // series hold slots too); the upgrade is a Queues fan-out or a cursor carried across passes.
+  now: number,
+  graceMs: number,
+  // ponytail: no ORDER BY, so past the 200th series the rest are starved, not delayed; the
+  // upgrade is a Queues fan-out or a cursor carried across passes.
   limit = 200,
 ): Promise<RecurringCandidate[]> {
   const { results } = await db
@@ -158,10 +160,11 @@ export async function recurringAlertCandidates(
        FROM tasks t
        LEFT JOIN user_settings s ON s.user_id = t.user_id
        WHERE t.alert IS NOT NULL AND t.repeat_kind != 'Off'
+         AND (t.repeat_until IS NULL OR t.repeat_until + (t.alert - t.date) >= ?)
          AND EXISTS (SELECT 1 FROM push_subscriptions p WHERE p.user_id = t.user_id)
        LIMIT ?`,
     )
-    .bind(limit)
+    .bind(now - graceMs, limit)
     .all<
       TaskRow & { alert_sent: number | null; timezone: string | null; week_start: number | null }
     >();
@@ -184,14 +187,6 @@ export interface RecurringCandidate {
 }
 
 /** Marca até onde a série já foi avisada (o instante do alerta da ocorrência, não o do envio). */
-export async function markOccurrenceAlerted(
-  db: D1Database,
-  id: string,
-  alertAt: number,
-): Promise<void> {
-  await markOccurrenceAlertedStatement(db, id, alertAt).run();
-}
-
 export function markOccurrenceAlertedStatement(
   db: D1Database,
   id: string,
