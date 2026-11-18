@@ -56,8 +56,7 @@ import { cn } from "@/lib/utils";
 const chipClass =
   "pointer-events-auto inline-flex w-fit shrink-0 cursor-default items-center gap-1 " +
   "overflow-hidden rounded-md px-2 py-0.5 text-sm font-normal whitespace-nowrap " +
-  "text-content-secondary transition-colors outline-none hover:bg-surface-panel " +
-  "focus-visible:ring-3 focus-visible:ring-ring/50";
+  "text-ink-secondary transition-colors focus-ring hover:bg-surface-raised";
 
 type ChipProps = ComponentPropsWithoutRef<"button"> & {
   editable?: boolean;
@@ -116,7 +115,7 @@ const LinkChip = forwardRef<HTMLButtonElement, { links: string[] } & MetaChipPro
           ref={ref}
           editable
           label={copy.task.editLinks}
-          className="max-w-40 hover:text-foreground"
+          className="max-w-40 hover:text-ink"
           {...props}
         >
           {body}
@@ -130,7 +129,7 @@ const LinkChip = forwardRef<HTMLButtonElement, { links: string[] } & MetaChipPro
         rel="noreferrer"
         onClick={(e) => e.stopPropagation()}
         aria-label={linkLabel(first)}
-        className={cn(chipClass, "max-w-40 hover:text-foreground")}
+        className={cn(chipClass, "max-w-40 hover:text-ink")}
       >
         {body}
       </a>
@@ -188,7 +187,7 @@ const PriorityChip = forwardRef<HTMLButtonElement, { priority?: number } & MetaC
  */
 const toolbarClass =
   "pointer-events-none absolute -top-7 right-2 z-20 flex items-center gap-0.5 rounded-md " +
-  "border border-surface-line bg-surface-panel p-0.5 opacity-0 shadow-elevation-1 " +
+  "border border-separator bg-surface-raised p-0.5 opacity-0 shadow-elevation-1 " +
   "transition-opacity " +
   "group-hover:pointer-events-auto group-hover:opacity-100 focus-within:pointer-events-auto " +
   "focus-within:opacity-100 has-[[data-state=open]]:pointer-events-auto " +
@@ -209,7 +208,7 @@ export const ToolbarButton = forwardRef<
         type="button"
         aria-label={label}
         className={cn(
-          "flex size-8 items-center justify-center rounded-sm text-muted-foreground outline-none transition-colors hover:bg-surface-hover hover:text-foreground focus-visible:ring-3 focus-visible:ring-ring/50",
+          "flex size-8 items-center justify-center rounded-sm text-ink-secondary focus-ring transition-colors hover:bg-fill hover:text-ink",
           className,
         )}
         {...props}
@@ -366,8 +365,8 @@ function TitleField({
         "relative z-10 mr-auto -ml-2 min-w-[15ch] max-w-1/2 truncate rounded-md bg-transparent px-2 py-0.5",
         "field-sizing-content",
         "text-sm font-medium outline-none transition-colors",
-        "hover:bg-surface-panel pointer-fine:focus:bg-surface-panel",
-        completed ? "text-muted-foreground line-through" : "text-foreground",
+        "hover:bg-surface-raised pointer-fine:focus:bg-surface-raised",
+        completed ? "text-ink-secondary line-through" : "text-ink",
       )}
     />
   );
@@ -411,8 +410,8 @@ function CardBody({
       <div
         className={cn(
           "group relative min-w-0 rounded-lg border bg-transparent px-3 py-2.5",
-          selected && !loading ? "border-accent-primary" : "border-surface-line",
-          onClick && !loading && "transition-colors hover:bg-surface-hover",
+          selected && !loading ? "border-brand" : "border-separator",
+          onClick && !loading && "transition-colors hover:bg-fill",
         )}
       >
         {/* Overlay clicável em vez de envolver tudo num <button>: check e chips também são botões, e
@@ -422,7 +421,7 @@ function CardBody({
             type="button"
             onClick={onClick}
             aria-label={title}
-            className="absolute inset-0 z-0 cursor-default rounded-lg outline-none focus-visible:ring-3 focus-visible:ring-ring/50"
+            className="absolute inset-0 z-0 cursor-default rounded-lg focus-ring"
           />
         )}
 
@@ -454,7 +453,7 @@ function CardBody({
             )}
             {edit.calendar}
             {(edit.complete || edit.remove) && (
-              <span className="mx-0.5 h-5 w-px bg-surface-line" aria-hidden="true" />
+              <span className="mx-0.5 h-5 w-px bg-separator" aria-hidden="true" />
             )}
             {edit.remove && (
               <ToolbarButton label={copy.task.delete} onClick={edit.remove}>
@@ -486,7 +485,7 @@ function CardBody({
             <span
               className={cn(
                 "min-w-0 flex-1 truncate text-sm font-medium",
-                completed ? "text-muted-foreground line-through" : "text-foreground",
+                completed ? "text-ink-secondary line-through" : "text-ink",
               )}
             >
               {title}

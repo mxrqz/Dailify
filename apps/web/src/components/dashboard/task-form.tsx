@@ -165,7 +165,7 @@ function WeekdayToggle({
           <Chip
             key={day}
             variant="select"
-            size="sm"
+            size="square"
             pressed={on}
             disabled={disabled}
             onClick={() => {
@@ -173,7 +173,6 @@ function WeekdayToggle({
               if (on && value.length === 1) return;
               onChange(on ? value.filter((d) => d !== day) : [...value, day]);
             }}
-            className="size-10 justify-center px-0"
           >
             {copy.form.repeatDays[dayMap[day]]}
           </Chip>
@@ -416,7 +415,7 @@ export function TaskForm({
               onClick={() => onView("title")}
               disabled={locked}
               className={cn(
-                "self-start rounded-xs text-left text-title-3 font-semibold outline-none focus-visible:ring-[3px] focus-visible:ring-ring/50",
+                "self-start rounded-xs text-left text-title-3 font-semibold focus-ring",
                 !title && "text-ink-secondary",
               )}
             >

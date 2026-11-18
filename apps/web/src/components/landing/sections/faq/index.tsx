@@ -25,7 +25,7 @@ export function FaqV2() {
                     aria-expanded={isOpen}
                     aria-controls={`${id}-a${i}`}
                     onClick={() => setOpen(isOpen ? null : i)}
-                    className="flex min-h-14 w-full cursor-pointer items-center justify-between gap-4 rounded-md px-4.5 py-3.5 text-left text-lg leading-snug font-semibold tracking-tight text-ink outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-inset"
+                    className="flex min-h-14 w-full cursor-pointer items-center justify-between gap-4 rounded-md px-4.5 py-3.5 text-left text-lg leading-snug font-semibold tracking-tight text-ink focus-ring focus-visible:ring-inset"
                   >
                     <span>{q}</span>
                     <ChevronDown

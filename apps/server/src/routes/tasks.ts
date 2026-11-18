@@ -1,5 +1,4 @@
 import { Hono } from "hono";
-import { nanoid } from "nanoid";
 import type { AppEnv } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
@@ -15,10 +14,10 @@ import {
   excludeOccurrence,
 } from "../db/tasks";
 import { enforceCreate } from "../db/limits";
-import type { OccurrenceEdit, Task } from "@dailify/shared";
+import { isRecord, type OccurrenceEdit, type Task } from "@dailify/shared";
 import {
   isEpochMs,
-  isRecord,
+  newTaskId,
   parseClientId,
   parseMonth,
   parseNewTask,
@@ -65,7 +64,7 @@ tasks.post("/", async (c) => {
   // MESMA conta — colisão entre contas não sobrescreve nada, e vira 409 aqui embaixo.
   const clientId = parseClientId(body);
   if (clientId === "invalid") return fail(c, 400, "invalid id");
-  const task: Task = { ...parsed.task, id: clientId ?? nanoid(6) };
+  const task: Task = { ...parsed.task, id: clientId ?? newTaskId() };
   const err = await enforceCreate(c.env.DB, userId, c.get("plan"), task);
   if (err) return fail(c, 429, err);
   // Devolve o que ficou GRAVADO: numa reentrada da fila o upsert pode ter recusado a escrita por
@@ -89,7 +88,7 @@ tasks.patch("/:id", async (c) => {
   const at = parseOccurrence(c.req.query("occurrence"));
   if (at === "invalid") return fail(c, 400, "invalid occurrence");
   if (at !== undefined) {
-    const detached = await detachOccurrence(c.env.DB, userId, id, at, parsed.fields, nanoid(6));
+    const detached = await detachOccurrence(c.env.DB, userId, id, at, parsed.fields, newTaskId());
     if (!detached) return fail(c, 404, "Recurring task not found");
     if (linked) {
       const ctx = { env: c.env, userId };

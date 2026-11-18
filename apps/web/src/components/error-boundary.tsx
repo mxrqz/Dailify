@@ -29,9 +29,9 @@ export class ErrorBoundary extends Component<Props, State> {
     if (!this.state.hasError) return this.props.children;
 
     return (
-      <div className="flex h-dvh w-full flex-col items-center justify-center gap-4 bg-background p-6 text-center">
-        <h1 className="text-2xl font-bold text-foreground">Algo deu errado</h1>
-        <p className="max-w-md text-muted-foreground">
+      <div className="flex h-dvh w-full flex-col items-center justify-center gap-4 bg-canvas p-6 text-center">
+        <h1 className="text-2xl font-bold text-ink">Algo deu errado</h1>
+        <p className="max-w-md text-ink-secondary">
           Ocorreu um erro inesperado. Tente recarregar a página.
         </p>
         <Button onClick={() => window.location.reload()}>Recarregar</Button>

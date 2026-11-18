@@ -4,7 +4,7 @@ import {
   deleteSubscriptionByEndpoint,
   dueAlerts,
   markAlertsSent,
-  markOccurrenceAlerted,
+  markOccurrenceAlertedStatement,
   recurringAlertCandidates,
   subscriptionsFor,
   type DueAlert,
@@ -68,9 +68,7 @@ export async function dispatchAlerts(env: Env, now: number = Date.now()): Promis
     now,
   );
   // A série guarda até QUAL ocorrência foi avisada, não a hora do envio — a próxima ainda vem.
-  for (const { taskId, alertAt } of recurring) {
-    await markOccurrenceAlerted(env.DB, taskId, alertAt);
-  }
+  await markOccurrences(env, recurring);
   return sent;
 }
 
@@ -86,8 +84,9 @@ async function dueRecurring(
   env: Env,
   now: number,
 ): Promise<{ taskId: string; alertAt: number; outgoing: Outgoing }[]> {
-  const candidates = await recurringAlertCandidates(env.DB);
+  const candidates = await recurringAlertCandidates(env.DB, now, GRACE_MS);
   const out: { taskId: string; alertAt: number; outgoing: Outgoing }[] = [];
+  const skipped: { taskId: string; alertAt: number }[] = [];
 
   for (const { task, userId, alertSent, timeZone, weekStart } of candidates) {
     const alertAt = dueOccurrenceAlert(task, alertSent, timeZone, now, GRACE_MS);
@@ -95,7 +94,7 @@ async function dueRecurring(
 
     // Sem data já feita no período: não avisa, mas marca para não reavaliar a cada passada.
     if (task.undated && doneThisPeriod(task, now, weekStart, timeZone)) {
-      await markOccurrenceAlerted(env.DB, task.id, alertAt);
+      skipped.push({ taskId: task.id, alertAt });
       continue;
     }
 
@@ -106,5 +105,14 @@ async function dueRecurring(
       outgoing: { taskId: task.id, userId, title: task.title, at: alertAt - offset },
     });
   }
+  await markOccurrences(env, skipped);
   return out;
+}
+
+// One batch per pass: a statement per series would spend the invocation's query budget.
+async function markOccurrences(env: Env, marks: { taskId: string; alertAt: number }[]) {
+  if (!marks.length) return;
+  await env.DB.batch(
+    marks.map(({ taskId, alertAt }) => markOccurrenceAlertedStatement(env.DB, taskId, alertAt)),
+  );
 }

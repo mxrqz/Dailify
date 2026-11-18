@@ -18,6 +18,7 @@ import { Bubble } from "@/components/landing/kit/bubble";
 import { Tail } from "@/components/landing/kit/tail";
 import { Mew } from "@/components/mew/mew";
 import { damp } from "@/components/mew/spring";
+import { duration } from "@/consts/motion";
 import { cn } from "@/lib/utils";
 
 import { type RowKind, copy } from "./copy";
@@ -377,7 +378,7 @@ export function HeroScene() {
                         "inline-block transition-[opacity,filter,translate] duration-420 ease-out starting:translate-y-1 starting:opacity-0 starting:blur-xs",
                         w.strong && "font-semibold text-brand-text",
                       )}
-                      style={{ transitionDelay: `${k * 38 + 120}ms` }}
+                      style={{ transitionDelay: `${k * (duration.stagger * 1000) + 120}ms` }}
                     >
                       {w.text}
                     </span>

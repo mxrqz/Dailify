@@ -6,7 +6,7 @@ mockSession(() => ({ id: "u1" }));
 
 import { env } from "cloudflare:test";
 import app from "../src/index";
-import { deleteUserData } from "../src/db/tasks";
+import { deleteUserData } from "../src/db/user";
 
 const put = (body: string) =>
   app.request(

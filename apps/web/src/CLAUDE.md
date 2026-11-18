@@ -7,7 +7,7 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
 
 - Header: `@import "tailwindcss"`, `@plugin "tailwindcss-animate"` (the v3 plugin behind the
   `data-[state]:animate-in/fade-in-0/zoom-in-95` classes in `ui/`), `@custom-variant dark`.
-- `:root`: every raw value (`--motion-*`, DS palette, shadows, legacy aliases, widths, `--layer-*`).
+- `:root`: every raw value (`--motion-*`, DS palette, shadows, the shadcn bridge, widths, `--layer-*`).
   `.dark`/`.light` only set `color-scheme`; `components/theme-provider.tsx` puts one on `<html>`.
 - `@theme inline`: var mappings that generate utilities (`--color-*`, `--radius-*`, `--shadow-*`,
   `--width-*`, `--max-width-*`, `--z-index-*`, `--transition-duration-*`, `--ease-*`) and the
@@ -39,12 +39,14 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
   `brand-text` (red text, errors, focus), `brand-soft(-pressed)`, `on-brand`,
   `material-bar(-solid)`, `scrim`, `meta-*(-subtle)`, `priority-0..4`, `success(-soft|-soft-strong)`,
   `control-mark`.
-- Legacy to DS: `foreground` → `ink`; `muted-foreground`, `content-secondary` → `ink-secondary`;
-  `surface-line`, `highlight`, `border` → `separator`; `surface-hover`, `accent`, `muted` → `fill`;
-  `surface-panel`, `surface-popover` → `surface-raised`; `background`, `surface-page` → `canvas`;
-  `surface-card`, `card` → `surface`; `accent-primary`, `primary` → `brand`; `accent-hover` →
-  `brand-pressed`; `destructive` → `brand-text`. `ui/` menus keep `bg-surface-popover`.
-- An alias like `--surface-hover: var(--fill)` is computed on `:root` and inherited as a value, so
+- The shadcn bridge (`foreground`, `muted(-foreground)`, `accent(-foreground)`, `popover*`,
+  `primary*`, `destructive*`, `border`, `input`, `ring`) and `surface-panel|popover|line` exist only
+  for `ui/`; app code has none left. Mapping when touching `ui/`: `foreground` → `ink`;
+  `muted-foreground` → `ink-secondary`; `surface-line`, `border` → `separator`; `accent`, `muted` →
+  `fill`; `surface-panel`, `surface-popover` → `surface-raised`; `primary` → `brand`; `destructive`
+  → `brand-text`. `ui/` menus keep `bg-surface-popover`. Drop a bridge var once `ui/` stops using
+  it.
+- An alias like `--muted: var(--fill)` is computed on `:root` and inherited as a value, so
   `glass`'s override reaches only `bg-surface`, `bg-fill`, `bg-fill-pressed` and `card`.
 - `light-dark()` in a custom property resolves where a real property uses it, so `.light`/`.dark`
   on any element flips its subtree; `.light` re-sets `color`, which arrives already resolved. No
@@ -77,10 +79,11 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
 
 - twMerge knows the custom `text-*`, `rounded-*`, `shadow-*`, `ease-*`, `duration-*`, `z-*`,
   `w-sheet|undated`, `max-w-bubble`, `max-h-sheet`, `h-bar|below-bar`, `pb-*`, `pt-safe`,
-  `top-safe`, `px-gutter`, `pr-gutter`. Still unregistered: `scroll-mt-bar`, `min-w-duration`.
-- Don't copy: `ring-[3px]` focus recipes (use `focus-ring`), `tracking-[0.04em]` caps labels (use
+  `top-safe`, `px-gutter`, `pr-gutter`, `scroll-mt-bar`, `min-w-duration`, and `caps` as a font
+  size (so it replaces a Button's `text-subhead`).
+- Don't use: `ring-[3px]` focus recipes (use `focus-ring`), `tracking-[0.04em]` caps labels (use
   `caps`), `max-h-[94svh]` (use `max-h-sheet`), `h-[calc(100dvh-…)]` (use `h-below-bar`),
-  `rounded-xl`/`shadow-panel` (legacy aliases of `rounded-lg`/`shadow-raised`). Scale forms:
+  `rounded-xl` (Tailwind's 12px, off the DS scale; panels are `rounded-lg`). Scale forms:
   `ring-3`, `min-w-32`, `max-h-75`, `top-1/2`, `-translate-1/2`.
 - Page layers: `z-bar` (20) < `z-float` (30) < `z-chat` (35) < `z-dock` (40) < `z-overlay` (50).
   Numeric z only for stacking inside one component.

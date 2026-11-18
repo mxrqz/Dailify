@@ -10,7 +10,8 @@ vi.mock("../src/lib/email", () => ({ sendEmail }));
 
 import { env } from "cloudflare:test";
 import { auth } from "../src/auth";
-import { insertTask, getTask, USER_TABLES } from "../src/db/tasks";
+import { insertTask, getTask } from "../src/db/tasks";
+import { USER_TABLES } from "../src/db/user";
 import { bumpStoredUsage, readStoredUsage } from "../src/db/usage";
 import { insertState, upsertConnection } from "../src/db/integrations";
 import { sealTokens } from "../src/integrations/connection";

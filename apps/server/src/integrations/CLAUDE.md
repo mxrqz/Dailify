@@ -47,7 +47,7 @@ those routed through `PROVIDERS[id]` first.
 
 ## OAuth flow
 
-- `redirect_uri` is an SPA route (`${appOrigin}/integrations/<id>/callback`), not the Worker: the
+- `redirect_uri` is an SPA route (`${returnBase}/integrations/<id>/callback`), not the Worker: the
   SPA posts `{ code, state }` with its session, which ties the external account to the signed-in
   user.
 - `state` is single-use (`consumeState`: `DELETE ... RETURNING`, 10 min) and must match `user_id`
@@ -56,7 +56,8 @@ those routed through `PROVIDERS[id]` first.
   revokes the grant.
 - From the Tauri app the consent page opens in the system browser, so `redirect_uri` comes from
   `returnBase`: `${APP_URL}/app/integrations/<id>/callback`, which `pages/app-return.tsx` hands to
-  `mewki://open`. That URI must be authorized on the Google OAuth client too.
+  `mewki://open`, so the code reaches the app's session. That URI must be authorized on the Google
+  OAuth client too.
 
 ## Propagation and sync
 

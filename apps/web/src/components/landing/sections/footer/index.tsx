@@ -69,7 +69,7 @@ export function FooterV2() {
                 aria-pressed={theme === t}
                 onClick={() => setTheme(t)}
                 className={cn(
-                  "min-h-8 cursor-pointer rounded-xs px-3 text-sm transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                  "min-h-8 cursor-pointer rounded-xs px-3 text-sm transition-colors focus-ring",
                   theme === t ? "bg-surface-raised text-ink shadow-raised" : "hover:text-ink",
                 )}
               >

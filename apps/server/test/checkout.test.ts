@@ -11,8 +11,8 @@ vi.mock("../src/auth", () => import("./session"));
 import { mockSession } from "./session";
 mockSession(() => ({ id: "u1" }));
 
-vi.mock("../src/lib/user", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/lib/user")>();
+vi.mock("../src/db/user", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../src/db/user")>();
   return { ...actual, billingProfile: profileMock };
 });
 
@@ -152,7 +152,8 @@ describe("CORS", () => {
     );
 
   it("allows every listed origin and rejects others", async () => {
-    for (const o of ["https://dailify.mxrqz.com", "https://mewki.mxrqz.com"]) {
+    // The app's webview origins come from NATIVE_ORIGINS, not ALLOWED_ORIGIN.
+    for (const o of ["https://dailify.mxrqz.com", "https://mewki.mxrqz.com", "tauri://localhost"]) {
       expect((await preflight(o)).headers.get("access-control-allow-origin")).toBe(o);
     }
     expect(

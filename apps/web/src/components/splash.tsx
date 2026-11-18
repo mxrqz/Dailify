@@ -26,7 +26,7 @@ export function Splash({ slow: forceSlow = false }: { slow?: boolean }): JSX.Ele
     <motion.div
       exit={{ opacity: 0 }}
       transition={{ duration: duration.slow, ease: ease.exit }}
-      className="fixed inset-0 z-50 grid place-items-center bg-canvas"
+      className="fixed inset-0 z-overlay grid place-items-center bg-canvas"
     >
       <div className="flex flex-col items-center gap-10">
         <Mew mood="loading" enter className="w-42" />

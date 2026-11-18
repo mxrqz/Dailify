@@ -1,15 +1,22 @@
 import OpenAI from "openai";
-import { DateTime } from "luxon";
-import { nanoid } from "nanoid";
 import { TZDate } from "@date-fns/tz";
 import {
   composeTaskInput,
   DATE_RANGE,
+  DURATION_RE,
+  fromWire,
   INTEGRATIONS,
   PROVIDER_IDS,
   TASK_LIMITS,
+  isRecord,
+  isRepeatEvery,
+  isStringArray,
+  isoWallTime,
   normalizeRepeat,
   weekDays,
+  weekdayOf,
+  zonedEpoch,
+  zonedParts,
   type AiIntent,
   type AiParse,
   type ParsedTaskWire,
@@ -17,7 +24,7 @@ import {
   type Task,
 } from "@dailify/shared";
 import type { Env } from "../index";
-import { isRepeatEvery, sanitizeLinks } from "./task-input";
+import { newTaskId, sanitizeLinks } from "./task-input";
 
 // One retry: the SDK retries timeouts too, so the default 2 turned each `timeout` into 3× it.
 export const openaiClient = (env: Env) => new OpenAI({ apiKey: env.OPENAI_API_KEY, maxRetries: 1 });
@@ -57,14 +64,6 @@ interface GPTResponse {
 }
 
 const INTENTS: readonly string[] = ["create", "question", "command", "unsupported"];
-
-export function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === "object" && v !== null;
-}
-
-export function isStringArray(v: unknown): v is string[] {
-  return Array.isArray(v) && v.every((x) => typeof x === "string");
-}
 
 const isNullableString = (v: unknown) => v === null || typeof v === "string";
 
@@ -161,9 +160,8 @@ feminino ("anotei", "pronto, marquei"), em português do Brasil. Se o usuário e
 responda em inglês.`;
 
 export function clock(timezone: string): string {
-  const local = DateTime.now().setZone(timezone);
-  const now = local.toISO({ includeOffset: false, suppressMilliseconds: true }) ?? "";
-  return `Agora é ${now} (${weekDays[local.weekday % 7]}), no horário local do usuário. Use isso para "amanhã", "sexta",
+  const local = zonedParts(Date.now(), timezone);
+  return `Agora é ${isoWallTime(local)} (${weekDays[weekdayOf(local)]}), no horário local do usuário. Use isso para "amanhã", "sexta",
 "daqui a 30 minutos", "15 pras 6" (= 05:45 ou 17:45, o que vier primeiro), etc.`;
 }
 
@@ -176,7 +174,7 @@ export const taskRules = (
 - "duration": só se dita, no formato "15m", "1h", "1h30m" (nunca "min"); senão null.
 - "repeat": só se dita explicitamente — "Off" | "Daily" | "Monthly" | "Yearly" |
   {"Weekly": ["Monday", ...]} (nomes em inglês); senão "Off".
-- "repeatEvery": o N de "a cada N" (2 a 365) na unidade do "repeat" — "a cada 2 semanas" é Weekly
+- "repeatEvery": o N de "a cada N" (2 a ${TASK_LIMITS.repeatEveryMax}) na unidade do "repeat" — "a cada 2 semanas" é Weekly
   com 2, "dia sim, dia não" é Daily com 2, "a cada 3 meses" é Monthly com 3; senão null.
 - "links": as URLs citadas, exatamente como vieram; [] se nenhuma.
 ${targetsRule(allowed)}`;
@@ -212,7 +210,6 @@ function targetsRule(allowed: readonly ProviderId[]): string {
   Nunca deixe o nome do app ou o pedido de colocar nele no "title".`;
 }
 
-const DURATION_RE = /^(?:\d{1,3}h)?(?:\d{1,4}m)?$/;
 export const DATE_ONLY_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 /** "1h30min" → "1h30m"; o que não couber no formato do `Task.duration` vira `null`. */
@@ -221,11 +218,19 @@ function toDuration(raw: string | null): string | null {
   return d && DURATION_RE.test(d) ? d : null;
 }
 
+const LOCAL_ISO_RE = /^(\d{4})-(\d{2})-(\d{2})(?:T(\d{2})(?::(\d{2})(?::(\d{2})(?:\.\d+)?)?)?)?$/;
+
 /** Hora-de-parede local → epoch-ms no fuso do cliente; 'Z'/offset que escapar é ignorado. */
 export function toEpoch(iso: string, timeZone: string): number | null {
-  const local = iso.replace(/(Z|[+-]\d{2}:?\d{2})$/, "");
-  const ms = DateTime.fromISO(local, { zone: timeZone }).toMillis();
-  return Number.isFinite(ms) && ms >= DATE_RANGE.min && ms <= DATE_RANGE.max ? ms : null;
+  const m = LOCAL_ISO_RE.exec(iso.replace(/(Z|[+-]\d{2}:?\d{2})$/, ""));
+  if (!m) return null;
+  const [year, month, day, hour, minute, second] = m.slice(1).map((x) => Number(x ?? 0));
+  // Date.UTC rolls 2026-02-30 into March; a date that doesn't round-trip is not a real day.
+  const civil = new Date(Date.UTC(year, month - 1, day));
+  if (civil.getUTCMonth() !== month - 1 || civil.getUTCDate() !== day) return null;
+  if (hour > 23 || minute > 59 || second > 59) return null;
+  const ms = zonedEpoch({ year, month: month - 1, day, hour, minute, second }, timeZone);
+  return ms >= DATE_RANGE.min && ms <= DATE_RANGE.max ? ms : null;
 }
 
 export function toDraft(
@@ -260,9 +265,8 @@ export function toDraft(
 
 /** The composer's rule (`composeTaskInput`), with a server id the client can POST back as-is. */
 export function draftToTask(d: ParsedTaskWire, timezone: string, now: number): Task {
-  const date = d.date === null ? null : new TZDate(d.date, timezone);
-  const input = composeTaskInput({ ...d, date }, new TZDate(now, timezone));
-  return { ...input, id: nanoid(6), completed: [] };
+  const input = composeTaskInput(fromWire(d, timezone), new TZDate(now, timezone));
+  return { ...input, id: newTaskId(), completed: [] };
 }
 
 /** Model output through its guard; throws so the caller answers 502 without a debit. */

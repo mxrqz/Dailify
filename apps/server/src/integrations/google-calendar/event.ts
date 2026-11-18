@@ -1,6 +1,8 @@
 import {
   calendarSlot,
   isCalendarEventLink,
+  isoDate,
+  isoWallTime,
   meetLink,
   toRrule,
   videoLink,
@@ -74,9 +76,6 @@ export function eventId(taskId: string): string {
   return bits ? out + BASE32HEX[(value << (5 - bits)) & 31] : out;
 }
 
-const pad = (n: number) => String(n).padStart(2, "0");
-const ymd = (p: ZonedParts) => `${p.year}-${pad(p.month + 1)}-${pad(p.day)}`;
-const wall = (p: ZonedParts) => `${ymd(p)}T${pad(p.hour)}:${pad(p.minute)}:${pad(p.second)}`;
 /** Tarefa → evento; `null` quando ela não tem dia (Sem data sem lembrete). */
 export function toEvent(task: Task, timeZone: string, opts: { meet: boolean }): GoogleEvent | null {
   const slot = calendarSlot(task, timeZone);
@@ -88,12 +87,12 @@ export function toEvent(task: Task, timeZone: string, opts: { meet: boolean }): 
   if (slot.allDay) {
     startParts = slot.day;
     const next = new Date(Date.UTC(slot.day.year, slot.day.month, slot.day.day + 1));
-    start = { date: ymd(slot.day) };
+    start = { date: isoDate(slot.day) };
     end = { date: next.toISOString().slice(0, 10) };
   } else {
     startParts = zonedParts(slot.start, timeZone);
-    start = { dateTime: wall(startParts), timeZone };
-    end = { dateTime: wall(zonedParts(slot.end, timeZone)), timeZone };
+    start = { dateTime: isoWallTime(startParts), timeZone };
+    end = { dateTime: isoWallTime(zonedParts(slot.end, timeZone)), timeZone };
   }
 
   const id = eventId(task.id);

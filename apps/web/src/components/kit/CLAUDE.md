@@ -16,7 +16,7 @@ Repo-wide rules: [/RULES.md](../../../../../RULES.md). This file adds only what 
   radiogroup, selection in `ink`; `className="w-32 flex-none"` for the narrow one beside a label.
 - `Switch({ checked, onCheckedChange, ...button })`: `role="switch"` with no visible label, so pass
   the row's text as `aria-label`. A caller `onClick` that calls `preventDefault()` cancels the toggle.
-- `Chip({ icon?, variant?: "action" | "select", size?: "default" | "sm", pressed?, onRemove?, removeLabel? })`:
+- `Chip({ icon?, variant?: "action" | "select", size?: "default" | "sm" | "square", pressed?, onRemove?, removeLabel? })`:
   `pressed` sets `aria-pressed` and `bg-ink`. With `onRemove` it is a `<span>` of two buttons: ref and
   rest props go to the main one, `className` to the span.
 - `PageHeader({ title, subtitle?, bar?, trailing? })`: sticky material bar (`h-bar`) + Large Title.
@@ -61,8 +61,6 @@ Repo-wide rules: [/RULES.md](../../../../../RULES.md). This file adds only what 
 
 ## Don't copy
 
-- ActionSheet's options card is `glass overflow-hidden`, which clips the glass top light edge;
-  clip or scroll a child instead.
 - `: JSX.Element` return types use the global namespace, `@deprecated` in `@types/react` 18.3;
   omit the return type.
 

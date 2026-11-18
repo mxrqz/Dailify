@@ -16,7 +16,7 @@ export function AppLayout(): JSX.Element {
   const dashboard = useMatch("/dashboard") !== null;
 
   return (
-    <div className="flex min-h-dvh flex-col bg-surface-page text-foreground">
+    <div className="flex min-h-dvh flex-col bg-canvas text-ink">
       <AppHeader className="px-2 md:pl-3 md:pr-gutter" />
 
       <div className="flex flex-1">

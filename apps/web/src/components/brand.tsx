@@ -38,7 +38,7 @@ export function Brand({
       {!iconOnly && (
         <span
           className={cn(
-            "font-semibold tracking-[-0.01em] text-ink",
+            "font-semibold tracking-tight text-ink",
             // no header do app o wordmark só volta com a sidebar: sr-only (não hidden) pra o link
             // não ficar sem nome acessível no mobile
             compact ? "text-sm sr-only md:not-sr-only" : "text-lg",

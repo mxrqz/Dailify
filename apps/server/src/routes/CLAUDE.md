@@ -45,12 +45,13 @@ things.use("*", rateLimit("API_LIMITER")); // only if every route shares it, els
   route (`/tasks/parse`, `/tasks/voice`, `/mew/chat`). `AUTH_LIMITER` 5/min per
   `cf-connecting-ip`: before login only.
 - Tests run the real bindings (`test/CLAUDE.md`); only `tasks-parse.test.ts` asserts a limiter's
-  429 (`AI_LIMITER`), and a missing binding is a no-op: a forgotten `rateLimit(...)` passes the gate. `auth.test.ts` asserts that
-  `POST /tasks/parse` and `GET /integrations` read the session once.
+  429 (`AI_LIMITER`), and a missing binding is a no-op: a forgotten `rateLimit(...)` passes the
+  gate. `auth.test.ts` asserts that `POST /tasks/parse` and `GET /integrations` read the session
+  once.
 
 ## Bodies
 
-- Read with `readJson(c)` and narrow with `isRecord` (`lib/task-input.ts`). A bare `c.req.json()`
+- Read with `readJson(c)` (`lib/task-input.ts`) and narrow with `isRecord` (`@dailify/shared`). A bare `c.req.json()`
   turns malformed JSON (or a destructured `null`) into a 500 via `app.onError`.
 - A parser whose errors aren't all 400 carries `status` in its union (`parseRequest`, mew.ts).
 - Zones: `validZone`; new endpoints take the body key `timezone`. Months: `parseMonth`; epochs:
@@ -66,7 +67,7 @@ things.use("*", rateLimit("API_LIMITER")); // only if every route shares it, els
   `API_ERROR.reconnect` · 413/415 payload · 429 rate limit or quota · 502 upstream failure
   (no AI debit) · 503 optional feature not configured. A 500 comes only from `app.onError`.
 - Codes (`API_ERROR`, shared) ride beside the old texts, which older app builds still compare:
-  `rate_limited` (`rateLimit`), `ai_blocked`/`ai_exhausted` (`aiQuotaError`),
+  `rate_limited` (`rateLimit`), `ai_blocked`/`ai_exhausted` (`aiQuota`, `db/limits.ts`),
   `mew_consent_required`, `missing_scope`, `reconnect`, `already_linked`. A new branch the web
   reacts to adds a code there.
 - Success: `c.json({ <noun>: ... })` (`{ task }`, `{ tasks }`, `{ series }`, `{ url }`) or

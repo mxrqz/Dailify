@@ -1,11 +1,12 @@
 import { Hono } from "hono";
+import { isRecord } from "@dailify/shared";
 import type { AppEnv } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
-import { deleteSubscription, saveSubscription, subscriptionsOf } from "../db/push";
+import { deleteSubscription, saveSubscription, countSubscriptions } from "../db/push";
 import { fail } from "../lib/errors";
 import { base64urlToBytes } from "../lib/encoding";
-import { isRecord, readJson, validZone } from "../lib/task-input";
+import { readJson, validZone } from "../lib/task-input";
 
 const push = new Hono<AppEnv>();
 push.use("/push/subscription", requireAuth, rateLimit("API_LIMITER"));
@@ -41,7 +42,7 @@ push.get("/push/key", (c) =>
 );
 
 push.get("/push/subscription", async (c) =>
-  c.json({ count: await subscriptionsOf(c.env.DB, c.get("userId")) }),
+  c.json({ count: await countSubscriptions(c.env.DB, c.get("userId")) }),
 );
 
 push.post("/push/subscription", async (c) => {

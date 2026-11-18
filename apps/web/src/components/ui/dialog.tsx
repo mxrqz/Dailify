@@ -30,7 +30,7 @@ const DialogOverlay = React.forwardRef<
       ref={ref}
       data-slot="dialog-overlay"
       className={cn(
-        "scrim data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-50",
+        "scrim data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 fixed inset-0 z-overlay",
         className,
       )}
       {...props}
@@ -46,7 +46,7 @@ function OverlayClose({ className, plain }: { className?: string; plain?: boolea
   return (
     <DialogPrimitive.Close
       className={cn(
-        "absolute grid size-11 cursor-pointer place-items-center rounded-full text-ink-secondary outline-none transition-colors hover:text-ink focus-visible:ring-3 focus-visible:ring-ring/50",
+        "absolute grid size-11 cursor-pointer place-items-center rounded-full text-ink-secondary focus-ring transition-colors hover:text-ink",
         className,
       )}
     >
@@ -71,7 +71,7 @@ function DialogContent({
       <DialogPrimitive.Content
         data-slot="dialog-content"
         className={cn(
-          "glass text-ink data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-[50%] left-[50%] z-50 grid w-full max-w-[calc(100%-2rem)] translate-x-[-50%] translate-y-[-50%] gap-4 rounded-lg p-6 duration-base ease-out sm:max-w-lg",
+          "glass text-ink data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 fixed top-1/2 left-1/2 z-overlay grid w-full max-w-[calc(100%-2rem)] -translate-1/2 gap-4 rounded-lg p-6 duration-base ease-out sm:max-w-lg",
           className,
         )}
         {...props}

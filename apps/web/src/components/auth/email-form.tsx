@@ -51,13 +51,9 @@ export function EmailForm({
       </div>
 
       {failure && (
-        <p id="email-error" className="px-1 text-subhead text-destructive">
+        <p id="email-error" className="px-1 text-subhead text-brand-text">
           {copy.errors[failure.key]}
-          {failure.code && (
-            <span className="ml-1 font-mono text-2xs uppercase tracking-[0.04em] opacity-70">
-              {failure.code}
-            </span>
-          )}
+          {failure.code && <span className="ml-1 caps opacity-70">{failure.code}</span>}
         </p>
       )}
 

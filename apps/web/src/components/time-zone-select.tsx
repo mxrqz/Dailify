@@ -76,7 +76,7 @@ export function TimeZoneSelect(): JSX.Element {
               >
                 <CheckIcon className={cn("size-4", timeZone !== zone && "invisible")} />
                 <span className="flex-1 truncate">{zone.replace(/_/g, " ")}</span>
-                <span className="font-mono text-2xs text-muted-foreground">{offset}</span>
+                <span className="font-mono text-2xs text-ink-secondary">{offset}</span>
               </CommandItem>
             ))}
           </CommandList>

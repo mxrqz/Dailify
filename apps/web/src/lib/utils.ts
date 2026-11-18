@@ -15,11 +15,15 @@ const twMerge = extendTailwindMerge({
     // Named layers, durations, widths and the geometry `@utility`s: unregistered, `z-chat` can't
     // replace a sheet's `z-50`, both classes stay and stylesheet order decides.
     classGroups: {
+      // `caps` carries its own size, so it replaces a Button's `text-subhead`.
+      "font-size": ["caps"],
       z: [{ z: ["bar", "float", "chat", "dock", "overlay"] }],
       duration: [{ duration: ["instant", "fast", "base", "slow", "open"] }],
       w: [{ w: ["sheet", "undated"] }],
       "max-w": [{ "max-w": ["bubble"] }],
       "max-h": [{ "max-h": ["sheet"] }],
+      "min-w": [{ "min-w": ["duration"] }],
+      "scroll-mt": [{ "scroll-mt": ["bar"] }],
       h: [{ h: ["bar", "below-bar"] }],
       pb: [{ pb: ["safe", "dock", "dock-clear"] }],
       pt: [{ pt: ["safe"] }],

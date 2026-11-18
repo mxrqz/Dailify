@@ -17,12 +17,11 @@ vi.mock("../src/auth", () => import("./session"));
 import { mockSession } from "./session";
 mockSession(() => ({ id: userId, plan: role }));
 
-import { DateTime } from "luxon";
 import { env } from "cloudflare:test";
 import app from "../src/index";
 import { getTask } from "../src/db/tasks";
 import { saveSettings } from "../src/db/settings";
-import { limitsFor, type Task } from "@dailify/shared";
+import { limitsFor, zonedEpoch, zonedParts, type Task } from "@dailify/shared";
 import { bumpStoredUsage, periodFor, readStoredUsage } from "../src/db/usage";
 
 beforeEach(async () => {
@@ -175,14 +174,15 @@ describe("POST /tasks/voice", () => {
       const res = await audioRequest(tz);
       expect(res.status).toBe(200);
       const body = await res.json<{ response: string; tasks: Task[] }>();
-      const tomorrow15 = DateTime.now()
-        .setZone(tz)
-        .plus({ days: 1 })
-        .set({ hour: 15, minute: 0, second: 0, millisecond: 0 });
+      const today = zonedParts(Date.now(), tz);
+      const tomorrow15 = zonedEpoch(
+        { ...today, day: today.day + 1, hour: 15, minute: 0, second: 0, ms: 0 },
+        tz,
+      );
       expect(body.tasks).toHaveLength(1);
       expect(body.tasks[0]).toMatchObject({
         title: "dentista",
-        date: tomorrow15.toMillis(),
+        date: tomorrow15,
         duration: "10m",
       });
       expect(body.tasks[0].undated).toBeUndefined();

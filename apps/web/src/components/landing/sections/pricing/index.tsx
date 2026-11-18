@@ -100,7 +100,7 @@ function PlanCard({ plan, cycle }: { plan: Plan; cycle: Cycle }) {
       <Link
         to={plan.to}
         className={cn(
-          "mt-1.5 mb-1 inline-flex min-h-11 w-full items-center justify-center rounded-sm px-5 text-base font-semibold transition-[scale,background-color] duration-fast ease-out outline-none focus-visible:ring-2 focus-visible:ring-ring focus-visible:ring-offset-2 active:scale-97",
+          "mt-1.5 mb-1 inline-flex min-h-11 w-full items-center justify-center rounded-sm px-5 text-base font-semibold transition-[scale,background-color] duration-fast ease-out focus-ring focus-visible:ring-offset-2 active:scale-97",
           plan.featured
             ? "bg-brand text-on-brand hover:bg-brand-pressed pointer-fine:active:bg-brand-pressed"
             : "bg-fill text-ink hover:bg-fill-pressed pointer-fine:active:bg-fill-pressed",
@@ -140,7 +140,7 @@ export function PricingV2() {
               aria-pressed={cycle === c}
               onClick={() => setCycle(c)}
               className={cn(
-                "min-h-9 rounded-sm px-4 text-base outline-none focus-visible:ring-2 focus-visible:ring-ring",
+                "min-h-9 rounded-sm px-4 text-base focus-ring",
                 cycle === c
                   ? "bg-surface-raised font-semibold text-ink shadow-raised"
                   : "font-medium text-ink-secondary",

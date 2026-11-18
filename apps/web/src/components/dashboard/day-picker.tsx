@@ -64,7 +64,7 @@ export function DayPicker({
             <ChevronLeftIcon className="size-4" />
           </button>
         )}
-        <span className="flex-1 px-1 font-mono text-2xs uppercase text-ink-secondary">
+        <span className="flex-1 px-1 caps text-ink-secondary">
           {format(open ? viewMonth : value, "MMMM yyyy", { locale: ptBR })}
         </span>
         {open && (
@@ -97,7 +97,7 @@ export function DayPicker({
         {copy.aside.weekDayInitials
           .map((_, index) => copy.aside.weekDayInitials[(index + weekStart) % 7])
           .map((initial, index) => (
-            <li key={index} className="font-mono text-2xs uppercase text-ink-secondary">
+            <li key={index} className="caps text-ink-secondary">
               {initial}
             </li>
           ))}

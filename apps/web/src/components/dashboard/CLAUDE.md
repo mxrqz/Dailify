@@ -18,7 +18,6 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
   `ActionSheet`). `push-toggle.tsx` is a settings row (`pages/settings.tsx`).
 - `copy.ts` is the dictionary of the whole authenticated app (see `components/CLAUDE.md`).
 - `styles.ts` holds only `calendarPanel`, shared by `task-meta-menus` and `anytime-block`.
-- Legacy-alias holdouts, don't copy: `undated-column.tsx`, `SchedulePicker` in `anytime-block.tsx`.
 
 ## Two editing modes, never both
 
@@ -126,8 +125,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
   because `dragSnapToOrigin` dies when `setTasks` re-renders the row (motion#636).
 - `dragListener={false}`; the drag starts only outside 24px screen edges (`startsSwipe`, the system
   back gesture). `onClickCapture` swallows the click that ends a drag. `dragElastic={1}`.
-- Fires past `min(25% of width, 96px)` or on a flick ≥400px/s that moved ≥24px. The translucent
-  success/destructive panels are deliberate: they read as behind the row.
+- Fires past `min(25% of width, 96px)` or on a flick ≥400px/s that moved ≥24px. The panels are
+  solid `success-soft(-strong)` and `brand-soft(-pressed)`, the second one when armed.
 
 ## sidebar/
 

@@ -1,7 +1,8 @@
+import { isRecord } from "@dailify/shared";
+
 export const EVENTS_API = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
 
-export const field = (v: unknown, key: string): unknown =>
-  typeof v === "object" && v !== null ? Reflect.get(v, key) : undefined;
+export const field = (v: unknown, key: string): unknown => (isRecord(v) ? v[key] : undefined);
 export const text = (v: unknown, key: string): string | undefined => {
   const x = field(v, key);
   return typeof x === "string" ? x : undefined;

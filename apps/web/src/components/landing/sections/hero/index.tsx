@@ -10,7 +10,7 @@ export function HeroV2() {
         <div className="flex flex-col items-center gap-3.5 text-center md:items-start md:gap-5 md:text-left">
           <h1
             id="hero-title"
-            className="text-5xl leading-none font-bold tracking-[-0.035em] whitespace-pre-line md:text-7xl"
+            className="text-5xl leading-none font-bold tracking-tight whitespace-pre-line md:text-7xl"
           >
             {copy.title}
           </h1>

@@ -5,7 +5,7 @@ import { mockSession } from "./session";
 
 import { env } from "cloudflare:workers";
 import app from "../src/index";
-import { subscriptionsOf } from "../src/db/push";
+import { countSubscriptions } from "../src/db/push";
 
 let userId = "";
 beforeEach(() => {
@@ -31,7 +31,7 @@ const subscribe = (body: object) =>
 describe("POST /push/subscription — keys", () => {
   it("stores a subscription with valid keys", async () => {
     expect((await subscribe(VALID)).status).toBe(204);
-    expect(await subscriptionsOf(env.DB, userId)).toBe(1);
+    expect(await countSubscriptions(env.DB, userId)).toBe(1);
   });
 
   it.each([
@@ -43,6 +43,6 @@ describe("POST /push/subscription — keys", () => {
   ])("400s on %s and stores nothing", async (_, patch) => {
     const res = await subscribe({ ...VALID, ...patch });
     expect(res.status).toBe(400);
-    expect(await subscriptionsOf(env.DB, userId)).toBe(0);
+    expect(await countSubscriptions(env.DB, userId)).toBe(0);
   });
 });
