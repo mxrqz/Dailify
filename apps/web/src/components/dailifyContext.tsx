@@ -13,7 +13,6 @@ import { appTimeZone, setAppTimeZone, zoned } from "@/functions/zone";
 
 interface DailifyContextType {
   selectedDay: Date;
-  setSelectedDay: (selectedDay: Date) => void;
   /** Dia pedido por clique; a lista rola até ele e o mostra mesmo sem tarefa. */
   targetDay: Date | undefined;
   /** Carrega os meses até o dia e só então o marca como alvo, pra ele já estar na lista. */
@@ -48,10 +47,14 @@ interface DailifyContextType {
   bumpUsage: (key: QuotaKey) => void;
 }
 
-// Criando o contexto com um valor inicial `undefined`
+/** A failed load is not an empty month; offline with an agenda on screen stays silent (the indicator tells). */
+export function reportLoadError(error: ApiError | undefined, hasTasks: boolean): void {
+  if (error?.offline && hasTasks) return;
+  toast.error(copy.loading.tasksError, { id: "tasks-load-error", description: error?.message });
+}
+
 const DailifyContext = createContext<DailifyContextType | undefined>(undefined);
 
-// Criando o provider
 export function DailifyProvider({ children }: { children: ReactNode }) {
   const [selectedDay, setSelectedDay] = useState<Date>(() => zoned());
   const [targetDay, setTargetDay] = useState<Date>();
@@ -129,17 +132,11 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
     }
     try {
       const error = await fetchMonth(month);
-      // Mesma regra do boot: offline com agenda na tela é silencioso, o indicador já conta.
-      if (error && (!error.offline || !tasks?.length)) {
-        toast.error(copy.loading.tasksError, {
-          id: "tasks-load-error",
-          description: error.message,
-        });
-      }
+      if (error) reportLoadError(error, Boolean(tasks?.length));
     } catch {
       // Offline com agenda na tela, cada mês pedido viraria um toast.
       if (navigator.onLine === false && tasks?.length) return;
-      toast.error(copy.loading.tasksError, { id: "tasks-load-error" });
+      reportLoadError(undefined, false);
     }
   };
 
@@ -179,7 +176,6 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
     <DailifyContext.Provider
       value={{
         selectedDay,
-        setSelectedDay,
         targetDay,
         goToDay,
         tasks,
@@ -211,9 +207,8 @@ export function DailifyProvider({ children }: { children: ReactNode }) {
   );
 }
 
-// Hook para usar o contexto
 export function useDailify() {
   const context = useContext(DailifyContext);
-  if (!context) throw new Error("useDailify must be used within a ThemeProvider");
+  if (!context) throw new Error("useDailify must be used within DailifyProvider");
   return context;
 }
