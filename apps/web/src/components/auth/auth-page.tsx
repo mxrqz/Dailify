@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Navigate, useSearchParams } from "react-router-dom";
 
 import type { AuthFailure, AuthMode } from "@/components/auth/auth-state";
@@ -63,6 +64,9 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
             crossLinkTo: mode === "signUp" ? "/login" : "/signup",
           })}
     >
+      <Helmet>
+        <title>{text.pageTitle}</title>
+      </Helmet>
       {inbox ? (
         <CheckInbox
           email={inbox.email}

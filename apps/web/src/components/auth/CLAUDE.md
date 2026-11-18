@@ -15,7 +15,8 @@ The `/login` and `/signup` screens, plus the shell the hand-off pages reuse. Rep
   `internalPath` from `lib/platform.ts`). `use-email-link-auth.ts` only wires Better Auth to it. `turnstile.ts` is the
   captcha hook.
 - `copy.ts`: every string here, plus those of `pages/verify.tsx`, `auth-app.tsx`, `app-return.tsx`,
-  the auth `<title>`s in `App.tsx` and the invalid-link toast in `main.tsx`.
+  and the invalid-link toast in `main.tsx`. Each of those pages, and `AuthPage` by mode, renders its
+  own `<Helmet>` title.
 
 ## State machine (`auth-state.ts`)
 
