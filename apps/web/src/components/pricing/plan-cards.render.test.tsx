@@ -4,7 +4,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { PlanCards } from "./plan-cards";
-import { PLAN_PRICING, formatPrice } from "@/consts/pricing";
+import { PLAN_PRICING, formatPrice } from "@dailify/shared";
 import { copy } from "./copy";
 
 /** `formatPrice` usa espaço não separável; o normalizador do RTL só mexe no lado do DOM. */

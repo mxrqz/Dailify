@@ -1,15 +1,15 @@
 import { describe, it, expect } from "vitest";
-import type { InvoicesProps, PaymentDetailsProps } from "@/types/types";
+import type { Invoice, PaymentDetails } from "@dailify/shared";
 import { billingSections } from "./billing-sections";
 
-const subscription: PaymentDetailsProps = {
+const subscription: PaymentDetails = {
   amount: 990,
   currency: "brl",
   start: 1_755_000_000,
   recurring: "month",
 };
 
-const invoice: InvoicesProps = {
+const invoice: Invoice = {
   amount_paid: 990,
   currency: "brl",
   status: "paid",

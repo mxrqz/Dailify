@@ -3,10 +3,17 @@ import type { ReactNode } from "react";
 import { useId, useState } from "react";
 import { CheckIcon } from "lucide-react";
 import { motion, useReducedMotion } from "motion/react";
-import { limitsFor, QUOTA_KEYS, formatPrice, yearlySavings } from "@dailify/shared";
+import {
+  PLAN_PRICING,
+  QUOTA_KEYS,
+  formatPrice,
+  limitsFor,
+  yearlySavings,
+  type PlanRole,
+} from "@dailify/shared";
 
 import { SegmentedControl } from "@/components/kit/segmented-control";
-import { PLAN_PRICING, type PlanRole } from "@/consts/pricing";
+import { fill } from "@/functions/functions";
 import { cn } from "@/lib/utils";
 import { copy } from "./copy";
 
@@ -19,7 +26,7 @@ export function planFeatures(role: PlanRole): string[] {
   return QUOTA_KEYS.filter((key) => limits[key] !== 0).map((key) =>
     limits[key] < 0
       ? copy.features.unlimited[key]
-      : copy.features.finite[key].replace("{n}", limits[key].toLocaleString("pt-BR")),
+      : fill(copy.features.finite[key], { n: limits[key].toLocaleString("pt-BR") }),
   );
 }
 
@@ -134,7 +141,7 @@ export function PlanCards({
                 </span>
                 {pricing && cycle === "yearly" && (
                   <span className="basis-full text-footnote text-success">
-                    {copy.billing.savings.replace("{v}", formatPrice(yearlySavings(pricing)))}
+                    {fill(copy.billing.savings, { v: formatPrice(yearlySavings(pricing)) })}
                   </span>
                 )}
               </div>

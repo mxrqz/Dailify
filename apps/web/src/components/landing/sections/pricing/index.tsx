@@ -6,6 +6,7 @@ import { Link } from "react-router-dom";
 
 import { Ears } from "@/components/landing/kit/ears";
 import { fade } from "@/consts/motion";
+import { fill } from "@/functions/functions";
 import { cn } from "@/lib/utils";
 
 import { copy } from "./copy";
@@ -47,7 +48,7 @@ function PlanCard({ plan, cycle }: { plan: Plan; cycle: Cycle }) {
   const price = p ? formatPrice(p[cycle]) : copy.plans.free.price;
   const per = p ? copy.per[cycle] : copy.plans.free.per;
   const save =
-    p && cycle === "yearly" ? copy.save.replace("{price}", formatPrice(yearlySavings(p))) : "";
+    p && cycle === "yearly" ? fill(copy.save, { price: formatPrice(yearlySavings(p)) }) : "";
   const credits = QUOTAS.ai.limits[plan.key].toLocaleString("pt-BR");
 
   return (
@@ -112,7 +113,7 @@ function PlanCard({ plan, cycle }: { plan: Plan; cycle: Cycle }) {
         {c.features.map((f) => (
           <li key={f} className="flex items-center gap-2.5 text-base">
             <CheckIcon aria-hidden="true" className="size-4 flex-none stroke-brand-text stroke-3" />
-            <span>{f.replace("{n}", credits)}</span>
+            <span>{fill(f, { n: credits })}</span>
           </li>
         ))}
       </ul>
