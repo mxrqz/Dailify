@@ -19,7 +19,7 @@ export interface Env {
   DB: D1Database;
   // Opcionais: em teste/dev local o binding de rate limit nao existe (ver middleware/rate-limit.ts).
   API_LIMITER?: RateLimit;
-  VOICE_LIMITER?: RateLimit;
+  AI_LIMITER?: RateLimit;
   AUTH_LIMITER?: RateLimit;
   ALLOWED_ORIGIN: string; // lista separada por vírgula (lib/origin.ts)
   BETTER_AUTH_SECRET: string; // >= 32 chars; assina cookie e cookieCache

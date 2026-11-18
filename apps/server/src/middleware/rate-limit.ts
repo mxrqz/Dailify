@@ -3,12 +3,12 @@ import { API_ERROR } from "@dailify/shared";
 import type { AppEnv } from "../index";
 import { fail } from "../lib/errors";
 
-type Limiter = "API_LIMITER" | "VOICE_LIMITER" | "AUTH_LIMITER";
+type Limiter = "API_LIMITER" | "AI_LIMITER" | "AUTH_LIMITER";
 
 /**
  * Limite por usuário (não por IP: o usuário já está autenticado aqui, e IP compartilhado puniria
- * escritório inteiro). `VOICE_LIMITER` guards every OpenAI route (`/tasks/parse`, `/tasks/voice`,
- * `/mew/chat`), not only voice: each call costs real money, so its limit is an order of magnitude
+ * escritório inteiro). `AI_LIMITER` guards every OpenAI route (`/tasks/parse`, `/tasks/voice`,
+ * `/mew/chat`): each call costs real money, so its limit is an order of magnitude
  * below the rest of the API.
  * `AUTH_LIMITER` é a exceção: antes do login não há usuário, então a chave é o IP.
  */

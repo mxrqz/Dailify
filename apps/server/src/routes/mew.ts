@@ -68,7 +68,7 @@ async function readAgenda(db: D1Database, userId: string, timezone: string, now:
   return agendaOf(read.flat(), timezone, now);
 }
 
-mew.post("/chat", rateLimit("VOICE_LIMITER"), async (c) => {
+mew.post("/chat", rateLimit("AI_LIMITER"), async (c) => {
   const userId = c.get("userId");
   const req = parseRequest(await readJson(c));
   if ("error" in req) return fail(c, req.status, req.error);

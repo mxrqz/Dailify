@@ -32,7 +32,7 @@ function readLocally(text: string, timezone: string): AiParse | null {
   return { reply: "Anotei!", intent: "create", drafts: [draft] };
 }
 
-voice.post("/parse", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
+voice.post("/parse", requireAuth, rateLimit("AI_LIMITER"), async (c) => {
   const body = await readJson(c);
   const text = isRecord(body) && typeof body.text === "string" ? body.text.trim() : "";
   if (!text || text.length > TASK_LIMITS.titleMax) return fail(c, 400, "invalid text");
@@ -54,7 +54,7 @@ voice.post("/parse", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   return c.json(result);
 });
 
-voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
+voice.post("/voice", requireAuth, rateLimit("AI_LIMITER"), async (c) => {
   const userId = c.get("userId");
   const quotaError = await aiQuotaError(c);
   if (quotaError) return quotaError;

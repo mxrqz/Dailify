@@ -39,7 +39,7 @@ namespace_id = "1001"
   period = 60
 
 [[ratelimits]]
-name = "VOICE_LIMITER"
+name = "AI_LIMITER"
 namespace_id = "1002"
 
   [ratelimits.simple]

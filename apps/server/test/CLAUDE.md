@@ -16,7 +16,7 @@ server's prettier, eslint and `tsc` gates. Its package-rename warning on every r
 ## Invariants that bite
 
 - Storage is isolated per file, not per test, and the `[[ratelimits]]` bindings really run (API 120,
-  VOICE 6, AUTH 5 per minute per key). Give each test its own user id
+  AI 6, AUTH 5 per minute per key). Give each test its own user id
   (`` `eu-${crypto.randomUUID()}` `` in beforeEach) or filter assertions to its own ids. One id that
   makes more than 6 OpenAI-route calls in a file gets a 429 (`mew-chat.test.ts` switches ids for this).
 - Migrations are applied per file by `apply-migrations.ts` (a `setupFiles` `beforeAll`); a file's own

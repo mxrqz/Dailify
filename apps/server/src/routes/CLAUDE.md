@@ -41,7 +41,7 @@ things.use("*", rateLimit("API_LIMITER")); // only if every route shares it, els
 
 ## Limiters (`wrangler.toml`)
 
-- `API_LIMITER` 120/min per user: D1 and Stripe. `VOICE_LIMITER` 6/min per user: every OpenAI
+- `API_LIMITER` 120/min per user: D1 and Stripe. `AI_LIMITER` 6/min per user: every OpenAI
   route (`/tasks/parse`, `/tasks/voice`, `/mew/chat`). `AUTH_LIMITER` 5/min per
   `cf-connecting-ip`: before login only.
 - Tests run the real bindings (`test/CLAUDE.md`), but none asserts a limiter's 429, and a missing

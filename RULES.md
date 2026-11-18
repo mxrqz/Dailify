@@ -170,7 +170,7 @@ relative to the package they name (`apps/web/src`, `apps/server/src`, `packages/
 - Identity comes only from `c.get("userId")`/`c.get("plan")`. Every query on user data takes `userId`
   and filters on `user_id`; a row owned by someone else answers 404.
 - Every authenticated route has a rate limiter mounted after `requireAuth`, because the limiter keys
-  on the userId: `API_LIMITER` for D1 and Stripe, `VOICE_LIMITER` for anything calling OpenAI.
+  on the userId: `API_LIMITER` for D1 and Stripe, `AI_LIMITER` for anything calling OpenAI.
 - Third-party work after a successful write (calendar push, e-mail, revoke) runs in
   `c.executionCtx.waitUntil`, swallows its errors and records a recoverable state (`stale`); it never
   fails the user's write (`integrations/propagate.ts`).

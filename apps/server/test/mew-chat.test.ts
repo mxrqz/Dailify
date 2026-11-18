@@ -243,7 +243,7 @@ describe("POST /mew/chat", () => {
     expect((await chat({ history: Array(9).fill({ from: "me", text: "a" }) })).status).toBe(400);
     expect((await chat({ history: [{ from: "bot", text: "a" }] })).status).toBe(400);
     expect((await chat({ image: "https://x/y.png" })).status).toBe(400);
-    userId = "mw-413"; // VOICE_LIMITER allows 6 a minute per user
+    userId = "mw-413"; // AI_LIMITER allows 6 a minute per user
     await consent(userId);
     const big = `data:image/jpeg;base64,${"A".repeat(MEW_IMAGE_MAX)}`;
     expect((await chat({ image: big })).status).toBe(413);
