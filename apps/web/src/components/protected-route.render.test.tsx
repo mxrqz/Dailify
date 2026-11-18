@@ -63,7 +63,6 @@ const app = () => (
 
 describe("<ProtectedRoute>", () => {
   beforeEach(() => {
-    vi.clearAllMocks();
     offline.flushQueue.mockResolvedValue({ sent: 0, dropped: 0, offline: false });
     dailify.selectedDay = new Date(2026, 9, 23);
   });

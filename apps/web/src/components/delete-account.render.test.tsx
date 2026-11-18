@@ -1,7 +1,7 @@
 /** @vitest-environment jsdom */
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 
 const m = vi.hoisted(() => ({
   deleteUser: vi.fn(),
@@ -41,8 +41,6 @@ async function confirmWith(error: unknown) {
 }
 
 describe("<DeleteAccount>", () => {
-  beforeEach(() => vi.clearAllMocks());
-
   it("keeps Confirm disabled until the typed e-mail matches, case-insensitive and trimmed", async () => {
     const { input, confirm } = await openDialog();
     expect(confirm).toBeDisabled();

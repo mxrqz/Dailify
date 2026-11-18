@@ -94,8 +94,6 @@ beforeEach(() => {
 });
 afterEach(() => {
   vi.useRealTimers();
-  vi.clearAllMocks();
-  vi.restoreAllMocks();
   toast.dismiss();
   localStorage.clear();
 });

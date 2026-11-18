@@ -61,6 +61,9 @@ Naming, pragma, clock, mocking and query rules: RULES.md "Testing". The harness 
 - `globals: true` stays although every file imports from `vitest`: RTL needs it to set the act
   environment and register auto-cleanup. `execArgv: ["--no-experimental-webstorage"]` keeps Node
   25+'s empty global `localStorage` from shadowing jsdom's.
+- The config sets `clearMocks`, `restoreMocks` and `unstubGlobals`: don't call
+  `vi.clearAllMocks()`/`vi.restoreAllMocks()` by hand. Clearing keeps a `mockResolvedValue`, so a
+  test that needs a fresh one sets it.
 - Mocks: build in `vi.hoisted`, return from `vi.mock`, import the module under test after
   (`protected-route.render.test.tsx`); partial mocks spread `importOriginal`
   (`pages/billing.render.test.tsx`). `Link`s and router hooks need a `MemoryRouter`.

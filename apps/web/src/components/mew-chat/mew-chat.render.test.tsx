@@ -76,7 +76,6 @@ const say = (text: string) => {
 
 beforeEach(() => {
   localStorage.clear();
-  vi.clearAllMocks();
   ctx.tasks = [];
   ctx.undatedTasks = [];
   api.getSettings.mockResolvedValue({ settings: { mewConsent: true } });

@@ -21,9 +21,7 @@ import { copy } from "@/components/dashboard/copy";
 
 const t = copy.integrations;
 
-beforeEach(() => {
-  vi.clearAllMocks();
-});
+beforeEach(() => {});
 
 const renderAt = (query: string) =>
   render(

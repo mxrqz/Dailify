@@ -32,8 +32,6 @@ const GCAL: IntegrationStatus = {
 };
 
 beforeEach(() => {
-  vi.clearAllMocks();
-  vi.restoreAllMocks();
   useOnline.mockReturnValue(true);
   setIntegrations(undefined);
 });

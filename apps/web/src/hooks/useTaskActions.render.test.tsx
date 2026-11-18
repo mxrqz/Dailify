@@ -52,7 +52,6 @@ beforeEach(() => {
   dailify.mockImplementation(() => ({ tasks: store, setTasks, loadedMonths: [AUG] }));
 });
 afterEach(() => {
-  vi.clearAllMocks();
   localStorage.clear();
   toast.dismiss();
 });

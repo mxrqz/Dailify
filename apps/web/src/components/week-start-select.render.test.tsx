@@ -18,7 +18,6 @@ import { copy } from "@/components/dashboard/copy";
 const setWeekStart = vi.fn();
 
 beforeEach(() => {
-  vi.clearAllMocks();
   useDailify.mockReturnValue({ weekStart: 1, setWeekStart });
 });
 

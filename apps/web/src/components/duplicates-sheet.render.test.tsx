@@ -52,7 +52,6 @@ const status = (duplicates: IntegrationStatus["duplicates"]): IntegrationStatus 
 });
 
 beforeEach(async () => {
-  vi.clearAllMocks();
   vi.resetModules();
   ({ Duplicates } = await import("./duplicates-sheet"));
   ({ setIntegrations } = await import("@/hooks/useIntegrations"));

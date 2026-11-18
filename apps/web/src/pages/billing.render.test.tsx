@@ -51,7 +51,6 @@ function context(over: Record<string, unknown> = {}) {
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
   session({});
   dailify.mockReturnValue(context());
 });

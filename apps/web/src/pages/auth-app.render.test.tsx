@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { HelmetProvider } from "react-helmet-async";
 import { MemoryRouter } from "react-router-dom";
@@ -12,9 +12,6 @@ import { copy } from "@/components/auth/copy";
 
 const IPHONE =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1";
-
-beforeEach(() => vi.restoreAllMocks());
-
 const renderAt = (url: string) =>
   render(
     <HelmetProvider>
