@@ -14,9 +14,8 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   and `cancelSubscriptionsOf`. The subscription webhook branches and the checkout and portal calls
   still sit in `routes/billing.ts`.
 - `push.ts`: Web Push written by hand (RFC 8291 payload, RFC 8292 VAPID) on WebCrypto, because the
-  npm libraries are Node-only. On a 404/410 from `sendPush` the caller deletes the subscription. It
-  also hosts the base64url helpers that `integrations/` imports; that location is legacy, so new
-  byte helpers go elsewhere.
+  npm libraries are Node-only. On a 404/410 from `sendPush` the caller deletes the subscription.
+- `encoding.ts`: base64url and `sha256b64url` (PKCE S256, the magic-link verifier hash).
 - `email/`: `sendEmail` is the only entry point, with one file per vendor in `providers/` (today
   the Cloudflare `EMAIL` binding). Templates are pure, return `{ subject, text, html }`, and use
   inline styles with no images or tracking. `FROM` (`entrar@${APP_HOST}`) must be in wrangler.toml
@@ -31,7 +30,7 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
 
 ## Input helpers: reuse before writing a guard
 
-- `isRecord` and `isStringArray` (openai.ts). `isEpochMs` (task-input.ts) is private too: export it.
+- `isRecord` and `isStringArray` (openai.ts). `isEpochMs` (task-input.ts) is private: export it.
 - task-input.ts: `validZone`, `isRepeatEvery`, `sanitizeLinks`, `parseClientId`,
   `parseTaskFields`, `parseNewTask`.
 - Contract: an absent key keeps the stored value and `null` clears it (`alert`, `repeatEvery`,

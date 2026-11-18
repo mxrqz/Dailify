@@ -36,8 +36,8 @@ second provider needs those routed through `PROVIDERS[id]` first.
 - All provider HTTP goes through `ctx.api` (`makeCtx`): it adds the bearer and refreshes 60 s before
   expiry, saving the new sealed tokens. On `invalid_grant` it marks the connection `revoked` and
   rethrows; routes answer 409 with `code: reconnect`. Providers never read tokens.
-- No timeout yet in `ctx.api`, `tokenRequest` or `revoke`: add `AbortSignal.timeout` there once,
-  not per provider.
+- `ctx.api`, `tokenRequest` and `revoke` default to `AbortSignal.timeout(15_000)`, so providers
+  don't set their own.
 - Parallel calls on one `Ctx` can refresh twice (the `ponytail:` in `makeCtx`). Memoize the refresh
   promise before adding a provider that rotates its refresh token.
 - At rest: `v1.<iv>.<ct>`, AES-GCM with AAD `userId:provider`, so a blob copied to another row

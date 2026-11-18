@@ -1,5 +1,5 @@
 import type { Env } from "../index";
-import { bytesToBase64url } from "../lib/push";
+import { bytesToBase64url, sha256b64url } from "../lib/encoding";
 import type { OAuthConfig, Tokens } from "./types";
 
 // OAuth2 authorization code + PKCE (S256) em fetch puro: Arctic/oslo foram deprecados e o
@@ -8,14 +8,9 @@ import type { OAuthConfig, Tokens } from "./types";
 /** Refresh token revogado/expirado (ou code já usado): só reconectar resolve. */
 export class InvalidGrantError extends Error {}
 
-export async function challengeOf(verifier: string): Promise<string> {
-  const hash = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier));
-  return bytesToBase64url(hash);
-}
-
 export async function pkce(): Promise<{ verifier: string; challenge: string }> {
   const verifier = bytesToBase64url(crypto.getRandomValues(new Uint8Array(32)));
-  return { verifier, challenge: await challengeOf(verifier) };
+  return { verifier, challenge: await sha256b64url(verifier) };
 }
 
 export function authorizeUrl(
@@ -48,6 +43,7 @@ async function tokenRequest(
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
     body: new URLSearchParams({ ...params, client_id: id, client_secret: secret }),
+    signal: AbortSignal.timeout(15_000),
   });
   const body: unknown = await res.json().catch(() => null);
   const field = (k: string): unknown =>
@@ -98,6 +94,7 @@ export async function revoke(cfg: OAuthConfig, tokens: Tokens): Promise<void> {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
     body: new URLSearchParams({ token: tokens.refreshToken ?? tokens.accessToken }),
+    signal: AbortSignal.timeout(15_000),
   });
   if (!res.ok) throw new Error(`revoke ${res.status}`);
 }

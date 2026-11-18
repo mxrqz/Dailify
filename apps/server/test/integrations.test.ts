@@ -9,7 +9,8 @@ import { env, applyD1Migrations } from "cloudflare:test";
 import { INTEGRATIONS, PROVIDER_IDS, type IntegrationStatus } from "@dailify/shared";
 import app from "../src/index";
 import { seal, unseal } from "../src/integrations/crypto";
-import { challengeOf, InvalidGrantError } from "../src/integrations/oauth";
+import { InvalidGrantError } from "../src/integrations/oauth";
+import { sha256b64url as challengeOf } from "../src/lib/encoding";
 import { PROVIDERS } from "../src/integrations/registry";
 import { loadCtx, openTokens, sealTokens } from "../src/integrations/connection";
 import { getConnection, insertState, upsertConnection } from "../src/db/integrations";
@@ -250,6 +251,15 @@ describe("Ctx.api", () => {
     await seedConnection({ expiresAt: Date.now() + 30 * 60_000, refreshToken: "1//refresh-1" });
     await (await loadCtx(env, userId, "google-calendar"))?.api("https://api.test/ping");
     expect(callsTo(TOKEN)).toHaveLength(0);
+  });
+
+  it("every provider and token call carries a timeout signal", async () => {
+    await seedConnection({ expiresAt: Date.now() + 30_000, refreshToken: "1//refresh-1" });
+    routes[TOKEN] = () => Response.json(google.refreshed);
+    await (await loadCtx(env, userId, "google-calendar"))?.api("https://api.test/ping");
+    const signals = vi.mocked(fetch).mock.calls.map(([, init]) => init?.signal);
+    expect(signals).toHaveLength(2);
+    for (const s of signals) expect(s).toBeInstanceOf(AbortSignal);
   });
 
   it("invalid_grant marca a conexão revogada", async () => {
