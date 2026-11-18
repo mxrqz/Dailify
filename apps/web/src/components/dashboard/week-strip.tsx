@@ -1,12 +1,11 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { eachDayOfInterval, endOfWeek, format, isSameDay, isToday, startOfWeek } from "date-fns";
-import { ptBR } from "date-fns/locale";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { ScheduleDrop } from "@/components/dashboard/anytime-block";
-import { dayAnchorId } from "@/components/dashboard/day-section";
-import { capitalize, getTasksForDay } from "@/functions/functions";
+import { dayAnchorId, weekdayDate } from "@/components/dashboard/day-section";
+import { getTasksForDay } from "@/functions/functions";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { useNow } from "@/hooks/useNow";
 import { cn } from "@/lib/utils";
@@ -29,7 +28,7 @@ function useVisibleDay(days: Date[]): string | undefined {
     // lido na rolagem, e não por observer, porque as seções nascem depois (cache, meses chegando).
     const update = () => {
       frame = 0;
-      const sections = document.querySelectorAll<HTMLElement>("section[id^='day-']");
+      const sections = document.querySelectorAll<HTMLElement>("section[data-day]");
       let current = sections[0];
       for (const section of sections) {
         if (section.getBoundingClientRect().top > READING_LINE_PX) break;
@@ -88,7 +87,7 @@ export function WeekDays({
     <div role="group" aria-label={copy.day.week} className="grid grid-cols-7 gap-1">
       {days.map((day) => {
         const on = selected !== undefined && isSameDay(day, selected);
-        const label = weekdayLabel(day);
+        const label = weekdayDate(day, "EEEE, d 'de' MMMM");
         const has = marked(day);
         return (
           <div key={day.getTime()} className="flex flex-col items-center gap-1.5">
@@ -134,9 +133,6 @@ export function WeekDays({
     </div>
   );
 }
-
-const weekdayLabel = (day: Date) =>
-  capitalize(format(day, "EEEE, d 'de' MMMM", { locale: ptBR }).replace("-feira", ""));
 
 /** A semana de hoje (respeitando o primeiro dia da config); muda só à meia-noite. */
 export function useWeek(): Date[] {

@@ -12,6 +12,7 @@ import { SwipeActions } from "@/components/dashboard/swipe-actions";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
+import { formatClock } from "@/functions/functions";
 import { repeatLabel } from "@/functions/repeat-label";
 import { pendingUndated, splitUndated } from "@/functions/undated";
 import { useCreateTask } from "@/hooks/useCreateTask";
@@ -23,7 +24,6 @@ import { cn } from "@/lib/utils";
 import { zoned } from "@/functions/zone";
 
 const weekday = (day: number) => copy.form.repeatDays[day].toLowerCase();
-const hhmm = (date: Date) => format(date, "HH:mm");
 
 /** Só uma linha daqui vira alvo de soltar: arquivo ou texto arrastado de fora não. */
 export const DRAG_TYPE = "application/x-mewki-task";
@@ -59,11 +59,7 @@ export function AnytimeItem({
       onDragStart={onDragStart}
       className="flex min-h-14 items-center gap-3 pr-4 pl-1.5"
     >
-      <CheckCircle
-        checked={done}
-        onCheckedChange={onToggle}
-        label={done ? copy.task.uncomplete : copy.task.complete}
-      />
+      <CheckCircle checked={done} onCheckedChange={onToggle} />
       <button
         type="button"
         onClick={onOpen}
@@ -126,7 +122,7 @@ function AnytimeRow({
   drag: boolean;
   first: boolean;
 }): JSX.Element {
-  const { weekStart } = useDailify();
+  const { weekStart, hour12 } = useDailify();
   const { done, toggle, remove } = useUndatedActions(task);
   const [open, setOpen] = useState(false);
 
@@ -142,7 +138,8 @@ function AnytimeRow({
     ) : task.alert ? (
       <>
         <Bell role="img" aria-label={copy.undated.reminder} />
-        {weekday(zoned(task.alert).getDay())} {hhmm(zoned(task.alert))}
+        {weekday(zoned(task.alert).getDay())}{" "}
+        {formatClock(format(zoned(task.alert), "HH:mm"), hour12)}
       </>
     ) : (
       copy.day.noDate
@@ -265,16 +262,16 @@ function SchedulePicker({
   return (
     <div className="flex flex-col gap-3">
       <div className="min-w-0">
-        <p className="text-xs text-muted-foreground">{label}</p>
-        <p className="truncate text-sm text-foreground">{task.title}</p>
+        <p className="text-footnote text-ink-secondary">{label}</p>
+        <p className="truncate text-subhead text-ink">{task.title}</p>
       </div>
       <TimeWheel value={at} onChange={setAt} />
       <div className="grid grid-cols-2 gap-2">
-        <Button variant="ghost" className="h-9 rounded-sm" onClick={onDone}>
+        <Button variant="ghost" size="sm" onClick={onDone}>
           {copy.form.cancel}
         </Button>
         <Button
-          className="h-9 rounded-sm bg-accent-primary text-primary-foreground hover:bg-accent-hover"
+          size="sm"
           onClick={() => {
             void schedule(at.getTime());
             onDone();

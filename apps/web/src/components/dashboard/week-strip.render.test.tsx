@@ -30,6 +30,7 @@ describe("WeekStrip", () => {
     const sections = [0, 2, 4].map((offset, i) => {
       const section = document.createElement("section");
       section.id = dayAnchorId(addDays(sunday, offset));
+      section.dataset.day = "true";
       const top = [-300, 20, 400][i];
       const rect = { x: 0, y: top, width: 0, height: 0, top, right: 0, bottom: top, left: 0 };
       section.getBoundingClientRect = () => ({ ...rect, toJSON: () => rect });

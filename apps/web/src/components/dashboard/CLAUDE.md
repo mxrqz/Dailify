@@ -19,8 +19,7 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
 - `copy.ts` is the dictionary of the whole authenticated app (see `components/CLAUDE.md`).
 - `styles.ts`: only `calendarPanel` is shared; `fieldClass`/`bareFieldClass` have one user each, and
   the `chip*` exports are dead.
-- Legacy-alias holdouts, don't copy: `undated-column.tsx`, `SchedulePicker` in `anytime-block.tsx`,
-  `styles.ts` `fieldClass`, `day-picker.tsx`, `create-fab.tsx`.
+- Legacy-alias holdouts, don't copy: `undated-column.tsx`, `styles.ts` `fieldClass`, `day-picker.tsx`, `create-fab.tsx`.
 
 ## Two editing modes, never both
 
@@ -102,8 +101,9 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
 - `dayAnchorId(day)` = `day-yyyy-MM-dd`, absent in calendar mode. `DayList` scrolls to it when
   `targetDay` changes; a remount with the same target keeps the restored scroll.
 - `useVisibleDay` picks the last section whose top crossed 64px, if it is in this week; a
-  `targetDay` pins the pill until `touchstart`/`wheel`/`keydown`. Its `section[id^='day-']`
-  selector re-types the anchor prefix, so change both together.
+  `targetDay` pins the pill until `touchstart`/`wheel`/`keydown`. It queries `section[data-day]`,
+  which only anchored (non-calendar) sections carry.
+- `dayLabel` uses `isSameWeek` with `weekStart`, the same week as the strip.
 - `NowLine` sorts at `nowAt - 0.5`, so a task starting this minute sits below it. Only today uses
   `useNow(60_000)`. The row stagger runs only for today and the calendar day, so months loaded
   mid-scroll don't animate.
@@ -133,11 +133,13 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
 
 - App-shell nav: `Sidebar` is mounted by `components/app-layout.tsx` (md+), `MobileNav` by
   `components/app-header.tsx` (below md, the glass drawer `Sheet side="left"`).
-- `NavMenu` is props-only and shared by both; `NavItems` wires session and quotas. `/premium` shares
+- `NavMenu` is props-only and shared by both (items are the `NAV_ITEMS` list); `NavItems` wires
+  session and quotas, and the meter draws `QuotaState.ratio`. `/premium` shares
   the layout without `ProtectedRoute`, so account, credits and sign-out appear only when logged in.
 - The active item is neutral on purpose (brand would compete with the primary action), and nothing
   stays lit on mobile. `alsoActive="/premium"` lights "Planos" though it links to `/billing`.
-- `MobileNav` closes on any location change by adjusting state during render (covers device back).
+- `MobileNav` closes only on a location change, adjusted during render (a link, even to the current
+  route, and the device back); tapping the account or the meter leaves it open.
   The credits meter hides while quotas load or when AI is unlimited. Tests assert
   `aria-current="page"`.
 
@@ -147,4 +149,5 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
   `@/functions/api`, `@/lib/auth`, `dailifyContext` and `sonner`, and need a `MemoryRouter`
   (`MewCard` links to `/premium`). `create-fab.render` mocks the hooks instead.
 - `anytime-block.render` also covers today's undated `DayList`, `CheckHistory`, `useUndatedActions`
-  and drag-drop; `DaySection` has no test of its own. New cases go in the component's own file.
+  and drag-drop. `day-section.render` pins the day labels and the now-line order. New cases go in
+  the component's own file.

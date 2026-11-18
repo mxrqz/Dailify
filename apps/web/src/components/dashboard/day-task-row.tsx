@@ -49,11 +49,11 @@ export function durationText(minutes: number): string {
 export function CheckCircle({
   checked,
   onCheckedChange,
-  label,
+  label = checked ? copy.task.uncomplete : copy.task.complete,
 }: {
   checked: boolean;
   onCheckedChange: (checked: boolean) => void;
-  label: string;
+  label?: string;
 }): JSX.Element {
   return (
     <button
@@ -258,7 +258,7 @@ export function DayTaskRow({
     day,
   );
 
-  const onOpenChange = (next: boolean) => setOpen(next);
+  const toggle = () => void (data.completed ? onUncomplete() : onComplete());
   // Remarcar uma recorrente espera a escolha entre esta ocorrência e a série.
   const [moveTo, setMoveTo] = useState<Date | null>(null);
   // Os diálogos montam no primeiro uso e ficam (animação de saída): fechados, custavam por linha.
@@ -319,15 +319,11 @@ export function DayTaskRow({
             {chip}
           </DurationMenu>
         ),
-        complete: {
-          done: data.completed,
-          toggle: () => void (data.completed ? onUncomplete() : onComplete()),
-        },
+        complete: { done: data.completed, toggle },
         remove,
         calendar: <AddToCalendar task={task} variant="toolbar" />,
       };
 
-  const toggle = () => void (data.completed ? onUncomplete() : onComplete());
   const time = hour ? formatClock(hour, hour12) : "";
   // ponytail: o desktop segue no TaskCard (edição nos chips, por hover); portar pra TaskRow pede
   // levar os popovers de horário/duração/repetição pra dentro da meta.
@@ -340,13 +336,7 @@ export function DayTaskRow({
       done={data.completed}
       live={live && !data.completed}
       onOpen={() => setOpen(true)}
-      trailing={
-        <CheckCircle
-          checked={data.completed}
-          onCheckedChange={toggle}
-          label={data.completed ? copy.task.uncomplete : copy.task.complete}
-        />
-      }
+      trailing={<CheckCircle checked={data.completed} onCheckedChange={toggle} />}
     />
   ) : (
     <TaskCard
@@ -368,7 +358,7 @@ export function DayTaskRow({
   );
 
   return (
-    <EditTask open={open} onOpenChange={onOpenChange}>
+    <EditTask open={open} onOpenChange={setOpen}>
       {sheetEditing ? (
         <SwipeActions onComplete={toggle} onDelete={remove}>
           {card}

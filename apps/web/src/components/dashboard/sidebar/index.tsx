@@ -1,4 +1,12 @@
-import { LogOutIcon } from "lucide-react";
+import {
+  CrownIcon,
+  LayoutListIcon,
+  LogOutIcon,
+  SettingsIcon,
+  ShieldIcon,
+  UserIcon,
+} from "lucide-react";
+import type { QuotaState } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
@@ -7,15 +15,20 @@ import { useQuotas } from "@/hooks/useQuotas";
 import { planOf, useSession } from "@/lib/auth";
 import { signOutAndReload } from "@/lib/native-auth";
 import { cn } from "@/lib/utils";
-import { DashboardButton } from "./dashboard-button";
-import { PremiumButton } from "./premium-button";
-import { ProfileButton } from "./profile-button";
-import { SecurityButton } from "./security-button";
-import { SettingsButton } from "./settings-button";
-import { sidebarItemClass } from "./sidebar-item";
+import { SidebarItem, sidebarItemClass } from "./sidebar-item";
+
+const NAV_ITEMS = [
+  { icon: LayoutListIcon, label: copy.profile.navDashboard, to: "/dashboard" },
+  { icon: UserIcon, label: copy.profile.navPersonal, to: "/profile" },
+  { icon: ShieldIcon, label: copy.profile.navSecurity, to: "/security" },
+  { icon: CrownIcon, label: copy.profile.navPremium, to: "/billing", alsoActive: "/premium" },
+  { icon: SettingsIcon, label: copy.profile.navSettings, to: "/settings" },
+];
+
+type Credits = Pick<QuotaState, "used" | "limit" | "ratio">;
 
 /** "12 de 30 créditos de IA este mês": a barra lê o uso do mês que o servidor devolveu. */
-export function CreditsMeter({ used, limit }: { used: number; limit: number }): JSX.Element {
+export function CreditsMeter({ used, limit, ratio }: Credits): JSX.Element {
   const name = copy.quota.names.ai;
   return (
     <div className="mx-1 rounded-md bg-fill-pressed px-3 py-3.5">
@@ -33,10 +46,7 @@ export function CreditsMeter({ used, limit }: { used: number; limit: number }): 
         aria-valuenow={used}
         className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-canvas"
       >
-        <div
-          className="h-full rounded-full bg-ink"
-          style={{ width: `${Math.min(1, used / limit) * 100}%` }}
-        />
+        <div className="h-full rounded-full bg-ink" style={{ width: `${(ratio ?? 0) * 100}%` }} />
       </div>
       <p className="mt-2 text-footnote text-ink-secondary">
         {copy.profile.creditsSummary
@@ -58,7 +68,7 @@ export function NavMenu({
 }: {
   account?: { name: string; imageUrl?: string; plan: string };
   /** Sem teto (ou carregando) não há barra a mostrar. */
-  credits?: { used: number; limit: number };
+  credits?: Credits;
   onSignOut?: () => void;
 }): JSX.Element {
   return (
@@ -84,11 +94,9 @@ export function NavMenu({
       )}
 
       <div className="flex flex-col gap-0.5">
-        <DashboardButton />
-        <ProfileButton />
-        <SecurityButton />
-        <PremiumButton />
-        <SettingsButton />
+        {NAV_ITEMS.map((item) => (
+          <SidebarItem key={item.to} {...item} />
+        ))}
       </div>
 
       {account && (
@@ -122,7 +130,7 @@ export function NavItems(): JSX.Element {
           ? { name: user.name || user.email, imageUrl: user.image ?? undefined, plan }
           : undefined
       }
-      credits={loading || ai.unlimited ? undefined : { used: ai.used, limit: ai.limit }}
+      credits={loading || ai.unlimited ? undefined : ai}
       onSignOut={() => signOutAndReload()}
     />
   );
