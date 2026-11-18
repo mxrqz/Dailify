@@ -4,7 +4,7 @@ import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { deleteSubscription, saveSubscription, subscriptionsOf } from "../db/push";
 import { fail } from "../lib/errors";
-import { base64urlToBytes } from "../lib/push";
+import { base64urlToBytes } from "../lib/encoding";
 import { isRecord, readJson, validZone } from "../lib/task-input";
 
 const push = new Hono<AppEnv>();
