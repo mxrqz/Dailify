@@ -9,7 +9,7 @@ import { copy } from "@/components/dashboard/copy";
 import { CheckCircle, TaskRow } from "@/components/dashboard/day-task-row";
 import { PageHeader } from "@/components/kit/page-header";
 import { CalendarBadge } from "@/components/logos";
-import { ChatDrawer } from "@/components/mew-chat/chat-drawer";
+import { ChatDrawer, ChatInput } from "@/components/mew-chat/chat-drawer";
 import {
   type AgendaTask,
   dayName,
@@ -24,7 +24,7 @@ import {
   mewId,
   saveChat,
 } from "@/components/mew-chat/thread";
-import { spring } from "@/consts/motion";
+import { fade, spring } from "@/consts/motion";
 import { zoned } from "@/functions/zone";
 import { cn } from "@/lib/utils";
 
@@ -81,7 +81,8 @@ export default function MewPreview() {
   );
   const { busy, send } = usePlayer(dispatch);
   const [open, setOpen] = useState(false);
-  const [listen, setListen] = useState(false);
+  const [listening, setListening] = useState(false);
+  const photo = useRef<HTMLInputElement>(null);
   const [focus, setFocus] = useState<string | null>(null);
 
   useEffect(() => saveChat(state), [state]);
@@ -96,7 +97,7 @@ export default function MewPreview() {
   }, [focus]);
 
   const openChat = (voice: boolean) => {
-    setListen(voice);
+    setListening(voice);
     setOpen(true);
   };
 
@@ -114,17 +115,41 @@ export default function MewPreview() {
             focus={focus}
             onComplete={(task) => dispatch({ type: "complete", task })}
           />
-          <CreateDock onOpen={() => openChat(false)} onVoice={() => openChat(true)} />
+          {/* The same dock as the dashboard: open, it is the chat's message box, above the drawer. */}
+          <CreateDock
+            className="sm:mx-auto sm:w-sheet"
+            onOpen={() => openChat(false)}
+            onVoice={() => openChat(true)}
+            chat={
+              open && (
+                <ChatInput
+                  busy={busy}
+                  listening={listening}
+                  onListening={setListening}
+                  onSend={(text, image) => send(text, image, state.tasks)}
+                  file={photo}
+                />
+              )
+            }
+          />
         </div>
       </div>
+      {/* The drawer is non-modal (the dock outside it must stay usable), so the scrim is ours. */}
+      <AnimatePresence>
+        {open && <motion.div {...fade} aria-hidden="true" className="fixed inset-0 z-chat scrim" />}
+      </AnimatePresence>
       <ChatDrawer
         open={open}
-        onOpenChange={setOpen}
-        listen={listen}
+        onOpenChange={(next) => {
+          setOpen(next);
+          if (!next) setListening(false);
+        }}
+        listening={listening}
         state={state}
         dispatch={dispatch}
         busy={busy}
         onSend={(text, image) => send(text, image, state.tasks)}
+        onPhoto={() => photo.current?.click()}
         onOpenTask={(id) => {
           setOpen(false);
           setFocus(id);

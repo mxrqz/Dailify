@@ -1,6 +1,7 @@
 import {
   type FormEvent,
   type ReactNode,
+  type RefObject,
   useEffect,
   useLayoutEffect,
   useRef,
@@ -17,13 +18,13 @@ import {
   SearchIcon,
   XIcon,
 } from "lucide-react";
-import { motion, useReducedMotion } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion } from "motion/react";
 
 import { copy } from "@/components/dashboard/copy";
-import { CheckCircle, TaskRow } from "@/components/dashboard/day-task-row";
+import { CheckCircle } from "@/components/dashboard/day-task-row";
 import { Chip } from "@/components/kit/chip";
 import { BubbleDefs } from "@/components/landing/kit/bubble";
-import { MessageBox, type MessageType } from "@/components/landing/kit/message-box";
+import { MessageBox } from "@/components/landing/kit/message-box";
 import { CalendarBadge } from "@/components/logos";
 import { MewStatic } from "@/components/mew/mew-static";
 import { Button } from "@/components/ui/button";
@@ -34,8 +35,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { duration, spring } from "@/consts/motion";
+import { duration, ease, spring } from "@/consts/motion";
 import { zoned } from "@/functions/zone";
+import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { cn } from "@/lib/utils";
 
 import { type AgendaTask, type ConfirmBlock, type Step, dayName, fill } from "./engine";
@@ -73,28 +75,44 @@ type Props = {
   state: ChatState;
   dispatch: (action: ChatAction) => void;
   busy: boolean;
+  listening: boolean;
   onSend: (text: string, image?: string) => void;
+  onPhoto: () => void;
   onOpenTask: (id: string) => void;
   onReset: () => void;
 };
 
-/** The Mew's chat: a near-full-height bottom sheet. `listen` opens it already listening (the dock mic). */
+const INPUT_ID = "mew-input";
+
+/**
+ * The Mew's chat: a near-full-height bottom sheet on the `z-chat` layer, under the floating dock,
+ * which turns into its message box (`ChatInput`). Non-modal, so the dock outside stays focusable;
+ * the scrim is the page's.
+ */
 export function ChatDrawer({
   open,
   onOpenChange,
-  listen,
   ...props
-}: Props & { open: boolean; onOpenChange: (open: boolean) => void; listen: boolean }) {
+}: Props & { open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
-    <Sheet open={open} onOpenChange={onOpenChange}>
+    <Sheet open={open} onOpenChange={onOpenChange} modal={false}>
       <SheetContent
         side="bottom"
         showCloseButton={false}
         aria-describedby={undefined}
-        className="h-11/12 px-0 sm:mx-auto sm:w-sheet"
+        onOpenAutoFocus={(event) => {
+          event.preventDefault();
+          document.getElementById(INPUT_ID)?.focus();
+        }}
+        // Typing in the dock is not leaving the chat.
+        onInteractOutside={(event) => {
+          if (event.target instanceof Element && event.target.closest('[data-slot="create-dock"]'))
+            event.preventDefault();
+        }}
+        className="z-chat h-11/12 px-0 pb-0 sm:mx-auto sm:w-sheet"
       >
         <BubbleDefs />
-        <ChatPanel listen={listen} {...props} />
+        <ChatPanel {...props} />
       </SheetContent>
     </Sheet>
   );
@@ -104,48 +122,42 @@ function ChatPanel({
   state,
   dispatch,
   busy,
+  listening,
   onSend,
+  onPhoto,
   onOpenTask,
   onReset,
-  listen,
-}: Props & { listen: boolean }) {
-  const [text, setText] = useState("");
-  const [image, setImage] = useState<string>();
-  const [listening, setListening] = useState(listen);
-  const file = useRef<HTMLInputElement>(null);
+}: Props) {
   const log = useRef<HTMLDivElement>(null);
-  const first = useRef(true);
+  const list = useRef<HTMLDivElement>(null);
+  const pinned = useRef(true);
+  const reduce = useReducedMotion();
   const { messages } = state;
 
-  // Simulated voice: after a beat the fixed transcript lands in the field.
+  // Stay glued to the newest message while it grows (words, slots, morphs), unless scrolled up.
   useEffect(() => {
-    if (!listening) return;
-    const id = window.setTimeout(() => {
-      setListening(false);
-      setText(t.transcript);
-    }, LISTEN_MS);
-    return () => clearTimeout(id);
-  }, [listening]);
-
-  // Follow the reply only when already near the bottom, or when I just sent.
-  useLayoutEffect(() => {
     const el = log.current;
-    if (!el) return;
-    const near = el.scrollHeight - el.scrollTop - el.clientHeight < 160;
-    if (first.current || near || messages.at(-2)?.from === "me") el.scrollTop = el.scrollHeight;
-    first.current = false;
-  }, [messages]);
+    const inner = list.current;
+    if (!el || !inner) return;
+    const onScroll = () => {
+      pinned.current = el.scrollHeight - el.scrollTop - el.clientHeight < 48;
+    };
+    const observer = new ResizeObserver(() => {
+      if (pinned.current) el.scrollTop = el.scrollHeight;
+    });
+    observer.observe(inner);
+    el.addEventListener("scroll", onScroll, { passive: true });
+    return () => {
+      observer.disconnect();
+      el.removeEventListener("scroll", onScroll);
+    };
+  }, []);
 
-  const send = (value: string, img = image) => {
-    if (busy || (!value.trim() && !img)) return;
-    onSend(value.trim(), img);
-    setText("");
-    setImage(undefined);
-  };
-  const submit = (event: FormEvent) => {
-    event.preventDefault();
-    send(text);
-  };
+  // A new message (and opening the chat) always brings the thread back to the end.
+  useLayoutEffect(() => {
+    pinned.current = true;
+    if (log.current) log.current.scrollTop = log.current.scrollHeight;
+  }, [messages.length]);
 
   const last = messages.at(-1);
   const happy =
@@ -182,123 +194,207 @@ function ChatPanel({
         </SheetClose>
       </header>
 
+      {/* Newest at the bottom, against the dock; older ones scroll up under the fade. */}
       <div
         ref={log}
         role="log"
         aria-label={t.thread}
-        className="flex min-h-0 flex-1 flex-col gap-3 overflow-y-auto px-4 pt-2 pb-4"
+        className="fade-top flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4"
       >
-        {messages.length === 0 ? (
-          <Empty onPick={(value) => send(value)} onPhoto={() => file.current?.click()} />
-        ) : (
-          messages.map((m) =>
-            m.from === "me" ? (
-              <Mine key={m.id} message={m} />
-            ) : (
-              <Reply key={m.id} message={m} dispatch={dispatch} onOpenTask={onOpenTask} />
-            ),
-          )
-        )}
-      </div>
-
-      <form onSubmit={submit} className="px-3 pt-2 pb-safe">
-        {image && (
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9 }}
-            animate={{ opacity: 1, scale: 1 }}
-            transition={spring.soft}
-            className="relative mb-2 ml-1 w-fit"
-          >
-            <img src={image} alt={t.photo} className="h-16 rounded-md object-cover" />
-            <button
-              type="button"
-              aria-label={t.removeImage}
-              onClick={() => setImage(undefined)}
-              className="absolute -top-2 -right-2 grid size-6 cursor-pointer place-items-center rounded-full bg-ink text-canvas"
-            >
-              <XIcon aria-hidden="true" className="size-3.5" />
-            </button>
-          </motion.div>
-        )}
-        <div className="flex items-center gap-1 rounded-panel bg-fill p-1">
-          <input
-            ref={file}
-            type="file"
-            accept="image/*"
-            hidden
-            onChange={(event) => {
-              const picked = event.target.files?.[0];
-              event.target.value = "";
-              if (picked) void thumbnail(picked).then(setImage, () => undefined);
-            }}
-          />
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label={t.attach}
-            onClick={() => file.current?.click()}
-            className="rounded-full"
-          >
-            <ImagePlusIcon aria-hidden="true" />
-          </Button>
-          {listening ? (
-            <Listening />
+        <div ref={list} className="flex grow flex-col justify-end pt-6 pb-dock-clear">
+          {messages.length === 0 ? (
+            <Empty onPick={(value) => onSend(value)} onPhoto={onPhoto} />
           ) : (
-            // text-base: below 16px iOS zooms the page on focus.
-            <input
-              value={text}
-              onChange={(event) => setText(event.target.value)}
-              placeholder={t.placeholder}
-              aria-label={t.placeholder}
-              enterKeyHint="send"
-              autoComplete="off"
-              className="h-11 min-w-0 flex-1 bg-transparent px-1 text-base text-ink outline-none placeholder:text-ink-tertiary"
-            />
+            <AnimatePresence initial={false}>
+              {messages.map((m) => (
+                // .cslot: the row opens its height, then the message fades, rises and unblurs in.
+                <motion.div
+                  key={m.id}
+                  initial={reduce ? false : { height: 0 }}
+                  animate={{ height: "auto" }}
+                  transition={{ duration: 0.46, ease: ease.outQuint }}
+                  className="flex-none overflow-hidden"
+                >
+                  <motion.div
+                    initial={reduce ? false : { opacity: 0, y: 10, filter: "blur(4px)" }}
+                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
+                    transition={{
+                      delay: 0.08,
+                      duration: 0.36,
+                      ease: ease.out,
+                      y: { delay: 0.08, duration: 0.52, ease: ease.outQuint },
+                    }}
+                    className="py-1.5"
+                  >
+                    {m.from === "me" ? (
+                      <Mine message={m} />
+                    ) : (
+                      <Reply message={m} dispatch={dispatch} onOpenTask={onOpenTask} />
+                    )}
+                  </motion.div>
+                </motion.div>
+              ))}
+            </AnimatePresence>
           )}
-          <Button
-            type="button"
-            variant="ghost"
-            size="icon"
-            aria-label={listening ? t.micStop : t.mic}
-            aria-pressed={listening}
-            onClick={() => setListening((on) => !on)}
-            className={cn("rounded-full", listening && "bg-brand-soft text-brand-text")}
-          >
-            <MicIcon aria-hidden="true" />
-          </Button>
-          <Button
-            type="submit"
-            size="icon"
-            aria-label={t.send}
-            disabled={busy || (!text.trim() && !image)}
-            className="rounded-full"
-          >
-            <ArrowUpIcon aria-hidden="true" />
-          </Button>
         </div>
-      </form>
+      </div>
     </>
+  );
+}
+
+/**
+ * The dock's pill while the chat is open (`CreateDock chat={…}`): attach, field and one round
+ * button that is the mic when empty, send with text, stop while listening (the landing's `.cin`).
+ */
+export function ChatInput({
+  busy,
+  listening,
+  onListening,
+  onSend,
+  file,
+}: {
+  busy: boolean;
+  listening: boolean;
+  onListening: (on: boolean) => void;
+  onSend: (text: string, image?: string) => void;
+  file: RefObject<HTMLInputElement>;
+}) {
+  const [text, setText] = useState("");
+  const [image, setImage] = useState<string>();
+  const filled = !!text.trim() || !!image;
+  const sends = filled && !listening;
+
+  // Simulated voice: after a beat the fixed transcript lands in the field.
+  const heard = useEffectEvent(() => {
+    onListening(false);
+    setText(t.transcript);
+  });
+  useEffect(() => {
+    if (!listening) return;
+    const id = window.setTimeout(heard, LISTEN_MS);
+    return () => clearTimeout(id);
+  }, [listening]);
+
+  const submit = (event: FormEvent) => {
+    event.preventDefault();
+    if (busy || !filled) return;
+    onSend(text.trim(), image);
+    setText("");
+    setImage(undefined);
+  };
+
+  return (
+    <form onSubmit={submit} className="flex h-full min-w-0 flex-1 items-center gap-1">
+      {image && (
+        <motion.div
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={spring.soft}
+          className="absolute bottom-full left-1 mb-3"
+        >
+          <img src={image} alt={t.photo} className="h-16 rounded-md object-cover shadow-raised" />
+          <button
+            type="button"
+            aria-label={t.removeImage}
+            onClick={() => setImage(undefined)}
+            className="absolute -top-2 -right-2 grid size-6 cursor-pointer place-items-center rounded-full bg-ink text-canvas"
+          >
+            <XIcon aria-hidden="true" className="size-3.5" />
+          </button>
+        </motion.div>
+      )}
+      <input
+        ref={file}
+        type="file"
+        accept="image/*"
+        hidden
+        onChange={(event) => {
+          const picked = event.target.files?.[0];
+          event.target.value = "";
+          if (picked) void thumbnail(picked).then(setImage, () => undefined);
+        }}
+      />
+      <button
+        type="button"
+        aria-label={t.attach}
+        onClick={() => file.current?.click()}
+        className="grid size-11 flex-none cursor-pointer place-items-center rounded-full text-ink-secondary transition-colors duration-fast hover:bg-fill hover:text-ink"
+      >
+        <ImagePlusIcon aria-hidden="true" className="size-5" />
+      </button>
+      {listening ? (
+        <Listening />
+      ) : (
+        // text-body: below 16px iOS zooms the page on focus.
+        <input
+          id={INPUT_ID}
+          value={text}
+          onChange={(event) => setText(event.target.value)}
+          placeholder={t.placeholder}
+          aria-label={t.placeholder}
+          enterKeyHint="send"
+          autoComplete="off"
+          className="h-full min-w-0 flex-1 bg-transparent text-body text-ink outline-none placeholder:text-ink-secondary"
+        />
+      )}
+      <button
+        type={sends ? "submit" : "button"}
+        aria-label={listening ? t.micStop : filled ? t.send : t.mic}
+        aria-pressed={listening}
+        disabled={busy && sends}
+        onClick={sends ? undefined : () => onListening(!listening)}
+        className={cn(
+          "relative grid size-11 flex-none cursor-pointer place-items-center rounded-full bg-ink text-canvas transition-[background-color,color,scale] duration-fast active:scale-95 disabled:cursor-default disabled:bg-fill-pressed disabled:text-ink-tertiary",
+          (filled || listening) && "bg-brand text-on-brand",
+          listening && "scale-110",
+        )}
+      >
+        {listening && (
+          <span
+            aria-hidden="true"
+            className="absolute inset-0 animate-ping rounded-full border-2 border-brand motion-reduce:hidden"
+          />
+        )}
+        <MicIcon
+          aria-hidden="true"
+          className={cn(
+            "absolute size-5 transition-[opacity,scale] duration-fast",
+            sends && "scale-60 opacity-0",
+          )}
+        />
+        <ArrowUpIcon
+          aria-hidden="true"
+          className={cn(
+            "absolute size-5 transition-[opacity,scale] duration-fast",
+            !sends && "scale-60 opacity-0",
+          )}
+        />
+      </button>
+    </form>
   );
 }
 
 function Listening() {
   const reduce = useReducedMotion();
   return (
-    <span
-      role="img"
-      aria-label={t.listeningNow}
-      className="flex h-11 flex-1 items-center gap-1 px-1"
-    >
-      {Array.from({ length: 18 }, (_, i) => (
-        <motion.span
-          key={i}
-          className="h-6 w-1 rounded-full bg-brand-text"
-          initial={{ scaleY: 0.2 }}
-          animate={reduce ? { scaleY: 0.5 } : { scaleY: [0.2, 1, 0.35, 0.8, 0.2] }}
-          transition={{ duration: 1.1, delay: (i % 6) * 0.09, repeat: Infinity, ease: "easeInOut" }}
-        />
-      ))}
+    <span role="img" aria-label={t.listeningNow} className="flex h-full flex-1 items-center gap-2">
+      <span className="size-2 flex-none animate-pulse rounded-full bg-brand motion-reduce:animate-none" />
+      <span className="flex h-5 items-center gap-0.5">
+        {Array.from({ length: 18 }, (_, i) => (
+          <motion.span
+            key={i}
+            className="h-full w-0.5 rounded-full bg-ink-secondary"
+            initial={{ scaleY: 0.2 }}
+            animate={reduce ? { scaleY: 0.5 } : { scaleY: [0.2, 1, 0.35, 0.8, 0.2] }}
+            transition={{
+              duration: 1.1,
+              delay: (i % 6) * 0.09,
+              repeat: Infinity,
+              ease: "easeInOut",
+            }}
+          />
+        ))}
+      </span>
     </span>
   );
 }
@@ -335,28 +431,23 @@ function Empty({ onPick, onPhoto }: { onPick: (text: string) => void; onPhoto: (
   );
 }
 
-const enter = {
-  initial: { opacity: 0, y: 10 },
-  animate: { opacity: 1, y: 0 },
-  transition: spring.soft,
-} as const;
-
+/** `.mine`: accent bubble, tight corner at the bottom right, never wider than `max-w-bubble`. */
 function Mine({ message }: { message: Extract<Message, { from: "me" }> }) {
   return (
-    <motion.div {...enter} className="flex flex-col items-end gap-1 pl-12">
+    <div className="flex flex-col items-end gap-1">
       {message.image && (
         <img
           src={message.image}
           alt={t.photo}
-          className="max-h-40 rounded-lg rounded-br-xs object-cover"
+          className="max-h-40 max-w-bubble rounded-lg rounded-br-xs object-cover"
         />
       )}
       {message.text && (
-        <p className="rounded-lg rounded-br-xs bg-brand px-3.5 py-2 text-subhead text-on-brand">
+        <p className="max-w-bubble rounded-lg rounded-br-xs bg-brand px-3.5 py-2 text-subhead text-on-brand">
           {message.text}
         </p>
       )}
-    </motion.div>
+    </div>
   );
 }
 
@@ -375,6 +466,14 @@ function Dots({ label }: { label: string }) {
   );
 }
 
+/** Steps that close a confirmation: the whole message morphs to them (MessageBox). */
+const FINAL: Step[] = ["done", "cancelled", "undone"];
+
+/**
+ * One Mew message = one container (`.mwrap/.mbox`, ears on top): the text, then each block opens
+ * under it (`.cslot`), its buttons at the container's foot. Typing → text and a confirmation
+ * closing morph the whole box; status → draft reopens the block's slot.
+ */
 function Reply({
   message,
   dispatch,
@@ -384,15 +483,20 @@ function Reply({
   dispatch: (action: ChatAction) => void;
   onOpenTask: (id: string) => void;
 }) {
-  const done = message.blocks.some((b) => b.kind === "confirm" && b.step === "done");
+  const confirm = message.blocks.find((b): b is ConfirmBlock => b.kind === "confirm");
+  const key = message.typing
+    ? "typing"
+    : confirm && FINAL.includes(confirm.step)
+      ? confirm.step
+      : "text";
   return (
-    <motion.div {...enter} className="flex items-end gap-2 pr-2">
-      <MewStatic happy={done} className="mb-0.5 w-6.5 flex-none" />
-      <div className="flex min-w-0 flex-1 flex-col items-start gap-2">
-        <MessageBox type="text" contentKey={message.typing ? "typing" : "text"}>
-          {message.typing ? (
-            <Dots label={t.thinking} />
-          ) : (
+    <div className="flex items-end gap-2">
+      <MewStatic happy={confirm?.step === "done"} className="mb-0.5 w-6.5 flex-none" />
+      <MessageBox type="text" contentKey={key} className="max-w-bubble">
+        {message.typing ? (
+          <Dots label={t.thinking} />
+        ) : (
+          <>
             <p className="text-subhead">
               {message.words.map((word, i) => (
                 <motion.span
@@ -406,33 +510,61 @@ function Reply({
                 </motion.span>
               ))}
             </p>
-          )}
-        </MessageBox>
-        {message.blocks.map((block, i) =>
-          block.kind === "tasks" ? (
-            <ul key={i} className="flex w-full flex-col gap-1.5">
-              {block.tasks.map((task, j) => (
-                <motion.li
-                  key={task.id}
-                  initial={{ opacity: 0, y: 8 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  transition={{ ...spring.soft, delay: j * 0.06 }}
+            {message.blocks.map((block, i) =>
+              block.kind === "tasks" ? (
+                <Slot key={i}>
+                  <ul className="flex flex-col divide-y divide-separator rounded-md bg-fill px-3">
+                    {block.tasks.map((task) => (
+                      <li key={task.id}>
+                        <button
+                          type="button"
+                          onClick={() => onOpenTask(task.id)}
+                          className="flex w-full cursor-pointer flex-col gap-0.5 py-2 text-left"
+                        >
+                          <span
+                            className={cn(
+                              "truncate text-subhead font-semibold",
+                              task.done && "text-ink-tertiary line-through",
+                            )}
+                          >
+                            {task.title}
+                          </span>
+                          <Meta>
+                            {task.hasTime ? format(zoned(task.date), "HH:mm") : t.allDay}
+                            {task.calendar && <Calendar />}
+                          </Meta>
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                </Slot>
+              ) : (
+                <Slot
+                  key={`${i}-${block.step === "status" ? "status" : "body"}`}
+                  enter={!FINAL.includes(block.step)}
                 >
-                  <TaskRow
-                    time={task.hasTime ? format(zoned(task.date), "HH:mm") : t.allDay}
-                    title={task.title}
-                    done={task.done}
-                    meta={task.calendar && <Calendar />}
-                    onOpen={() => onOpenTask(task.id)}
-                  />
-                </motion.li>
-              ))}
-            </ul>
-          ) : (
-            <Confirm key={block.id} block={block} dispatch={dispatch} />
-          ),
+                  <ConfirmBody block={block} dispatch={dispatch} />
+                </Slot>
+              ),
+            )}
+          </>
         )}
-      </div>
+      </MessageBox>
+    </div>
+  );
+}
+
+/** `.cslot` inside a message: the block opens its own height after the text. */
+function Slot({ enter = true, children }: { enter?: boolean; children: ReactNode }) {
+  const reduce = useReducedMotion();
+  return (
+    <motion.div
+      initial={enter && !reduce ? { height: 0, opacity: 0 } : false}
+      animate={{ height: "auto", opacity: 1 }}
+      transition={{ duration: 0.46, ease: ease.outQuint }}
+      className="overflow-hidden"
+    >
+      <div className="pt-2.5">{children}</div>
     </motion.div>
   );
 }
@@ -446,28 +578,8 @@ function Calendar() {
   );
 }
 
-const BOX: Record<Step, MessageType> = {
-  status: "status",
-  draft: "draft",
-  done: "done",
-  cancelled: "text",
-  undone: "text",
-};
-
-/** The landing's MessageBox, live: status → draft → done morphs in one container. */
-function Confirm({
-  block,
-  dispatch,
-}: {
-  block: ConfirmBlock;
-  dispatch: (action: ChatAction) => void;
-}) {
-  return (
-    <MessageBox type={BOX[block.step]} contentKey={block.step} ears={false}>
-      <ConfirmBody block={block} dispatch={dispatch} />
-    </MessageBox>
-  );
-}
+/** `.pbtn`: the 34px pill buttons at the foot of a message. */
+const PILL = "h-8.5 rounded-full px-3.5 text-sm font-semibold";
 
 function ConfirmBody({
   block,
@@ -527,6 +639,7 @@ function ConfirmBody({
             size="sm"
             variant="secondary"
             onClick={() => dispatch({ type: "undo", block: block.id })}
+            className={PILL}
           >
             {b.undo}
           </Button>
@@ -622,6 +735,7 @@ function ConfirmBody({
           size="sm"
           variant="secondary"
           onClick={() => dispatch({ type: "cancel", block: block.id })}
+          className={PILL}
         >
           {b.cancel}
         </Button>
@@ -629,6 +743,7 @@ function ConfirmBody({
           size="sm"
           disabled={!n}
           onClick={() => dispatch({ type: "confirm", block: block.id })}
+          className={PILL}
         >
           {fill(cta, values)}
         </Button>
@@ -641,9 +756,15 @@ function Row({ title, children }: { title: string; children: ReactNode }) {
   return (
     <li className="flex flex-col gap-0.5 py-2">
       <span className="truncate text-subhead font-semibold">{title}</span>
-      <span className="flex items-center gap-1.5 text-footnote text-ink-secondary tabular-nums [&_svg]:size-3.5 [&_svg]:flex-none">
-        {children}
-      </span>
+      <Meta>{children}</Meta>
     </li>
+  );
+}
+
+function Meta({ children }: { children: ReactNode }) {
+  return (
+    <span className="flex items-center gap-1.5 text-footnote text-ink-secondary tabular-nums [&_svg]:size-3.5 [&_svg]:flex-none">
+      {children}
+    </span>
   );
 }

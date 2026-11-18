@@ -34,6 +34,7 @@ describe("/preview/mew", () => {
     expect(within(chat).getByText(t.suggestions.overdue)).toBeInTheDocument();
 
     advance(5000);
+    advance(1000);
     fireEvent.click(within(chat).getByRole("button", { name: t.box.confirm }));
     advance(1000);
     expect(within(chat).getByText("3 movidas para sexta-feira")).toBeInTheDocument();
@@ -55,6 +56,7 @@ describe("/preview/mew", () => {
     fireEvent.click(screen.getByRole("button", { name: copy.composer.open }));
     fireEvent.click(screen.getByRole("button", { name: t.suggestions.today }));
     advance(5000);
+    advance(1000);
     unmount();
 
     render(
@@ -64,5 +66,51 @@ describe("/preview/mew", () => {
     );
     fireEvent.click(screen.getByRole("button", { name: copy.composer.open }));
     expect(screen.getByRole("dialog")).toHaveTextContent("Você tem 3 coisas hoje:");
+  });
+
+  it("the chat types into the dashboard's dock, which stays outside the drawer and closes back", () => {
+    render(
+      <HelmetProvider>
+        <MewPreview />
+      </HelmetProvider>,
+    );
+    const dock = document.querySelector('[data-slot="create-dock"]');
+    expect(dock).toContainElement(screen.getByRole("button", { name: copy.composer.open }));
+
+    fireEvent.click(screen.getByRole("button", { name: copy.composer.open }));
+    const field = screen.getByRole("textbox", { name: t.placeholder });
+    // Same node, now the message box; the drawer opened under it, not around it.
+    expect(document.querySelector('[data-slot="create-dock"]')).toBe(dock);
+    expect(dock).toContainElement(field);
+    expect(screen.getByRole("dialog")).not.toContainElement(field);
+    expect(field).toHaveFocus();
+
+    fireEvent.change(field, { target: { value: "o que tenho hoje?" } });
+    fireEvent.click(screen.getByRole("button", { name: t.send }));
+    advance(5000);
+    advance(1000);
+    expect(screen.getByRole("dialog")).toHaveTextContent("Você tem 3 coisas hoje:");
+
+    fireEvent.click(screen.getByRole("button", { name: t.close }));
+    expect(dock).toContainElement(screen.getByRole("button", { name: copy.composer.open }));
+  });
+
+  it("a reply with a block is one container: text, rows and buttons in the same box", () => {
+    render(
+      <HelmetProvider>
+        <MewPreview />
+      </HelmetProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: copy.composer.open }));
+    fireEvent.click(screen.getByRole("button", { name: t.suggestions.steps }));
+    advance(5000);
+    advance(1000);
+
+    const chat = screen.getByRole("dialog");
+    const box = within(chat).getByText("Separei").closest('[data-slot="message-box"]');
+    expect(box).not.toBeNull();
+    expect(box).toContainElement(within(chat).getByText("Confirmar o caminhão"));
+    expect(box).toContainElement(within(chat).getByRole("button", { name: "Adicionar 5" }));
+    expect(chat.querySelectorAll('[data-slot="message-box"]')).toHaveLength(1);
   });
 });

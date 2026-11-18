@@ -15,6 +15,7 @@ describe("consts/motion", () => {
     ["standard", "motion-ease-standard"],
     ["exit", "motion-ease-exit"],
     ["outExpo", "ease-out-expo"],
+    ["outQuint", "ease-out-quint"],
   ] as const)("ease.%s bate com --%s", (key, name) => {
     expect(token(name)).toBe(`cubic-bezier(${ease[key].join(", ")})`);
   });

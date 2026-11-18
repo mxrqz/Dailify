@@ -91,6 +91,7 @@ export function MessageBox({
       {ears && <Ears size="sm" />}
       <div
         ref={boxRef}
+        data-slot="message-box"
         className="relative overflow-hidden rounded-lg rounded-bl-xs bg-surface-raised"
       >
         <div

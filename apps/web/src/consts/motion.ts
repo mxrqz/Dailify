@@ -8,6 +8,7 @@ export const ease = {
   standard: [0.2, 0, 0, 1],
   exit: [0.3, 0, 1, 1],
   outExpo: [0.16, 1, 0.3, 1],
+  outQuint: [0.22, 1, 0.36, 1],
 } as const;
 
 // Sem bounce em UI do app. `soft` é o morph aprovado do composer.
