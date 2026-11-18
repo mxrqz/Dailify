@@ -10,8 +10,7 @@ rules: [/RULES.md](../../../../RULES.md).
 - `platform.ts`: `isTauri`, `signedOutPath`, `internalPath` (the open-redirect guard). No imports,
   so `components/auth/auth-state.ts` and the pages take the guard from here.
 - `native-auth.ts`: the device-bound magic link, keyring access, the deep-link parsers,
-  `initNativeAuth`, `signOut`, `signOutAndReload`. It still re-exports `isTauri` for
-  `components/integrations.tsx`.
+  `initNativeAuth`, `signOut`, `signOutAndReload`.
 - `back-button.ts` (Android back), `haptics.ts` (`haptic(kind)`), `open-external.ts`
   (`openExternal`).
 - `form.ts`: `formString` reads `FormData` without `as string`. `utils.ts`: `cn()`.

@@ -20,7 +20,7 @@ import { fill } from "@/functions/functions";
 import { repeatLabel } from "@/functions/repeat-label";
 import { swapTasks, swapUndated } from "@/functions/task-lists";
 import { zoned } from "@/functions/zone";
-import { patchIntegration, useIntegrations } from "@/hooks/useIntegrations";
+import { patchIntegration, useIntegration } from "@/hooks/useIntegrations";
 import type { Task } from "@dailify/shared";
 
 const t = copy.calendar;
@@ -115,7 +115,7 @@ let shown = false;
 /** O container: lê `duplicates` do status da Agenda, acha os pares nas tarefas e resolve. */
 export function Duplicates(): JSX.Element | null {
   const { tasks, setTasks, undatedTasks, setUndatedTasks, loadedMonths, hour12 } = useDailify();
-  const duplicates = useIntegrations()?.find((s) => s.provider === "google-calendar")?.duplicates;
+  const duplicates = useIntegration("google-calendar")?.duplicates;
   const [closed, setClosed] = useState(shown);
   const [pending, setPending] = useState<string>();
 

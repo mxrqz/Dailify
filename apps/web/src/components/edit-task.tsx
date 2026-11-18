@@ -26,7 +26,7 @@ import {
 } from "@/components/dashboard/task-form";
 import { copy } from "@/components/dashboard/copy";
 import { useTaskActions } from "@/hooks/useTaskActions";
-import { useCalendarReady, useIntegrations } from "@/hooks/useIntegrations";
+import { useCalendarReady, useIntegration } from "@/hooks/useIntegrations";
 import { calendarRevoked, useApplyTask } from "@/hooks/useCalendarPush";
 import { INTEGRATION_ERROR, isCalendarEventLink, seriesOf } from "@dailify/shared";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
@@ -119,10 +119,7 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
     onDeleted: onClose,
   });
   const wasUndated = task.undated === true;
-  const locked =
-    useIntegrations()
-      ?.find((s) => s.provider === "google-calendar")
-      ?.readonly?.includes(task.id) ?? false;
+  const locked = useIntegration("google-calendar")?.readonly?.includes(task.id) ?? false;
   const calendarReady = useCalendarReady();
   const applyTask = useApplyTask();
 

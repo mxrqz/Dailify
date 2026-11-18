@@ -8,11 +8,6 @@ import { apiURL } from "@/consts/conts";
 import { forgetUser } from "@/functions/offline";
 import { authClient, setBearer } from "@/lib/auth";
 import { internalPath, isTauri, signedOutPath } from "@/lib/platform";
-
-// ponytail: re-export for components/integrations.tsx, outside this change; drop once it imports
-// @/lib/platform.
-export { isTauri };
-
 const SESSION_ACCOUNT = "mewki.session";
 const VERIFIER_ACCOUNT = "mewki.magic-link-verifier";
 // Token do magic link do Better Auth: 32 letras; a folga cobre mudança de tamanho sem abrir a porta.

@@ -62,7 +62,8 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
   values from `zoned()`. `"day"` is the start of the day and changes identity only at midnight.
   Never disable it under reduced motion: the now line's position is data.
 - `useIntegrations`: `undefined` until read; fetches only when nothing is cached or in flight and
-  online (`useOnline`, so reconnecting retries), a failure retries on the next mount. Writers: `setIntegrations`/`patchIntegration`.
+  online (`useOnline`, so reconnecting retries), a failure retries on the next mount. Writers: `setIntegrations`/`patchIntegration`. One provider:
+  `useIntegration(id)`; `isActive(status)` = connected and `status === "active"`.
 - `useOnline` lies upward (connected, no internet): use it to warn; `error.offline` decides.
 - `useEffectEvent` polyfills React 19.2's hook; the lint knows the name, so call it only in effects.
 - `useMediaQuery`: pass a named constant from `consts/media.ts` (`DESKTOP`, `MOBILE`,

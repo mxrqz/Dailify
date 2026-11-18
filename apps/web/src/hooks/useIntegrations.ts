@@ -49,8 +49,13 @@ export function useIntegrations(): IntegrationStatus[] | undefined {
   return list;
 }
 
+/** One provider's status; `undefined` while unread, offline or not offered. */
+export const useIntegration = (id: ProviderId): IntegrationStatus | undefined =>
+  useIntegrations()?.find((s) => s.provider === id);
+
+/** Connected and syncing: not revoked, not mid-reconnect. */
+export const isActive = (status: IntegrationStatus | undefined): boolean =>
+  !!status?.connected && status.status === "active";
+
 /** O Google Agenda conectado e ativo — a condição pra oferecer "Adicionar à Agenda". */
-export const useCalendarReady = (): boolean =>
-  useIntegrations()?.some(
-    (s) => s.provider === "google-calendar" && s.connected && s.status === "active",
-  ) ?? false;
+export const useCalendarReady = (): boolean => isActive(useIntegration("google-calendar"));

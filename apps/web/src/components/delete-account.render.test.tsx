@@ -10,7 +10,8 @@ const m = vi.hoisted(() => ({
   toastError: vi.fn(),
 }));
 
-vi.mock("@/lib/auth", () => ({
+vi.mock("@/lib/auth", async (importOriginal) => ({
+  settle: (await importOriginal<typeof import("@/lib/auth")>()).settle,
   authClient: { deleteUser: m.deleteUser },
   useSession: () => ({ data: { user: { id: "u1", email: "Ana@Mail.com" } } }),
 }));
