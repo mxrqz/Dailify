@@ -51,8 +51,9 @@ Each area's `CLAUDE.md` loads when you touch a file in it and holds only that fo
 - Hosting: the web is the Worker `dailify` (static assets with SPA fallback,
   `apps/web/wrangler.jsonc`) on mewki.mxrqz.com, with dailify.mxrqz.com still served; the API is the
   Worker `dailify-server` on api.mewki.mxrqz.com. Cloudflare Workers Builds deploys both, D1
-  migrations included, on every push to `main`. GitHub Actions only builds the signed Android
-  release on `v*` tags.
+  migrations included, on every push to `main`, without waiting for CI. GitHub Actions runs
+  `bun run check` on pushes and PRs (`check.yml`, report only) and builds the signed Android release
+  on `v*` tags.
 - Auth is Better Auth: an httpOnly cookie on the web, a bearer token in the OS keyring in the Tauri
   app. Notes that mention Clerk, Firestore, Vercel or Render are stale; the Stripe metadata key
   `clerkUserId` stays only because live subscriptions carry it.
@@ -70,6 +71,7 @@ Each area's `CLAUDE.md` loads when you touch a file in it and holds only that fo
   `packages/shared/src/quotas.ts`). The server is the real gate; the client check is cosmetic.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:7510c1e2 -->
+
 ## Beads Issue Tracker
 
 This project uses **bd (beads)** for issue tracking. Run `bd prime` to see full workflow context and commands.
@@ -111,10 +113,12 @@ bd close <id>         # Complete work
 7. **Hand off** - Provide context for next session
 
 **CRITICAL RULES:**
+
 - Work is NOT complete until `git push` succeeds
 - NEVER stop before pushing - that leaves work stranded locally
 - NEVER say "ready to push when you are" - YOU must push
 - If push fails, resolve and retry until it succeeds
+
 <!-- END BEADS INTEGRATION -->
 
 Push policy: never `git push` unless the user asks (`RULES.md`, "Git and task tracking"). That
