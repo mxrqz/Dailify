@@ -45,8 +45,8 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
 ## AI calls
 
 - Every Responses call goes through `structured(env, req, guard)` (`req` = name, schema,
-  instructions, input, timeout): `MODEL`, `reasoning: { effort: "low" }`, `store: false`, a strict `json_schema`, then
-  `readOutput`. `interpretText` passes 20 s, `askMew` 30 s, `transcribe` 20 s.
+  instructions, input, timeout): `MODEL`, `reasoning: { effort: "low" }`, `store: false`, a
+  strict `json_schema`, then `readOutput`. `interpretText` passes 20 s, `askMew` 30 s, `transcribe` 20 s.
 - `openaiClient` sets `maxRetries: 1`; the SDK retries timeouts, so a call can take 2× its timeout.
 - The model gets naive local wall time (`clock`). `toEpoch(iso, tz)` reads its dates in the client
   zone, drops any `Z`/offset, and rejects values outside `DATE_RANGE`.
