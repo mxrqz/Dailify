@@ -21,6 +21,7 @@ import { copy as dashboardCopy } from "@/components/dashboard/copy";
 import { ListGroup, ListRow } from "@/components/kit/list";
 import { PageHeader } from "@/components/kit/page-header";
 import { copy } from "@/components/pricing/copy";
+import { accountPage } from "@/components/settings-list";
 import ApplePayLogo from "@/components/ui/applePayLogo";
 import { Button } from "@/components/ui/button";
 import GooglePayLogo from "@/components/ui/googlePayLogo";
@@ -79,7 +80,7 @@ export function BillingView({
   const renewMonth = format(addMonths(zoned(), 1), "MMMM", { locale: ptBR });
 
   return (
-    <main className="mx-auto flex w-full max-w-160 flex-col pb-10">
+    <main className={accountPage}>
       <PageHeader title={copy.account.title} className="pt-2" />
 
       {/* O plano atual é um bloco, não uma lista: plano, preço e o uso do mês juntos. */}
