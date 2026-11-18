@@ -1,5 +1,6 @@
 import { InvoicesProps, PaymentDetailsProps, TaskProps } from "@/types/types";
 import { createContext, useContext, useRef, useState, ReactNode } from "react";
+import type { Dispatch, SetStateAction } from "react";
 import { addDays, endOfMonth, startOfDay, startOfMonth } from "date-fns";
 import { toast } from "sonner";
 import { DEFAULT_WEEK_START } from "@dailify/shared";
@@ -18,7 +19,8 @@ interface DailifyContextType {
   /** Carrega os meses até o dia e só então o marca como alvo, pra ele já estar na lista. */
   goToDay: (day: Date) => Promise<void>;
   tasks: TaskProps[] | undefined;
-  setTasks: (task: TaskProps[]) => void;
+  /** Functional form after an await or from an Undo: a snapshot reverts writes that landed since. */
+  setTasks: Dispatch<SetStateAction<TaskProps[] | undefined>>;
   isLoading: string | null;
   setIsLoading: (isLoading: string | null) => void;
   /** Inícios dos meses na tela, em ordem; quem reconstrói recorrência expande neles. */
@@ -34,7 +36,7 @@ interface DailifyContextType {
   quotas: QuotaSnapshot | undefined;
   setQuotas: (quotas: QuotaSnapshot) => void;
   undatedTasks: TaskProps[] | undefined;
-  setUndatedTasks: (tasks: TaskProps[]) => void;
+  setUndatedTasks: Dispatch<SetStateAction<TaskProps[] | undefined>>;
   weekStart: WeekStart;
   setWeekStart: (weekStart: WeekStart) => void;
   /** Fuso escolhido em /settings; null = automático (o do aparelho). */

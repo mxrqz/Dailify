@@ -82,6 +82,12 @@ export function normalizeRepeat(value: unknown): Repeat {
  * semana começa no dia da tarefa, não no `weekStart`, pra fase não depender da configuração. Mensal
  * no dia 31 corta pro último dia do mês curto sem arrastar: a âncora segue sendo o 31.
  */
+/** The stored series behind an expanded instance (`date` back to `seriesStart`); a task as is. */
+export function seriesOf(task: Task): Task {
+  const { seriesStart, ...series } = task;
+  return seriesStart === undefined ? task : { ...series, date: seriesStart };
+}
+
 export function expandRecurringTask(task: Task, month: Date, timeZone?: string): Task[] {
   const detached = new Set(task.exdates ?? []);
   const until = task.repeatUntil ?? Infinity;

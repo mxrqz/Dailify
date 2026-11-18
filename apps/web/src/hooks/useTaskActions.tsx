@@ -10,8 +10,9 @@ import { ActionSheet } from "@/components/kit/action-sheet";
 import { completeTask, createTask, deleteTask, uncompleteTask, updateTask } from "@/functions/api";
 import type { ApiError } from "@/functions/api";
 import { upsertTaskWithRecurrence } from "@/functions/functions";
+import { revertTask } from "@/functions/revert-task";
 import { enqueue, type Mutation } from "@/functions/offline";
-import { isCalendarEventLink, type TaskInput } from "@dailify/shared";
+import { isCalendarEventLink, seriesOf, type TaskInput } from "@dailify/shared";
 import type { TaskProps } from "@/types/types";
 import { zoned } from "@/functions/zone";
 
@@ -34,7 +35,8 @@ export function useTaskActions(
   const linked = task.links?.some(isCalendarEventLink) ?? false;
   const [confirmOpen, setConfirmOpen] = useState(false);
 
-  const rollback = (previous: TaskProps[]) => setTasks(previous);
+  const rollback = (previous: TaskProps[]) =>
+    setTasks((cur) => revertTask(cur ?? [], previous, task.id));
 
   const settle = (
     error: ApiError | undefined,
@@ -59,7 +61,7 @@ export function useTaskActions(
     const at = Date.now();
     const previous = tasks ?? [];
     const done: TaskProps = { ...task, completed: [...task.completed, at], updatedAt: at };
-    setTasks(upsertTaskWithRecurrence(previous, done, loadedMonths));
+    setTasks((cur) => upsertTaskWithRecurrence(cur ?? [], done, loadedMonths));
     haptic("success");
 
     const mutation: Mutation = { op: "complete", taskId: task.id, at };
@@ -78,30 +80,30 @@ export function useTaskActions(
       completed: task.completed.filter((done) => done < from || done > to),
       updatedAt: at,
     };
-    setTasks(upsertTaskWithRecurrence(previous, reopened, loadedMonths));
+    setTasks((cur) => upsertTaskWithRecurrence(cur ?? [], reopened, loadedMonths));
 
     const mutation: Mutation = { op: "uncomplete", taskId: task.id, day: from, at };
     const { error } = await uncompleteTask(task.id, day);
     settle(error, previous, mutation, copy.task.uncompleteError);
   };
 
-  /** Recria a tarefa com o MESMO id — o que o servidor apagou, não o que o cliente lembrava. */
-  const restore = async (previous: TaskProps[]) => {
+  /** Re-creates the task with the SAME id, a series from its anchor, not the tapped occurrence. */
+  const restore = async () => {
     const at = Date.now();
-    const input = { ...task, id: task.id, completed: task.completed, updatedAt: at };
-    const withoutTask = previous.filter((t) => t.id !== task.id);
-    setTasks(previous);
+    // ponytail: the server drops `completed` (and `exdates`) on create, so Undo restores the task
+    // without its history; re-sending them needs a create that accepts both.
+    const input = { ...seriesOf(task), completed: [], exdates: undefined, updatedAt: at };
+    setTasks((cur) => upsertTaskWithRecurrence(cur ?? [], input, loadedMonths));
 
     const mutation: Mutation = { op: "create", taskId: task.id, input, at };
     const { error } = await createTask(input);
-    if (settle(error, withoutTask, mutation, copy.task.undoError))
-      toast.success(copy.task.restored);
+    if (settle(error, [], mutation, copy.task.undoError)) toast.success(copy.task.restored);
   };
 
   const removeSeries = async () => {
     const at = Date.now();
     const previous = tasks ?? [];
-    setTasks(previous.filter((t) => t.id !== task.id));
+    setTasks((cur) => (cur ?? []).filter((t) => t.id !== task.id));
 
     const mutation: Mutation = { op: "delete", taskId: task.id, at };
     // Um 500 aqui não pode passar por sucesso: antes o cartão sumia da tela com a tarefa viva.
@@ -118,7 +120,7 @@ export function useTaskActions(
     toast.success(copy.task.deleted, {
       description: task.title,
       duration: 6000,
-      action: { label: copy.task.undo, onClick: () => void restore(previous) },
+      action: { label: copy.task.undo, onClick: () => void restore() },
     });
   };
 
@@ -130,7 +132,7 @@ export function useTaskActions(
   const removeOccurrence = async () => {
     const at = Date.now();
     const previous = tasks ?? [];
-    setTasks(previous.filter((t) => !(t.id === task.id && t.date === task.date)));
+    setTasks((cur) => (cur ?? []).filter((t) => !(t.id === task.id && t.date === task.date)));
 
     const mutation: Mutation = {
       op: "delete-occurrence",
@@ -142,7 +144,7 @@ export function useTaskActions(
     if (!settle(error, previous, mutation, copy.task.deleteError)) return;
     // Reexpandir a série com o `exdates` novo é mais fiel que o filtro otimista acima: é o servidor
     // dizendo quais dias sobraram.
-    if (series) setTasks(upsertTaskWithRecurrence(previous, series, loadedMonths));
+    if (series) setTasks((cur) => upsertTaskWithRecurrence(cur ?? [], series, loadedMonths));
     onDeleted?.();
     toast.success(copy.task.occurrenceDeleted, { description: task.title });
   };
@@ -196,16 +198,20 @@ export function useTaskActions(
   const onPatch = async (patch: Partial<TaskInput>, occurrence?: number): Promise<boolean> => {
     const at = Date.now();
     const previous = tasks ?? [];
+    const wholeSeries = occurrence === undefined;
     const stamped = { ...patch, updatedAt: at };
+    // A series move shifts the anchor; the tapped occurrence's date would re-anchor it there.
+    if (wholeSeries && patch.date !== undefined)
+      stamped.date = seriesOf(task).date + patch.date - task.date;
     // `repeatEvery: null` é "volta a 1" no fio; na tarefa da tela é ausência.
     const repeatEvery =
       patch.repeatEvery === undefined ? task.repeatEvery : (patch.repeatEvery ?? undefined);
     const local = { ...stamped, repeatEvery };
     // Só esta ocorrência: mexe só na instância da tela; a série inteira fica como está.
-    setTasks(
-      occurrence === undefined
-        ? upsertTaskWithRecurrence(previous, { ...task, ...local }, loadedMonths)
-        : previous.map((t) => (t.id === task.id && t.date === occurrence ? { ...t, ...local } : t)),
+    setTasks((cur = []) =>
+      wholeSeries
+        ? upsertTaskWithRecurrence(cur, { ...seriesOf(task), ...local }, loadedMonths)
+        : cur.map((t) => (t.id === task.id && t.date === occurrence ? { ...t, ...local } : t)),
     );
 
     const mutation: Mutation = { op: "patch", taskId: task.id, patch: stamped, at, occurrence };
@@ -215,8 +221,13 @@ export function useTaskActions(
 
     // A resposta do servidor ainda entra: ela traz o que o patch não mandou (recorrência expandida).
     // A série vem primeiro: reexpandi-la tira a ocorrência que virou tarefa própria (`exdates`).
-    const base = series ? upsertTaskWithRecurrence(previous, series, loadedMonths) : previous;
-    setTasks(upsertTaskWithRecurrence(base, updated, loadedMonths));
+    setTasks((cur = []) =>
+      upsertTaskWithRecurrence(
+        series ? upsertTaskWithRecurrence(cur, series, loadedMonths) : cur,
+        updated,
+        loadedMonths,
+      ),
+    );
     return true;
   };
 

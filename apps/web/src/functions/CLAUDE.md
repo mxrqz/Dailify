@@ -15,7 +15,8 @@ Each has a colocated `<module>.test.ts`, except `api.ts` and `push.ts`.
   `upsertTaskWithRecurrence`, `mergeMonth`, ...). No new exports; a new helper gets its own module.
 - One concept each: `repeat-label`, `link-label`, `quota-label`, `undated`, `user-agent`,
   `compose-input` (composer chip state: `onDay`, `fromWire`, `markSegments`, `withEdits`; not
-  shared's `composeTaskInput`), `edit-input` (edit form to `TaskInput`), `billing-sections`.
+  shared's `composeTaskInput`), `edit-input` (edit form to `TaskInput`), `billing-sections`,
+  `revert-task`.
 - Imports: shared, date libs, `@/consts`, `@/lib`, siblings, `components/*/copy.ts`, `import type`
   from components. `@/types` is a legacy alias layer; new code imports `@dailify/shared`.
 - A `month: Date` parameter (`getTasksForMonth`, `getQuotas`, `mergeMonth`, the `months` of
@@ -65,7 +66,8 @@ itself is testable with `vi.stubGlobal("fetch", ...)` plus `vi.mock("@/lib/auth"
 
 - `upsertTaskWithRecurrence` replaces every entry with the task's id and re-expands it per loaded
   month (instances share the series id; the server expands only on GET). It expands from
-  `task.date`, so pass the series anchor, never an on-screen instance.
+  `seriesOf(task)`, so an instance is safe; a series date change must arrive as a shifted anchor.
+- `revertTask(current, previous, id)`: a rollback that resets only `id` to its `previous` entries.
 - `getTasksForDay` memoizes per tasks array and zone in a `WeakMap` and returns shared buckets:
   never mutate them or the tasks array; `setTasks` always gets a new array.
 

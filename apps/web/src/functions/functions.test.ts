@@ -342,6 +342,16 @@ describe("upsertTaskWithRecurrence", () => {
     expect(next.filter((t) => t.id === "outra")).toEqual([other]);
   });
 
+  test("an on-screen instance re-expands the whole series from its anchor", () => {
+    const expanded = upsertTaskWithRecurrence([], daily, month);
+    const day18 = expanded.find((t) => new Date(t.date).getDate() === 18);
+    if (!day18) throw new Error("no day 18");
+    const next = upsertTaskWithRecurrence(expanded, { ...day18, completed: [1] }, month);
+    expect(next).toHaveLength(31);
+    expect(next.filter((t) => t.date === daily.date)).toEqual([{ ...daily, completed: [1] }]);
+    expect(next.every((t) => t.date === daily.date || t.seriesStart === daily.date)).toBe(true);
+  });
+
   test("reconstrói as instâncias em todos os meses carregados", () => {
     const next = upsertTaskWithRecurrence([], daily, [new Date(2026, 7, 1), new Date(2026, 8, 1)]);
     expect(next.length).toBe(61); // a original + 30 de agosto + 30 de setembro

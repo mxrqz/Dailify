@@ -9,7 +9,7 @@ import {
 } from "date-fns";
 import { enUS, ptBR } from "date-fns/locale";
 import type { TaskCardData } from "@/components/task-card";
-import { expandRecurringTask, zonedParts } from "@dailify/shared";
+import { expandRecurringTask, seriesOf, zonedParts } from "@dailify/shared";
 
 import { repeatLabel } from "@/functions/repeat-label";
 import { appTimeZone, zoned, zonedAt } from "@/functions/zone";
@@ -109,11 +109,13 @@ export function upsertTaskWithRecurrence(
   task: TaskProps,
   months: Date[],
 ): TaskProps[] {
-  const others = tasks.filter((t) => t.id !== task.id);
+  // An on-screen instance would re-anchor the series on itself and drop the earlier occurrences.
+  const series = seriesOf(task);
+  const others = tasks.filter((t) => t.id !== series.id);
   return [
     ...others,
-    task,
-    ...months.flatMap((month) => expandRecurringTask(task, month, appTimeZone())),
+    series,
+    ...months.flatMap((month) => expandRecurringTask(series, month, appTimeZone())),
   ];
 }
 

@@ -12,6 +12,7 @@ import {
 } from "@/functions/api";
 import type { ApiError } from "@/functions/api";
 import { upsertTaskWithRecurrence } from "@/functions/functions";
+import { revertTask } from "@/functions/revert-task";
 import { enqueue, type Mutation } from "@/functions/offline";
 import { removeUndated, upsertUndated } from "@/functions/undated";
 import { appTimeZone } from "@/functions/zone";
@@ -47,13 +48,13 @@ export function useUndatedActions(task: Task) {
       return true;
     }
 
-    setUndatedTasks(previous);
+    setUndatedTasks((cur) => revertTask(cur ?? [], previous, task.id));
     toast.error(message, { description: error.message });
     return false;
   };
 
-  /** Desmarca `current` em `list`. Recorrente: só o período corrente; avulsa: tudo. */
-  const reopen = async (list: Task[], current: Task) => {
+  /** Desmarca `current`. Recorrente: só o período corrente; avulsa: tudo. */
+  const reopen = async (current: Task) => {
     const at = Date.now();
     const from =
       current.repeat === "Off"
@@ -66,15 +67,15 @@ export function useUndatedActions(task: Task) {
             current.repeatEvery,
             current.date,
           );
-    setUndatedTasks(
-      upsertUndated(list, {
+    setUndatedTasks((cur) =>
+      upsertUndated(cur ?? [], {
         ...current,
         completed: current.completed.filter((c) => c < from || c > at),
         updatedAt: at,
       }),
     );
     await run(
-      list,
+      [current],
       { op: "uncomplete", taskId: current.id, day: from, until: at, at },
       copy.task.uncompleteError,
       () => uncompleteTaskRange(current.id, from, at),
@@ -84,11 +85,10 @@ export function useUndatedActions(task: Task) {
   const toggle = async () => {
     const at = Date.now();
     const previous = undatedTasks ?? [];
-    if (done) return reopen(previous, task);
+    if (done) return reopen(task);
 
     const completed = { ...task, completed: [...task.completed, at], updatedAt: at };
-    const next = upsertUndated(previous, completed);
-    setUndatedTasks(next);
+    setUndatedTasks((cur) => upsertUndated(cur ?? [], completed));
     const ok = await run(
       previous,
       { op: "complete", taskId: task.id, at },
@@ -100,18 +100,18 @@ export function useUndatedActions(task: Task) {
       toast.success(copy.task.completed, {
         description: task.title,
         duration: 6000,
-        action: { label: copy.task.undo, onClick: () => void reopen(next, completed) },
+        action: { label: copy.task.undo, onClick: () => void reopen(completed) },
       });
     }
   };
 
   /** Recria com o MESMO id — desfazer a exclusão. */
-  const restore = async (previous: Task[]) => {
+  const restore = async () => {
     const at = Date.now();
     const input = { ...task, updatedAt: at };
-    setUndatedTasks(previous);
+    setUndatedTasks((cur) => upsertUndated(cur ?? [], task));
     const ok = await run(
-      removeUndated(previous, task.id),
+      [],
       { op: "create", taskId: task.id, input, at },
       copy.task.undoError,
       () => createTask(input),
@@ -122,7 +122,7 @@ export function useUndatedActions(task: Task) {
   const remove = async () => {
     const at = Date.now();
     const previous = undatedTasks ?? [];
-    setUndatedTasks(removeUndated(previous, task.id));
+    setUndatedTasks((cur) => removeUndated(cur ?? [], task.id));
 
     const ok = await run(
       previous,
@@ -135,7 +135,7 @@ export function useUndatedActions(task: Task) {
     toast.success(copy.task.deleted, {
       description: task.title,
       duration: 6000,
-      action: { label: copy.task.undo, onClick: () => void restore(previous) },
+      action: { label: copy.task.undo, onClick: () => void restore() },
     });
   };
 
@@ -145,8 +145,8 @@ export function useUndatedActions(task: Task) {
     const previous = undatedTasks ?? [];
     const agenda = tasks ?? [];
     const patch = { date: at, alert: at, undated: false, updatedAt: now };
-    setUndatedTasks(removeUndated(previous, task.id));
-    setTasks(upsertTaskWithRecurrence(agenda, { ...task, ...patch }, loadedMonths));
+    setUndatedTasks((cur) => removeUndated(cur ?? [], task.id));
+    setTasks((cur) => upsertTaskWithRecurrence(cur ?? [], { ...task, ...patch }, loadedMonths));
 
     const ok = await run(
       previous,
@@ -154,7 +154,7 @@ export function useUndatedActions(task: Task) {
       copy.task.patchError,
       () => updateTask(task.id, patch),
     );
-    if (!ok) setTasks(agenda);
+    if (!ok) setTasks((cur) => revertTask(cur ?? [], agenda, task.id));
   };
 
   return { done, toggle, remove, schedule };

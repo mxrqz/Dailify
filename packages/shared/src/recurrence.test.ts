@@ -1,5 +1,5 @@
 import { describe, it, test, expect } from "vitest";
-import { expandRecurringTask, normalizeRepeat } from "./recurrence";
+import { expandRecurringTask, normalizeRepeat, seriesOf } from "./recurrence";
 import { zonedParts } from "./timezone";
 import type { Task } from "./types";
 
@@ -265,5 +265,21 @@ describe("repeatEvery", () => {
       "1/3 9h",
       "1/7 9h",
     ]);
+  });
+});
+
+describe("seriesOf", () => {
+  it("turns an instance back into its stored series and leaves a task alone", () => {
+    const anchor: Task = {
+      id: "s",
+      title: "s",
+      date: 1_000,
+      duration: "",
+      priority: 0,
+      repeat: "Daily",
+      completed: [],
+    };
+    expect(seriesOf({ ...anchor, date: 5_000, seriesStart: 1_000 })).toEqual(anchor);
+    expect(seriesOf(anchor)).toBe(anchor);
   });
 });
