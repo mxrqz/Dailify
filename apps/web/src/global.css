@@ -228,6 +228,12 @@
   --undated-handle-x: calc(50% - var(--width-undated) - 0.375rem);
   /* Folha de criação no desktop: frase + quatro chips numa linha, sem passar da agenda estreita. */
   --width-sheet: 27.5rem;
+  /* Bolha de conversa (sua ou da Mew): até 70% da coluna, como nos apps de mensagem. */
+  --width-bubble: 70%;
+  /* Camadas: página (z-30) < chat da Mew < dock do composer < overlays (z-50: gaveta, folhas,
+     diálogos). O chat abre por baixo do dock, então o mesmo campo flutuante vira a caixa de mensagem. */
+  --layer-chat: 35;
+  --layer-dock: 40;
   --surface-scrim: var(--scrim);
   --layout-content: 1380px; /* teto de largura do conteúdo (mastra-like) */
 }
@@ -397,6 +403,9 @@
   --radius-field: var(--radius-field);
   --width-undated: var(--width-undated);
   --width-sheet: var(--width-sheet);
+  --max-width-bubble: var(--width-bubble);
+  --z-index-chat: var(--layer-chat);
+  --z-index-dock: var(--layer-dock);
   --color-surface-scrim: var(--surface-scrim);
   --shadow-panel: var(--shadow-raised);
   /* Elevação 1 — o degrau mais baixo: o que flutua encostado na superfície (a toolbar do cartão).
@@ -528,6 +537,16 @@
 /* Dock do composer: flutua 16px acima da barra de gestos, como o FAB do Material. */
 @utility pb-dock {
   padding-bottom: calc(--spacing(4) + env(safe-area-inset-bottom));
+}
+
+/* Fim de uma lista que rola por baixo do dock: a pílula (h-13) + o pb-dock + 12px de respiro. */
+@utility pb-dock-clear {
+  padding-bottom: calc(--spacing(20) + env(safe-area-inset-bottom));
+}
+
+/* Lista de conversa: as mensagens mais velhas somem num fade de 48px no topo. */
+@utility fade-top {
+  mask-image: linear-gradient(transparent, black --spacing(12));
 }
 
 /* Barra sticky do topo: 52px de conteúdo abaixo da status bar/notch (0 fora do app edge-to-edge). */
