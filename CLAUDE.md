@@ -1,6 +1,73 @@
-# Project Instructions for AI Agents
+# Mewki
 
-This file provides instructions and context for AI coding agents working on this project.
+Mewki is a task agenda with an AI assistant, the Mew. This bun monorepo holds the React web app
+(also shipped as a Tauri Android/desktop app), its Hono API on Cloudflare Workers + D1, and the
+TypeScript model both share. Package names, the D1 database, the Workers and storage keys still say
+"dailify": those are persisted names, so don't rename them in passing.
+
+@RULES.md
+
+## Commands
+
+```bash
+bun install
+bun run dev            # API (wrangler :8787, local migrations first) + web (https://localhost:1420)
+bun run dev:frontend   # web only
+bun run dev:api        # API only
+bun run build          # web: tsc + vite build -> apps/web/dist
+bun run test           # vitest, every package (one file: `bun run test <path>` in the package dir)
+bun run lint           # eslint, every package
+bun run format         # prettier --write, every package
+bun run check          # the gate: format:check + lint + typecheck + test, every package
+```
+
+## Map
+
+Each area's `CLAUDE.md` loads when you touch a file in it and holds only that folder's invariants.
+
+| Working on                                    | Code                                           | Doc                              |
+| --------------------------------------------- | ---------------------------------------------- | -------------------------------- |
+| Web tooling, folder layers, web test harness  | `apps/web`                                     | `apps/web/CLAUDE.md`             |
+| Design tokens, `global.css`, motion           | `apps/web/src/global.css`                      | `apps/web/src/CLAUDE.md`         |
+| App shell, shared state, root widgets         | `apps/web/src/components`                      | `components/CLAUDE.md`           |
+| Primitives (vendored shadcn, DS kit)          | `components/ui`, `components/kit`              | one per folder                   |
+| Agenda, composer, task form, navigation       | `components/dashboard`                         | `components/dashboard/CLAUDE.md` |
+| Landing, Mew mascot, Mew chat, sign-in UI     | `components/{landing,mew,mew-chat,auth}`       | one per folder                   |
+| Task writes, offline settle, module stores    | `apps/web/src/hooks`                           | `hooks/CLAUDE.md`                |
+| API client, offline queue, pure helpers       | `apps/web/src/functions`                       | `functions/CLAUDE.md`            |
+| Auth client, Tauri and browser adapters       | `apps/web/src/lib`                             | `lib/CLAUDE.md`                  |
+| Routes and pages                              | `apps/web/src/pages`                           | `pages/CLAUDE.md`                |
+| Constants, legacy type aliases                | `apps/web/src/{consts,types}`                  | one per folder                   |
+| Tauri shell, Android build and release        | `apps/web/src-tauri`                           | `src-tauri/CLAUDE.md`            |
+| API server: layout, auth, cron, bindings      | `apps/server`                                  | `apps/server/CLAUDE.md`          |
+| HTTP routes, D1 queries, services, providers  | `apps/server/src/{routes,db,lib,integrations}` | one per folder                   |
+| D1 schema changes                             | `apps/server/migrations`                       | `migrations/CLAUDE.md`           |
+| Server tests                                  | `apps/server/test`                             | `test/CLAUDE.md`                 |
+| Shared model, quotas, recurrence, task parser | `packages/shared`                              | `packages/shared/CLAUDE.md`      |
+| CI workflows                                  | `.github/workflows`                            | `.github/workflows/CLAUDE.md`    |
+
+## Gotchas
+
+- Hosting: the web is the Worker `dailify` (static assets with SPA fallback,
+  `apps/web/wrangler.jsonc`) on mewki.mxrqz.com, with dailify.mxrqz.com still served; the API is the
+  Worker `dailify-server` on api.mewki.mxrqz.com. Cloudflare Workers Builds deploys both, D1
+  migrations included, on every push to `main`. GitHub Actions only builds the signed Android
+  release on `v*` tags.
+- Auth is Better Auth: an httpOnly cookie on the web, a bearer token in the OS keyring in the Tauri
+  app. Notes that mention Clerk, Firestore, Vercel or Render are stale; the Stripe metadata key
+  `clerkUserId` stays only because live subscriptions carry it.
+- The Tauri shell is live, not vestigial: native magic-link auth, deep links, haptics, the Android
+  back button and signed Android builds. Native code is only plugins; logic stays in web or server.
+- Env files are per app (`apps/web/.env`, `apps/server/.env`, gitignored; copy each `.env.example`),
+  and a git worktree needs its own copies. Only `VITE_*` variables reach the web bundle.
+- Vite holds port 1420 with `strictPort`, and the main checkout's dev server often has it. Start a
+  worktree's web elsewhere (`bun run dev --port 1425` in `apps/web`) and check `ss -tlnp | grep 142`
+  before trusting the screen.
+- Toolchain: bun 1.3.9 with the isolated linker. TypeScript is 5.9 at the root and in shared, 5.6 in
+  `apps/web` and 7 in `apps/server`; typescript-eslint can't load TS 7, which is why ESLint for
+  shared and server lives in the root `eslint.config.js`.
+- Plans are Free/Pro/Max and the only quota is AI credits (`QUOTAS` in
+  `packages/shared/src/quotas.ts`). The server is the real gate; the client check is cosmetic.
 
 <!-- BEGIN BEADS INTEGRATION v:1 profile:minimal hash:7510c1e2 -->
 ## Beads Issue Tracker
@@ -50,58 +117,8 @@ bd close <id>         # Complete work
 - If push fails, resolve and retry until it succeeds
 <!-- END BEADS INTEGRATION -->
 
-
-## Build & Test
-
-```bash
-bun install
-bun run dev           # vite dev server
-bun run build         # tsc + vite build
-bun run test          # vitest (run once)
-bun run lint          # eslint, every package
-bun run format        # prettier --write, every package
-bun run check         # format:check + lint + typecheck + test, every package (full gate)
-```
-
-## Monorepo
-
-This is a bun-workspaces monorepo (`apps/*`, `packages/*`). The web app lives at `apps/web`
-(package `@dailify/web`); root `package.json` scripts (`dev`/`build`/`test`/`check`) delegate to
-it via `bun --filter`, so the `Build & Test` commands above still work unchanged from the repo
-root. Web deploy root (e.g. Cloudflare Pages) is now `apps/web`, build output `apps/web/dist`.
-
-## Architecture Overview
-
-See `bd memories architecture`. In short: web app on Cloudflare (mewki.mxrqz.com; dailify.mxrqz.com still served) inside a
-vestigial Tauri shell. Auth = Clerk. All reads and writes go through the in-monorepo server
-(`apps/server`, Hono on Cloudflare Workers + D1) via a thin fetch client
-(`apps/web/src/functions/api.ts`) carrying a Clerk bearer token — no client-direct Firestore
-access. Stripe billing and OpenAI voice task creation also run in `apps/server`. Dates are
-epoch-ms numbers end to end. Plans: Free / Pro / Max.
-
-**Stack:** React 18 + Vite + TypeScript (web) · Hono + D1 + Clerk + Stripe + OpenAI (server,
-Cloudflare Workers) · Tailwind v4 + shadcn/ui · react-router · sonner · framer-motion. Package
-manager: **bun**.
-
-## Code map
-
-Area-specific guidance lives in nested `CLAUDE.md` files (auto-loaded when you work in that folder):
-
-- **`apps/web/src/functions/`** — data layer: `api.ts` (fetch client to `apps/server`) and pure,
-  tested helpers (dates, task list ops). Start here for anything data-shaped.
-- **`apps/web/src/components/`** — React components, shared state (`dailifyContext`), dark mode;
-  shadcn in `ui/`.
-- **`apps/web/src/types/`** — re-exports the shared TS model (`TaskProps`/`Task`, tiering via
-  `QUOTAS`) from `@dailify/shared` and its invariants.
-- **`apps/web/src/consts/`** — constants, plan ids, `apiURL`, color-token class names, priority
-  scale.
-- **`apps/web/src/pages/`** — routes, Clerk auth pages, Stripe checkout.
-- **`apps/server/src/`** — the backend: Hono routes (`routes/`), D1 queries (`db/`),
-  Clerk/Stripe/OpenAI clients (`lib/`), auth middleware. Its own vitest suite lives in
-  `apps/server/test/`.
-- **`packages/shared/src/`** — the canonical `Task`/`Quotas`/pricing/recurrence model,
-  imported by both `apps/web` and `apps/server` so drift between client and server shapes is a
-  compile error.
+Push policy: never `git push` unless the user asks (`RULES.md`, "Git and task tracking"). That
+overrides step 4 above; bd regenerates the block between the markers, so the override lives here.
 
 ## Changing the app domain (e.g. mewki.app)
 
@@ -112,35 +129,8 @@ App Links and the Stripe/e-mail return paths hang on one host. To move it:
 3. `[vars] ALLOWED_ORIGIN` in `apps/server/wrangler.toml` (first entry = the web origin).
 4. Serve `apps/web/public/.well-known/*` on the new domain, add it as a Cloudflare Email sending
    domain and as a Turnstile hostname.
-
-## Conventions & Patterns
-
-- **No `as` type assertions.** Use type guards or proper types. `as const` is fine. Enforced as
-  an ESLint *error* (bd issue `aqa`).
-- **Formatting: Prettier** (root `.prettierrc.json`, `printWidth: 100`, shared by every package).
-  Run `bun run format` before committing; `bun run check` is the full gate (format + lint +
-  typecheck + test). ESLint: `apps/web/eslint.config.js` for the web, root `eslint.config.js` for
-  `packages/shared` and `apps/server` (its deps live in the root because `apps/server` is on TS 7,
-  which `typescript-eslint` can't load).
-- **Design tokens — no arbitrary values, ever.** This covers colors AND radii, and any other design
-  value with a token. `rounded-[17px]`, `bg-[#151515]`, `border-[#242424]` are all defects: if a
-  token fits, use it; if none fits, **add one**. Everything lives in `apps/web/src/global.css`:
-
-  | what | defined at | exposed at | utilities |
-  | --- | --- | --- | --- |
-  | colors | `:root` (`--surface-*`, `--accent-*`, …) | `@theme inline` as `--color-*` | `bg-surface-panel`, `text-content-secondary`, … |
-  | radii | `:root` (`--radius`, `--radius-panel`, `--radius-field`) | `@theme inline` as `--radius-*` | `rounded-panel`, `rounded-field`, `rounded-md`, … |
-  | layout | `@utility` blocks near the end of the file | — | `px-gutter`, `section-y` |
-
-  Adding a token is two lines: the value in `:root` and the mapping in `@theme inline`. Put the
-  *reasoning* in a comment on the token (e.g. `--radius-field` is `--radius-panel` minus the `p-1`
-  of its parent, so the corners stay concentric) — that is where the next person looks, not the JSX.
-
-  Colors are defined ONCE via `light-dark(light, dark)` in `oklch` (no per-mode duplication, no
-  `display-p3`); dark mode is bridged from the `.dark` class through `color-scheme`. Prefer solid
-  state colors over `/opacity` on interactive elements.
-
-  Spacing follows the Tailwind scale (`p-2`, `gap-1`, `min-h-19` — v4 generates any step), so
-  `p-[7px]` is a defect too. Arbitrary values are acceptable only where no scale can apply, like a
-  one-off `grid-rows-[0fr]` animation.
-- Task tracking via **bd (beads)**, not markdown/TODO. Persistent knowledge via `bd remember`.
+5. `allowed_sender_addresses` in `apps/server/wrangler.toml` must stay `entrar@<APP_HOST>`: the
+   sender is built from `APP_HOST` (`apps/server/src/lib/email/providers/cloudflare.ts`), and a
+   mismatch fails every magic-link e-mail, so nobody can sign in.
+6. Add `https://<new host>/integrations/google-calendar/callback` to the Google OAuth client's
+   authorized redirect URIs (the Calendar callback is an SPA route on the web origin).

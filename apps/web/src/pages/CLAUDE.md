@@ -1,44 +1,79 @@
-# `src/pages/` — routes
+# apps/web/src/pages — routes and page containers
 
-Routes are declared in `src/App.tsx` (react-router). Provider nesting (from `main.tsx`):
-`HelmetProvider → DailifyProvider → Router → ThemeProvider` (no auth provider: the session is
-`useSession()` from `@/lib/auth`).
+One file per route. `src/App.tsx` declares the routes; each page owns its own I/O. Repo-wide rules:
+[/RULES.md](../../../../RULES.md).
 
-Every page except `home.tsx` is `React.lazy` (one chunk per route; the landing and its Mew/scenes
-stay out of the dashboard entry). A new page gets a `lazy()` import too, unless it's the PWA's
-`start_url`.
+## App.tsx
 
-| Path                               | Page                       | Notes                                                                                                               |
-| ---------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
-| `/`                                | `landingPage.tsx`          | public marketing page                                                                                               |
-| `/dashboard`                       | `home.tsx`                 | **protected**; the app (Hoje list + month calendar, `?view=calendar`)                                               |
-| `/profile`                         | `profile.tsx`              | **protected**; name (editable), Google photo or initial, read-only e-mail, sign out, delete account                 |
-| `/security`                        | `security.tsx`             | **protected**; Better Auth sessions (browser/OS from `functions/user-agent.ts`, IP, last use), revoke               |
-| `/billing`                         | `billing.tsx`              | **protected**; plan, usage, invoices. Free sees usage + CTA                                                         |
-| `/settings`                        | `settings.tsx`             | **protected**; theme, date/time, notifications, Google Agenda summary                                               |
-| `/integrations`                    | `integrations.tsx`         | **protected**; Google Agenda card (connect, settings, disconnect) + "Em breve"                                      |
-| `/integrations/:provider/callback` | `integration-callback.tsx` | **protected**; OAuth `redirect_uri`: POSTs `{code,state}` once (StrictMode-safe), toasts, back to `/integrations`   |
-| `/login`                           | `login.tsx`                | magic link + Google — `AuthPage mode="signIn"` (`components/auth/`)                                                 |
-| `/signup`                          | `signup.tsx`               | same machinery, `mode="signUp"` — only the copy differs                                                             |
-| `/verify`                          | `verify.tsx`               | web magic link `#token=…`; spends it only on the "Entrar" click (mail scanners don't click)                         |
-| `/auth/app`                        | `auth-app.tsx`             | app magic link `?token=…`; tries `mewki://auth` once, NEVER calls verify (token bound to the app)                   |
-| `/app/*`                           | `app-return.tsx`           | where Stripe returns someone who paid from the app; hands `<path>` to `mewki://open` (App Link opens the app first) |
-| `/task/:id`                        | `[id]/taskPreview.tsx`     | public, shareable task rendered as an image (`html-to-image`)                                                       |
-| `/premium`                         | `premium.tsx`              | pricing + Stripe checkout                                                                                           |
+- Providers, outermost first: `HelmetProvider` > `DailifyProvider` > `BrowserRouter` >
+  `ThemeProvider` > `TooltipProvider` > `MotionConfig reducedMotion="user"` > `ErrorBoundary` >
+  `Suspense fallback={null}`. `ScrollRestoration`, `Toaster` and `Refraction` sit beside the
+  boundary. `main.tsx` only boots.
+- Every page is a `lazy()` chunk except `home.tsx`, the PWA `start_url` (`/dashboard`).
+- Protected routes wrap the page inline in `<ProtectedRoute>`, which gates on the session and boots
+  the task data before rendering (`components/CLAUDE.md`, "Boot").
+- `*` redirects to `/dashboard`, so a mistyped link fails silently. Link only to paths in this table
+  (`/premium`, never `/prices`).
 
-**There is no catch-all route** — a link to a non-existent path lands on a blank page. Only navigate
-to paths listed above (this caused the `/prices` vs `/premium` bug).
+| Path                                                  | Page                                           | Layout and access                                          |
+| ----------------------------------------------------- | ---------------------------------------------- | ---------------------------------------------------------- |
+| `/`                                                   | `landingPage.tsx`                              | public; in Tauri a `Navigate` to `/dashboard` (no landing) |
+| `/dashboard`                                          | `home.tsx`                                     | AppLayout, protected; `?view=calendar` opens the month     |
+| `/profile`, `/settings`, `/security`, `/integrations` | same names                                     | AppLayout, protected; account pages                        |
+| `/billing`                                            | `billing.tsx`                                  | AppLayout, protected                                       |
+| `/integrations/:provider/callback`                    | `integration-callback.tsx`                     | AppLayout, protected; the OAuth `redirect_uri`             |
+| `/premium`                                            | `premium.tsx`                                  | AppLayout, **public** on purpose: it is the sales page     |
+| `/login`, `/signup`                                   | `login.tsx`, `signup.tsx`                      | public; `AuthPage mode` (`components/auth/CLAUDE.md`)      |
+| `/verify`, `/auth/app`, `/app/*`                      | `verify.tsx`, `auth-app.tsx`, `app-return.tsx` | public hand-off pages (below)                              |
+| `/privacidade`, `/termos`                             | `privacy.tsx`, `terms.tsx`                     | public; `components/legal-page.tsx`                        |
+| `/task/:id`                                           | `[id]/taskPreview.tsx`                         | public; dead legacy, nothing produces `/task` URLs         |
 
-## Auth
+## Adding a page
 
-Better Auth (`@/lib/auth`; Google returns straight to its `callbackURL`, no callback route). Protected
-pages are wrapped in `ProtectedRoute` (`src/components/`), which gates on `useSession()`
-(`isPending`/`data.user.id`) and loads tasks/quotas from `apps/server` before rendering.
+1. `lazy(() => import("./pages/<kebab-name>"))`, then a `Route` inside `<AppLayout>` (top bar and
+   sidebar) or outside it (full screen). Wrap it in `<ProtectedRoute>` if it needs a user.
+2. Title: a `pageTitle` key in the feature's `copy.ts`, `"Mewki — <Page>"` (as `auth/copy.ts`),
+   rendered by a `<Helmet>` in the page itself (`auth-app.tsx`). Today's titles are mixed
+   (`Mewki - Profile` literals in App.tsx, `Mewki - Premium` on `/billing`, none on `/premium`, the
+   callback or the landing); don't copy them.
+3. Default-export the container; conditional UI goes in a named, props-only View with a
+   `<page>.render.test.tsx` ([Testing](../../../../RULES.md#testing)).
+4. Add its row to the table above.
 
-## Billing (premium.tsx)
+## Containers and Views
 
-`handleSelectPlan(planId)` calls `checkout(productName)` (`@/functions/api`) with
-`productName` (yearly appends `-year`); the server returns a Stripe URL and we redirect. Plan ids
-come from `PLAN_ID` (`consts`); copy that references limits reads from `@dailify/shared`'s
-`limitsFor` instead of hard-coding numbers. The billing portal (`pages/billing.tsx`) is
-fetched the same way via `billingPortal`.
+- The default export wires session, `useDailify`, API, toasts and navigation. The named View takes
+  only props: `BillingView`, `PlansView` (premium), `SessionRow` (security), `ProfileHero`
+  (profile), `TodayHeader` (home). No test mounts a View yet: `billing.render.test.tsx` mounts the
+  container with `@/lib/auth`, `@/functions/api` and `dailifyContext` mocked.
+- Account pages (profile, security, settings, integrations): `<main className={accountPage}>`,
+  `<PageHeader className="px-1">`, then `<div className={accountGroups}>` holding kit
+  `ListGroup`/`ListRow`; both strings come from `components/settings-list.tsx`. `billing.tsx`
+  inlines the `accountPage` string and pads groups with `mx-4 md:mx-0`: legacy, don't copy.
+- Copy: `dashboard/copy.ts` `profile.*` (profile, security and settings) and `integrations` (both
+  integration pages); `pricing/copy.ts` `account` (billing) and `page`/`plans` (premium);
+  `auth/copy.ts` (login, signup, hand-off pages); `dashboard/copy.ts` `legal` (legal frame).
+
+## Invariants
+
+- Billing data (payment details, invoices) loads only on `/billing`, into `DailifyContext` so a
+  revisit paints at once. On `?checkout=success` it calls
+  `refetch({ query: { disableCookieCache: true } })`: the plan arrives by webhook, and the 5-minute
+  session cookie cache still holds the old one.
+- Hand-off pages render `<AuthShell>` with every prop omitted.
+  - `/verify#token=…&next=…` spends the token only on the button click (mail scanners open links
+    but don't click), strips the hash on mount, and passes `next` through `internalPath`.
+  - `/auth/app?token=…` never calls verify: the token is bound to the requesting device's
+    verifier. On desktop it tries `mewki://auth` once; the browser restarts at `/login`.
+  - `/app/<path>` is where Stripe returns a checkout started in the app; it hands the path to
+    `mewki://open` once. It does not run `<path>` through `internalPath` yet, so `/app//evil.com`
+    points the "continue in browser" `Link` off-site. Guard it before copying the pattern.
+- Single-shot effects (OAuth code, deep-link attempt) use a `useRef` flag (`integration-callback`,
+  `auth-app`, `app-return`). `integration-callback` and `verify` render tests run in `<StrictMode>`.
+- Legal pages: the body text is literal in `privacy.tsx`/`terms.tsx`, the one documented
+  literal-content exception (`dashboard/copy.ts` `legal`); the frame strings come from `copy.legal`.
+
+## Tests
+
+`billing`, `verify`, `auth-app` and `integration-callback` have render tests. Their `it` names are
+legacy pt-BR; new ones are English.

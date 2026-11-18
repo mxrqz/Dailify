@@ -41,5 +41,5 @@ dist-ssr
 # Worktrees criadas pelo harness (Claude Code)
 .claude/worktrees/
 
-# Export Clerk -> D1 (apps/server/scripts/clerk-to-d1.ts): dado pessoal, nunca commitar
+# Old Clerk -> D1 export (personal data, never commit)
 clerk-import*.sql

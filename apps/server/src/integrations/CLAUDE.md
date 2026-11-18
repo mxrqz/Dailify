@@ -1,0 +1,80 @@
+# apps/server/src/integrations — provider integrations
+
+OAuth providers whose objects mirror tasks (today only `google-calendar`): connecting, sealing the
+tokens, and pushing task edits out. Repo-wide rules: `/RULES.md` ("Backend and API"). Google's
+event mapping and sync: `google-calendar/CLAUDE.md`.
+
+## Layout
+
+- `types.ts` `Provider`, `Ctx`, `Action`, `ActionError` · `registry.ts` `PROVIDERS` · `oauth.ts`
+  code + PKCE (S256) on plain fetch, `InvalidGrantError` · `crypto.ts` token sealing ·
+  `connection.ts` `makeCtx`/`loadCtx`, `sealTokens`/`openTokens`, best-effort `revokeSealed` ·
+  `propagate.ts` task edits to providers · `<id>/` one folder per provider.
+- Routes live in `routes/integrations.ts`; SQL in `db/integrations.ts` and `db/calendar-sync.ts`.
+
+## Adding a provider
+
+1. Id and `roles` in `INTEGRATIONS` (`packages/shared/src/integrations.ts`). That is the plan gate
+   (`canUseIntegration`), not `QUOTAS`.
+2. `integrations/<id>/index.ts` exports a `Provider`: `oauth` (endpoints, `scopes`, `required`,
+   `credentials(env)`), `identify`, `actions`, optional `onTaskChanged`. Expected action failures
+   throw `ActionError(status, msg, extra)`, which the route maps to `fail`.
+3. Register it in `PROVIDERS`; `satisfies Record<ProviderId, Provider>` makes a missing entry a
+   compile error.
+4. Credentials in `Env`, `.env.example` and `vitest.config.ts`. Without them the status row is
+   `configured: false` and `connect` answers 503.
+5. The "contrato dos providers" block in `test/integrations.test.ts` then checks https endpoints,
+   `required` within `scopes`, credentials and `identify`.
+
+Gotcha: the registry is only half used. The generic `/:provider/callback` calls Google's
+`syncCalendar` directly, the action routes are hardcoded to Google (`withCalendar`, `createEvent`,
+`replaceMeet`), and `Provider.actions` (with `name`/`kind`/`preview`) is read nowhere in `src`. A
+second provider needs those routed through `PROVIDERS[id]` first.
+
+## Ctx.api and tokens
+
+- All provider HTTP goes through `ctx.api` (`makeCtx`): it adds the bearer and refreshes 60 s before
+  expiry, saving the new sealed tokens. On `invalid_grant` it marks the connection `revoked` and
+  rethrows; routes answer 409 with `code: reconnect`. Providers never read tokens.
+- No timeout yet in `ctx.api`, `tokenRequest` or `revoke`: add `AbortSignal.timeout` there once,
+  not per provider.
+- Parallel calls on one `Ctx` can refresh twice (the `ponytail:` in `makeCtx`). Memoize the refresh
+  promise before adding a provider that rotates its refresh token.
+- At rest: `v1.<iv>.<ct>`, AES-GCM with AAD `userId:provider`, so a blob copied to another row
+  won't open. `TOKEN_KEY_V1` never changes; rotation = `TOKEN_KEY_V2` plus a `v2` entry in `KEYS`
+  (`crypto.ts`), and v1 rows stay readable.
+
+## OAuth flow
+
+- `redirect_uri` is an SPA route (`${appOrigin}/integrations/<id>/callback`), not the Worker: the
+  SPA posts `{ code, state }` with its session, which ties the external account to the signed-in
+  user.
+- `state` is single-use (`consumeState`: `DELETE ... RETURNING`, 10 min) and must match `user_id`
+  and the provider, else 403.
+- A `required` scope left unticked on the consent screen answers 400 `MISSING_SCOPE_ERROR` and
+  revokes the grant.
+- Plausible bug, not in bd yet: from the Tauri app `appOrigin` returns the webview origin (it is in
+  `ALLOWED_ORIGIN`), so the `redirect_uri` points at `tauri://localhost` or `tauri.localhost`
+  while the consent page opens in the system browser.
+
+## Propagation and sync
+
+- Task routes read `linkedTask` BEFORE the write, then run `propagate` in `waitUntil`. It never
+  fails the write: a provider error or a missing connection sets the link `stale`, and the web
+  offers a resend (`POST /integrations/google-calendar/events/:taskId/sync`, `before = null` =
+  push without diffing).
+- `onTaskChanged` returning `"unlink"` deletes the link and drops its `url` from `task.links` (the
+  web reads that url as "linked"). A success clears `stale`. Completing a task does not propagate.
+- Sync never calls `propagate`; echoes are caught by `remote_updated`. The cron runs `syncOldest`,
+  which calls `syncIfDue` per user, each isolated.
+- Disconnect has no plan gate. It revokes best-effort and deletes the connection and its links,
+  never tasks: imported tasks become normal tasks. Reconnecting another account drops old links.
+
+## Tests
+
+- `test/integrations.test.ts` (crypto, PKCE, connect, callback, `Ctx.api`, disconnect, contract)
+  and `test/integrations-{events,propagate,sync}.test.ts`.
+- Providers are mocked with `vi.spyOn(globalThis, "fetch")` over a URL-to-handler map that throws
+  on an unknown URL, so a new endpoint fails loudly.
+- Route tests that touch links pass `createExecutionContext()` to `app.request` (without it
+  `c.executionCtx` throws) and `await waitOnExecutionContext(ctx)` before asserting.

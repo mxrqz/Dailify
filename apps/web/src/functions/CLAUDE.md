@@ -1,52 +1,78 @@
-# `src/functions/` — data layer & pure logic
+# apps/web/src/functions — data layer and pure web helpers
 
-Several very different files live here — keep them separate:
+Repo-wide rules: [/RULES.md](../../../../RULES.md); what belongs here versus `lib/` or shared is
+in [Where code goes](../../../../RULES.md#where-code-goes). Only local invariants follow.
 
-- **`functions.ts`** — PURE helpers (dates, task list ops). No I/O. Everything with real logic goes
-  here so it can be unit-tested.
-- **`api.ts`** — the impure I/O boundary: the thin fetch client for `apps/server` (tasks CRUD, month
-  read, voice, permissions, billing). Not unit-tested (would need a live/mocked server).
-- **`billing-sections.ts`** — pure helper deriving which billing sections (`subscription`,
-  `invoices`) to render from `paymentDetails`/`invoices`, without a single all-or-nothing gate.
-- **`functions.test.ts`** / **`billing-sections.test.ts`** — vitest for the pure helpers above.
-  `bun run test`.
+## Modules
 
-## The read/write split
+Each has a colocated `<module>.test.ts`, except `api.ts` and `push.ts`.
 
-`apps/server` (Hono/Workers + D1 + Better Auth, same repo) serves everything now — tasks CRUD, the
-month read (recurring already expanded server-side), billing, voice. No call in `api.ts` takes a
-token: `request` sends `credentials: "include"` (the web's session cookie) plus `authHeaders()` from
-`@/lib/auth` (the native app's bearer), and hits `apiURL` (`VITE_API_URL`, `consts`). A dead session
-comes back as `ApiError.status === 401`; the offline queue (`offline.ts`) and the optimistic writes
-treat it like a network error and keep the mutation queued, so an old tab doesn't lose edits across
-a re-login. There is **no** direct Firestore access anymore.
+- `api.ts`: the only HTTP boundary to `apps/server`. `push.ts`: Web Push for this device.
+- `offline.ts`: per-user cache, outbox queue, last signed-in user, `newTaskId`, `clearLocal`.
+- `zone.ts`: the app zone as module state (`appTimeZone`/`setAppTimeZone`, `zoned`, `zonedAt`,
+  `fromDateInput`), so the parser, the queue and the API read one zone.
+- `functions.ts`: legacy grab-bag (`fill`, `formatClock`, `getTasksForDay`,
+  `upsertTaskWithRecurrence`, `mergeMonth`, ...). No new exports; a new helper gets its own module.
+- One concept each: `repeat-label`, `link-label`, `quota-label`, `undated`, `user-agent`,
+  `compose-input` (composer chip state: `onDay`, `fromWire`, `markSegments`, `withEdits`; not
+  shared's `composeTaskInput`), `edit-input` (edit form to `TaskInput`), `billing-sections`.
+- Imports: shared, date libs, `@/consts`, `@/lib`, siblings, `components/*/copy.ts`, `import type`
+  from components. `@/types` is a legacy alias layer; new code imports `@dailify/shared`.
+- A `month: Date` parameter (`getTasksForMonth`, `getQuotas`, `mergeMonth`, the `months` of
+  `upsertTaskWithRecurrence`) must be a zoned month: its year and month are read in its own zone.
 
-## Dates: epoch-ms numbers, not `Date | Timestamp`
+## api.ts contract
 
-`TaskProps.date`/`alert`/`completed` (= shared `Task`) are plain **epoch-ms `number`s**. Writes that
-mark completion push `Date.now()` (a number), not a `Date`.
+- Every endpoint wraps the private `request<T>()`, which never throws: a rejected fetch gives
+  `{ offline: true }`, a non-2xx `{ status, code, message }`, a non-JSON body (a Worker 502 is HTML)
+  `undefined`. Endpoints return `{ <noun>?: T; error?: ApiError }`; `message` is for a toast only.
+- A 401 also fires `authClient.$store.notify("$sessionSignal")`, so the session gate re-reads.
+  `errorBody` is a failed response's body: `createCalendarEvent` reads a 409 `already_linked`
+  from it.
+- Auth is `credentials: "include"` (web cookie) plus `authHeaders()` (Tauri bearer); no function
+  takes a token. In PATCH bodies `null` clears and an absent key keeps (`updateTask`'s `alert`).
+- Legacy, don't copy: `createTaskVoice` (FormData; `authed()` forces JSON Content-Type) and the push
+  trio call `fetch` directly, so push throws offline and voice errors lack `status`/`code`.
+  `getQuotas`, `getPaymentDetails`, `getInvoices`, `checkout`, `billingPortal` drop `error`. The
+  `/tasks/${id}` routes skip `encodeURIComponent`. `Settings`/`QuotaSnapshot` should live in shared.
 
-**Never `new Date()` in app code — use `zone.ts`.** The app computes and shows dates in the account's
-time zone (Settings; `null` = the device's), not the browser's. `zoned(ms?)` replaces `new Date(x)`,
-`zonedAt(y, m, d, …)` replaces `new Date(y, m, d, …)`, `appTimeZone()` goes wherever a zone is sent
-(`?tz=`, voice, push). They return a `TZDate`, and date-fns keeps the zone of a `TZDate` argument —
-but a raw epoch passed to date-fns (`startOfMonth(task.date)`) falls back to the device zone, so wrap
-it: `startOfMonth(zoned(task.date))`. `setAppTimeZone` is called by `dailifyContext`'s `setTimeZone`,
-which also refetches the loaded months (their boundaries move with the zone).
+Adding an endpoint: name the wire type in `@dailify/shared`
+([TypeScript](../../../../RULES.md#typescript)); wrap `request<T>()` here and `encodeURIComponent`
+every path segment; add the function to the `vi.mock("@/functions/api", () => api)` object of each
+render test whose component now calls it (a factory mock throws on an export it lacks). api.ts
+itself is testable with `vi.stubGlobal("fetch", ...)` plus `vi.mock("@/lib/auth")`.
 
-## Parser — owned by `@dailify/shared`
+## Offline queue (`offline.ts`)
 
-`parseTaskText`/`parseLinks` (e o corpus golden, `bun run parser:failures`) moram em
-`packages/shared` — importe de `@dailify/shared`. O fuso é explícito: passe `zoned()` (um `TZDate`
-no fuso do app) como `now`; o parser não lê `appTimeZone()`.
+- `Mutation` replays existing routes: `create` (id from `newTaskId()`, which survives a missing
+  `crypto.randomUUID` on plain http), `patch` (optional `occurrence`), `complete`, `uncomplete`
+  (`day`, or `[day, until]` for an undated period), `delete`, `delete-occurrence`.
+- `collapseQueue`: a `delete` drops its task's pending entries, and itself when a `create` was
+  pending. The newest `complete`/`uncomplete` replaces the pending one whatever its day. Patches
+  merge per (task, occurrence); a series patch on a pending `create` folds into it.
+  `delete-occurrence` is its own op so it never collapses like a delete.
+- `flushQueue` is single-flight per user (`flushing` map). The drain re-reads storage every step,
+  stops at the first offline or 401 (kept for the next sign-in) and drops what the server refused.
+  Entries are removed by value, not index: another tab may have sent the head meanwhile.
+- `enqueue` doesn't collapse during a flush: a delete folded into an in-flight create is lost.
+- `drainQueue` holds one of the five copies of the settle predicate (`hooks/CLAUDE.md`).
+- Storage keys are a persisted contract (renaming drops queued writes):
+  `dailify:{tasks,outbox,undated}:<userId>`, `dailify:last-user`, `mewki:mew:<userId>:v1`
+  (`components/mew-chat/thread.ts`). `clearLocal` misses the Mew key today
+  ([Security](../../../../RULES.md#security-and-privacy)).
 
-## Recurrence — owned by `@dailify/shared`
+## Lists
 
-`expandRecurringTask`/`normalizeRepeat` live in `@dailify/shared` now (used by `apps/server`'s
-`GET /tasks`, which returns recurring instances already expanded and deduped). The web app doesn't
-call them directly — `getTasksForMonth` (`api.ts`) just returns what the server sends.
+- `upsertTaskWithRecurrence` replaces every entry with the task's id and re-expands it per loaded
+  month (instances share the series id; the server expands only on GET). It expands from
+  `task.date`, so pass the series anchor, never an on-screen instance.
+- `getTasksForDay` memoizes per tasks array and zone in a `WeakMap` and returns shared buckets:
+  never mutate them or the tasks array; `setTasks` always gets a new array.
 
-## Conventions
+## Copy and tests
 
-- Pure logic → add it here with a vitest test (TDD: write the failing test first).
-- No `as` assertions (use type guards); no hex (use tokens). See root `CLAUDE.md`.
+- Helpers read pt-BR from `@/components/dashboard/copy`. The `.replace` chains in `repeat-label` and
+  `quota-label` and the api.ts fallback messages are legacy
+  ([Copy](../../../../RULES.md#copy-and-i18n)).
+- Harness and jsdom opt-in: `apps/web/CLAUDE.md`. A module that calls the API mocks `./api` through
+  `vi.hoisted`, as `offline.test.ts` does.

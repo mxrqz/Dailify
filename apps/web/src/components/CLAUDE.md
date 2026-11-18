@@ -1,166 +1,89 @@
-# `src/components/` — React components
+# apps/web/src/components — app shell, shared state and root widgets
 
-React 18 + Vite + TypeScript. App components live here at the top level; `ui/` holds shadcn
-primitives (see `ui/CLAUDE.md`). `@/` resolves to `src/`.
+Repo-wide rules: `/RULES.md` (Frontend, Styling and tokens, Copy and i18n). Tokens, dark mode and
+motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hooks/CLAUDE.md`.
 
-## Kit do redesign mobile — `kit/`
+## Where code goes
 
-Peças apresentacionais (props → markup, sem `useDailify`/sessão): o container busca os dados e passa.
-Toda string visível vem de `copy` (os defaults "Fechar"/"Cancelar"/"Remover" estão em `copy.kit`).
+- `ui/`: Radix/shadcn wrappers adapted to the DS (`ui/CLAUDE.md`). No app logic, no strings beyond
+  `copy.kit`.
+- `kit/`: DS presentational primitives, props to markup (`kit/CLAUDE.md`). No `useDailify`,
+  `useSession`, api or router hooks.
+- Feature folders own their code and `copy.ts`: `dashboard/` (agenda, composer, sidebar), `auth/`,
+  `landing/`, `mew/`, `mew-chat/`, and `pricing/` (covered below).
+- Root, for what no single feature owns. Shell: `app-layout` (AppHeader, `dashboard/sidebar`,
+  Outlet, Duplicates; no gutter on /dashboard), `app-header`, `protected-route`, `splash`,
+  `scroll-restoration`, `error-boundary`, `brand`. State: `dailifyContext`, `theme-provider`. Task
+  UI: `edit-task`, `task-card` (legacy desktop row, rendered by `dashboard/day-task-row` when not
+  sheet-editing), `add-to-calendar`, `clock-check`, `duplicates-sheet`, `sync-badge`. Settings
+  widgets for `pages/`: `hour-format-select`, `week-start-select`, `time-zone-select`,
+  `mode-toggle.tsx:ThemeSelect`, `delete-account`, `integrations`,
+  `settings-list.tsx:accountPage/accountGroups`.
+- `dashboard/copy.ts` is the dictionary of the root components, `functions/` and `hooks/` too.
+- `landing/kit/` is the Mew speech kit the app imports, a legacy placement
+  (`landing/CLAUDE.md`): never add app pieces there.
 
-- `ListGroup({ title?, footer?, compact? })` e `ListRow({ icon?, label, sublabel?, value?, trailing?, below?, accessory?, danger?, href?, onClick?, asChild? })`
-  — lista agrupada do iOS. A linha vira `<a>` com `href`, `<button>` com `onClick` (funciona sob
-  um `DialogTrigger asChild`), `<div>` sem nenhum; `asChild` pra um `<Link>`. `accessory` é
-  `"chevron"` ou `"external"`. Separador só entre linhas. `compact` é o grupo de dentro de folha
-  (raio 14, linhas de 48). Espaço entre grupos é de quem usa (`gap-7`).
-- `SegmentedControl({ value, onValueChange, options, aria-label })` — radiogroup em cápsula, thumb
-  `ink`; já ignora o `""` do Radix. `className="w-32 flex-none"` pra versão estreita ao lado do rótulo.
-- `Switch({ checked, onCheckedChange, aria-label })` — `role="switch"`, `ink` ligado.
-- `Chip({ icon?, variant?: "action" | "select", size?: "default" | "sm", pressed?, onRemove? })` —
-  raio 10 pra ação/toggle, cápsula (`select`) só pra escolha; ref/props vão pro botão principal.
-- `PageHeader({ title, subtitle?, bar?, trailing? })` — barra de material sticky + Large Title.
-- `ProgressRing({ value, max, label })` — anel de 40px com "feitas/total".
-- `ActionSheet({ open, onOpenChange, title, description?, actions, cancelLabel? })` — pergunta do
-  iOS (opções + Cancelar em vidro). `RecurrenceScopeDialog` já usa.
-- `Refraction({ strength?, edge? })` — montado uma vez no `App`: o `<filter id="refract">` (fundo
-  escorrega pra fora a ~3×`edge` px das bordas, com franja RGB) e `<html class="refract">` só no
-  Chromium. Só o `dock-veil` usa, via `var(--refract,)` (no `glass` custava caro); fora do
-  Chromium ou com movimento/transparência reduzidos fica vazio.
-- `Button` (`ui/button`): `default` (brand), `secondary` (fill), `ghost`, `soft-danger` (brand-soft +
-  brand-text, o "Encerrar"), `link`; `outline` é legado. Tamanhos `sm` 32 / `default` 44 / `lg` 52 /
-  `icon` 44, raio pela altura.
+## DailifyContext (`dailifyContext.tsx:DailifyContextType`)
 
-**Superfícies** (utilities do `global.css`): `card` = surface + contorno de 1px (`--card-edge`);
-`glass` = vidro de overlay (sheet, gaveta, sidebar, dialog, action sheet — popover não); `scrim` =
-fundo atrás do overlay. Dentro do `glass`, `fill`/`fill-pressed`/`surface` sobem um tom sozinhos.
-Regras do vidro: nenhum ancestral com `opacity<1`/`filter`/`mask`/`mix-blend-mode` (o fade de um
-wrapper do `AnimatePresence` mata o blur: anime o próprio painel), só transform/opacity, no máximo
-duas camadas, e sem `overflow-hidden` no próprio vidro (corta o fio de luz do topo; role um filho).
-`Sheet side="bottom"` (topo de 32px + puxador) e `side="left"` (gaveta de 304px) e `DialogContent`
-já são vidro sobre scrim — não passe `bg-*`/`border-*` pra eles. Texto: `text-title-1` (34),
-`text-title-3` (22), `text-body` (17), `text-subhead` (15), `text-footnote` (13), `text-xs` (12).
+- `tasks`, `undatedTasks`: `undefined` until fetched or hydrated from the cache. `isLoading` is a
+  string or null; only its truthiness is read.
+- `loadedMonths`; `loadMonth(month)` waits on a loaded or in-flight month instead of refetching;
+  `reloadMonths(months)` forces a refetch and returns the first error; `goToDay(day)` loads every
+  month between today and `day`, then sets `selectedDay` and a fresh `targetDay`.
+- `quotas`/`setQuotas`/`bumpUsage(key)` (optimistic +1). `invoices`/`paymentDetails`: only
+  `pages/billing.tsx` loads or reads them.
+- `weekStart`, `hour12`, `timeZone`/`setTimeZone`, which calls `setAppTimeZone`, clears
+  `monthRequests` and refetches every loaded month by its mid-month date in the new zone.
+- The provider sits above the Router (`App.tsx`): state survives route changes, and only a full page
+  load resets it.
+- `monthRequests`: a key stays while its month is loaded or in flight, a failed request removes
+  itself, and a newer request for the same key turns older responses into no-ops (`isCurrent`).
+  `reloadMonths` prunes tasks outside the map's months only when no request errored. Pinned by
+  `dailifyContext.render.test.tsx`.
+- Setters are the raw `useState` setters typed value-only (RULES Frontend says how to widen them).
 
-Conferir visualmente sem dev server: o harness de preview (`SCRATCH/preview/README.md` do
-orquestrador) builda stories e tira screenshot a 390px nos dois temas.
+## Boot: `protected-route.tsx`
 
-## Shared state — `dailifyContext.tsx`
+It owns the task boot. Other code only re-triggers loads (`pages/integration-callback.tsx` calls
+`reloadMonths` after an import), and page-specific data loads in its page (`pages/billing.tsx`).
 
-Single source of truth via `useDailify()`: `tasks`, `selectedDay`, `targetDay`, `loadedMonths`,
-`loadMonth`, `reloadMonths`, `goToDay`, `quotas`, `invoices`, `paymentDetails`, `undatedTasks`,
-`weekStart`, and their setters. Keep per-frame UI state OUT of this context: every consumer
-re-renders (the whole Home, measuring every swipe row).
+- Session gate: a network/5xx get-session error falls back to `readLastUser()` and paints the cache;
+  only a 401 or an empty session redirects to /login.
+- Hydrates tasks and undated from the cache; writes the cache debounced (1s), flushed on `pagehide`
+  and when the page goes hidden.
+- `getTasks`: `flushQueue` first, then undated + settings, and `reloadMonths` for the loaded months,
+  today, next month and `selectedDay`. After boot, a `selectedDay` in another month loads only it.
+- Revalidates on `visibilitychange` at most every 30s and at once on `online`; both refetch quotas,
+  which are keyed by today's month (`useNow("day")`).
+- The splash holds for `SPLASH_MIN_MS` only when the route mounted while loading.
+- `protected-route.render.test.tsx` pins loads-once, queue-before-undated, the deferred cache, the
+  splash and the session fallback; extend it when the boot changes.
 
-- **`protected-route.tsx`** is where it all loads: gates on `useSession()`
-  (`isPending`/`data.user.id`; a network/5xx get-session falls back to `readLastUser()` so the
-  cache still paints offline — only a 401 or an empty session redirects to /login), then `getTasks()`: flushes the offline queue, then `reloadMonths`
-  (context) for today, next month and every month already in `loadedMonths`. Each month is fetched (`getTasksForMonth`) and merged into
-  `tasks` with `mergeMonth` — a month never replaces the others. `loadMonth(month)` adds one more
-  month on demand, idempotent (loaded or in flight → no refetch). `goToDay(day)` loads every month
-  between today and `day`, then sets `selectedDay` and `targetDay` (the list scrolls to it).
-  Payment/invoices are NOT loaded here — `pages/billing.tsx` fetches them on open into the context
-  setters. The tasks cache is written debounced, flushed on `pagehide`/hidden. Quotas load in their own effect keyed by TODAY's month (`useNow`), not
-  `selectedDay`'s. `protected-route.render.test.tsx` pins "loads once".
-- **`dashboard/day-list.tsx`** is the continuous list: one `DaySection` per day with tasks (via
-  `listDays`) up to the contiguous run of `loadedMonths`; a sentinel asks for the next month. The
-  skeleton shows only at boot (`isLoading && !tasks`) — revalidation keeps the list and its scroll.
-  `day-section.tsx`, `week-strip.tsx`, `month-calendar.tsx` read `tasks` per day with
-  `getTasksForDay`. Each splits a presentational piece (props → markup, for the preview harness)
-  from the container: `WeekDays`/`WeekStrip`, `MonthGrid`/`MonthCalendar`, `TaskRow`/`DayTaskRow`
-  (touch only — desktop keeps `TaskCard` with chip editing), `AnytimeCard`+`AnytimeItem`/`AnytimeBlock`.
-  The month opens from the bar's calendar icon as `/dashboard?view=calendar` (device back closes
-  it). All read from the shared array — so any write must update it.
+## Overlays and widgets
 
-## Writes are optimistic against the shared array
+- Per-row overlay: `EditTask` wraps the Sheet; `EditTaskContent` mounts on first open and stays
+  mounted for the exit animation, so a closed row pays for none of the sheet's hooks. Its save
+  calls `updateTask` itself, against RULES.md "Frontend" (legacy: route new writes through
+  `hooks/`).
+- `Duplicates` shows at most once per app load (module `shown` flag), mounted once in `AppLayout`.
+- View/container splits here: `DuplicatesSheet`, `CalendarRows`, `IntegrationCard` are the Views.
+- New setting: a `Settings` field (`functions/api.ts`) and its server side, a context field set in
+  protected-route `loadUndated`, a widget that applies it, calls `saveSettings` and restores it with
+  `toast.error` on failure (`week-start-select.tsx`), and a row in `pages/settings.tsx`.
+- `theme-provider`: the key `vite-ui-theme` must match the pre-paint script in
+  `apps/web/index.html`. The `transition:none` style injected on each switch is deliberate.
 
-On create and on EDIT: `upsertTaskWithRecurrence(tasks ?? [], task, loadedMonths)` — recurring
-instances share the original's id, so `upsertTaskById` would swap only the first one and leave the
-rest stale; it rebuilds the instances in every loaded month. Complete/delete/patch apply the
-change to `tasks` **immediately**, keep the previous array, and restore it if the server refuses
-(`hooks/useTaskActions.tsx`) — waiting for the round-trip made every tap feel dead on mobile. Delete
-also offers "Desfazer" in the toast, which recreates the task with the same id.
-Numa tarefa **recorrente**, excluir e editar primeiro perguntam o escopo: o hook devolve
-`deleteDialog` (por isso ele é `.tsx`) e quem o usa renderiza — "só esta ocorrência" manda
-`?occurrence=` e a data entra no `exdates` da série, sem apagar nada. Essa exclusão não tem
-"Desfazer": não há rota que tire uma data do `exdates`.
-The day view's write path is **`dashboard/day-task-row.tsx`** for complete/delete actions.
-The Mew chat (`mew-chat/`, the mobile dock opens it) writes the same way: `apply.ts` swaps a
-confirm box's `before`/`after` into `tasks`/`undatedTasks` and rolls back if a write is refused.
-There is **no** `newTask` mechanism anymore (it only mutated a local copy and desynced — removed in
-`pz9.3`). If you add a write, surface it into `tasks`, not a component-local list.
+## pricing/
 
-## Auth — `auth/`
+- `PlanCards` and `planFeatures(role)` derive bullets from `QUOTAS`: a limit of 0 gets no bullet,
+  -1 the unlimited phrase. `currentPlan` is `string` on purpose: it is the session's free-text
+  `user.plan` written by the Stripe webhook, and an unknown id just matches no card.
+- Only `pages/premium.tsx` uses it; the landing forks it (`PricingV2`), so don't fork it again.
 
-`/login` and `/signup` are the same machine, differing only in copy: both mount `auth-page.tsx`
-with a `mode` ("signIn" | "signUp").
+## Legacy: don't copy or import
 
-- **`auth-state.ts` is the only place logic goes**, and the tested file of the folder
-  (`auth-state.test.ts`). `use-email-link-auth.ts` is just the wire to Better Auth
-  (`authClient.signIn.magicLink` / `.social`): if you're writing an `if` that isn't about its API,
-  it belongs in the reducer. `classifyAuthError` maps the client's `{ status, code }` (429, zod
-  `VALIDATION_ERROR`, captcha codes, `null` = network).
-- No polling: after sending, the inbox screen only offers resend (cooldown). The e-mail link opens
-  `/verify` (or `/auth/app` for the app), which finishes the sign-in.
-- `turnstile.ts`: Cloudflare Turnstile, `interaction-only`, script loaded only on the auth page
-  (`VITE_TURNSTILE_SITE_KEY`; empty = no captcha). Each send takes a fresh single-use token into the
-  `x-captcha-response` header.
-- Every visible string comes from `auth/copy.ts` (pt-BR) — no literals in JSX.
-- `auth-shell.tsx` owns the whole layout; the body components are `email-form.tsx` and
-  `check-inbox.tsx`. `/verify` and `/auth/app` reuse the shell with all its props omitted.
-
-## Dark mode & colors
-
-- Dark mode is **class-based** (`.dark`) via `theme-provider.tsx` (custom `useTheme`, not
-  next-themes). Tokens flip through a `color-scheme` bridge defined in `global.css`.
-- Use semantic tokens (`bg-background`, `text-foreground`, `text-muted-foreground`, `bg-tag-N`,
-  `bg-success`, …) — they already adapt to light/dark. Reach for the `dark:` variant only for the rare
-  case a token can't express. **No hex / arbitrary colors.**
-- The same rule covers **radii**: `rounded-panel` / `rounded-field` / `rounded-md`, never
-  `rounded-[17px]`. Tokens are in `global.css` (`:root` + `@theme inline`); if none fits, add one
-  instead of inlining a pixel value. See the token table in the root `CLAUDE.md`.
-- Prefer solid state colors over `/opacity` on interactive elements (bd task `k00`).
-
-## Testes de render
-
-Componente com estado condicional **tem** teste de render (bd `040`): `/billing` já apareceu em
-branco para todo usuário Free, e depois anunciou "ilimitado" para quem tinha 30/mês — os dois
-passariam por qualquer suíte de função pura.
-
-- Arquivo `*.render.test.tsx` com `/** @vitest-environment jsdom */` na primeira linha. O default do
-  projeto é `node` (a maioria dos testes é de lógica pura e não paga o custo do DOM), e
-  `environmentMatchGlobs` não existe mais no vitest 4.
-- `src/test/setup.ts` faz `cleanup` entre testes e stuba `IntersectionObserver` / `ResizeObserver` /
-  `matchMedia`, que jsdom não tem e o app usa (motion, Radix, `useMediaQuery`).
-- Mocke `@/lib/auth` (`useSession`) e `useDailify` por arquivo — montar os providers de verdade traria
-  rede e sessão para dentro do teste. Quem também usa `planOf`/`authClient` mocka parcial
-  (`importOriginal` + `useSession`). Envolva em `MemoryRouter` quem usa rota.
-- Prefira o contrato acessível ao detalhe visual: `aria-current="page"` para item de navegação
-  aceso, `getByRole("heading")` para título. E cuidado com escopo: a `/billing` mostra a tabela de
-  planos junto, então "Tarefas ilimitadas" existe na página mesmo para o Free — use `within()`.
-
-## Misc
-
-- `cn()` from `@/lib/utils` for conditional/merged classes.
-- `edit-task.tsx` is a compound component (`EditTask` / `EditTaskTrigger` / `EditTaskContent`).
-- Toasts via `sonner`. Navigate only to routes that exist (see `src/pages/CLAUDE.md`) — link to
-  `/premium`, not `/prices`.
-- `react-hooks/exhaustive-deps` has 0 warnings — keep it so. An effect that must read a value
-  without re-running on it calls a `useEffectEvent` (`hooks/useEffectEvent.ts`, the React 19.2 hook
-  for React 18; the lint knows the name) instead of omitting the dep. Context functions like
-  `loadMonth`/`reloadMonths` are new every render: in deps they'd refetch in a loop. See bd `0g7`.
-
-## Motion
-
-Estudo: `docs/research/2026-10-21-microanimacoes.md`. Valores sempre de `consts/motion.ts`.
-
-- Anime pela frequência: o que se repete o dia todo (hover, atalho de teclado) é rápido ou não anima.
-  Exceção: `n`/`/` abrem o composer com o morph, porque é o mesmo caminho do clique.
-- CSS primeiro (hover, press, cor). `motion` para saída, layout, gesto e morph.
-- Só `transform`/`opacity`; nunca `transition-all`. Exceções: largura da coluna lateral, o
-  `grid-template-rows` do colapso e o `height` do preset `collapse` (saída de item de lista).
-- Durações e curvas: utilitários `duration-fast|base|slow` e `ease-out|standard|exit` no CSS;
-  `duration`, `ease`, `spring`, `fade`, `reveal`, `slideX`, `collapse` no motion. Sem bounce.
-  `ease-out` sobrescreve a curva padrão do Tailwind. Landing: `ease.outExpo` e durações nomeadas
-  em `landing/scenes/timing.ts`.
-- Reduced motion: `<MotionConfig reducedMotion="user">` na raiz cobre transform e layout.
-  `useReducedMotion` só onde há `duration` manual ou altura customizada.
-  Exceção: `strokeDashoffset` do check-relógio (`duration` 0 com `useReducedMotion`).
+- Dead: `site-header.tsx`, `ModeToggle`, `SettingsGroup`/`SettingsRow`/`settingsPage` (use kit
+  `ListGroup`/`ListRow`), `EditTaskContext`/`useEditTask`/`EditTaskTrigger`, `TagBadge`.
+- Stale comments: `task-card.tsx` (landing mock call sites), `pricing/plan-cards.tsx` (claims the
+  landing and /billing use it).
+- `ui/applePayLogo.tsx`, `ui/googlePayLogo.tsx` are brand art in `ui/`; new logos go in `logos.tsx`.

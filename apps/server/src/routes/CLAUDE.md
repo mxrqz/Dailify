@@ -1,0 +1,91 @@
+# apps/server/src/routes — HTTP routes
+
+Repo-wide rules: [/RULES.md](../../../../RULES.md) ("Backend and API": `fail` + `code`, identity,
+limiter order, `waitUntil`, AI credit order). Routes validate and wire; SQL lives in `db/`, SDK and
+provider work in `lib/` and `integrations/`.
+
+## Inventory (mounted in `../index.ts`)
+
+- `tasks.ts` at `/tasks`: `GET /?month=YYYY-MM&tz=`, `GET /undated`, `POST /`, `PATCH|DELETE /:id`
+  (`?occurrence=<epoch-ms>` = one instance), `POST|DELETE /:id/complete`.
+- `voice.ts`, also at `/tasks`: `POST /parse` (text), `POST /voice` (multipart audio).
+- `mew.ts` at `/mew`: `POST /chat`, `PATCH /actions/:id`.
+- `billing.ts` at `/`: `GET /permissions`, `/billing/{checkout,portal,payment-details,invoices}`,
+  `POST /webhooks/stripe` (public, signature-checked, empty 200).
+- `push.ts` at `/`: `GET /push/key` (public), `GET|POST|DELETE /push/subscription`.
+- `settings.ts` at `/`: `GET|PUT /settings`.
+- `integrations.ts` at `/`: `GET /integrations`, `POST /:provider/{connect,callback}`,
+  `DELETE /:provider`, `POST google-calendar/{events,events/:taskId/meet|sync,duplicates/:id}`.
+
+## A new module
+
+```ts
+const things = new Hono<{ Bindings: Env; Variables: { userId: string; plan: Role } }>();
+things.use("*", requireAuth);
+things.use("*", rateLimit("API_LIMITER")); // only if every route shares it, else per route (mew.ts)
+// index.ts: app.route("/things", things);
+```
+
+- Canonical: `tasks.ts:26-28`. Mount once at its own prefix: never `/`, never a taken prefix.
+- Only `/health`, `/auth/*` (index.ts), `/push/key` and `/webhooks/stripe` skip `requireAuth`. A
+  new public endpoint goes above the `use("*")` or in its own module.
+- Legacy, don't copy: modules at `/` with per-route or path-scoped auth (billing, push, settings,
+  integrations), and authenticated routes with no limiter (`/permissions`, `/billing/portal`,
+  `/billing/payment-details`, `/billing/invoices`, `GET|DELETE /push/subscription`).
+
+## Hono gotchas (verified on 4.13.18)
+
+- Sub-apps at the same prefix share middleware: tasks' `use("*")` also runs for `/tasks/parse` and
+  `/tasks/voice`, which therefore run `requireAuth` twice and also spend `API_LIMITER`.
+- `use("/x/*")` also matches `/x`, so `GET /integrations` runs auth and limiter twice
+  (integrations.ts registers both). Register `/x/*` only.
+- Middleware and handlers run in registration order; the first to return without `next()` wins.
+
+## Limiters (`wrangler.toml`)
+
+- `API_LIMITER` 120/min per user: D1 and Stripe. `VOICE_LIMITER` 6/min per user: every OpenAI
+  route (`/tasks/parse`, `/tasks/voice`, `/mew/chat`). `AUTH_LIMITER` 5/min per
+  `cf-connecting-ip`: before login only.
+- Tests run the real bindings (`test/CLAUDE.md`), but none asserts a limiter's 429, and a missing
+  binding is a no-op: a forgotten `rateLimit(...)` passes the gate.
+
+## Bodies
+
+- Read to `unknown` without throwing, like `readJson` in tasks.ts. A bare `c.req.json()`, or the
+  uncaught `c.req.json<T>()` in `/billing/checkout`, turns malformed JSON (or a destructured `null`)
+  into a 500 via `app.onError`.
+- A parser whose errors aren't all 400 carries `status` in its union (`parseRequest`, mew.ts).
+- Zones: `validZone` (`lib/task-input.ts`); push, settings and integrations still call
+  `IANAZone.isValidZone`. Caps: `TASK_LIMITS`, `DATE_RANGE`, `MEW_*` from `@dailify/shared`.
+- Partial writes: absent key keeps, `null` clears, no known key is a 400 (`parseTaskFields` with
+  `partial: true`, `parsePatch` in settings.ts).
+- Multipart (voice.ts): `parseBody()`, `instanceof File`, 413 size cap, 415 MIME, before paying.
+
+## Status codes
+
+- 400 invalid input · 401 no session · 403 plan gate, AI blocked on the plan, Mew consent, OAuth
+  state of another user · 404 unknown or not owned · 409 conflict (`id already in use`) or
+  `INTEGRATION_ERROR.reconnect` · 413/415 payload · 429 rate limit or quota · 502 upstream failure
+  (no AI debit) · 503 optional feature not configured. A 500 comes only from `app.onError`.
+- The 429s (`Too many requests`, `AI Credits Limit Reached`, `Monthly Tasks Limit Reached`) differ
+  only by message and `mew-chat.tsx` matches the text; a new branch needs a `code`.
+- Success: `c.json({ <noun>: ... })` (`{ task }`, `{ tasks }`, `{ series }`, `{ url }`) or
+  `c.body(null, 204)`. Bare bodies (settings, integrations list, invoices, `AiParse`, `MewReply`)
+  are legacy.
+- `DELETE /tasks/:id` is 204 even when the row is gone (the offline queue replays it); a `PATCH` of
+  a missing task is 404.
+- The web (`request()` in `apps/web/src/functions/api.ts`) shows `error` as the toast description
+  and branches on `status` + `code`; a non-JSON body degrades to "O servidor falhou (N).".
+- Expected `integrations/` failures are typed errors mapped at the edge: `withCalendar` maps
+  `ActionError` and `InvalidGrantError` and rethrows the rest.
+
+## Adding a route
+
+1. In the module that owns the prefix. A pure `parseX` beside the route, or in `lib/` once two
+   routes share it, with a colocated test.
+2. Test file `apps/server/test/<area>-<feature>.test.ts` (harness: `test/session.ts`, `mockSession`,
+   `app.request(path, init, env, createExecutionContext())`; the context is required once the route
+   calls `waitUntil`). Cover the happy path, the 400s, the tier gate, the epoch-ms shape, and a 401
+   with `mockSession(() => null)`: today only `GET /tasks` and `GET /settings` assert 401.
+3. A response richer than `{ <noun>: <shared model> }` gets a type in `@dailify/shared`, built with
+   `satisfies`; then wire the client in `apps/web/src/functions/api.ts`.

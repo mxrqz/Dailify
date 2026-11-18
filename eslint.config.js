@@ -7,6 +7,6 @@ export default tseslint.config(js.configs.recommended, ...tseslint.configs.recom
   files: ["**/*.ts"],
   rules: {
     // Sem `as`: type guard ou tipo de verdade. Aviso, como no apps/web.
-    "@typescript-eslint/consistent-type-assertions": ["warn", { assertionStyle: "never" }],
+    "@typescript-eslint/consistent-type-assertions": ["error", { assertionStyle: "never" }],
   },
 });

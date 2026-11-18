@@ -1,33 +1,14 @@
-# `src/types/` — shared type model
+# apps/web/src/types — legacy type aliases
 
-`types.ts` re-exports the canonical model from `@dailify/shared` (the model is owned there, not
-here) plus the web-only picker prop interfaces. The invariants that aren't obvious from the types:
+Repo-wide rules: [/RULES.md](../../../../RULES.md). The model is owned by `@dailify/shared`.
 
-## `TaskProps` (= shared `Task`)
-
-- **`date: number`**, `alert?: number`, `completed: number[]` — all epoch **milliseconds**, never a
-  `Date`/`Timestamp` union. Wrap with `new Date(task.date)` when you need a JS `Date` for
-  formatting/comparison; there is no `toJsDate()` anymore.
-- **`repeat: Repeat`** (`"Off" | "Daily" | "Monthly" | "Yearly" | { Weekly: string[] }`, from
-  `@dailify/shared`). The `Weekly` array holds weekday **names** (`"Monday"`…) matched via the
-  `weekDays` index (`consts`). Untrusted `repeat` values (e.g. hand-built objects) should go through
-  `normalizeRepeat` — but note the server already normalizes recurring/voice-created tasks before
-  they reach the client, so the web app itself rarely needs to call it.
-
-## Quotas — o contrato de tiering
-
-Os limites e o uso vêm do servidor em `GET /permissions?month=YYYY-MM` e são lidos por `useQuotas()`.
-Gate a UI em `states[key].blocked` / `.exhausted`, nunca no nome do plano. O registro é `QUOTAS`
-(`@dailify/shared`), o mesmo import dos dois lados.
-
-## Stripe shapes
-
-`InvoicesProps` / `PaymentDetailsProps` (= shared `Invoice`/`PaymentDetails`) mirror what
-`apps/server`'s billing routes send back from Stripe. Their `created`/`start` fields stay Stripe's
-native **Unix seconds** (not epoch-ms like `Task`) — multiply by 1000 before formatting.
-
-## When you change a type
-
-Change it in `packages/shared/src/types.ts`, not here — `types.ts` just re-exports it. Update the
-server (`apps/server`, same repo now) and the components that render it in the same change; both
-sides import the identical type so drift shows up as a compile error instead of a runtime bug.
+- `types.ts` only renames shared types (`TaskProps` = `Task`, `InvoicesProps` = `Invoice`,
+  `PaymentDetailsProps` = `PaymentDetails`) plus `FormDataValues`, which nothing imports.
+- New code imports `Task`/`Invoice`/`PaymentDetails` from `@dailify/shared` and adds nothing here.
+  Move a file off the aliases when you touch it; the folder goes once none are left.
+- Wire response types belong in `@dailify/shared`, not here or in `functions/api.ts`
+  ([RULES.md, TypeScript](../../../../RULES.md#typescript)).
+- Stripe `Invoice.created` and `PaymentDetails.start` are Unix **seconds**, unlike the epoch-ms
+  `Task` dates: convert with `zoned(x * 1000)`, as `pages/billing.tsx` does.
+- `Repeat`'s `{ Weekly: string[] }` holds English weekday names; order and index come from
+  `weekDays`/`dayMap` in `@dailify/shared`.
