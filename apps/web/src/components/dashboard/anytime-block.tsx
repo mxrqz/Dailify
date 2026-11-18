@@ -59,11 +59,7 @@ export function AnytimeItem({
       onDragStart={onDragStart}
       className="flex min-h-14 items-center gap-3 pr-4 pl-1.5"
     >
-      <CheckCircle
-        checked={done}
-        onCheckedChange={onToggle}
-        label={done ? copy.task.uncomplete : copy.task.complete}
-      />
+      <CheckCircle checked={done} onCheckedChange={onToggle} />
       <button
         type="button"
         onClick={onOpen}
