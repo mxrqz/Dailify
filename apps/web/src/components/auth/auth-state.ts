@@ -5,7 +5,8 @@
 
 export type AuthMode = "signIn" | "signUp";
 
-export type AuthErrorKey = "invalidEmail" | "captcha" | "tooManyRequests" | "network" | "generic";
+export type AuthErrorKey =
+  "invalidEmail" | "captcha" | "tooManyRequests" | "network" | "reauth" | "generic";
 
 /** `code` só no genérico: a tela mostra em mono pra virar relato de bug. */
 export type AuthFailure = { key: AuthErrorKey; code?: string };

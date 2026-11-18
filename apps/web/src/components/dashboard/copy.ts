@@ -261,7 +261,6 @@ export const copy = {
     deleteConfirmPrompt: "Digite {email} para confirmar",
     deleteConfirmCta: "Excluir permanentemente",
     deleteAccountError: "Não foi possível excluir a conta",
-    deleteReauth: "Por segurança, entre de novo e repita a exclusão.",
   },
 
   integrations: {

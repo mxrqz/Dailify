@@ -1,12 +1,11 @@
 import { LogOutIcon } from "lucide-react";
-import { useNavigate } from "react-router-dom";
 
 import { copy } from "@/components/dashboard/copy";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PLAN_ID, planMap } from "@/consts/conts";
 import { useQuotas } from "@/hooks/useQuotas";
 import { planOf, useSession } from "@/lib/auth";
-import { signOut, signedOutPath } from "@/lib/native-auth";
+import { signOutAndReload } from "@/lib/native-auth";
 import { cn } from "@/lib/utils";
 import { DashboardButton } from "./dashboard-button";
 import { PremiumButton } from "./premium-button";
@@ -112,7 +111,6 @@ export function NavMenu({
 /** O `NavMenu` ligado à sessão e às quotas. */
 export function NavItems(): JSX.Element {
   const user = useSession().data?.user;
-  const navigate = useNavigate();
   const { loading, states } = useQuotas();
   const ai = states.ai;
   const plan = planMap[planOf(user)] ?? planMap[PLAN_ID.free];
@@ -125,7 +123,7 @@ export function NavItems(): JSX.Element {
           : undefined
       }
       credits={loading || ai.unlimited ? undefined : { used: ai.used, limit: ai.limit }}
-      onSignOut={() => void signOut().then(() => navigate(signedOutPath()))}
+      onSignOut={() => signOutAndReload()}
     />
   );
 }

@@ -164,3 +164,13 @@ export async function signOut(): Promise<void> {
   if (isTauri()) return signOutNative();
   await authClient.signOut();
 }
+
+/**
+ * Sair e recarregar a página inteira, falhe ou não o servidor: o `DailifyContext` fica acima do
+ * router, e no app o próximo login termina na mesma webview — sem recarregar, as tarefas de quem
+ * saiu seriam gravadas no cache de quem entrou.
+ */
+export const signOutAndReload = (path = signedOutPath()): void =>
+  void signOut()
+    .catch(() => undefined)
+    .finally(() => window.location.assign(path));

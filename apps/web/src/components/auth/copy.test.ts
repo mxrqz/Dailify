@@ -27,6 +27,7 @@ describe("auth copy", () => {
       "captcha",
       "tooManyRequests",
       "network",
+      "reauth",
       "generic",
     ] as const) {
       expect(copy.errors[key]).toBeTruthy();

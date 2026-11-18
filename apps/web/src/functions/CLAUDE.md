@@ -58,7 +58,7 @@ itself is testable with `vi.stubGlobal("fetch", ...)` plus `vi.mock("@/lib/auth"
 - `drainQueue` holds one of the five copies of the settle predicate (`hooks/CLAUDE.md`).
 - Storage keys are a persisted contract (renaming drops queued writes):
   `dailify:{tasks,outbox,undated}:<userId>`, `dailify:last-user`, `mewki:mew:<userId>:v1`
-  (`components/mew-chat/thread.ts`). `clearLocal` misses the Mew key today
+  (`chatKey`, read by `components/mew-chat/thread.ts`); `clearLocal` removes all but device-wide ones
   ([Security](../../../../RULES.md#security-and-privacy)).
 
 ## Lists

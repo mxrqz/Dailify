@@ -32,6 +32,9 @@ export type Mutation =
 
 const key = (userId: string, what: "tasks" | "outbox" | "undated") => `dailify:${what}:${userId}`;
 
+/** A conversa com a Mew (`components/mew-chat/thread.ts`); mora aqui pro `clearLocal` não esquecê-la. */
+export const chatKey = (userId: string) => `mewki:mew:${userId}:v1`;
+
 /**
  * Id da tarefa nascido no cliente. `crypto.randomUUID` só existe em contexto seguro — testar no
  * celular por `http://192.168.x.x` cairia num `undefined is not a function` bem no botão de criar.
@@ -195,6 +198,7 @@ export function clearLocal(userId: string): void {
     localStorage.removeItem(key(userId, "tasks"));
     localStorage.removeItem(key(userId, "outbox"));
     localStorage.removeItem(key(userId, "undated"));
+    localStorage.removeItem(chatKey(userId));
     localStorage.removeItem(LAST_USER);
   } catch {
     /* sem acesso ao storage: não havia o que limpar */
