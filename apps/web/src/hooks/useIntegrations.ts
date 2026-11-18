@@ -2,6 +2,7 @@ import { useEffect, useSyncExternalStore } from "react";
 import type { IntegrationStatus, ProviderId } from "@dailify/shared";
 
 import { getIntegrations } from "@/functions/api";
+import { useOnline } from "@/hooks/useOnline";
 
 // Fora do contexto de propósito: cada linha da agenda lê isto, e mudar o status não pode
 // re-renderizar a Home inteira. Um GET por sessão; /settings e o 409 de revogado escrevem aqui.
@@ -26,9 +27,11 @@ const subscribe = (listener: () => void) => {
 /** Status das integrações; `undefined` enquanto não leu (ou offline). */
 export function useIntegrations(): IntegrationStatus[] | undefined {
   const list = useSyncExternalStore(subscribe, () => current);
+  // Mounted offline: reconnecting re-runs the effect; `current`/`inflight` prevent a duplicate GET.
+  const online = useOnline();
 
   useEffect(() => {
-    if (current || inflight || !navigator.onLine) return;
+    if (current || inflight || !online) return;
     inflight = true;
     void (async () => {
       try {
@@ -41,7 +44,7 @@ export function useIntegrations(): IntegrationStatus[] | undefined {
         inflight = false;
       }
     })();
-  }, []);
+  }, [online]);
 
   return list;
 }
