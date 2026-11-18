@@ -78,8 +78,8 @@ Naming, pragma, clock, mocking and query rules: RULES.md "Testing". The harness 
 ## Gotchas
 
 - `tsconfig.json` `lib` is ES2022 + DOM. `@types/node` globals still leak into `src` because
-  `types` is unset; setting it breaks `consts/motion.test.ts` (`node:fs`). TS is pinned ~5.6 (a
-  Tauri template leftover).
+  `types` is unset; setting it breaks `consts/motion.test.ts` (`node:fs`). TS 5.9 with
+  `verbatimModuleSyntax`: a type-only import is `import type` (or an inline `type`).
 - `typecheck` also runs `tsconfig.node.json` (`vite.config.ts`, `noEmit`); `format` and `lint`
   cover `src`, `scripts`, the configs and the tsconfigs.
 - `eslint.config.js` enables only `rules-of-hooks` and `exhaustive-deps` from react-hooks; `lint`
