@@ -20,6 +20,13 @@
   --motion-duration-base: 200ms;
   /* Maior deslocamento ou troca de painel (estudo §1: até 300ms). */
   --motion-duration-slow: 300ms;
+  /* Mew chat: a message or block opening its own height. */
+  --motion-duration-open: 460ms;
+  /* Mew chat: one word of a reply fading up, and the gap to the next one. */
+  --motion-duration-word: 240ms;
+  --motion-duration-stagger: 38ms;
+  /* Mew chat: an opening row's content waits for its room. */
+  --motion-duration-lag: 80ms;
   /* Entrada: começa rápido e assenta (estudo §1, ease-out forte). */
   --motion-ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   /* Elemento que já está na tela e se move (estudo §1, ease-in-out). */
@@ -274,6 +281,7 @@
   --transition-duration-fast: var(--motion-duration-fast);
   --transition-duration-base: var(--motion-duration-base);
   --transition-duration-slow: var(--motion-duration-slow);
+  --transition-duration-open: var(--motion-duration-open);
   /* `--ease-out` sobrescreve de propósito a curva padrão do Tailwind. */
   --ease-out: var(--motion-ease-out);
   --ease-standard: var(--motion-ease-standard);
@@ -596,11 +604,11 @@
 }
 
 /* Palavras da resposta da Mew: todas já no DOM (a bolha mede o tamanho final de uma vez) e cada
-   uma aparece 38ms depois da anterior (`--i` = índice; o player espera o mesmo passo). Precisa de
-   `inline-block`: translate não vale em inline. */
+   uma aparece um `stagger` depois da anterior (`--i` = índice). Precisa de `inline-block`:
+   translate não vale em inline. */
 @utility word-in {
-  animation: word-in 240ms var(--ease-out) both;
-  animation-delay: calc(var(--i, 0) * 38ms);
+  animation: word-in var(--motion-duration-word) var(--ease-out) both;
+  animation-delay: calc(var(--i, 0) * var(--motion-duration-stagger));
 
   @media (prefers-reduced-motion: reduce) {
     animation: none;
@@ -612,6 +620,16 @@
     opacity: 0;
     translate: 0 --spacing(1);
   }
+}
+
+/* A block under a Mew reply opens after the reply's last word (`--words` = its word count). */
+@utility delay-words {
+  transition-delay: calc(var(--words, 0) * var(--motion-duration-stagger));
+}
+@utility delay-words-lag {
+  transition-delay: calc(
+    var(--words, 0) * var(--motion-duration-stagger) + var(--motion-duration-lag)
+  );
 }
 
 /* Barra sticky do topo: 52px de conteúdo abaixo da status bar/notch (0 fora do app edge-to-edge). */

@@ -1,5 +1,8 @@
 import type {
   AiParse,
+  MewActionStatus,
+  MewReply,
+  MewRequest,
   Task,
   TaskInput,
   QuotaLimits,
@@ -111,6 +114,8 @@ export interface Settings {
   /** null = automático: o fuso do aparelho. */
   timeZone: string | null;
   hour12: boolean;
+  /** LGPD: the Mew chat sends the agenda to OpenAI only after this. */
+  mewConsent: boolean;
 }
 
 export async function getSettings(): Promise<{ settings?: Settings; error?: ApiError }> {
@@ -216,6 +221,23 @@ export async function parseTaskAi(text: string): Promise<{ result?: AiParse; err
     body: JSON.stringify({ text, timezone: appTimeZone() }),
   });
   return { result: data, error };
+}
+
+/** 403 = no consent yet, 429 = out of AI credits, 413 = image too big, 502 = model failed (no debit). */
+export async function mewChat(req: MewRequest): Promise<{ reply?: MewReply; error?: ApiError }> {
+  const { data, error } = await request<MewReply>("/mew/chat", {
+    method: "POST",
+    body: JSON.stringify(req),
+  });
+  return { reply: data, error };
+}
+
+/** Audit trail of a confirm box; fire and forget. */
+export async function setMewAction(id: string, status: MewActionStatus): Promise<void> {
+  await request(`/mew/actions/${encodeURIComponent(id)}`, {
+    method: "PATCH",
+    body: JSON.stringify({ status }),
+  });
 }
 
 /** Sem `request`: o corpo é FormData, e o Content-Type JSON dele quebraria o upload. */

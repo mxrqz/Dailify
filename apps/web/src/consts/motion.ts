@@ -1,7 +1,16 @@
 import type { Transition } from "motion/react";
 
 // Espelham --motion-duration-* e --motion-ease-* de global.css (motion.test.ts garante). Segundos, como o motion usa.
-export const duration = { instant: 0, fast: 0.12, base: 0.2, slow: 0.3 } as const;
+export const duration = {
+  instant: 0,
+  fast: 0.12,
+  base: 0.2,
+  slow: 0.3,
+  open: 0.46,
+  word: 0.24,
+  stagger: 0.038,
+  lag: 0.08,
+} as const;
 
 export const ease = {
   out: [0.23, 1, 0.32, 1],
