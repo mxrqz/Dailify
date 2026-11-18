@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import { TZDate } from "@date-fns/tz";
-import { TASK_LIMITS, parseTaskText, type AiParse, type Role, type Task } from "@dailify/shared";
-import type { Env } from "../index";
+import { TASK_LIMITS, parseTaskText, type AiParse, type Task } from "@dailify/shared";
+import type { AppEnv } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { getSettings } from "../db/settings";
@@ -10,11 +10,9 @@ import { insertTask } from "../db/tasks";
 import { aiQuotaError, debitAi, enforceCreate } from "../db/limits";
 import { aiTargets } from "../db/integrations";
 import { fail } from "../lib/errors";
-import { validZone } from "../lib/task-input";
+import { isRecord, readJson, validZone } from "../lib/task-input";
 
-const isRecord = (v: unknown): v is Record<string, unknown> => typeof v === "object" && v !== null;
-
-const voice = new Hono<{ Bindings: Env; Variables: { userId: string; plan: Role } }>();
+const voice = new Hono<AppEnv>();
 
 /** Frase clara (sem `unsure`) o parser lê sozinho; o GPT só entra na dúvida. */
 function readLocally(text: string, timezone: string): AiParse | null {
@@ -35,7 +33,7 @@ function readLocally(text: string, timezone: string): AiParse | null {
 }
 
 voice.post("/parse", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
-  const body: unknown = await c.req.json().catch(() => null);
+  const body = await readJson(c);
   const text = isRecord(body) && typeof body.text === "string" ? body.text.trim() : "";
   if (!text || text.length > TASK_LIMITS.titleMax) return fail(c, 400, "invalid text");
   const timezone = validZone(isRecord(body) ? body.timezone : undefined);
@@ -96,10 +94,12 @@ voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   for (const draft of ai.drafts) {
     const task = draftToTask(draft, timezone, now);
     const err = await enforceCreate(c.env.DB, userId, c.get("plan"), task);
-    if (err) return fail(c, 429, err);
+    // The credit is spent: once a draft is stored, a quota stop answers with what was created.
+    if (err && !tasks.length) return fail(c, 429, err);
+    if (err) break;
 
-    await insertTask(c.env.DB, userId, task);
-    tasks.push(task);
+    const stored = await insertTask(c.env.DB, userId, task);
+    if (stored) tasks.push(stored);
   }
 
   return c.json({ response: ai.reply, tasks });
