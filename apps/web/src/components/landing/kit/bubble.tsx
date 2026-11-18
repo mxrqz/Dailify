@@ -8,9 +8,8 @@ import { Tail } from "./tail";
 // contorno 1px na silhueta inteira (balão + orelhas + setinha) e sombra que segue a mesma silhueta;
 // `box-shadow`/`border` desenhariam só o retângulo
 export const BUBBLE_FILTER = "url(#bubLine) drop-shadow(0 6px 14px #0000001a)";
-export const BUBBLE_LINE = "url(#bubLine)";
 
-/** Define o filtro `#bubLine` — renderize uma vez por página, antes de qualquer `Bubble`/`MessageBox`. */
+/** Define o filtro `#bubLine` — renderize uma vez por página, antes de qualquer `Bubble`. */
 export function BubbleDefs() {
   return (
     <svg width="0" height="0" className="absolute" aria-hidden="true">

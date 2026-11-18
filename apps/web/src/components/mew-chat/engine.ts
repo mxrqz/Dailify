@@ -41,7 +41,7 @@ export type ConfirmBlock = Extract<Block, { kind: "confirm" }>;
 
 export type ChatEvent =
   | { type: "typing"; ms: number }
-  | { type: "word"; word: string }
+  | { type: "text"; text: string }
   | { type: "block"; block: Block }
   | { type: "settle"; id: string; ms: number };
 
@@ -84,9 +84,10 @@ export function seedAgenda(now: TZDate): AgendaTask[] {
   });
 }
 
+// The whole line at once: the bubble measures its final size before the words fade in (CSS).
 const say = (text: string): ChatEvent[] => [
   { type: "typing", ms: TYPING_MS },
-  ...text.split(" ").map((word): ChatEvent => ({ type: "word", word })),
+  { type: "text", text },
 ];
 
 export const fill = (template: string, values: Record<string, string | number>) =>

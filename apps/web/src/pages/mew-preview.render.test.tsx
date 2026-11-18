@@ -95,6 +95,23 @@ describe("/preview/mew", () => {
     expect(dock).toContainElement(screen.getByRole("button", { name: copy.composer.open }));
   });
 
+  it("a reply lands whole: every word in the DOM on its first render, two lines tall at least", () => {
+    render(
+      <HelmetProvider>
+        <MewPreview />
+      </HelmetProvider>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: copy.composer.open }));
+    fireEvent.click(screen.getByRole("button", { name: t.suggestions.today }));
+    // Typing beat, then the box's 120ms fade-out before it swaps in the text.
+    advance(650);
+    advance(120);
+
+    const text = screen.getByRole("dialog").querySelector("p.min-h-2lh");
+    expect(text).toHaveTextContent("Você tem 3 coisas hoje:");
+    expect(text?.querySelectorAll("span")).toHaveLength(5);
+  });
+
   it("a reply with a block is one container: text, rows and buttons in the same box", () => {
     render(
       <HelmetProvider>

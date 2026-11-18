@@ -519,6 +519,7 @@ export function CreateDock({
       {/* Sem barra sólida: véu leve atrás da pílula (blur + aresta cromática no fim da tela). */}
       {createPortal(
         <div
+          data-chat={chat ? "" : undefined}
           className={cn(
             "dock-veil pointer-events-none fixed inset-x-0 bottom-0 z-dock px-4 pb-dock",
             className,

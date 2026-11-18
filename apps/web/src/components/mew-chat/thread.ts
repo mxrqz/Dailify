@@ -2,7 +2,7 @@ import { type AgendaTask, type Block, type ChatEvent, type ConfirmBlock, swap } 
 
 export type Message =
   | { id: string; from: "me"; text: string; image?: string }
-  | { id: string; from: "mew"; words: string[]; typing: boolean; blocks: Block[] };
+  | { id: string; from: "mew"; text: string; typing: boolean; blocks: Block[] };
 
 export interface ChatState {
   messages: Message[];
@@ -40,8 +40,7 @@ const findConfirm = (state: ChatState, id: string) =>
 
 function play(message: Message, event: ChatEvent): Message {
   if (message.from !== "mew") return message;
-  if (event.type === "word")
-    return { ...message, typing: false, words: [...message.words, event.word] };
+  if (event.type === "text") return { ...message, typing: false, text: event.text };
   if (event.type === "block")
     return { ...message, typing: false, blocks: [...message.blocks, event.block] };
   if (event.type === "settle")
@@ -65,7 +64,7 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
         messages: [
           ...state.messages,
           { id: action.id, from: "me", text: action.text, image: action.image },
-          { id: mewId(action.id), from: "mew", words: [], typing: true, blocks: [] },
+          { id: mewId(action.id), from: "mew", text: "", typing: true, blocks: [] },
         ],
       };
     case "event":
@@ -120,7 +119,8 @@ export function chatReducer(state: ChatState, action: ChatAction): ChatState {
   }
 }
 
-const KEY = "mewki:preview-mew";
+// v2: a reply is one `text`, no longer `words`.
+const KEY = "mewki:preview-mew:v2";
 
 const isChatState = (value: unknown): value is ChatState =>
   typeof value === "object" &&

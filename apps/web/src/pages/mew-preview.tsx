@@ -29,7 +29,8 @@ import { zoned } from "@/functions/zone";
 import { cn } from "@/lib/utils";
 
 const t = copy.mewChat;
-const WORD_MS = 45;
+// Mirrors the `word-in` stagger in global.css: what follows the text waits for its last word.
+const WORD_MS = 38;
 const FOCUS_MS = 1800;
 
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
@@ -59,10 +60,10 @@ function usePlayer(dispatch: (action: ChatAction) => void) {
     let at = 0;
     for (const event of events) {
       if (event.type === "typing" || event.type === "settle") at += event.ms;
-      else if (event.type === "word" && !reduce) at += WORD_MS;
       timers.current.push(
         window.setTimeout(() => dispatch({ type: "event", to: mewId(id), event }), at),
       );
+      if (event.type === "text" && !reduce) at += event.text.split(" ").length * WORD_MS;
     }
     timers.current.push(window.setTimeout(() => setBusy(false), at));
   };
@@ -85,7 +86,10 @@ export default function MewPreview() {
   const photo = useRef<HTMLInputElement>(null);
   const [focus, setFocus] = useState<string | null>(null);
 
-  useEffect(() => saveChat(state), [state]);
+  // Once per finished reply (and per tap after it), not per event: the thread carries photo thumbnails.
+  useEffect(() => {
+    if (!busy) saveChat(state);
+  }, [busy, state]);
 
   useEffect(() => {
     if (!focus) return;
@@ -219,6 +223,7 @@ function Agenda({
                     key={task.id}
                     id={`task-${task.id}`}
                     layout
+                    layoutDependency={tasks}
                     initial={{ opacity: 0, scale: 0.96 }}
                     animate={{ opacity: 1, scale: 1 }}
                     exit={{ opacity: 0, scale: 0.96 }}

@@ -1,9 +1,17 @@
-import { useReducedMotion } from "motion/react";
-import { type Key, type ReactNode, useEffect, useLayoutEffect, useRef, useState } from "react";
+import { animate, motionValue, useReducedMotion } from "motion/react";
+import {
+  Fragment,
+  type Key,
+  type ReactNode,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+} from "react";
 
+import { spring } from "@/consts/motion";
 import { cn } from "@/lib/utils";
 
-import { BUBBLE_LINE } from "./bubble";
 import { Ears } from "./ears";
 
 export type MessageType = "status" | "draft" | "done" | "text";
@@ -17,12 +25,12 @@ type MessageBoxProps = {
   className?: string;
 };
 
-const EASE = "cubic-bezier(0.32,0.72,0,1)";
 const OUT_MS = 120;
 
 /**
  * Uma mensagem da Mewki = um container só: quando `type`/`contentKey` muda, o conteúdo velho some,
- * o container anima até o tamanho do novo e o novo entra com fade + blur.
+ * o novo entra com fade + translate, e a altura do container segue o conteúdo numa mola (a largura
+ * troca sem animar). Em repouso a altura é `auto`: nada prende o conteúdo.
  */
 export function MessageBox({
   type,
@@ -35,7 +43,7 @@ export function MessageBox({
   const boxRef = useRef<HTMLDivElement>(null);
   const innerRef = useRef<HTMLDivElement>(null);
   const latest = useRef(children);
-  const from = useRef<DOMRect | null>(null);
+  const swapped = useRef(false);
   const [shown, setShown] = useState({ type, key: contentKey, node: children });
   const changed = shown.type !== type || shown.key !== contentKey;
 
@@ -45,9 +53,11 @@ export function MessageBox({
 
   useEffect(() => {
     if (!changed) return;
-    const swap = () => setShown({ type, key: contentKey, node: latest.current });
+    const swap = () => {
+      swapped.current = true;
+      setShown({ type, key: contentKey, node: latest.current });
+    };
     if (reduce || !innerRef.current) return swap();
-    from.current = boxRef.current?.getBoundingClientRect() ?? null;
     const a = innerRef.current.animate([{ opacity: 1 }, { opacity: 0 }], {
       duration: OUT_MS,
       fill: "forwards",
@@ -59,36 +69,62 @@ export function MessageBox({
     };
   }, [changed, type, contentKey, reduce]);
 
-  // depois da troca: container do tamanho velho pro novo, conteúdo novo entra
+  // depois da troca o conteúdo novo entra (sem blur: filtro aqui refiltrava a bolha a cada quadro)
   useLayoutEffect(() => {
-    const r0 = from.current;
-    const box = boxRef.current;
-    from.current = null;
-    if (!r0 || !box || !r0.width) return;
-    const r1 = box.getBoundingClientRect();
-    box.animate(
-      [
-        { width: `${r0.width}px`, height: `${r0.height}px` },
-        { width: `${r1.width}px`, height: `${r1.height}px` },
-      ],
-      { duration: 520, easing: EASE },
-    );
+    if (!swapped.current) return;
+    swapped.current = false;
     innerRef.current?.animate(
       [
-        { opacity: 0, filter: "blur(4px)", transform: "translateY(4px)" },
-        { opacity: 1, filter: "blur(0)", transform: "none" },
+        { opacity: 0, transform: "translateY(4px)" },
+        { opacity: 1, transform: "none" },
       ],
-      { duration: 380, delay: 120, easing: "ease-out", fill: "backwards" },
+      { duration: 300, easing: "ease-out" },
     );
   }, [shown]);
 
+  // A altura segue o conteúdo: px só enquanto a mola anda, `auto` quando assenta.
+  useEffect(() => {
+    const box = boxRef.current;
+    const inner = innerRef.current;
+    if (reduce || !box || !inner) return;
+    let last = inner.offsetHeight;
+    const height = motionValue(last);
+    const off = height.on("change", (h) => {
+      box.style.height = `${h}px`;
+    });
+    const observer = new ResizeObserver(() => {
+      const next = inner.offsetHeight;
+      if (Math.abs(next - last) < 2) return;
+      // parada, a caixa já pulou pro tamanho novo: volta pro velho e anda; andando, segue com a velocidade
+      if (!height.isAnimating()) height.jump(last);
+      last = next;
+      animate(height, next, {
+        ...spring.soft,
+        onComplete: () => {
+          box.style.height = "";
+        },
+      });
+    });
+    observer.observe(inner);
+    return () => {
+      observer.disconnect();
+      off();
+      height.stop();
+      box.style.height = "";
+    };
+  }, [reduce]);
+
   const shownType = changed ? shown.type : type;
   return (
+    // O contorno é a sombra do wrapper, por baixo das orelhas (que têm o próprio traço) e do corpo.
     <div
-      className={cn("relative min-w-0", ears && "mt-3.5", className)}
-      style={{ filter: BUBBLE_LINE }}
+      className={cn(
+        "relative min-w-0 rounded-lg rounded-bl-xs shadow-line",
+        ears && "mt-3.5",
+        className,
+      )}
     >
-      {ears && <Ears size="sm" />}
+      {ears && <Ears size="sm" line />}
       <div
         ref={boxRef}
         data-slot="message-box"
@@ -96,10 +132,11 @@ export function MessageBox({
       >
         <div
           ref={innerRef}
-          key={`${shown.type}:${String(shown.key)}`}
           className={cn("px-3.5 py-3", (shownType === "draft" || shownType === "done") && "w-69")}
         >
-          {changed ? shown.node : children}
+          <Fragment key={`${shown.type}:${String(shown.key)}`}>
+            {changed ? shown.node : children}
+          </Fragment>
         </div>
       </div>
     </div>

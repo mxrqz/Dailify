@@ -1,4 +1,6 @@
 import {
+  type CSSProperties,
+  Fragment,
   type FormEvent,
   type ReactNode,
   type RefObject,
@@ -18,12 +20,11 @@ import {
   SearchIcon,
   XIcon,
 } from "lucide-react";
-import { AnimatePresence, motion, useReducedMotion } from "motion/react";
+import { motion } from "motion/react";
 
 import { copy } from "@/components/dashboard/copy";
 import { CheckCircle } from "@/components/dashboard/day-task-row";
 import { Chip } from "@/components/kit/chip";
-import { BubbleDefs } from "@/components/landing/kit/bubble";
 import { MessageBox } from "@/components/landing/kit/message-box";
 import { CalendarBadge } from "@/components/logos";
 import { MewStatic } from "@/components/mew/mew-static";
@@ -35,7 +36,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { duration, ease, spring } from "@/consts/motion";
+import { spring } from "@/consts/motion";
 import { zoned } from "@/functions/zone";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { cn } from "@/lib/utils";
@@ -111,7 +112,6 @@ export function ChatDrawer({
         }}
         className="z-chat h-11/12 px-0 pb-0 sm:mx-auto sm:w-sheet"
       >
-        <BubbleDefs />
         <ChatPanel {...props} />
       </SheetContent>
     </Sheet>
@@ -131,10 +131,12 @@ function ChatPanel({
   const log = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
-  const reduce = useReducedMotion();
   const { messages } = state;
+  // What was already there when the chat opened shows up as is; only new messages and blocks enter.
+  const [initial] = useState(() => new Set(messages.map((m) => m.id)));
 
-  // Stay glued to the newest message while it grows (words, slots, morphs), unless scrolled up.
+  // The only writer of scrollTop: glued to the newest message while it grows (rows opening, morphs),
+  // unless scrolled up. Instant, so it never fights the animation.
   useEffect(() => {
     const el = log.current;
     const inner = list.current;
@@ -153,10 +155,9 @@ function ChatPanel({
     };
   }, []);
 
-  // A new message (and opening the chat) always brings the thread back to the end.
+  // A new message re-pins; the observer above scrolls as its row opens.
   useLayoutEffect(() => {
     pinned.current = true;
-    if (log.current) log.current.scrollTop = log.current.scrollHeight;
   }, [messages.length]);
 
   const last = messages.at(-1);
@@ -205,36 +206,18 @@ function ChatPanel({
           {messages.length === 0 ? (
             <Empty onPick={(value) => onSend(value)} onPhoto={onPhoto} />
           ) : (
-            <AnimatePresence initial={false}>
-              {messages.map((m) => (
-                // .cslot: the row opens its height, then the message fades, rises and unblurs in.
-                <motion.div
-                  key={m.id}
-                  initial={reduce ? false : { height: 0 }}
-                  animate={{ height: "auto" }}
-                  transition={{ duration: 0.46, ease: ease.outQuint }}
-                  className="flex-none overflow-hidden"
-                >
-                  <motion.div
-                    initial={reduce ? false : { opacity: 0, y: 10, filter: "blur(4px)" }}
-                    animate={{ opacity: 1, y: 0, filter: "blur(0px)" }}
-                    transition={{
-                      delay: 0.08,
-                      duration: 0.36,
-                      ease: ease.out,
-                      y: { delay: 0.08, duration: 0.52, ease: ease.outQuint },
-                    }}
-                    className="py-1.5"
-                  >
-                    {m.from === "me" ? (
-                      <Mine message={m} />
-                    ) : (
-                      <Reply message={m} dispatch={dispatch} onOpenTask={onOpenTask} />
-                    )}
-                  </motion.div>
-                </motion.div>
-              ))}
-            </AnimatePresence>
+            messages.map((m) => {
+              const fresh = !initial.has(m.id);
+              return (
+                <Reveal key={m.id} enter={fresh} className="py-1.5">
+                  {m.from === "me" ? (
+                    <Mine message={m} />
+                  ) : (
+                    <Reply message={m} fresh={fresh} dispatch={dispatch} onOpenTask={onOpenTask} />
+                  )}
+                </Reveal>
+              );
+            })
           )}
         </div>
       </div>
@@ -375,23 +358,15 @@ export function ChatInput({
 }
 
 function Listening() {
-  const reduce = useReducedMotion();
   return (
     <span role="img" aria-label={t.listeningNow} className="flex h-full flex-1 items-center gap-2">
       <span className="size-2 flex-none animate-pulse rounded-full bg-brand motion-reduce:animate-none" />
       <span className="flex h-5 items-center gap-0.5">
         {Array.from({ length: 18 }, (_, i) => (
-          <motion.span
+          <span
             key={i}
-            className="h-full w-0.5 rounded-full bg-ink-secondary"
-            initial={{ scaleY: 0.2 }}
-            animate={reduce ? { scaleY: 0.5 } : { scaleY: [0.2, 1, 0.35, 0.8, 0.2] }}
-            transition={{
-              duration: 1.1,
-              delay: (i % 6) * 0.09,
-              repeat: Infinity,
-              ease: "easeInOut",
-            }}
+            className="h-full w-0.5 animate-bar rounded-full bg-ink-secondary motion-reduce:scale-y-50 motion-reduce:animate-none"
+            style={{ animationDelay: `${(i % 6) * 90}ms` }}
           />
         ))}
       </span>
@@ -455,11 +430,10 @@ function Dots({ label }: { label: string }) {
   return (
     <span role="status" aria-label={label} className="inline-flex h-5 items-center gap-0.75">
       {[0, 1, 2].map((i) => (
-        <motion.i
+        <i
           key={i}
-          className="size-1.5 rounded-full bg-ink-tertiary"
-          animate={{ opacity: [0.35, 1, 0.35], y: [0, -3, 0] }}
-          transition={{ duration: 1.2, delay: i * 0.15, repeat: Infinity, times: [0, 0.3, 0.6] }}
+          className="size-1.5 animate-dot rounded-full bg-ink-tertiary motion-reduce:animate-none"
+          style={{ animationDelay: `${i * 150}ms` }}
         />
       ))}
     </span>
@@ -474,12 +448,17 @@ const FINAL: Step[] = ["done", "cancelled", "undone"];
  * under it (`.cslot`), its buttons at the container's foot. Typing → text and a confirmation
  * closing morph the whole box; status → draft reopens the block's slot.
  */
+/** `--i` drives the `word-in` stagger (global.css). */
+const wordAt = (i: number): CSSProperties & Record<string, number> => ({ "--i": i });
+
 function Reply({
   message,
+  fresh,
   dispatch,
   onOpenTask,
 }: {
   message: Extract<Message, { from: "mew" }>;
+  fresh: boolean;
   dispatch: (action: ChatAction) => void;
   onOpenTask: (id: string) => void;
 }) {
@@ -497,22 +476,20 @@ function Reply({
           <Dots label={t.thinking} />
         ) : (
           <>
-            <p className="text-subhead">
-              {message.words.map((word, i) => (
-                <motion.span
-                  key={i}
-                  initial={{ opacity: 0 }}
-                  animate={{ opacity: 1 }}
-                  transition={{ duration: duration.slow }}
-                >
+            {/* Every word is in the DOM at once, so the box morphs to its final size. */}
+            <p className="min-h-2lh text-subhead">
+              {message.text.split(" ").map((word, i) => (
+                <Fragment key={i}>
                   {i > 0 && " "}
-                  {word}
-                </motion.span>
+                  <span className={cn("inline-block", fresh && "word-in")} style={wordAt(i)}>
+                    {word}
+                  </span>
+                </Fragment>
               ))}
             </p>
             {message.blocks.map((block, i) =>
               block.kind === "tasks" ? (
-                <Slot key={i}>
+                <Slot key={i} enter={fresh}>
                   <ul className="flex flex-col divide-y divide-separator rounded-md bg-fill px-3">
                     {block.tasks.map((task) => (
                       <li key={task.id}>
@@ -541,7 +518,7 @@ function Reply({
               ) : (
                 <Slot
                   key={`${i}-${block.step === "status" ? "status" : "body"}`}
-                  enter={!FINAL.includes(block.step)}
+                  enter={fresh && !FINAL.includes(block.step)}
                 >
                   <ConfirmBody block={block} dispatch={dispatch} />
                 </Slot>
@@ -555,17 +532,45 @@ function Reply({
 }
 
 /** `.cslot` inside a message: the block opens its own height after the text. */
-function Slot({ enter = true, children }: { enter?: boolean; children: ReactNode }) {
-  const reduce = useReducedMotion();
+function Slot({ enter, children }: { enter: boolean; children: ReactNode }) {
   return (
-    <motion.div
-      initial={enter && !reduce ? { height: 0, opacity: 0 } : false}
-      animate={{ height: "auto", opacity: 1 }}
-      transition={{ duration: 0.46, ease: ease.outQuint }}
-      className="overflow-hidden"
+    <Reveal enter={enter} className="pt-2.5">
+      {children}
+    </Reveal>
+  );
+}
+
+/**
+ * Opens its own height on mount (grid rows 0fr → 1fr) while the content fades up: CSS from
+ * `@starting-style`, no height in JS, no blur. `enter={false}` just shows it.
+ */
+function Reveal({
+  enter,
+  className,
+  children,
+}: {
+  enter: boolean;
+  className: string;
+  children: ReactNode;
+}) {
+  return (
+    <div
+      className={cn(
+        "grid flex-none grid-rows-[1fr]",
+        enter &&
+          "transition-[grid-template-rows] duration-460 ease-out-quint starting:grid-rows-[0fr] motion-reduce:transition-none",
+      )}
     >
-      <div className="pt-2.5">{children}</div>
-    </motion.div>
+      <div
+        className={cn(
+          "min-h-0 overflow-hidden",
+          enter &&
+            "transition-[opacity,translate] delay-80 duration-slow ease-out starting:translate-y-2.5 starting:opacity-0 motion-reduce:transition-none",
+        )}
+      >
+        <div className={className}>{children}</div>
+      </div>
+    </div>
   );
 }
 

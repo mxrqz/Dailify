@@ -20,7 +20,7 @@ const ctx = (extra: { image?: boolean } = {}) => {
 };
 
 const text = (events: ChatEvent[]) =>
-  events.flatMap((e) => (e.type === "word" ? [e.word] : [])).join(" ");
+  events.flatMap((e) => (e.type === "text" ? [e.text] : [])).join(" ");
 const confirmOf = (events: ChatEvent[]): ConfirmBlock => {
   for (const e of events) if (e.type === "block" && e.block.kind === "confirm") return e.block;
   throw new Error("no confirm block");
@@ -36,10 +36,11 @@ describe("seedAgenda", () => {
 });
 
 describe("reply", () => {
-  it("starts typing, then streams the text word by word", () => {
+  it("starts typing, then says the whole line in one event", () => {
     const events = reply("O que tenho hoje?", ctx());
     expect(events[0]).toEqual({ type: "typing", ms: expect.any(Number) });
-    expect(events[1]).toEqual({ type: "word", word: "Você" });
+    expect(events[1]).toEqual({ type: "text", text: "Você tem 3 coisas hoje:" });
+    expect(events.filter((e) => e.type === "text")).toHaveLength(1);
   });
 
   it("answers what is on today with a read-only task list, in time order", () => {

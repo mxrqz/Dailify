@@ -26,15 +26,15 @@ const lastConfirm = (state: ChatState): ConfirmBlock => {
 const start: ChatState = { messages: [], tasks: seedAgenda(now) };
 
 describe("chatReducer", () => {
-  it("adds my message and a typing Mew, then streams into it", () => {
+  it("adds my message and a typing Mew, then fills in its text", () => {
     const sent = chatReducer(start, { type: "send", id: "a", text: "oi" });
     expect(sent.messages.map((m) => m.from)).toEqual(["me", "mew"]);
     const played = chatReducer(sent, {
       type: "event",
       to: mewId("a"),
-      event: { type: "word", word: "Olá" },
+      event: { type: "text", text: "Olá, tudo bem?" },
     });
-    expect(played.messages[1]).toMatchObject({ typing: false, words: ["Olá"] });
+    expect(played.messages[1]).toMatchObject({ typing: false, text: "Olá, tudo bem?" });
   });
 
   it("settles a status box into a draft", () => {
