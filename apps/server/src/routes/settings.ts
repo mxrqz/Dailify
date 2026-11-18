@@ -1,39 +1,38 @@
 import { Hono } from "hono";
-import { IANAZone } from "luxon";
 import { isWeekStart, type UserSettings } from "@dailify/shared";
-import type { Env } from "../index";
+import type { AppEnv } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { getSettings, saveSettings } from "../db/settings";
 import { fail } from "../lib/errors";
+import { isRecord, readJson, validZone } from "../lib/task-input";
 
-const settings = new Hono<{ Bindings: Env; Variables: { userId: string } }>();
+const settings = new Hono<AppEnv>();
 settings.use("/settings", requireAuth, rateLimit("API_LIMITER"));
 
 settings.get("/settings", async (c) => c.json(await getSettings(c.env.DB, c.get("userId"))));
 
 /** Corpo parcial: cada chave que veio precisa ser válida, e pelo menos uma tem que vir. */
 function parsePatch(body: unknown): Partial<UserSettings> | null {
-  if (typeof body !== "object" || body === null) return null;
+  if (!isRecord(body)) return null;
   const patch: Partial<UserSettings> = {};
   if ("weekStart" in body) {
-    const weekStart = Reflect.get(body, "weekStart");
+    const weekStart = body.weekStart;
     if (!isWeekStart(weekStart)) return null;
     patch.weekStart = weekStart;
   }
   if ("timeZone" in body) {
-    const timeZone = Reflect.get(body, "timeZone");
-    if (timeZone !== null && !(typeof timeZone === "string" && IANAZone.isValidZone(timeZone)))
-      return null;
+    const timeZone = body.timeZone === null ? null : validZone(body.timeZone);
+    if (timeZone === undefined) return null;
     patch.timeZone = timeZone;
   }
   if ("hour12" in body) {
-    const hour12 = Reflect.get(body, "hour12");
+    const hour12 = body.hour12;
     if (typeof hour12 !== "boolean") return null;
     patch.hour12 = hour12;
   }
   if ("mewConsent" in body) {
-    const mewConsent = Reflect.get(body, "mewConsent");
+    const mewConsent = body.mewConsent;
     if (typeof mewConsent !== "boolean") return null;
     patch.mewConsent = mewConsent;
   }
@@ -41,7 +40,7 @@ function parsePatch(body: unknown): Partial<UserSettings> | null {
 }
 
 settings.put("/settings", async (c) => {
-  const patch = parsePatch(await c.req.json().catch(() => null));
+  const patch = parsePatch(await readJson(c));
   if (!patch) return fail(c, 400, "invalid settings");
   return c.json(await saveSettings(c.env.DB, c.get("userId"), patch));
 });

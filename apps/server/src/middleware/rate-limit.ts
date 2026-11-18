@@ -1,18 +1,17 @@
 import type { MiddlewareHandler } from "hono";
-import type { Env } from "../index";
+import type { AppEnv } from "../index";
 import { fail } from "../lib/errors";
 
 type Limiter = "API_LIMITER" | "VOICE_LIMITER" | "AUTH_LIMITER";
 
 /**
  * Limite por usuário (não por IP: o usuário já está autenticado aqui, e IP compartilhado puniria
- * escritório inteiro). `VOICE_LIMITER` existe separado porque cada chamada de voz custa dinheiro
- * real em OpenAI — o limite dela é uma ordem de grandeza menor que o do resto da API.
+ * escritório inteiro). `VOICE_LIMITER` guards every OpenAI route (`/tasks/parse`, `/tasks/voice`,
+ * `/mew/chat`), not only voice: each call costs real money, so its limit is an order of magnitude
+ * below the rest of the API.
  * `AUTH_LIMITER` é a exceção: antes do login não há usuário, então a chave é o IP.
  */
-export function rateLimit(
-  name: Limiter,
-): MiddlewareHandler<{ Bindings: Env; Variables: { userId: string } }> {
+export function rateLimit(name: Limiter): MiddlewareHandler<AppEnv> {
   return async (c, next) => {
     const limiter = c.env[name];
     if (!limiter) return next(); // binding ausente (teste/dev local): nada a limitar

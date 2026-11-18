@@ -35,6 +35,35 @@ describe("POST /tasks/:id/complete", () => {
     expect(body.task.completed[0]).toBeLessThanOrEqual(after);
   });
 
+  it("keeps a client `at` inside DATE_RANGE and falls back to now outside it", async () => {
+    await insertTask(env.DB, "u4", {
+      id: "comp2",
+      title: "Task",
+      date: new Date(2026, 6, 1, 9).getTime(),
+      duration: "10m",
+      priority: 0,
+      repeat: "Off",
+      completed: [],
+    });
+    const offline = new Date(2026, 6, 1, 10).getTime();
+    const complete = (at: number) =>
+      app.request(
+        "/tasks/comp2/complete",
+        {
+          method: "POST",
+          body: JSON.stringify({ at }),
+          headers: { "content-type": "application/json" },
+        },
+        env,
+      );
+
+    await complete(offline);
+    const before = Date.now();
+    const body = await (await complete(1)).json<{ task: Task }>();
+    expect(body.task.completed[0]).toBe(offline);
+    expect(body.task.completed[1]).toBeGreaterThanOrEqual(before);
+  });
+
   it("404s for a missing task", async () => {
     const res = await app.request("/tasks/nope/complete", { method: "POST" }, env);
     expect(res.status).toBe(404);

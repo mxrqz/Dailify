@@ -6,6 +6,37 @@ export function validZone(value: unknown): string | undefined {
   return typeof value === "string" && IANAZone.isValidZone(value) ? value : undefined;
 }
 
+// ponytail: copy of `isRecord` in lib/openai.ts so routes import input guards from one place.
+// Delete that copy once openai.ts (and lib/mew.ts) import this one.
+export const isRecord = (v: unknown): v is Record<string, unknown> =>
+  typeof v === "object" && v !== null;
+
+/** The JSON body as `unknown`, never throwing: empty or malformed becomes `undefined` (a 400). */
+export async function readJson(c: { req: { json: () => Promise<unknown> } }): Promise<unknown> {
+  try {
+    return await c.req.json();
+  } catch {
+    return undefined;
+  }
+}
+
+/** "YYYY-MM" with month 1..12 -> the 1st of that month; anything else -> null. */
+export function parseMonth(value: string | undefined): Date | null {
+  const match = value === undefined ? null : /^(\d{4})-(\d{2})$/.exec(value);
+  if (!match) return null;
+  const month = Number(match[2]);
+  if (month < 1 || month > 12) return null;
+  // Only the year/month pair is read later; every epoch goes through the user's zone.
+  return new Date(Number(match[1]), month - 1, 1);
+}
+
+/** `?occurrence=<epoch-ms>`: absent -> undefined, non-integer or outside `DATE_RANGE` -> "invalid". */
+export function parseOccurrence(raw: string | undefined): number | undefined | "invalid" {
+  if (raw === undefined) return undefined;
+  const at = Number(raw);
+  return isEpochMs(at) ? at : "invalid";
+}
+
 /** Campos que o cliente pode ditar. `id`, `completed` e `exdates` são do servidor, nunca do body. */
 export type TaskFields = Partial<Omit<Task, "id" | "completed" | "exdates">>;
 
@@ -21,9 +52,7 @@ const {
 } = TASK_LIMITS;
 const { min: MIN_DATE, max: MAX_DATE } = DATE_RANGE;
 
-const field = (o: object, k: string): unknown => Reflect.get(o, k);
-
-function isEpochMs(value: unknown): value is number {
+export function isEpochMs(value: unknown): value is number {
   return (
     typeof value === "number" && Number.isInteger(value) && value >= MIN_DATE && value <= MAX_DATE
   );
@@ -72,49 +101,49 @@ export type ParseResult = { error: string } | { fields: TaskFields };
  * ausente vira violação de NOT NULL do D1: 500 cru no lugar de 400.
  */
 export function parseTaskFields(body: unknown, opts: { partial: boolean }): ParseResult {
-  if (typeof body !== "object" || body === null) return { error: "invalid body" };
+  if (!isRecord(body)) return { error: "invalid body" };
   const fields: TaskFields = {};
 
-  const title = field(body, "title");
+  const title = body.title;
   if (title !== undefined) {
     if (typeof title !== "string" || !title.trim() || title.length > MAX_TITLE_LEN)
       return { error: "invalid title" };
     fields.title = title.trim();
   } else if (!opts.partial) return { error: "title required" };
 
-  const date = field(body, "date");
+  const date = body.date;
   if (date !== undefined) {
     if (!isEpochMs(date)) return { error: "invalid date" };
     fields.date = date;
   } else if (!opts.partial) return { error: "date required" };
 
   // `null` limpa o lembrete (mesmo truque das tags: `undefined` presente sobrescreve no spread).
-  const alert = field(body, "alert");
+  const alert = body.alert;
   if (alert === null) fields.alert = undefined;
   else if (alert !== undefined) {
     if (!isEpochMs(alert)) return { error: "invalid alert" };
     fields.alert = alert;
   }
 
-  const duration = field(body, "duration");
+  const duration = body.duration;
   if (duration !== undefined) {
     if (typeof duration !== "string" || duration.length > MAX_DURATION_LEN)
       return { error: "invalid duration" };
     fields.duration = duration;
   }
 
-  const priority = field(body, "priority");
+  const priority = body.priority;
   if (priority !== undefined) {
     if (typeof priority !== "number" || !Number.isInteger(priority) || priority < 0 || priority > 4)
       return { error: "invalid priority" };
     fields.priority = priority;
   }
 
-  const repeat = field(body, "repeat");
+  const repeat = body.repeat;
   if (repeat !== undefined) fields.repeat = normalizeRepeat(repeat);
 
   // `null` volta a 1 (mesmo truque do `alert`).
-  const repeatEvery = field(body, "repeatEvery");
+  const repeatEvery = body.repeatEvery;
   if (repeatEvery === null) fields.repeatEvery = undefined;
   else if (repeatEvery !== undefined) {
     if (!isRepeatEvery(repeatEvery)) return { error: "invalid repeatEvery" };
@@ -123,17 +152,17 @@ export function parseTaskFields(body: unknown, opts: { partial: boolean }): Pars
 
   // Chave presente com lista vazia (ou null) = limpar o campo, e por isso o `!== undefined` olha o
   // valor cru: `fields.tags = undefined` sobrescreve no spread do updateTask, a chave ausente nao.
-  const rawTags = field(body, "tags");
+  const rawTags = body.tags;
   const tags = sanitizeTags(rawTags);
   if (tags === "invalid") return { error: "invalid tags" };
   if (rawTags !== undefined) fields.tags = tags;
 
-  const rawLinks = field(body, "links");
+  const rawLinks = body.links;
   const links = sanitizeLinks(rawLinks);
   if (links === "invalid") return { error: "invalid links" };
   if (rawLinks !== undefined) fields.links = links;
 
-  const undated = field(body, "undated");
+  const undated = body.undated;
   if (undated !== undefined && undated !== null) {
     if (typeof undated !== "boolean") return { error: "invalid undated" };
     fields.undated = undated;
@@ -142,7 +171,7 @@ export function parseTaskFields(body: unknown, opts: { partial: boolean }): Pars
   // O carimbo do LWW vem do cliente (a edição offline aconteceu quando ele diz) e precisa
   // atravessar esta porta — sem isso a fila sobe sem `updatedAt` e toda reentrada vira escrita.
   // `stampUpdatedAt` no db é quem recusa relógio adiantado; aqui só se checa que é epoch-ms.
-  const updatedAt = field(body, "updatedAt");
+  const updatedAt = body.updatedAt;
   if (updatedAt !== undefined && updatedAt !== null) {
     if (!isEpochMs(updatedAt)) return { error: "invalid updatedAt" };
     fields.updatedAt = updatedAt;
@@ -157,8 +186,8 @@ export function parseTaskFields(body: unknown, opts: { partial: boolean }): Pars
 const ID_RE = /^[A-Za-z0-9_-]{6,64}$/;
 
 export function parseClientId(body: unknown): string | undefined | "invalid" {
-  if (typeof body !== "object" || body === null) return undefined;
-  const id = field(body, "id");
+  if (!isRecord(body)) return undefined;
+  const id = body.id;
   if (id === undefined || id === null) return undefined;
   return typeof id === "string" && ID_RE.test(id) ? id : "invalid";
 }

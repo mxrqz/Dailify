@@ -1,7 +1,6 @@
 import { Hono } from "hono";
-import { IANAZone } from "luxon";
 import { nanoid } from "nanoid";
-import type { Env } from "../index";
+import type { AppEnv } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import {
@@ -16,40 +15,31 @@ import {
   excludeOccurrence,
 } from "../db/tasks";
 import { enforceCreate } from "../db/limits";
-import type { OccurrenceEdit, Role, Task } from "@dailify/shared";
-import { parseClientId, parseNewTask, parseTaskFields } from "../lib/task-input";
+import type { OccurrenceEdit, Task } from "@dailify/shared";
+import {
+  isEpochMs,
+  isRecord,
+  parseClientId,
+  parseMonth,
+  parseNewTask,
+  parseOccurrence,
+  parseTaskFields,
+  readJson,
+  validZone,
+} from "../lib/task-input";
 import { fail } from "../lib/errors";
 import { linkedTask, propagate } from "../integrations/propagate";
 import { linkInstance } from "../integrations/google-calendar";
 import { syncIfDue } from "../integrations/google-calendar/sync";
 
-const tasks = new Hono<{ Bindings: Env; Variables: { userId: string; plan: Role } }>();
+const tasks = new Hono<AppEnv>();
 tasks.use("*", requireAuth);
 tasks.use("*", rateLimit("API_LIMITER"));
 
-const MONTH_RE = /^\d{4}-\d{2}$/;
-
-/** Fuso IANA vindo da query — entrada de usuário, então validada antes de chegar no Intl. */
-function validZone(value: string | undefined): string | undefined {
-  return value && IANAZone.isValidZone(value) ? value : undefined;
-}
-
-async function readJson(c: { req: { json: () => Promise<unknown> } }): Promise<unknown> {
-  try {
-    return await c.req.json();
-  } catch {
-    return undefined; // body vazio ou JSON quebrado cai na validacao como "invalid body"
-  }
-}
-
 tasks.get("/", async (c) => {
   const userId = c.get("userId");
-  const monthParam = c.req.query("month"); // "YYYY-MM"
-  if (!monthParam || !MONTH_RE.test(monthParam)) return fail(c, 400, "month required");
-  const [y, m] = monthParam.split("-").map(Number);
-  // `new Date(y, m-1, 1)` só carrega o par ano/mês daqui pra frente; o instante em si é irrelevante
-  // porque tudo que vira epoch passa pelo fuso abaixo.
-  const month = new Date(y, m - 1, 1);
+  const month = parseMonth(c.req.query("month"));
+  if (!month) return fail(c, 400, "month required");
 
   // O fuso vem do cliente pelo mesmo motivo que o `from`/`to` do DELETE /complete: o Worker roda em
   // UTC e não tem como saber onde o dia do usuário começa. Sem `tz` o comportamento é o antigo.
@@ -96,10 +86,9 @@ tasks.patch("/:id", async (c) => {
   // ?occurrence=<epoch-ms> = "editar só esta": edita a instância daquele dia em vez da série.
   // Série na Agenda: a tarefa destacada vira a instância daquele dia (vínculo próprio + override),
   // e a data fica fora do EXDATE do evento. Sem isso a ocorrência sumiria do Google.
-  const occurrence = c.req.query("occurrence");
-  if (occurrence !== undefined) {
-    const at = Number(occurrence);
-    if (!Number.isInteger(at)) return fail(c, 400, "invalid occurrence");
+  const at = parseOccurrence(c.req.query("occurrence"));
+  if (at === "invalid") return fail(c, 400, "invalid occurrence");
+  if (at !== undefined) {
     const detached = await detachOccurrence(c.env.DB, userId, id, at, parsed.fields, nanoid(6));
     if (!detached) return fail(c, 404, "Recurring task not found");
     if (linked) {
@@ -132,8 +121,8 @@ tasks.post("/:id/complete", async (c) => {
   const userId = c.get("userId");
   // `at` opcional: uma conclusão feita offline aconteceu quando o cliente diz, não quando a fila
   // subiu. Sem corpo (o caminho online normal), vale o relógio do servidor.
-  const body = await c.req.json<{ at?: number }>().catch(() => ({ at: undefined }));
-  const at = Number.isFinite(body.at) && body.at ? body.at : Date.now();
+  const body = await readJson(c);
+  const at = isRecord(body) && isEpochMs(body.at) ? body.at : Date.now();
   const updated = await appendCompletion(c.env.DB, userId, c.req.param("id"), at);
   if (!updated) return fail(c, 404, "Task not found");
   return c.json({ task: updated });
@@ -157,10 +146,9 @@ tasks.delete("/:id", async (c) => {
   const linked = await linkedTask(c.env, userId, id);
 
   // Mesmo contrato do PATCH: ?occurrence=<epoch-ms> mexe num dia só, sem ?occurrence apaga a série.
-  const occurrence = c.req.query("occurrence");
-  if (occurrence !== undefined) {
-    const at = Number(occurrence);
-    if (!Number.isInteger(at)) return fail(c, 400, "invalid occurrence");
+  const at = parseOccurrence(c.req.query("occurrence"));
+  if (at === "invalid") return fail(c, 400, "invalid occurrence");
+  if (at !== undefined) {
     const series = await excludeOccurrence(c.env.DB, userId, id, at);
     if (!series) return fail(c, 404, "Recurring task not found");
     if (linked)

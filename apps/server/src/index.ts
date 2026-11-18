@@ -43,10 +43,14 @@ export interface Env {
   TOKEN_KEY_V1: string;
 }
 
-const app = new Hono<{ Bindings: Env; Variables: { userId: string; plan: Role } }>();
-app.use("*", (c, next) =>
+/** Every app and sub-app; `requireAuth` sets `userId` and `plan`. */
+export type AppEnv = { Bindings: Env; Variables: { userId: string; plan: Role } };
+
+const app = new Hono<AppEnv>();
+app.use(
+  "*",
   cors({
-    origin: (origin) => (allowedOrigins(c.env).includes(origin) ? origin : null),
+    origin: (origin, c) => (allowedOrigins(c.env).includes(origin) ? origin : null),
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     // Os dois `x-` são do login: captcha do Turnstile e o verifier do magic link do app.
     allowHeaders: ["Authorization", "Content-Type", "x-captcha-response", "x-mewki-verifier"],
@@ -55,7 +59,7 @@ app.use("*", (c, next) =>
     exposeHeaders: ["set-auth-token"],
     // Sem isto cada request autenticado paga um preflight (o Bearer força). Chrome corta em 2h.
     maxAge: 86400,
-  })(c, next),
+  }),
 );
 app.get("/health", (c) => c.json({ ok: true }));
 
@@ -63,14 +67,17 @@ app.get("/health", (c) => c.json({ ok: true }));
 app.use("/auth/sign-in/*", rateLimit("AUTH_LIMITER"));
 app.use("/auth/magic-link/*", rateLimit("AUTH_LIMITER"));
 app.on(["GET", "POST"], "/auth/*", (c) => auth.handler(c.req.raw));
-app.route("/tasks", tasks);
+// Order is load-bearing: sub-apps at one prefix share middleware. Voice first, so its handlers end
+// the chain and tasks' use("*") (a second requireAuth + API_LIMITER) never runs for /parse, /voice.
 app.route("/tasks", voice);
+app.route("/tasks", tasks);
 app.route("/", billing);
 app.route("/", push);
 app.route("/", settings);
 app.route("/", integrations);
 app.route("/mew", mew);
 
+app.notFound((c) => fail(c, 404, "Not found"));
 app.onError((err, c) => {
   console.error(err);
   return fail(c, 500, "Internal error");

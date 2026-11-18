@@ -1,5 +1,4 @@
 import { Hono, type Context } from "hono";
-import { IANAZone } from "luxon";
 import {
   canUseIntegration,
   INTEGRATION_ERROR,
@@ -8,12 +7,12 @@ import {
   PROVIDER_IDS,
   type IntegrationStatus,
   type ProviderId,
-  type Role,
 } from "@dailify/shared";
-import type { Env } from "../index";
+import type { AppEnv, Env } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { fail } from "../lib/errors";
+import { isRecord, readJson, validZone } from "../lib/task-input";
 import { appOrigin } from "../lib/origin";
 import { bytesToBase64url } from "../lib/push";
 import {
@@ -45,19 +44,21 @@ import { pushLink } from "../integrations/propagate";
 import { getTask } from "../db/tasks";
 import { createEvent, replaceMeet } from "../integrations/google-calendar";
 import { syncCalendar } from "../integrations/google-calendar/sync";
-import { ActionError, type Ctx as ProviderCtx } from "../integrations/types";
-
-type Ctx = Context<{ Bindings: Env; Variables: { userId: string; plan: Role } }>;
+import { ActionError, type Ctx } from "../integrations/types";
 
 const STATE_TTL = 10 * 60 * 1000;
 
-const integrations = new Hono<{ Bindings: Env; Variables: { userId: string; plan: Role } }>();
-integrations.use("/integrations", requireAuth, rateLimit("API_LIMITER"));
+const integrations = new Hono<AppEnv>();
+// `/integrations/*` also matches `/integrations`; registering both ran auth and the limiter twice.
 integrations.use("/integrations/*", requireAuth, rateLimit("API_LIMITER"));
+
+const reconnect = (c: Context<AppEnv>) =>
+  fail(c, 409, "Reconecte a Agenda para continuar", { code: INTEGRATION_ERROR.reconnect });
+const planBlocked = (c: Context<AppEnv>) => fail(c, 403, "Seu plano não inclui esta integração");
 
 // O Google volta pro SPA, que manda {code, state} com a sessão: é isso que amarra a conta
 // externa a quem está logado (redirect direto pro worker não tem como saber quem é).
-const redirectUri = (c: Ctx, id: ProviderId) =>
+const redirectUri = (c: Context<AppEnv>, id: ProviderId) =>
   `${appOrigin(c.env, c.req.header("origin"))}/integrations/${id}/callback`;
 
 function statusOf(
@@ -115,8 +116,7 @@ integrations.post("/integrations/:provider/connect", async (c) => {
   const id = c.req.param("provider");
   if (!isProviderId(id)) return fail(c, 404, "Integração desconhecida");
   const userId = c.get("userId");
-  if (!canUseIntegration(c.get("plan"), id))
-    return fail(c, 403, "Seu plano não inclui esta integração");
+  if (!canUseIntegration(c.get("plan"), id)) return planBlocked(c);
   const { oauth } = PROVIDERS[id];
   if (!oauth.credentials(c.env).id) return fail(c, 503, "Integração não configurada");
 
@@ -138,9 +138,9 @@ integrations.post("/integrations/:provider/connect", async (c) => {
 integrations.post("/integrations/:provider/callback", async (c) => {
   const id = c.req.param("provider");
   if (!isProviderId(id)) return fail(c, 404, "Integração desconhecida");
-  const body: unknown = await c.req.json().catch(() => null);
-  const code = typeof body === "object" && body !== null ? Reflect.get(body, "code") : undefined;
-  const state = typeof body === "object" && body !== null ? Reflect.get(body, "state") : undefined;
+  const body = await readJson(c);
+  const code = isRecord(body) ? body.code : undefined;
+  const state = isRecord(body) ? body.state : undefined;
   if (typeof code !== "string" || !code || typeof state !== "string" || !state)
     return fail(c, 400, "code e state são obrigatórios");
 
@@ -150,7 +150,7 @@ integrations.post("/integrations/:provider/callback", async (c) => {
   if (saved.user_id !== userId || saved.provider !== id)
     return fail(c, 403, "Este pedido de conexão não é seu");
   const role = c.get("plan");
-  if (!canUseIntegration(role, id)) return fail(c, 403, "Seu plano não inclui esta integração");
+  if (!canUseIntegration(role, id)) return planBlocked(c);
 
   const provider = PROVIDERS[id];
   let tokens;
@@ -196,28 +196,24 @@ integrations.post("/integrations/:provider/callback", async (c) => {
   });
 });
 
-const RECONNECT = "Reconecte a Agenda para continuar";
-
 /** Plano + conexão ativa + os erros esperados do Google, iguais em toda rota que fala com ele. */
-async function withCalendar(c: Ctx, run: (ctx: ProviderCtx) => Promise<unknown>) {
+async function withCalendar(c: Context<AppEnv>, run: (ctx: Ctx) => Promise<unknown>) {
   const userId = c.get("userId");
-  if (!canUseIntegration(c.get("plan"), "google-calendar"))
-    return fail(c, 403, "Seu plano não inclui esta integração");
+  if (!canUseIntegration(c.get("plan"), "google-calendar")) return planBlocked(c);
   const ctx = await loadCtx(c.env, userId, "google-calendar");
-  if (!ctx) return fail(c, 409, RECONNECT, { code: INTEGRATION_ERROR.reconnect });
+  if (!ctx) return reconnect(c);
   try {
     return c.json(await run(ctx));
   } catch (err) {
     if (err instanceof ActionError) return fail(c, err.status, err.message, err.extra);
     // O refresh recusado já marcou a conexão revogada (`makeCtx`).
-    if (err instanceof InvalidGrantError)
-      return fail(c, 409, RECONNECT, { code: INTEGRATION_ERROR.reconnect });
+    if (err instanceof InvalidGrantError) return reconnect(c);
     throw err;
   }
 }
 
 integrations.post("/integrations/google-calendar/events", async (c) => {
-  const parsed = createEvent.parse(await c.req.json().catch(() => null));
+  const parsed = createEvent.parse(await readJson(c));
   if ("error" in parsed) return fail(c, 400, parsed.error);
   return withCalendar(c, (ctx) => createEvent.run(ctx, parsed.input));
 });
@@ -230,8 +226,8 @@ integrations.post("/integrations/google-calendar/events/:taskId/meet", (c) =>
 // O par da duplicata (`duplicates` do GET): "merge" junta na tarefa própria, "keep" mantém as duas.
 // Só D1, nada no Google — por isso sem gate de plano nem conexão, como o desconectar.
 integrations.post("/integrations/google-calendar/duplicates/:importedId", async (c) => {
-  const body: unknown = await c.req.json().catch(() => null);
-  const action = typeof body === "object" && body !== null ? Reflect.get(body, "action") : null;
+  const body = await readJson(c);
+  const action = isRecord(body) ? body.action : undefined;
   if (action !== "merge" && action !== "keep") return fail(c, 400, "action inválida");
   const userId = c.get("userId");
   const importedId = c.req.param("importedId");
@@ -246,10 +242,9 @@ integrations.post("/integrations/google-calendar/duplicates/:importedId", async 
 
 // O retry do "não sincronizado": reenvia agora, sem comparar, no fuso que o aparelho mandar.
 integrations.post("/integrations/google-calendar/events/:taskId/sync", async (c) => {
-  const body: unknown = await c.req.json().catch(() => null);
-  const timeZone = typeof body === "object" && body !== null ? Reflect.get(body, "timezone") : null;
-  if (typeof timeZone !== "string" || !IANAZone.isValidZone(timeZone))
-    return fail(c, 400, "Fuso inválido");
+  const body = await readJson(c);
+  const timeZone = validZone(isRecord(body) ? body.timezone : undefined);
+  if (!timeZone) return fail(c, 400, "Fuso inválido");
   const userId = c.get("userId");
   const taskId = c.req.param("taskId");
   const link = (await listTaskLinks(c.env.DB, userId, taskId)).find(
@@ -257,7 +252,7 @@ integrations.post("/integrations/google-calendar/events/:taskId/sync", async (c)
   );
   if (!link) return fail(c, 404, "Tarefa não está na Agenda");
   const ctx = await loadCtx(c.env, userId, "google-calendar");
-  if (!ctx) return fail(c, 409, RECONNECT, { code: INTEGRATION_ERROR.reconnect });
+  if (!ctx) return reconnect(c);
   try {
     await pushLink(
       c.env,
@@ -267,8 +262,7 @@ integrations.post("/integrations/google-calendar/events/:taskId/sync", async (c)
       await getTask(c.env.DB, userId, taskId),
     );
   } catch (err) {
-    if (err instanceof InvalidGrantError)
-      return fail(c, 409, RECONNECT, { code: INTEGRATION_ERROR.reconnect });
+    if (err instanceof InvalidGrantError) return reconnect(c);
     console.error(`Falha ao sincronizar ${taskId}`, err);
     return fail(c, 502, "A Agenda não respondeu; tente de novo");
   }
