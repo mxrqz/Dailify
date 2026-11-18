@@ -12,7 +12,7 @@ function readEnvFile(): Record<string, string> {
     const out: Record<string, string> = {};
     for (const line of readFileSync(path.join(__dirname, ".env"), "utf8").split("\n")) {
       const match = /^\s*([A-Z0-9_]+)\s*=\s*(.*)$/.exec(line);
-      if (match) out[match[1]] = match[2].trim().replace(/^["\']|["\']$/g, "");
+      if (match) out[match[1]] = match[2].trim().replace(/^["']|["']$/g, "");
     }
     return out;
   } catch {
@@ -34,9 +34,14 @@ function liveStripeBindings(): Record<string, string> {
     LIVE_PRICE_MAX: env.STRIPE_PRICE_MAX,
     LIVE_PRICE_MAX_YEAR: env.STRIPE_PRICE_MAX_YEAR,
   };
-  if (!key?.startsWith("sk_") || Object.values(ids).some((id) => !id)) return {};
+  if (!key?.startsWith("sk_")) return {};
 
-  return { LIVE_STRIPE_SECRET_KEY: key, ...(ids as Record<string, string>) };
+  const out: Record<string, string> = { LIVE_STRIPE_SECRET_KEY: key };
+  for (const [k, v] of Object.entries(ids)) {
+    if (!v) return {};
+    out[k] = v;
+  }
+  return out;
 }
 
 export default defineConfig({
