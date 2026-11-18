@@ -1,5 +1,3 @@
-import { Loader2Icon } from "lucide-react";
-
 import type { AuthFailure } from "@/components/auth/auth-state";
 import { copy } from "@/components/auth/copy";
 import { Button } from "@/components/ui/button";
@@ -57,8 +55,7 @@ export function EmailForm({
         </p>
       )}
 
-      <Button type="submit" size="lg" disabled={disabled}>
-        {disabled ? <Loader2Icon className="animate-spin" /> : null}
+      <Button type="submit" size="lg" loading={disabled}>
         {submitLabel}
       </Button>
     </form>

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Loader2Icon, LockIcon } from "lucide-react";
+import { LockIcon } from "lucide-react";
 import { toast } from "sonner";
 
 import { copy } from "@/components/dashboard/copy";
@@ -126,15 +126,8 @@ export default function ProfilePage(): JSX.Element {
                 </Button>
               </DialogClose>
 
-              <Button type="submit" disabled={saving}>
-                {saving ? (
-                  <>
-                    <Loader2Icon className="animate-spin" />
-                    <span>{copy.profile.saving}</span>
-                  </>
-                ) : (
-                  copy.form.save
-                )}
+              <Button type="submit" loading={saving}>
+                {saving ? copy.profile.saving : copy.form.save}
               </Button>
             </DialogFooter>
           </form>
