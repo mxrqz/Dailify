@@ -95,6 +95,6 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
   Reveal in chat-drawer) and the side column's width and margin (`dashboard/undated-column.tsx`).
 - Motion corrects a radius during a layout morph only when it comes through `style`, so a morphing
   surface takes a px number equal to its token: `radius.panel` from `@/consts/motion` (tested).
-  `create-fab.tsx` `RADIUS_FAB`/`RADIUS_PANEL` are still a local 12 that claims to mirror it.
+  `create-fab.tsx`: `RADIUS_PANEL` = 22 (`--radius-panel`), `RADIUS_FAB` = 14 (`--radius-md`).
 - `<MotionConfig reducedMotion="user">` (`App.tsx`) covers only the motion library; CSS utilities
   carry their own `@media` (`word-in`, `skeleton`). Research: `docs/research/2026-10-21-*.md`.

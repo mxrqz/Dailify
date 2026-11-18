@@ -26,7 +26,6 @@ One file per route. `src/App.tsx` declares the routes; each page owns its own I/
 | `/login`, `/signup`                                   | `login.tsx`, `signup.tsx`                      | public; `AuthPage mode` (`components/auth/CLAUDE.md`)      |
 | `/verify`, `/auth/app`, `/app/*`                      | `verify.tsx`, `auth-app.tsx`, `app-return.tsx` | public hand-off pages (below)                              |
 | `/privacidade`, `/termos`                             | `privacy.tsx`, `terms.tsx`                     | public; `components/legal-page.tsx`                        |
-| `/task/:id`                                           | `[id]/taskPreview.tsx`                         | public; dead legacy, nothing produces `/task` URLs         |
 
 ## Adding a page
 

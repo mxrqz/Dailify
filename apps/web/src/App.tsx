@@ -29,7 +29,6 @@ const SecurityPage = lazy(() => import("@/pages/security"));
 const SettingsPage = lazy(() => import("@/pages/settings"));
 const IntegrationsPage = lazy(() => import("@/pages/integrations"));
 const IntegrationCallback = lazy(() => import("@/pages/integration-callback"));
-const TaskPreview = lazy(() => import("@/pages/[id]/taskPreview"));
 const PrivacyPage = lazy(() => import("@/pages/privacy"));
 const TermsPage = lazy(() => import("@/pages/terms"));
 
@@ -154,8 +153,6 @@ export default function App() {
                       <Route path="/auth/app" element={<AuthApp />} />
 
                       <Route path="/app/*" element={<AppReturn />} />
-
-                      <Route path="/task/:id" element={<TaskPreview />} />
 
                       <Route path="/privacidade" element={<PrivacyPage />} />
 
