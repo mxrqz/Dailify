@@ -95,18 +95,7 @@ export function computeQuotas(
 }
 
 function mapKeys<T>(pick: (key: QuotaKey) => T): Record<QuotaKey, T> {
-  const out: Partial<Record<QuotaKey, T>> = {};
-  for (const key of QUOTA_KEYS) out[key] = pick(key);
-  return fullRecord(out);
-}
-
-/** `QUOTA_KEYS` vem de `Object.keys(QUOTAS)`, então o loop acima preencheu todas as chaves. */
-function fullRecord<T>(partial: Partial<Record<QuotaKey, T>>): Record<QuotaKey, T> {
   const out: Record<string, T> = {};
-  for (const key of QUOTA_KEYS) {
-    const value = partial[key];
-    if (value === undefined) throw new Error(`quota sem valor: ${key}`);
-    out[key] = value;
-  }
+  for (const key of QUOTA_KEYS) out[key] = pick(key);
   return out;
 }
