@@ -133,11 +133,13 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
 
 - App-shell nav: `Sidebar` is mounted by `components/app-layout.tsx` (md+), `MobileNav` by
   `components/app-header.tsx` (below md, the glass drawer `Sheet side="left"`).
-- `NavMenu` is props-only and shared by both; `NavItems` wires session and quotas. `/premium` shares
+- `NavMenu` is props-only and shared by both (items are the `NAV_ITEMS` list); `NavItems` wires
+  session and quotas, and the meter draws `QuotaState.ratio`. `/premium` shares
   the layout without `ProtectedRoute`, so account, credits and sign-out appear only when logged in.
 - The active item is neutral on purpose (brand would compete with the primary action), and nothing
   stays lit on mobile. `alsoActive="/premium"` lights "Planos" though it links to `/billing`.
-- `MobileNav` closes on any location change by adjusting state during render (covers device back).
+- `MobileNav` closes only on a location change, adjusted during render (a link, even to the current
+  route, and the device back); tapping the account or the meter leaves it open.
   The credits meter hides while quotas load or when AI is unlimited. Tests assert
   `aria-current="page"`.
 

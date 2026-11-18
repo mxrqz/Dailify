@@ -36,10 +36,10 @@ export function MobileNav(): JSX.Element {
         <SheetTitle className="sr-only">{copy.profile.navLabel}</SheetTitle>
         <SheetDescription className="sr-only">{copy.header.openNav}</SheetDescription>
 
-        {/* O clique em qualquer item fecha; o X da folha divide a linha com a conta (pr-10). */}
+        {/* A link tap closes through the location sync above; the sheet's X shares the account
+            row (pr-10). */}
         <nav
           aria-label={copy.profile.navLabel}
-          onClick={() => setOpen(false)}
           className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-5"
         >
           <NavItems />

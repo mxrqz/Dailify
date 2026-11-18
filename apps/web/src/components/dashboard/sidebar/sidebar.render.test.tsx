@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 const { useSession } = vi.hoisted(() => ({ useSession: vi.fn() }));
@@ -12,6 +12,7 @@ const { useDailify } = vi.hoisted(() => ({ useDailify: vi.fn() }));
 vi.mock("@/components/dailifyContext", () => ({ useDailify }));
 
 import { Sidebar } from "./index";
+import { MobileNav } from "./mobile-nav";
 import { copy } from "@/components/dashboard/copy";
 
 beforeEach(() => {
@@ -102,5 +103,37 @@ describe("<Sidebar>", () => {
     useDailify.mockReturnValue({ quotas: undefined });
     renderAt("/dashboard");
     expect(screen.queryByRole("meter")).not.toBeInTheDocument();
+  });
+
+  it("draws a blocked quota (limit 0) as a full bar, not NaN", () => {
+    useDailify.mockReturnValue({
+      quotas: { limits: { tasks: -1, ai: 0 }, usage: { tasks: 0, ai: 0 } },
+    });
+    renderAt("/dashboard");
+    const fill = screen.getByRole("meter", { name: copy.quota.names.ai }).firstElementChild;
+    expect(fill).toHaveStyle({ width: "100%" });
+  });
+});
+
+describe("<MobileNav>", () => {
+  const open = () => {
+    render(
+      <MemoryRouter initialEntries={["/dashboard"]}>
+        <MobileNav />
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole("button", { name: copy.header.openNav }));
+  };
+
+  it("stays open when the meter, not an item, is tapped", () => {
+    open();
+    fireEvent.click(screen.getByRole("meter"));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("closes when the current route's item is tapped", () => {
+    open();
+    fireEvent.click(screen.getByRole("link", { name: copy.profile.navDashboard }));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 });
