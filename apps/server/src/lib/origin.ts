@@ -12,6 +12,10 @@ export const NATIVE_ORIGINS = [
   "mewki://",
 ];
 
+/** CORS: a web origin from `ALLOWED_ORIGIN` or the app's webview. */
+export const isAllowedOrigin = (env: Env, origin: string) =>
+  allowedOrigins(env).includes(origin) || NATIVE_ORIGINS.includes(origin);
+
 // Volta do Stripe pro mesmo domínio de onde a pessoa saiu (dailify ou mewki).
 export function appOrigin(env: Env, origin: string | undefined) {
   const list = allowedOrigins(env);

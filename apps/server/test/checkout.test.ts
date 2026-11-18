@@ -180,7 +180,8 @@ describe("CORS", () => {
     );
 
   it("allows every listed origin and rejects others", async () => {
-    for (const o of ["https://dailify.mxrqz.com", "https://mewki.mxrqz.com"]) {
+    // The app's webview origins come from NATIVE_ORIGINS, not ALLOWED_ORIGIN.
+    for (const o of ["https://dailify.mxrqz.com", "https://mewki.mxrqz.com", "tauri://localhost"]) {
       expect((await preflight(o)).headers.get("access-control-allow-origin")).toBe(o);
     }
     expect(

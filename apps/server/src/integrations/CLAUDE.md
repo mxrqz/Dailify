@@ -54,9 +54,8 @@ through `PROVIDERS[id]` first.
   and the provider, else 403.
 - A `required` scope left unticked on the consent screen answers 400 `MISSING_SCOPE_ERROR` and
   revokes the grant.
-- Plausible bug, not in bd yet: from the Tauri app `appOrigin` returns the webview origin (it is in
-  `ALLOWED_ORIGIN`), so the `redirect_uri` points at `tauri://localhost` or `tauri.localhost`
-  while the consent page opens in the system browser.
+- From the Tauri app `appOrigin` falls back to the first `ALLOWED_ORIGIN` (the webview origins are
+  only in `NATIVE_ORIGINS`), so the `redirect_uri` is the web SPA, opened in the system browser.
 
 ## Propagation and sync
 

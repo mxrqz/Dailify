@@ -15,7 +15,7 @@ import { rateLimit } from "../middleware/rate-limit";
 import { fail } from "../lib/errors";
 import { readJson, validZone } from "../lib/task-input";
 import { appOrigin } from "../lib/origin";
-import { bytesToBase64url } from "../lib/push";
+import { bytesToBase64url } from "../lib/encoding";
 import {
   consumeState,
   deleteConnection,

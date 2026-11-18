@@ -8,7 +8,7 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
 ## Layout
 
 - `src/index.ts`: `Env` (bindings + secrets), `AppEnv` and the app. Order: CORS (its `origin`
-  callback reads `ALLOWED_ORIGIN` from `c.env` through `lib/origin.ts`), public `/health`,
+  callback is `isAllowedOrigin`: `ALLOWED_ORIGIN` plus `NATIVE_ORIGINS`), public `/health`,
   `AUTH_LIMITER` on `/auth/sign-in/*` and `/auth/magic-link/*`, Better Auth on `/auth/*`, the 7 route
   modules (voice before tasks: see `src/routes/CLAUDE.md`), `app.notFound` and `app.onError` ->
   `fail(c, 500, "Internal error")`. The default export is the app with `scheduled`

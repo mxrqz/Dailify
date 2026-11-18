@@ -23,8 +23,8 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   `allowed_sender_addresses`.
 - `origin.ts`: `appOrigin` returns the caller's origin when it is allowed, otherwise the first
   `ALLOWED_ORIGIN`. `returnBase` sends native callers to `${APP_URL}/app`, because Stripe can't
-  reopen the app. `NATIVE_ORIGINS` repeats the tauri entries of `ALLOWED_ORIGIN` by hand and also
-  feeds Better Auth `trustedOrigins`, so change both together.
+  reopen the app. `NATIVE_ORIGINS` is the only list of the app's webview origins: CORS
+  (`isAllowedOrigin`) and Better Auth `trustedOrigins` add it to `ALLOWED_ORIGIN`.
 - `occurrence-alert.ts` (series alert math; `monthsTouching` is the one "which month starts does
   this window touch" helper), `errors.ts` (`fail`), `task-input.ts` (body gate).
 
