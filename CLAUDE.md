@@ -103,6 +103,16 @@ Area-specific guidance lives in nested `CLAUDE.md` files (auto-loaded when you w
   imported by both `apps/web` and `apps/server` so drift between client and server shapes is a
   compile error.
 
+## Changing the app domain (e.g. mewki.app)
+
+App Links and the Stripe/e-mail return paths hang on one host. To move it:
+
+1. `APP_URL` in `packages/shared/src/app-url.ts` (server checkout return, e-mail sender, web link parser).
+2. `host` of the mobile deep link in `apps/web/src-tauri/tauri.conf.json`, then rebuild the app.
+3. `[vars] ALLOWED_ORIGIN` in `apps/server/wrangler.toml` (first entry = the web origin).
+4. Serve `apps/web/public/.well-known/*` on the new domain, add it as a Cloudflare Email sending
+   domain and as a Turnstile hostname.
+
 ## Conventions & Patterns
 
 - **No `as` type assertions.** Use type guards or proper types. `as const` is fine. Enforced as

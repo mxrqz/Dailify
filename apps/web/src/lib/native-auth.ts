@@ -3,13 +3,13 @@
  * sistema. Contrato em `docs/research/2026-11-17-better-auth.md` (Magic link). Nada de
  * `@tauri-apps/*` é importado estaticamente — na web este módulo não puxa o runtime do Tauri.
  */
+import { APP_HOST } from "@dailify/shared";
 import { apiURL } from "@/consts/conts";
 import { forgetUser } from "@/functions/offline";
 import { authClient, setBearer } from "@/lib/auth";
 
 const SESSION_ACCOUNT = "mewki.session";
 const VERIFIER_ACCOUNT = "mewki.magic-link-verifier";
-const LINK_HOST = "mewki.mxrqz.com";
 // Token do magic link do Better Auth: 32 letras; a folga cobre mudança de tamanho sem abrir a porta.
 const TOKEN_RE = /^[A-Za-z0-9_-]{16,128}$/;
 
@@ -42,7 +42,7 @@ export function parseAuthLink(raw: string): string | null {
     url.protocol === "mewki:" && url.host === "auth" && ["", "/"].includes(url.pathname);
   const appLink =
     url.protocol === "https:" &&
-    url.host === LINK_HOST &&
+    url.host === APP_HOST &&
     ["/auth/app", "/auth/app/"].includes(url.pathname);
   if (!custom && !appLink) return null;
   const tokens = url.searchParams.getAll("token");
@@ -61,7 +61,7 @@ export function parseOpenLink(raw: string): string | null {
   if (url.protocol === "mewki:" && url.host === "open") path = url.pathname;
   else if (
     url.protocol === "https:" &&
-    url.host === LINK_HOST &&
+    url.host === APP_HOST &&
     (url.pathname === "/app" || url.pathname.startsWith("/app/"))
   )
     path = url.pathname.slice("/app".length);

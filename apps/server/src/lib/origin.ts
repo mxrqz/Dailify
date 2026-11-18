@@ -1,3 +1,4 @@
+import { APP_URL } from "@dailify/shared";
 import type { Env } from "../index";
 
 // ALLOWED_ORIGIN é uma lista separada por vírgula; o primeiro é o padrão quando o Origin não vem.
@@ -20,8 +21,6 @@ export function appOrigin(env: Env, origin: string | undefined) {
 // Stripe can't send a browser back into the app, so the app returns through `/app/*` on the domain
 // its App Links are verified for (fixed, so local dev reopens the app too); the page there is the
 // fallback that hands the path to `mewki://open`.
-const APP_LINK_BASE = "https://mewki.mxrqz.com/app";
-
 export function returnBase(env: Env, origin: string | undefined) {
-  return origin && NATIVE_ORIGINS.includes(origin) ? APP_LINK_BASE : appOrigin(env, origin);
+  return origin && NATIVE_ORIGINS.includes(origin) ? `${APP_URL}/app` : appOrigin(env, origin);
 }

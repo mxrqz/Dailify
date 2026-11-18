@@ -8,23 +8,23 @@ Every page except `home.tsx` is `React.lazy` (one chunk per route; the landing a
 stay out of the dashboard entry). A new page gets a `lazy()` import too, unless it's the PWA's
 `start_url`.
 
-| Path                               | Page                       | Notes                                                                                                             |
-| ---------------------------------- | -------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `/`                                | `landingPage.tsx`          | public marketing page                                                                                             |
-| `/dashboard`                       | `home.tsx`                 | **protected**; the app (Hoje list + month calendar, `?view=calendar`)                                             |
-| `/profile`                         | `profile.tsx`              | **protected**; name (editable), Google photo or initial, read-only e-mail, sign out, delete account               |
-| `/security`                        | `security.tsx`             | **protected**; Better Auth sessions (browser/OS from `functions/user-agent.ts`, IP, last use), revoke             |
-| `/billing`                         | `billing.tsx`              | **protected**; plan, usage, invoices. Free sees usage + CTA                                                       |
-| `/settings`                        | `settings.tsx`             | **protected**; theme, date/time, notifications, Google Agenda summary                                             |
-| `/integrations`                    | `integrations.tsx`         | **protected**; Google Agenda card (connect, settings, disconnect) + "Em breve"                                    |
-| `/integrations/:provider/callback` | `integration-callback.tsx` | **protected**; OAuth `redirect_uri`: POSTs `{code,state}` once (StrictMode-safe), toasts, back to `/integrations` |
-| `/login`                           | `login.tsx`                | magic link + Google — `AuthPage mode="signIn"` (`components/auth/`)                                               |
-| `/signup`                          | `signup.tsx`               | same machinery, `mode="signUp"` — only the copy differs                                                           |
-| `/verify`                          | `verify.tsx`               | web magic link `#token=…`; spends it only on the "Entrar" click (mail scanners don't click)                       |
-| `/auth/app`                        | `auth-app.tsx`             | app magic link `?token=…`; tries `mewki://auth` once, NEVER calls verify (token bound to the app)                 |
+| Path                               | Page                       | Notes                                                                                                               |
+| ---------------------------------- | -------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| `/`                                | `landingPage.tsx`          | public marketing page                                                                                               |
+| `/dashboard`                       | `home.tsx`                 | **protected**; the app (Hoje list + month calendar, `?view=calendar`)                                               |
+| `/profile`                         | `profile.tsx`              | **protected**; name (editable), Google photo or initial, read-only e-mail, sign out, delete account                 |
+| `/security`                        | `security.tsx`             | **protected**; Better Auth sessions (browser/OS from `functions/user-agent.ts`, IP, last use), revoke               |
+| `/billing`                         | `billing.tsx`              | **protected**; plan, usage, invoices. Free sees usage + CTA                                                         |
+| `/settings`                        | `settings.tsx`             | **protected**; theme, date/time, notifications, Google Agenda summary                                               |
+| `/integrations`                    | `integrations.tsx`         | **protected**; Google Agenda card (connect, settings, disconnect) + "Em breve"                                      |
+| `/integrations/:provider/callback` | `integration-callback.tsx` | **protected**; OAuth `redirect_uri`: POSTs `{code,state}` once (StrictMode-safe), toasts, back to `/integrations`   |
+| `/login`                           | `login.tsx`                | magic link + Google — `AuthPage mode="signIn"` (`components/auth/`)                                                 |
+| `/signup`                          | `signup.tsx`               | same machinery, `mode="signUp"` — only the copy differs                                                             |
+| `/verify`                          | `verify.tsx`               | web magic link `#token=…`; spends it only on the "Entrar" click (mail scanners don't click)                         |
+| `/auth/app`                        | `auth-app.tsx`             | app magic link `?token=…`; tries `mewki://auth` once, NEVER calls verify (token bound to the app)                   |
 | `/app/*`                           | `app-return.tsx`           | where Stripe returns someone who paid from the app; hands `<path>` to `mewki://open` (App Link opens the app first) |
-| `/task/:id`                        | `[id]/taskPreview.tsx`     | public, shareable task rendered as an image (`html-to-image`)                                                     |
-| `/premium`                         | `premium.tsx`              | pricing + Stripe checkout                                                                                         |
+| `/task/:id`                        | `[id]/taskPreview.tsx`     | public, shareable task rendered as an image (`html-to-image`)                                                       |
+| `/premium`                         | `premium.tsx`              | pricing + Stripe checkout                                                                                           |
 
 **There is no catch-all route** — a link to a non-existent path lands on a blank page. Only navigate
 to paths listed above (this caused the `/prices` vs `/premium` bug).
