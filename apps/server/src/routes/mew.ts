@@ -8,9 +8,8 @@ import {
   type MewActionStatus,
   type MewReply,
   type MewRequest,
-  type Role,
 } from "@dailify/shared";
-import type { Env } from "../index";
+import type { AppEnv } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { getSettings } from "../db/settings";
@@ -19,13 +18,12 @@ import { aiQuotaError, debitAi } from "../db/limits";
 import { aiTargets } from "../db/integrations";
 import { logProposals, setActionStatus } from "../db/mew";
 import { WINDOW_DAYS, agendaOf, askMew } from "../lib/mew";
-import { isRecord } from "../lib/openai";
-import { validZone } from "../lib/task-input";
+import { isRecord, readJson, validZone } from "../lib/task-input";
 import { fail } from "../lib/errors";
 
 const STATUSES: readonly MewActionStatus[] = ["proposed", "done", "cancelled", "undone"];
 
-const mew = new Hono<{ Bindings: Env; Variables: { userId: string; plan: Role } }>();
+const mew = new Hono<AppEnv>();
 mew.use("*", requireAuth);
 
 const isTurn = (v: unknown): v is MewRequest["history"][number] =>
@@ -71,7 +69,7 @@ async function readAgenda(db: D1Database, userId: string, timezone: string, now:
 
 mew.post("/chat", rateLimit("VOICE_LIMITER"), async (c) => {
   const userId = c.get("userId");
-  const req = parseRequest(await c.req.json().catch(() => null));
+  const req = parseRequest(await readJson(c));
   if ("error" in req) return fail(c, req.status, req.error);
   if (!(await getSettings(c.env.DB, userId)).mewConsent) return fail(c, 403, MEW_CONSENT_REQUIRED);
   const quotaError = await aiQuotaError(c);
@@ -95,7 +93,7 @@ mew.post("/chat", rateLimit("VOICE_LIMITER"), async (c) => {
 });
 
 mew.patch("/actions/:id", rateLimit("API_LIMITER"), async (c) => {
-  const body: unknown = await c.req.json().catch(() => null);
+  const body = await readJson(c);
   const status = isRecord(body) ? STATUSES.find((s) => s === body.status) : undefined;
   if (!status) return fail(c, 400, "invalid status");
   const found = await setActionStatus(c.env.DB, c.get("userId"), c.req.param("id"), status);

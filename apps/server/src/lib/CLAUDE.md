@@ -31,10 +31,10 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
 
 ## Input helpers: reuse before writing a guard
 
-- `isRecord` (openai.ts). Its `isStringArray` is private and mew.ts copies it as `isStrings`:
-  export one instead of writing a third. `isEpochMs` (task-input.ts) is private too: export it.
-- task-input.ts: `validZone`, `isRepeatEvery`, `sanitizeLinks`, `parseClientId`,
-  `parseTaskFields`, `parseNewTask`.
+- `isRecord`: routes import it from task-input.ts; openai.ts still has its own copy. openai.ts's
+  `isStringArray` is private and mew.ts copies it as `isStrings`: export one instead of a third.
+- task-input.ts: `validZone`, `isRecord`, `readJson`, `isEpochMs`, `parseMonth`, `parseOccurrence`,
+  `isRepeatEvery`, `sanitizeLinks`, `parseClientId`, `parseTaskFields`, `parseNewTask`.
 - Contract: an absent key keeps the stored value and `null` clears it (`alert`, `repeatEvery`,
   `tags`, `links`). Optional parsers are tri-state: `undefined`, `"invalid"`, or the value.
   `updatedAt` passes through (the offline queue's LWW stamp). `id`, `completed` and `exdates` never
