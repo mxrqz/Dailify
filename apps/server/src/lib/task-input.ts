@@ -6,6 +6,7 @@ import {
   isRepeatEvery,
   isTimeZone,
   normalizeRepeat,
+  parseMonthKey,
   type Task,
 } from "@dailify/shared";
 
@@ -25,12 +26,9 @@ export async function readJson(c: { req: { json: () => Promise<unknown> } }): Pr
 
 /** "YYYY-MM" with month 1..12 -> the 1st of that month; anything else -> null. */
 export function parseMonth(value: string | undefined): Date | null {
-  const match = value === undefined ? null : /^(\d{4})-(\d{2})$/.exec(value);
-  if (!match) return null;
-  const month = Number(match[2]);
-  if (month < 1 || month > 12) return null;
+  const key = value === undefined ? null : parseMonthKey(value);
   // Only the year/month pair is read later; every epoch goes through the user's zone.
-  return new Date(Number(match[1]), month - 1, 1);
+  return key && new Date(key.year, key.month, 1);
 }
 
 /** `?occurrence=<epoch-ms>`: absent -> undefined, non-integer or outside `DATE_RANGE` -> "invalid". */

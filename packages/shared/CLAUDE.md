@@ -37,7 +37,9 @@ are in [Shared model](../../RULES.md#shared-model); required zones are in
   `QuotaSnapshot` (`GET /permissions`) and `QUOTA_ERRORS`, the exhausted-quota error texts.
 - `timezone.ts`: `zonedParts`/`zonedEpoch` (two-pass DST fix, one cached formatter per zone),
   `isTimeZone`, and civil-date helpers `isoDate`, `isoWallTime`, `civilDay`, `weekdayOf`.
-- `dates.ts`: `startOfMonthMs`/`endOfMonthMs`, legacy optional zone (tested in `timezone.test.ts`).
+- `dates.ts`: `monthKey`/`parseMonthKey` ("YYYY-MM", the `?month=` and `usage.period` format),
+  `startOfMonthMs`/`endOfMonthMs`, legacy optional zone (tested in `timezone.test.ts`).
+- `guards.ts`: `isRecord`, `isStringArray` for untrusted JSON.
 - `period.ts`: `WeekStart`, `UserSettings` (`/settings`), the 06:00 rollover, `periodStart`,
   `doneThisPeriod`.
 - `recurrence.ts`: `expandRecurringTask`, `seriesOf` (instance back to its stored series),
