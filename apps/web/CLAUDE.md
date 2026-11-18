@@ -77,13 +77,13 @@ Naming, pragma, clock, mocking and query rules: RULES.md "Testing". The harness 
 
 ## Gotchas
 
-- `tsconfig.json` `lib` is ES2020 plus `ES2022.Intl` (a Tauri template leftover, like the TS ~5.6
-  pin). `.at()` typechecks only because `@types/node` declares it globally, so never set `types`;
-  `Object.hasOwn` and `replaceAll` fail `tsc` here, so test table keys with `.some`.
-- `format`, `lint` and `typecheck` cover only `src/`. `vite.config.ts`, `tsconfig.node.json` and
-  `scripts/` sit outside the gate; a broken config shows up only when Vite loads it.
-- `eslint.config.js` enables only `rules-of-hooks` and `exhaustive-deps` from react-hooks; the
-  latter warns and `lint` has no `--max-warnings 0`, so a new one passes the gate. No Tailwind lint.
+- `tsconfig.json` `lib` is ES2022 + DOM. `@types/node` globals still leak into `src` because
+  `types` is unset; setting it breaks `consts/motion.test.ts` (`node:fs`). TS is pinned ~5.6 (a
+  Tauri template leftover).
+- `typecheck` also runs `tsconfig.node.json` (`vite.config.ts`, `noEmit`); `format` and `lint`
+  cover `src`, `scripts`, the configs and the tsconfigs.
+- `eslint.config.js` enables only `rules-of-hooks` and `exhaustive-deps` from react-hooks; `lint`
+  runs with `--max-warnings 0`, so an `exhaustive-deps` warning fails the gate. No Tailwind lint.
 
 ## Verify
 
