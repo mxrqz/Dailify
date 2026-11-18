@@ -4,7 +4,10 @@
     "target": {
       "namespace": "android_app",
       "package_name": "com.mewki.app",
-      "sha256_cert_fingerprints": ["3C:0E:60:7E:C8:92:38:31:92:C1:0B:61:2D:5A:E7:8D:39:7C:99:17:E6:2B:E0:EA:04:61:66:E5:8C:74:9F:3F"]
+      "sha256_cert_fingerprints": [
+        "16:D2:6D:3C:07:71:00:C9:33:11:5F:BE:7C:71:12:64:1E:5C:B6:1C:58:27:FF:09:EA:BB:21:62:0A:10:31:65",
+        "3C:0E:60:7E:C8:92:38:31:92:C1:0B:61:2D:5A:E7:8D:39:7C:99:17:E6:2B:E0:EA:04:61:66:E5:8C:74:9F:3F"
+      ]
     }
   }
 ]
