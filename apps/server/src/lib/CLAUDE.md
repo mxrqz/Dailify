@@ -7,8 +7,9 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
 
 - `openai.ts`: the AI kit. `openaiClient(env)` (a new client per call), `transcribe`, `PERSONA`,
   `clock(tz)`, `taskRules`/`taskSchema`, the guards, `readOutput`, `toEpoch`, `toDraft`,
-  `draftToTask`, `structured` (the one Responses call), and `interpretText` (shared by `/tasks/parse` and voice). `mew.ts` builds the chat
-  on top of it: `agendaOf`, `toBlocks`, `askMew`.
+  `draftToTask`, `structured` (the one Responses call), and `interpretText` (shared by
+  `/tasks/parse` and voice). `mew.ts` builds the chat on top of it: `agendaOf`, `toBlocks`,
+  `askMew`.
 - `stripe.ts`: `stripeClient(env)` with `createFetchHttpClient` (Workers has no Node http), the
   price maps, the expandable-field normalisers, the invoice and payment DTOs, `handleInvoicePaid`
   and `cancelSubscriptionsOf`. The subscription webhook branches and the checkout and portal calls
@@ -26,7 +27,8 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   `ALLOWED_ORIGIN`. `returnBase` sends native callers to `${APP_URL}/app`, because Stripe can't
   reopen the app. `NATIVE_ORIGINS` repeats the tauri entries of `ALLOWED_ORIGIN` by hand and also
   feeds Better Auth `trustedOrigins`, so change both together.
-- `occurrence-alert.ts` (series alert math), `errors.ts` (`fail`), `task-input.ts` (body gate).
+- `occurrence-alert.ts` (series alert math; `monthsTouching` is the one "which month starts does
+  this window touch" helper), `errors.ts` (`fail`), `task-input.ts` (body gate).
 
 ## Input helpers: reuse before writing a guard
 
@@ -42,8 +44,8 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
 
 ## AI calls
 
-- Every Responses call goes through `structured(env, { name, schema, instructions, input, timeout },
-guard)`: `MODEL`, `reasoning: { effort: "low" }`, `store: false`, a strict `json_schema`, then
+- Every Responses call goes through `structured(env, req, guard)` (`req` = name, schema,
+  instructions, input, timeout): `MODEL`, `reasoning: { effort: "low" }`, `store: false`, a strict `json_schema`, then
   `readOutput`. `interpretText` passes 20 s, `askMew` 30 s, `transcribe` 20 s.
 - `openaiClient` sets `maxRetries: 1`; the SDK retries timeouts, so a call can take 2× its timeout.
 - The model gets naive local wall time (`clock`). `toEpoch(iso, tz)` reads its dates in the client
