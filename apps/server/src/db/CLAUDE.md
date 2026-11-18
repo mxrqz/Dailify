@@ -7,24 +7,25 @@ The Worker's SQL, hand-written over the raw `D1Database` binding (no ORM). Repo-
 ## Modules
 
 - `tasks.ts`: `tasks` rows, `TaskRow` + `rowToTask` (reused by push.ts and calendar-sync.ts), JSON
-  codecs, the LWW upsert, completions and occurrences, `USER_TABLES` + `deleteUserData`.
+  codecs, the LWW upsert, completions and occurrences.
+- `user.ts`: the Better Auth `"user"` row (`planOf`, `billingProfile`, `updateUserRole`; `roleOf`
+  maps an absent or unknown plan to `free`), the magic-link tables (`magic_link_sent`,
+  `magic_link_challenge`, `verification`) for `auth-options.ts`, and `USER_TABLES` +
+  `deleteUserData`.
 - `integrations.ts`: `integration_connections`, `oauth_states`, `integration_links` for the
   propagation and the web.
 - `calendar-sync.ts`: Google-only sync (claim, sync token, import batch), provider hardcoded as `P`.
-  Legacy split: `linkByExternal`/`instanceLinks`/`linkStatement` duplicate integrations.ts. Don't
+  Legacy split: `getLinkByExternal`/`listInstanceLinks`/`linkStatement` duplicate integrations.ts. Don't
   add a third copy.
 - `push.ts`: subscriptions and the cron's cross-user alert queries. `settings.ts`: `user_settings`,
   defaults when no row. `usage.ts`: the `usage` counter, keyed `(user_id, quota, period)`.
-- `limits.ts`: quota policy. `aiQuotaError`/`debitAi` take a Hono `Context` and return a `Response`,
-  the one exception to "db never returns a Response"; slated for `lib/`, don't extend it.
+- `limits.ts`: quota policy. `aiQuota` answers `{ status, error }` or null (the route maps it with
+  `fail`); `debitAi` spends one credit.
 - `mew.ts`: the `mew_actions` log, task ids only, never titles.
-
-SQL still outside db/, to move here: `lib/user.ts` and `middleware/auth.ts` (`"user"`),
-`auth-options.ts` (`magic_link_*`, `verification`).
 
 ## Conventions
 
-- Signature `(db, userId, ...)`. Cross-user by design: push.ts's cron queries, `oldestSyncs`, and
+- Signature `(db, userId, ...)`. Cross-user by design: push.ts's cron queries, `listOldestSyncs`, and
   `oauth_states`, keyed by a random state (`insertState` sweeps everyone's expired rows).
 - snake_case row interfaces stay in db/; exports return camelCase types via a mapper (`rowToTask`,
   `toLink`, `toSyncLink`) that narrows `provider` with `isProviderId` (`listTaskLinks`).
@@ -41,7 +42,7 @@ SQL still outside db/, to move here: `lib/user.ts` and `middleware/auth.ts` (`"u
 - integrations, calendar-sync and mew take `now: number`; `saveSubscription` and `saveSettings`
   still call `Date.now()`.
 - New names: verb first, `get*` one or null, `list*` many, `count*` a number. Outliers, renamed when
-  touched: `getMonthTasks`/`getUndatedTasks` (many), `subscriptionsOf` (a count), `dueAlerts`.
+  touched: `getMonthTasks`/`getUndatedTasks` (many), `dueAlerts`.
 
 ## Invariants
 

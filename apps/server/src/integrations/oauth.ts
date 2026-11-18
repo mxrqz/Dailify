@@ -1,3 +1,4 @@
+import { isRecord } from "@dailify/shared";
 import type { Env } from "../index";
 import { bytesToBase64url, sha256b64url } from "../lib/encoding";
 import type { OAuthConfig, Tokens } from "./types";
@@ -46,8 +47,7 @@ async function tokenRequest(
     signal: AbortSignal.timeout(15_000),
   });
   const body: unknown = await res.json().catch(() => null);
-  const field = (k: string): unknown =>
-    typeof body === "object" && body !== null ? Reflect.get(body, k) : undefined;
+  const field = (k: string): unknown => (isRecord(body) ? body[k] : undefined);
 
   if (field("error") === "invalid_grant") throw new InvalidGrantError("invalid_grant");
   const access = field("access_token");

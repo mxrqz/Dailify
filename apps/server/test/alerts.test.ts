@@ -24,9 +24,10 @@ import { dispatchAlerts } from "../src/alerts";
 import { insertTask } from "../src/db/tasks";
 import {
   markAlertsSent,
+  recurringAlertCandidates,
   saveSubscription,
   subscriptionsFor,
-  subscriptionsOf,
+  countSubscriptions,
 } from "../src/db/push";
 
 beforeAll(async () => {
@@ -90,7 +91,7 @@ describe("dispatchAlerts", () => {
     await saveSubscription(env.DB, "pushuser", subscription);
 
     await dispatchAlerts(env);
-    expect(await subscriptionsOf(env.DB, "pushuser")).toBe(0);
+    expect(await countSubscriptions(env.DB, "pushuser")).toBe(0);
   });
 
   it("marca como enviado mesmo sem device inscrito, para não reprocessar para sempre", async () => {
@@ -156,13 +157,13 @@ describe("/push/subscription", () => {
   it("guarda a inscrição do usuário", async () => {
     const res = await post(subscription);
     expect(res.status).toBe(204);
-    expect(await subscriptionsOf(env.DB, "pushuser")).toBe(1);
+    expect(await countSubscriptions(env.DB, "pushuser")).toBe(1);
   });
 
   it("re-inscrever o mesmo endpoint não duplica", async () => {
     await post(subscription);
     await post({ ...subscription, timezone: "Europe/Lisbon" });
-    expect(await subscriptionsOf(env.DB, "pushuser")).toBe(1);
+    expect(await countSubscriptions(env.DB, "pushuser")).toBe(1);
   });
 
   it("recusa endpoint não-https, chave vazia e fuso inválido", async () => {
@@ -183,7 +184,7 @@ describe("/push/subscription", () => {
       env,
     );
     expect(res.status).toBe(204);
-    expect(await subscriptionsOf(env.DB, "pushuser")).toBe(0);
+    expect(await countSubscriptions(env.DB, "pushuser")).toBe(0);
   });
 });
 
@@ -224,6 +225,16 @@ describe("dispatchAlerts — séries recorrentes", () => {
     await dispatchAlerts(env, Date.UTC(2026, 4, 20, 12, 1));
     const [, , payload] = sendPush.mock.calls[0];
     expect(payload).toMatchObject({ title: "Academia", at: Date.UTC(2026, 4, 20, 12, 0) });
+  });
+
+  it("leaves out a series whose last occurrence alerted before the grace window", async () => {
+    await insertTask(env.DB, "pushuser", { ...daily, repeatUntil: Date.UTC(2026, 4, 10, 12, 0) });
+    await saveSubscription(env.DB, "pushuser", subscription);
+    const now = Date.UTC(2026, 4, 20, 12, 1);
+    expect(await recurringAlertCandidates(env.DB, now, 60 * 60_000)).toEqual([]);
+    expect(
+      await recurringAlertCandidates(env.DB, Date.UTC(2026, 4, 10, 12, 1), 60 * 60_000),
+    ).toHaveLength(1);
   });
 
   it("sem device inscrito, a série não é processada", async () => {

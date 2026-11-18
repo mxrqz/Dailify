@@ -18,9 +18,18 @@ import { mockSession } from "./session";
 mockSession(() => ({ id: userId, plan: "free" }));
 
 import { env, applyD1Migrations } from "cloudflare:test";
-import { DateTime } from "luxon";
 import app from "../src/index";
-import { MEW_IMAGE_MAX, limitsFor, type MewBlock, type MewReply, type Task } from "@dailify/shared";
+import {
+  MEW_IMAGE_MAX,
+  isoDate,
+  isoWallTime,
+  limitsFor,
+  zonedEpoch,
+  zonedParts,
+  type MewBlock,
+  type MewReply,
+  type Task,
+} from "@dailify/shared";
 import { bumpStoredUsage, periodFor, readStoredUsage } from "../src/db/usage";
 import { insertTask } from "../src/db/tasks";
 import { saveSettings } from "../src/db/settings";
@@ -84,14 +93,18 @@ const gptTask = (over: Record<string, unknown>) => ({
   ...over,
 });
 
-const local = (days: number, hour: number, minute = 0) =>
-  DateTime.now().setZone(TZ).plus({ days }).set({ hour, minute, second: 0, millisecond: 0 });
+/** Epoch-ms of `hour:minute` on today + `days`, in `TZ`. */
+function local(days: number, hour: number, minute = 0): number {
+  const p = zonedParts(Date.now(), TZ);
+  return zonedEpoch({ ...p, day: p.day + days, hour, minute, second: 0, ms: 0 }, TZ);
+}
+const localDay = (days: number) => isoDate(zonedParts(local(days, 12), TZ));
 
 const seed = (id: string, over: Partial<Task>) =>
   insertTask(env.DB, userId, {
     id,
     title: id,
-    date: local(1, 15, 30).toMillis(),
+    date: local(1, 15, 30),
     duration: "",
     priority: 0,
     repeat: "Off",
@@ -114,11 +127,11 @@ describe("POST /mew/chat", () => {
   it("monta os blocos só com ids da agenda e respeita as travas", async () => {
     userId = "mw-blocks";
     await consent(userId);
-    await seed("plain1", { alert: local(1, 15).toMillis() });
+    await seed("plain1", { alert: local(1, 15) });
     await seed("linked1", { links: ["https://www.google.com/calendar/event?eid=x"] });
-    await seed("series1", { date: local(0, 8).toMillis(), repeat: "Daily" });
-    const seriesRef = `series1@${local(1, 8).toISODate()}`;
-    const target = local(3, 0).toISODate();
+    await seed("series1", { date: local(0, 8), repeat: "Daily" });
+    const seriesRef = `series1@${localDay(1)}`;
+    const target = localDay(3);
     aiReturns({
       intent: "propose",
       reply: " Proponho isto ",
@@ -131,7 +144,7 @@ describe("POST /mew/chat", () => {
           action: "create",
           ids: [],
           date: null,
-          tasks: [gptTask({ title: "Dentista", date: `${local(2, 0).toISODate()}T10:00:00` })],
+          tasks: [gptTask({ title: "Dentista", date: `${localDay(2)}T10:00:00` })],
         },
       ],
     });
@@ -151,14 +164,14 @@ describe("POST /mew/chat", () => {
     expect(move).toMatchObject({ action: "move", label: target });
     expect(move.before.map((t) => t.id)).toEqual(["plain1"]);
     // Same time of day, new day; the alert shifts with it. Epoch-ms numbers.
-    expect(move.after[0].date).toBe(local(3, 15, 30).toMillis());
-    expect(move.after[0].alert).toBe(local(3, 15).toMillis());
+    expect(move.after[0].date).toBe(local(3, 15, 30));
+    expect(move.after[0].alert).toBe(local(3, 15));
 
     expect(del.before.map((t) => t.id)).toEqual(["plain1"]);
     expect(del.after).toEqual([]);
 
     expect(create.before).toEqual([]);
-    expect(create.after[0]).toMatchObject({ title: "Dentista", date: local(2, 10).toMillis() });
+    expect(create.after[0]).toMatchObject({ title: "Dentista", date: local(2, 10) });
     expect(create.after[0].id).toMatch(/^[A-Za-z0-9_-]{6,64}$/);
 
     expect(await used(userId)).toBe(1);
@@ -188,7 +201,7 @@ describe("POST /mew/chat", () => {
     expect(sent.instructions).not.toContain("seen1");
     expect(sent.input[0]).toMatchObject({ role: "user" });
     expect(sent.input[0].content).toContain(
-      `seen1|Pagar   luz|${local(1, 15, 30).toFormat("yyyy-MM-dd'T'HH:mm")}|aberta|-|-`,
+      `seen1|Pagar   luz|${isoWallTime(zonedParts(local(1, 15, 30), TZ)).slice(0, 16)}|aberta|-|-`,
     );
     expect(sent.input[1]).toEqual({ role: "assistant", content: "Oi!" });
     expect(sent.input[2].content[1]).toMatchObject({ type: "input_image", image_url: image });

@@ -1,7 +1,7 @@
 import Stripe from "stripe";
 import type { Invoice, PaymentDetails, Role } from "@dailify/shared";
 import type { Env } from "../index";
-import { updateUserRole } from "./user";
+import { updateUserRole } from "../db/user";
 
 export const stripeClient = (env: Env): Stripe =>
   new Stripe(env.STRIPE_SECRET_KEY, {
@@ -111,12 +111,21 @@ function knownInvoiceStatus(status: Stripe.Invoice.Status | null): KnownInvoiceS
  * `invoice.paid`: grava o plano e o customer de quem pagou. A chave `clerkUserId` na metadata da
  * assinatura é histórica (gravada no checkout desde o Clerk) e segue sendo o id do usuário.
  */
-export async function handleInvoicePaid(env: Env, invoice: Stripe.Invoice): Promise<void> {
+/** Subscription statuses that keep a paid role. */
+export const PAYING = new Set<Stripe.Subscription.Status>(["active", "trialing", "past_due"]);
+
+export async function handleInvoicePaid(
+  env: Env,
+  stripe: Stripe,
+  invoice: Stripe.Invoice,
+): Promise<void> {
   const userId = invoice.parent?.subscription_details?.metadata?.clerkUserId;
   const subId = subscriptionId(invoice.parent?.subscription_details?.subscription);
   // Sem linha de plano (fatura só de proration) ou preço desconhecido: não mexe no plano.
   const role = roleForPrice(env, priceIdOf(planLine(invoice.lines.data)) ?? "");
   if (typeof userId !== "string" || !subId || !role) return;
+  // Stripe doesn't order events: a late invoice.paid must not revive a plan already cancelled.
+  if (!PAYING.has((await stripe.subscriptions.retrieve(subId)).status)) return;
 
   await updateUserRole(env.DB, { userId, role, stripeCustomerId: customerId(invoice.customer) });
 }

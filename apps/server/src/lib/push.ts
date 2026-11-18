@@ -1,9 +1,6 @@
 import type { Env } from "../index";
 import { base64urlToBytes, bytesToBase64url } from "./encoding";
 
-// ponytail: re-export only for routes/integrations.ts; drop it once that imports ./encoding.
-export { bytesToBase64url };
-
 // Web Push na mão: RFC 8291 (payload aes128gcm) + RFC 8292 (VAPID). Tudo isso existe no WebCrypto
 // do Worker; as libs de push do npm ou são Node-only (usam `https`) ou estão paradas há anos.
 // A correção da parte delicada é verificada em test/push.test.ts contra o vetor da própria RFC.
@@ -166,7 +163,14 @@ export async function sendPush(
   subscription: PushSubscriptionKeys,
   payload: unknown,
 ): Promise<number> {
-  const body = await encryptPayload(JSON.stringify(payload), subscription);
+  let body: Uint8Array;
+  try {
+    body = await encryptPayload(JSON.stringify(payload), subscription);
+  } catch (err) {
+    // Keys that can't encrypt never will: answer as a dead subscription so the caller drops it.
+    console.error("push keys unusable", subscription.endpoint, err);
+    return 410;
+  }
   const res = await fetch(subscription.endpoint, {
     method: "POST",
     headers: {

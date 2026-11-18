@@ -21,21 +21,20 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   the Cloudflare `EMAIL` binding). Templates are pure, return `{ subject, text, html }`, and use
   inline styles with no images or tracking. `FROM` (`entrar@${APP_HOST}`) must be in wrangler.toml
   `allowed_sender_addresses`.
-- `user.ts`: raw queries on the Better Auth `"user"` table, whose `plan` and `stripeCustomerId`
-  only the server writes (`input: false`). `roleOf` maps an absent or unknown plan to `free`.
 - `origin.ts`: `appOrigin` returns the caller's origin when it is allowed, otherwise the first
   `ALLOWED_ORIGIN`. `returnBase` sends native callers to `${APP_URL}/app`, because Stripe can't
-  reopen the app. `NATIVE_ORIGINS` repeats the tauri entries of `ALLOWED_ORIGIN` by hand and also
-  feeds Better Auth `trustedOrigins`, so change both together.
+  reopen the app. `NATIVE_ORIGINS` is the only list of the app's webview origins: CORS
+  (`isAllowedOrigin`) and Better Auth `trustedOrigins` add it to `ALLOWED_ORIGIN`.
 - `occurrence-alert.ts` (series alert math; `monthsTouching` is the one "which month starts does
   this window touch" helper), `errors.ts` (`fail`), `task-input.ts` (body gate).
 
 ## Input helpers: reuse before writing a guard
 
-- `isRecord`: routes import it from task-input.ts; openai.ts still has its own copy (merge them).
-  `isStringArray` is exported from openai.ts.
-- task-input.ts: `validZone`, `isRecord`, `readJson`, `isEpochMs`, `parseMonth`, `parseOccurrence`,
-  `isRepeatEvery`, `sanitizeLinks`, `parseClientId`, `parseTaskFields`, `parseNewTask`.
+- `isRecord`, `isStringArray`, `isRepeatEvery`, `isTimeZone`, `isDuration` come from
+  `@dailify/shared`.
+- task-input.ts: `validZone`, `readJson`, `isEpochMs`, `parseMonth`, `parseOccurrence`,
+  `sanitizeLinks`, `parseClientId`, `newTaskId` (every server-minted task id), `parseTaskFields`,
+  `parseNewTask`.
 - Contract: an absent key keeps the stored value and `null` clears it (`alert`, `repeatEvery`,
   `tags`, `links`). Optional parsers are tri-state: `undefined`, `"invalid"`, or the value.
   `updatedAt` passes through (the offline queue's LWW stamp). `id`, `completed` and `exdates` never
@@ -65,6 +64,8 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
 - The plan comes from `planLine` (the first non-proration subscription line): after a plan change
   Stripe lists the prorations, priced at the old plan, first. An unknown price never writes a role.
   `listInvoices` reads each invoice's own plan line and fetches a shared subscription once.
+- Stripe doesn't order events: `handleInvoicePaid` and the subscription webhook re-read the
+  subscription and grant a paid role only for a `PAYING` status.
 - `stripeClient` sets a 20 s timeout (SDK default 80 s).
 
 ## occurrence-alert

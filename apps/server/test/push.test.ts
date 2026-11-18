@@ -1,5 +1,6 @@
-import { describe, it, expect } from "vitest";
-import { encryptPayload } from "../src/lib/push";
+import { describe, it, expect, vi } from "vitest";
+import { env } from "cloudflare:workers";
+import { encryptPayload, sendPush } from "../src/lib/push";
 
 // Vetor da RFC 8291 §5 (o "watermelon"). Com salt e par efêmero fixos, o corpo cifrado é
 // determinístico: se a derivação de chave ou o formato do header saírem do lugar, isto quebra.
@@ -43,5 +44,14 @@ describe("encryptPayload (RFC 8291)", () => {
     const a = await encryptPayload("oi", RECEIVER);
     const b = await encryptPayload("oi", RECEIVER);
     expect(toBase64url(a)).not.toBe(toBase64url(b));
+  });
+});
+
+describe("sendPush", () => {
+  it("answers 410 without a request when the subscription keys can't encrypt", async () => {
+    const fetchSpy = vi.spyOn(globalThis, "fetch");
+    const broken = { endpoint: "https://push.example.net/x", p256dh: "AAAA", auth: RECEIVER.auth };
+    expect(await sendPush(env, broken, { title: "x" })).toBe(410);
+    expect(fetchSpy).not.toHaveBeenCalled();
   });
 });

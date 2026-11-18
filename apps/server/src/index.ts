@@ -13,7 +13,7 @@ import mew from "./routes/mew";
 import { dispatchAlerts } from "./alerts";
 import { syncOldest } from "./integrations/google-calendar/sync";
 import { fail } from "./lib/errors";
-import { allowedOrigins } from "./lib/origin";
+import { isAllowedOrigin } from "./lib/origin";
 
 export interface Env {
   DB: D1Database;
@@ -50,7 +50,7 @@ const app = new Hono<AppEnv>();
 app.use(
   "*",
   cors({
-    origin: (origin, c) => (allowedOrigins(c.env).includes(origin) ? origin : null),
+    origin: (origin, c) => (isAllowedOrigin(c.env, origin) ? origin : null),
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
     // Os dois `x-` são do login: captcha do Turnstile e o verifier do magic link do app.
     allowHeaders: ["Authorization", "Content-Type", "x-captcha-response", "x-mewki-verifier"],

@@ -6,7 +6,7 @@ mockSession(() => ({ id: "u1" }));
 
 import { env, applyD1Migrations } from "cloudflare:test";
 import app from "../src/index";
-import { deleteUserData } from "../src/db/tasks";
+import { deleteUserData } from "../src/db/user";
 
 beforeAll(async () => {
   await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);

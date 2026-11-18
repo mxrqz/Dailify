@@ -1,6 +1,6 @@
 import { Hono } from "hono";
-import { DateTime } from "luxon";
 import {
+  isRecord,
   MEW_CONSENT_REQUIRED,
   MEW_HISTORY_MAX,
   MEW_IMAGE_MAX,
@@ -14,11 +14,12 @@ import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { getSettings } from "../db/settings";
 import { getUndatedTasks, readMonth } from "../db/tasks";
-import { aiQuotaError, debitAi } from "../db/limits";
+import { aiQuota, debitAi } from "../db/limits";
 import { aiTargets } from "../db/integrations";
 import { logProposals, setActionStatus } from "../db/mew";
 import { WINDOW_DAYS, agendaOf, askMew } from "../lib/mew";
-import { isRecord, readJson, validZone } from "../lib/task-input";
+import { monthsTouching } from "../lib/occurrence-alert";
+import { readJson, validZone } from "../lib/task-input";
 import { fail } from "../lib/errors";
 
 const STATUSES: readonly MewActionStatus[] = ["proposed", "done", "cancelled", "undone"];
@@ -52,14 +53,9 @@ function parseRequest(body: unknown): MewRequest | { error: string; status: 400 
 
 /** Undated tasks plus the months the ±`WINDOW_DAYS` window touches. */
 async function readAgenda(db: D1Database, userId: string, timezone: string, now: number) {
-  const today = DateTime.fromMillis(now, { zone: timezone });
-  const months = [today.minus({ days: WINDOW_DAYS }), today.plus({ days: WINDOW_DAYS })]
-    .map((d) => d.toFormat("yyyy-MM"))
-    .filter((m, i, all) => all.indexOf(m) === i)
-    .map((m) => {
-      const [y, mo] = m.split("-").map(Number);
-      return new Date(y, mo - 1, 1);
-    });
+  const day = 86_400_000;
+  // Two ends 28 days apart touch at most two months.
+  const months = monthsTouching(now + WINDOW_DAYS * day, 2 * WINDOW_DAYS * day, timezone);
   const read = await Promise.all([
     getUndatedTasks(db, userId),
     ...months.map((m) => readMonth(db, userId, m, timezone)),
@@ -72,8 +68,8 @@ mew.post("/chat", rateLimit("VOICE_LIMITER"), async (c) => {
   const req = parseRequest(await readJson(c));
   if ("error" in req) return fail(c, req.status, req.error);
   if (!(await getSettings(c.env.DB, userId)).mewConsent) return fail(c, 403, MEW_CONSENT_REQUIRED);
-  const quotaError = await aiQuotaError(c);
-  if (quotaError) return quotaError;
+  const quota = await aiQuota(c.env.DB, userId, c.get("plan"));
+  if (quota) return fail(c, quota.status, quota.error);
 
   const now = Date.now();
   const [agenda, allowed] = await Promise.all([
@@ -87,7 +83,7 @@ mew.post("/chat", rateLimit("VOICE_LIMITER"), async (c) => {
     console.error(err);
     return fail(c, 502, "AI request failed");
   }
-  await debitAi(c);
+  await debitAi(c.env.DB, userId);
   await logProposals(c.env.DB, userId, reply.blocks, now);
   return c.json(reply);
 });

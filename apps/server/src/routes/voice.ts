@@ -1,16 +1,16 @@
 import { Hono } from "hono";
 import { TZDate } from "@date-fns/tz";
-import { TASK_LIMITS, parseTaskText, type AiParse, type Task } from "@dailify/shared";
+import { TASK_LIMITS, isRecord, parseTaskText, type AiParse, type Task } from "@dailify/shared";
 import type { AppEnv } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { getSettings } from "../db/settings";
 import { draftToTask, interpretText, transcribe } from "../lib/openai";
 import { insertTask } from "../db/tasks";
-import { aiQuotaError, debitAi, enforceCreate } from "../db/limits";
+import { aiQuota, debitAi, enforceCreate } from "../db/limits";
 import { aiTargets } from "../db/integrations";
 import { fail } from "../lib/errors";
-import { isRecord, readJson, validZone } from "../lib/task-input";
+import { readJson, validZone } from "../lib/task-input";
 
 const voice = new Hono<AppEnv>();
 
@@ -39,9 +39,10 @@ voice.post("/parse", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const timezone = validZone(isRecord(body) ? body.timezone : undefined);
   if (!timezone) return fail(c, 400, "invalid timezone");
 
-  const quotaError = await aiQuotaError(c);
-  if (quotaError) return quotaError;
-  const allowed = await aiTargets(c.env.DB, c.get("userId"), c.get("plan"));
+  const userId = c.get("userId");
+  const quota = await aiQuota(c.env.DB, userId, c.get("plan"));
+  if (quota) return fail(c, quota.status, quota.error);
+  const allowed = await aiTargets(c.env.DB, userId, c.get("plan"));
 
   let result: AiParse;
   try {
@@ -50,14 +51,14 @@ voice.post("/parse", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
     console.error(err);
     return fail(c, 502, "AI request failed");
   }
-  await debitAi(c);
+  await debitAi(c.env.DB, userId);
   return c.json(result);
 });
 
 voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
   const userId = c.get("userId");
-  const quotaError = await aiQuotaError(c);
-  if (quotaError) return quotaError;
+  const quota = await aiQuota(c.env.DB, userId, c.get("plan"));
+  if (quota) return fail(c, quota.status, quota.error);
 
   const body = await c.req.parseBody();
   const audio = body["audio"];
@@ -87,7 +88,7 @@ voice.post("/voice", requireAuth, rateLimit("VOICE_LIMITER"), async (c) => {
     console.error(err);
     return fail(c, 502, "AI request failed");
   }
-  await debitAi(c);
+  await debitAi(c.env.DB, userId);
 
   const now = Date.now();
   const tasks: Task[] = [];

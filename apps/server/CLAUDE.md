@@ -8,7 +8,7 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
 ## Layout
 
 - `src/index.ts`: `Env` (bindings + secrets), `AppEnv` and the app. Order: CORS (its `origin`
-  callback reads `ALLOWED_ORIGIN` from `c.env` through `lib/origin.ts`), public `/health`,
+  callback is `isAllowedOrigin`: `ALLOWED_ORIGIN` plus `NATIVE_ORIGINS`), public `/health`,
   `AUTH_LIMITER` on `/auth/sign-in/*` and `/auth/magic-link/*`, Better Auth on `/auth/*`, the 7 route
   modules (voice before tasks: see `src/routes/CLAUDE.md`), `app.notFound` and `app.onError` ->
   `fail(c, 500, "Internal error")`. The default export is the app with `scheduled`
@@ -21,7 +21,7 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
 - `migrations/` D1 schema · `test/` the worker test suite · `scripts/`: `vapid.ts` (`bun run vapid`),
   `auth-schema.ts` (Better Auth CLI input for 0015). Each script's header has its exact command.
 - Every Hono app, `Context` and `MiddlewareHandler` uses `AppEnv` from `../index` (type-only), as
-  does `Env`; never redeclare either. `db/limits.ts` still spells the literal out.
+  does `Env`; never redeclare either.
 
 ## Auth
 
@@ -63,7 +63,8 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
 
 `scheduled` runs `dispatchAlerts` (`alerts.ts` + `lib/occurrence-alert.ts`) and `syncOldest` (the
 25 oldest Calendar connections, one at a time because of the subrequest ceiling). `syncIfDue`
-isolates each user; `dispatchAlerts` does not isolate per subscription yet.
+isolates each user; `dispatchAlerts` isolates each send, and `sendPush` answers 410 for keys that
+can't encrypt, so the subscription is deleted.
 
 ## Local dev and deploy
 

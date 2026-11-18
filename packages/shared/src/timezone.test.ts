@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { endOfMonthMs, startOfMonthMs } from "./dates";
+import { endOfMonthMs, monthKey, parseMonthKey, startOfMonthMs } from "./dates";
 import {
   civilDay,
   daysInMonth,
@@ -96,6 +96,15 @@ describe("civil-date helpers", () => {
     expect(isTimeZone("America/Sao_Paulo")).toBe(true);
     expect(isTimeZone("UTC")).toBe(true);
     for (const z of ["Mars/Olympus", "", 3, null]) expect(isTimeZone(z)).toBe(false);
+  });
+});
+
+describe("monthKey", () => {
+  it("round-trips through parseMonthKey and rejects anything else", () => {
+    expect(monthKey(2026, 0)).toBe("2026-01");
+    expect(parseMonthKey("2026-12")).toEqual({ year: 2026, month: 11 });
+    for (const bad of ["2026-00", "2026-13", "2026-1", "26-01", "2026-01-01"])
+      expect(parseMonthKey(bad)).toBeNull();
   });
 });
 

@@ -45,8 +45,8 @@ Flow and keyring accounts: `apps/web/src/lib/CLAUDE.md`; contract:
   that bearer from the keyring). Tauri hashes the inline theme script of `index.html` at build
   time; a new origin (API host, captcha, CDN) goes in its directive there. It applies to built
   assets only: the dev server proxy sends no CSP, so check a change on a release build.
-- The server accepts the webview origins (`tauri://localhost`, `http(s)://tauri.localhost`) in
-  `ALLOWED_ORIGIN` and `apps/server/src/lib/origin.ts`; its CORS allows `x-mewki-verifier` and
+- The server accepts the webview origins (`tauri://localhost`, `http(s)://tauri.localhost`) from
+  `NATIVE_ORIGINS` in `apps/server/src/lib/origin.ts`; its CORS allows `x-mewki-verifier` and
   exposes `set-auth-token` (`apps/server/src/index.ts`).
 
 ## App Links and Universal Links (files in `apps/web/public/`)

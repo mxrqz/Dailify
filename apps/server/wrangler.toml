@@ -14,8 +14,9 @@ database_name = "dailify"
 database_id = "7fdd1f9f-c6b2-40e1-9a5f-3a13ec224580"
 
 [vars]
-# A primeira é a WEB_URL dos links de login (auth-options.ts); as tauri são a webview do app.
-ALLOWED_ORIGIN = "https://mewki.mxrqz.com,https://dailify.mxrqz.com,tauri://localhost,http://tauri.localhost,https://tauri.localhost"
+# A primeira é a WEB_URL dos links de login (auth-options.ts); the app's webview origins are
+# NATIVE_ORIGINS in lib/origin.ts.
+ALLOWED_ORIGIN = "https://mewki.mxrqz.com,https://dailify.mxrqz.com"
 
 # E-mail do magic link (lib/email/providers/cloudflare.ts). O domínio do remetente tem que estar
 # verificado no Email Service.

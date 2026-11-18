@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 import type Stripe from "stripe";
-import { limitsFor, type QuotaSnapshot } from "@dailify/shared";
+import { isRecord, limitsFor, type QuotaSnapshot } from "@dailify/shared";
 import type { AppEnv } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
-import { billingProfile, updateUserRole } from "../lib/user";
+import { billingProfile, updateUserRole } from "../db/user";
 import { readAllUsage } from "../db/limits";
 import {
   customerId,
@@ -12,12 +12,13 @@ import {
   handleInvoicePaid,
   isProductName,
   listInvoices,
+  PAYING,
   priceMap,
   roleForPrice,
   stripeClient,
 } from "../lib/stripe";
 import { fail } from "../lib/errors";
-import { isRecord, parseMonth, readJson } from "../lib/task-input";
+import { parseMonth, readJson } from "../lib/task-input";
 import { returnBase } from "../lib/origin";
 
 const billing = new Hono<AppEnv>();
@@ -105,8 +106,6 @@ billing.get("/billing/invoices", async (c) => {
   return c.json(invoices);
 });
 
-const PAYING = new Set<Stripe.Subscription.Status>(["active", "trialing", "past_due"]);
-
 billing.post("/webhooks/stripe", async (c) => {
   const sig = c.req.header("stripe-signature");
   const raw = await c.req.text();
@@ -121,7 +120,7 @@ billing.post("/webhooks/stripe", async (c) => {
   }
 
   if (event.type === "invoice.paid") {
-    await handleInvoicePaid(c.env, event.data.object);
+    await handleInvoicePaid(c.env, stripe, event.data.object);
   } else if (
     event.type === "customer.subscription.deleted" ||
     event.type === "customer.subscription.updated"

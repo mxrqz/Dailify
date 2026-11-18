@@ -213,25 +213,6 @@ export async function deleteTask(db: D1Database, userId: string, id: string): Pr
   await db.prepare(`DELETE FROM tasks WHERE user_id=? AND id=?`).bind(userId, id).run();
 }
 
-/** Every app table keyed by `user_id`; `account-delete.test.ts` fails when the schema adds one. */
-export const USER_TABLES = [
-  "tasks",
-  "push_subscriptions",
-  "user_settings",
-  "usage",
-  "integration_connections",
-  "integration_links",
-  "oauth_states",
-  "mew_actions",
-] as const;
-
-/** Tudo que o usuário tem no D1 — chamado pelo `afterDelete` da conta (auth-options.ts). */
-export async function deleteUserData(db: D1Database, userId: string): Promise<void> {
-  await db.batch(
-    USER_TABLES.map((t) => db.prepare(`DELETE FROM ${t} WHERE user_id=?`).bind(userId)),
-  );
-}
-
 export async function appendCompletion(
   db: D1Database,
   userId: string,

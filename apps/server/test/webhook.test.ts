@@ -58,6 +58,8 @@ const invoicePaid = (lines: unknown[]) => ({
 describe("POST /webhooks/stripe", () => {
   beforeEach(async () => {
     vi.clearAllMocks();
+    // invoice.paid re-reads the subscription; subscriptionEvent overrides this.
+    stripeMock.subscriptions.retrieve.mockResolvedValue({ id: "sub_1", status: "active" });
     await seedUser(env.DB, "u1");
   });
 
@@ -116,6 +118,16 @@ describe("POST /webhooks/stripe", () => {
     );
     await post("{}", "t=1,v1=abc");
     expect(await billingOf("u1")).toEqual({ plan: "pro", stripeCustomerId: "cus_1" });
+  });
+
+  it("a late invoice.paid doesn't grant a plan whose subscription is already canceled", async () => {
+    stripeMock.subscriptions.retrieve.mockResolvedValue({ id: "sub_1", status: "canceled" });
+    stripeMock.webhooks.constructEventAsync.mockResolvedValue(
+      invoicePaid([line("price_pro_month")]),
+    );
+    await post("{}", "t=1,v1=abc");
+    expect(stripeMock.subscriptions.retrieve).toHaveBeenCalledWith("sub_1");
+    expect(await billingOf("u1")).toEqual({ plan: null, stripeCustomerId: null });
   });
 
   it("invoice.paid with an unknown price doesn't downgrade a paying user", async () => {

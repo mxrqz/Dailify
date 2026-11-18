@@ -50,7 +50,7 @@ things.use("*", rateLimit("API_LIMITER")); // only if every route shares it, els
 
 ## Bodies
 
-- Read with `readJson(c)` and narrow with `isRecord` (`lib/task-input.ts`). A bare `c.req.json()`
+- Read with `readJson(c)` (`lib/task-input.ts`) and narrow with `isRecord` (`@dailify/shared`). A bare `c.req.json()`
   turns malformed JSON (or a destructured `null`) into a 500 via `app.onError`.
 - A parser whose errors aren't all 400 carries `status` in its union (`parseRequest`, mew.ts).
 - Zones: `validZone`; new endpoints take the body key `timezone`. Months: `parseMonth`; epochs:
