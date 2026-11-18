@@ -66,8 +66,9 @@ One file per route. `src/App.tsx` declares the routes; each page owns its own I/
   - `/auth/app?token=…` never calls verify: the token is bound to the requesting device's
     verifier. On desktop it tries `mewki://auth` once; the browser restarts at `/login`.
   - `/app/<path>` is where Stripe returns a checkout started in the app; it hands the path to
-    `mewki://open` once. It does not run `<path>` through `internalPath` yet, so `/app//evil.com`
-    points the "continue in browser" `Link` off-site. Guard it before copying the pattern.
+    `mewki://open` once, after `internalPath` (`/app//evil.com` would still match `/app/*`).
+  - `/auth/app` and `/app/*` share `components/auth/handoff.tsx`: `useOpenOnce` and
+    `HandoffNotice`.
 - Single-shot effects (OAuth code, deep-link attempt) use a `useRef` flag (`integration-callback`,
   `auth-app`, `app-return`). `integration-callback` and `verify` render tests run in `<StrictMode>`.
 - Legal pages: the body text is literal in `privacy.tsx`/`terms.tsx`, the one documented
@@ -75,5 +76,5 @@ One file per route. `src/App.tsx` declares the routes; each page owns its own I/
 
 ## Tests
 
-`billing`, `verify`, `auth-app` and `integration-callback` have render tests. Their `it` names are
+`billing`, `verify`, `auth-app`, `app-return` and `integration-callback` have render tests. Their `it` names are
 legacy pt-BR; new ones are English.

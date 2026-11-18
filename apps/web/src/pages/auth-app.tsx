@@ -1,10 +1,9 @@
-import { useEffect, useRef, useState } from "react";
+import { useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { Link, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
-import { AuthShell } from "@/components/auth/auth-shell";
 import { copy } from "@/components/auth/copy";
-import { Button } from "@/components/ui/button";
+import { HandoffNotice, useOpenOnce } from "@/components/auth/handoff";
 import { parseUserAgent } from "@/functions/user-agent";
 
 /**
@@ -18,35 +17,20 @@ export default function AuthApp() {
   const [mobile] = useState(() => parseUserAgent(navigator.userAgent).mobile);
   const deepLink = token && `mewki://auth?token=${encodeURIComponent(token)}`;
 
-  const showOpen = !mobile && deepLink;
-
-  // Uma tentativa só (o StrictMode roda o efeito duas vezes): repetir empilha diálogos do sistema.
-  const tried = useRef(false);
-  useEffect(() => {
-    if (!showOpen || tried.current) return;
-    tried.current = true;
-    window.location.href = showOpen;
-  }, [showOpen]);
+  const showOpen = !mobile && deepLink ? deepLink : null;
+  useOpenOnce(showOpen);
 
   const message = !token ? copy.verify.invalid : mobile ? copy.app.mobile : copy.app.desktop;
 
   return (
-    <AuthShell>
+    <HandoffNotice
+      message={message}
+      open={showOpen ? { href: showOpen, label: copy.app.open } : undefined}
+      browser={{ to: "/login", label: copy.app.browser }}
+    >
       <Helmet>
         <title>{copy.app.pageTitle}</title>
       </Helmet>
-      <div className="flex flex-col items-center gap-4 pt-24 text-center">
-        <p className="text-body text-ink">{message}</p>
-
-        {showOpen && (
-          <Button asChild size="lg" className="w-full">
-            <a href={showOpen}>{copy.app.open}</a>
-          </Button>
-        )}
-        <Button asChild size="lg" variant="secondary" className="w-full">
-          <Link to="/login">{copy.app.browser}</Link>
-        </Button>
-      </div>
-    </AuthShell>
+    </HandoffNotice>
   );
 }
