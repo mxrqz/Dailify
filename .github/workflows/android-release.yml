@@ -67,10 +67,9 @@ jobs:
       - name: Build APK + AAB
         working-directory: apps/web
         env:
-          NDK_HOME: ${{ env.ANDROID_HOME }}/ndk/${{ env.NDK_VERSION }}
           VITE_API_URL: ${{ vars.VITE_API_URL }}
           VITE_TURNSTILE_SITE_KEY: ${{ vars.VITE_TURNSTILE_SITE_KEY }}
-        run: bun run tauri android build --ci --apk --aab --target aarch64 --config '${{ steps.version.outputs.config }}'
+        run: NDK_HOME="$ANDROID_HOME/ndk/$NDK_VERSION" bun run tauri android build --ci --apk --aab --target aarch64 --config '${{ steps.version.outputs.config }}'
 
       - name: Collect
         run: |
