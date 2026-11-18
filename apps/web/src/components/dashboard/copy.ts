@@ -80,6 +80,12 @@ export const copy = {
     dropped: "{n} alteração(ões) não foram aceitas pelo servidor",
   },
 
+  errorBoundary: {
+    title: "Algo deu errado",
+    description: "Ocorreu um erro inesperado. Tente recarregar a página.",
+    reload: "Recarregar",
+  },
+
   loading: {
     /** Legenda do splash, só depois de 2s: antes disso a Mew caçando o laser já basta. */
     slow: "Buscando suas tarefas…",
