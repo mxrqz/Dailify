@@ -23,7 +23,9 @@ vi.mock("@/functions/api", () => api);
 
 import { Toaster } from "@/components/ui/sonner";
 import { copy } from "@/components/dashboard/copy";
-import { upsertTaskWithRecurrence } from "@/functions/functions";
+import { getCompletionDate, upsertTaskWithRecurrence } from "@/functions/functions";
+import { readQueue } from "@/functions/offline";
+import { zoned } from "@/functions/zone";
 import { useTaskActions } from "./useTaskActions";
 
 const AUG = new Date(2026, 7, 1);
@@ -117,6 +119,25 @@ describe("useTaskActions", () => {
 
     expect(store.find((t) => t.id === "b")?.completed).toEqual([1]);
     expect(store.some((t) => t.id === "a")).toBe(true);
+  });
+
+  it("completing another day's occurrence offline stamps that day, queues it and keeps the series", async () => {
+    if (!day18) throw new Error("no day 18");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 7, 10, 12));
+    store = series;
+    api.completeTask.mockResolvedValue({ error: { message: "rede", offline: true } });
+    const { result } = renderHook(() => useTaskActions(day18, zoned(day18.date)));
+
+    await act(() => result.current.onComplete());
+    vi.useRealTimers();
+
+    expect(api.completeTask).toHaveBeenCalledWith("r", day18.date);
+    expect(readQueue("u1")).toEqual([{ op: "complete", taskId: "r", at: day18.date }]);
+    expect(store).toHaveLength(31);
+    expect(
+      store.every((t) => getCompletionDate(t, zoned(t.date)) === (t.date === day18.date)),
+    ).toBe(true);
   });
 
   it("a refused write rolls back only its own task", async () => {

@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import { useNavigate, type NavigateFunction } from "react-router-dom";
 import { toast } from "sonner";
 import { INTEGRATION_ERROR } from "@dailify/shared";
@@ -6,7 +5,7 @@ import { INTEGRATION_ERROR } from "@dailify/shared";
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { createCalendarEvent } from "@/functions/api";
-import { upsertTaskWithRecurrence } from "@/functions/functions";
+import { fill, upsertTaskWithRecurrence } from "@/functions/functions";
 import { upsertUndated } from "@/functions/undated";
 import { patchIntegration } from "@/hooks/useIntegrations";
 import type { TaskProps } from "@/types/types";
@@ -19,21 +18,12 @@ const t = copy.calendar;
  * não podem apagar uma à outra.
  */
 export function useApplyTask(): (task: TaskProps) => void {
-  const { tasks, setTasks, undatedTasks, setUndatedTasks, loadedMonths } = useDailify();
-  const latest = useRef({ tasks, undatedTasks });
-  latest.current = { tasks, undatedTasks };
+  const { setTasks, setUndatedTasks, loadedMonths } = useDailify();
 
-  return (task) => {
-    if (task.undated) {
-      const next = upsertUndated(latest.current.undatedTasks ?? [], task);
-      latest.current.undatedTasks = next;
-      setUndatedTasks(next);
-    } else {
-      const next = upsertTaskWithRecurrence(latest.current.tasks ?? [], task, loadedMonths);
-      latest.current.tasks = next;
-      setTasks(next);
-    }
-  };
+  return (task) =>
+    task.undated
+      ? setUndatedTasks((cur) => upsertUndated(cur ?? [], task))
+      : setTasks((cur) => upsertTaskWithRecurrence(cur ?? [], task, loadedMonths));
 }
 
 /** O 409 `reconnect`: a agenda some das ofertas e o toast leva pra reconectar. */
@@ -67,18 +57,13 @@ export function useCalendarPush(): (items: (CalendarPick & { id: string })[]) =>
       calendarRevoked(navigate);
     } else if (!failed.length) {
       toast.success(
-        items.length === 1
-          ? t.createdAdded
-          : t.createdAddedMany.replace("{n}", String(items.length)),
+        items.length === 1 ? t.createdAdded : fill(t.createdAddedMany, { n: items.length }),
       );
     } else {
-      toast.error(
-        failed.length === 1 ? t.notAdded : t.notAddedMany.replace("{n}", String(failed.length)),
-        {
-          description: items.length === 1 ? results[0].error?.message : undefined,
-          action: { label: t.tryAgain, onClick: () => void push(failed) },
-        },
-      );
+      toast.error(failed.length === 1 ? t.notAdded : fill(t.notAddedMany, { n: failed.length }), {
+        description: items.length === 1 ? results[0].error?.message : undefined,
+        action: { label: t.tryAgain, onClick: () => void push(failed) },
+      });
     }
   };
 

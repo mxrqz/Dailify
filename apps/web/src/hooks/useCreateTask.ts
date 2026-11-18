@@ -1,12 +1,12 @@
-import { useRef, useState } from "react";
+import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { composeTaskInput, type ParsedTask, type Task } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { createTask, deleteTask } from "@/functions/api";
-import { upsertTaskWithRecurrence } from "@/functions/functions";
+import { createTask, deleteTask, type ApiError } from "@/functions/api";
+import { fill, upsertTaskWithRecurrence } from "@/functions/functions";
 import { enqueue, newTaskId } from "@/functions/offline";
 import { upsertUndated } from "@/functions/undated";
 import { useCalendarPush, type CalendarPick } from "@/hooks/useCalendarPush";
@@ -14,35 +14,54 @@ import { useQuotas } from "@/hooks/useQuotas";
 import { zoned } from "@/functions/zone";
 import { useSession } from "@/lib/auth";
 
+// 401 is a dead session (old tab, account switch), not a refused write: it waits for the login.
+const queueable = (error: ApiError | undefined, userId: string | undefined): userId is string =>
+  Boolean((error?.offline || error?.status === 401) && userId);
+
 /**
  * Tarefas que já existem no servidor (a voz, os rascunhos da Mew): põe na agenda ou no A qualquer
  * hora e avisa com Desfazer.
  */
 export function useShowCreated() {
-  const { tasks, setTasks, undatedTasks, setUndatedTasks, loadedMonths, bumpUsage } = useDailify();
-  // A resposta chega segundos depois do toque; as listas de agora, não as daquele render.
-  const latest = useRef({ tasks, undatedTasks });
-  latest.current = { tasks, undatedTasks };
+  const userId = useSession().data?.user.id;
+  const { setTasks, setUndatedTasks, loadedMonths, bumpUsage } = useDailify();
+
+  // Functional: the reply lands seconds after the tap, so it reads the lists of that moment.
+  const put = (list: Task[]) => {
+    setTasks((cur) =>
+      list
+        .filter((t) => !t.undated)
+        .reduce((acc, task) => upsertTaskWithRecurrence(acc, task, loadedMonths), cur ?? []),
+    );
+    setUndatedTasks((cur) => list.filter((t) => t.undated).reduce(upsertUndated, cur ?? []));
+  };
 
   const undo = async (created: Task[]) => {
+    const at = Date.now();
     const ids = new Set(created.map((t) => t.id));
-    setTasks((latest.current.tasks ?? []).filter((t) => !ids.has(t.id)));
-    setUndatedTasks((latest.current.undatedTasks ?? []).filter((t) => !ids.has(t.id)));
-    await Promise.all(created.map((t) => deleteTask(t.id)));
+    setTasks((cur) => (cur ?? []).filter((t) => !ids.has(t.id)));
+    setUndatedTasks((cur) => (cur ?? []).filter((t) => !ids.has(t.id)));
+    const results = await Promise.all(created.map((t) => deleteTask(t.id)));
+
+    // A refused delete leaves the task on the server, so it comes back on screen.
+    const refused = created.filter((task, i) => {
+      const { error } = results[i];
+      if (!error) return false;
+      if (queueable(error, userId)) {
+        enqueue(userId, { op: "delete", taskId: task.id, at });
+        return false;
+      }
+      return true;
+    });
+    if (!refused.length) return;
+    put(refused);
+    toast.error(copy.task.deleteError, {
+      description: results.find((r) => r.error && !queueable(r.error, userId))?.error?.message,
+    });
   };
 
   return (created: Task[], message: string) => {
-    setTasks(
-      created
-        .filter((t) => !t.undated)
-        .reduce(
-          (list, task) => upsertTaskWithRecurrence(list, task, loadedMonths),
-          latest.current.tasks ?? [],
-        ),
-    );
-    setUndatedTasks(
-      created.filter((t) => t.undated).reduce(upsertUndated, latest.current.undatedTasks ?? []),
-    );
+    put(created);
     created.forEach(() => bumpUsage("tasks"));
     toast.success(message, {
       description: created.map((t) => t.title).join(" · "),
@@ -64,12 +83,11 @@ export function useCreateTask() {
   const showCreated = useShowCreated();
   const pushCalendar = useCalendarPush();
 
+  const upgrade = { label: copy.form.upgrade, onClick: () => navigate("/premium") };
+
   const limited = () => {
     if (!quotas.states.tasks.exhausted) return false;
-    toast(copy.form.limitReached, {
-      description: copy.form.limitReachedHint,
-      action: { label: copy.form.upgrade, onClick: () => navigate("/premium") },
-    });
+    toast(copy.form.limitReached, { description: copy.form.limitReachedHint, action: upgrade });
     return true;
   };
 
@@ -104,8 +122,7 @@ export function useCreateTask() {
     try {
       const { task, error } = await createTask(input);
 
-      // 401: a sessão caiu (aba velha, troca de conta), não a tarefa — espera na fila pelo login.
-      if ((error?.offline || error?.status === 401) && userId) {
+      if (queueable(error, userId)) {
         enqueue(userId, { op: "create", taskId: input.id, input, at });
         toast.message(undated ? copy.form.createdUndated : copy.form.created, {
           description: copy.task.queued,
@@ -115,9 +132,10 @@ export function useCreateTask() {
 
       if (error || !task) {
         restore();
-        toast(copy.form.createError, {
+        // Only the 429 is the quota; upgrading fixes nothing else.
+        toast.error(copy.form.createError, {
           description: error?.message,
-          action: { label: copy.form.upgrade, onClick: () => navigate("/premium") },
+          action: error?.status === 429 ? upgrade : undefined,
         });
         return false;
       }
@@ -154,13 +172,16 @@ export function useCreateTask() {
         const input = { ...composeTaskInput(parsed, zoned(at)), id: newTaskId(), updatedAt: at };
         const { task, error } = await createTask(input);
         if (!task) {
-          toast.error(copy.form.createError, { description: error?.message });
+          toast.error(copy.form.createError, {
+            description: error?.message,
+            action: error?.status === 429 ? upgrade : undefined,
+          });
           break;
         }
         created.push(task);
       }
       if (created.length) {
-        showCreated(created, copy.mew.createdMany.replace("{n}", String(created.length)));
+        showCreated(created, fill(copy.mew.createdMany, { n: created.length }));
       }
       const pushes = created.flatMap((task, i) => {
         const pick = calendar[i];

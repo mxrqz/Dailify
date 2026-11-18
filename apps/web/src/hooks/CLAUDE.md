@@ -5,7 +5,7 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 
 ## What lives here
 
-- Task writes: `useTaskActions.tsx` (dated), `useUndatedActions.tsx` (undated), `useCreateTask.ts`
+- Task writes: `useTaskActions.tsx` (dated), `useUndatedActions.ts` (undated), `useCreateTask.ts`
   (+ `useShowCreated`), `useCalendarPush.ts` (+ `useApplyTask`, `calendarRevoked`). The rest are
   module stores, platform wrappers and `useQuotas` (sections below).
 - `useMewParse` and `useVoiceCreate` serve only the dashboard composer and FAB; they predate the
@@ -18,9 +18,10 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 - Settle: no error keeps the optimistic state; `error.offline || status === 401` with a userId calls
   `enqueue(userId, mutation)` and keeps it (a 401 is a dead session, not a refused edit); anything
   else rolls back and shows `toast.error(copy.task.*Error, { description: error.message })`.
-  Model: `run` in `useUndatedActions.tsx`.
+  Model: `run` in `useUndatedActions.ts`.
 - That predicate is copied in `useTaskActions`, `useUndatedActions`, `useCreateTask`,
-  `components/edit-task.tsx` (save) and `drainQueue` (`functions/offline.ts`). Change all five
+  `components/edit-task.tsx` (save) and `drainQueue` (`functions/offline.ts`); `useCreateTask.ts`
+  keeps one file-local `queueable` for `create` and `useShowCreated`'s Undo. Change all five
   together; a sixth caller exports it from `functions/offline.ts` instead of copying it.
 - Writes a caller reacts to return `Promise<boolean>` = the write stands (on the server or queued).
 - Take `at = Date.now()` once per action and reuse it as `updatedAt` in the optimistic state, the
@@ -30,7 +31,8 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 
 ## useTaskActions(task, day, { onDeleted })
 
-- Returns `onComplete`, `onUncomplete` (only `day`'s window), `onPatch(patch, occurrence?)`,
+- Returns `onComplete` (stamps now on today's card, `task.date` on another day's, since completion
+  is read per day; `updatedAt` stays now), `onUncomplete` (only `day`'s window), `onPatch(patch, occurrence?)`,
   `onRename`, `onDelete`, `deleteDialog`. Each caller renders `deleteDialog` once (hence `.tsx`).
 - `onDelete`: recurring asks occurrence vs series first; Calendar-linked (`isCalendarEventLink`)
   confirms in an ActionSheet, no Undo (the Google event goes too); a plain delete is immediate with
@@ -41,8 +43,8 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 - A series-scope `onPatch` with a `date` shifts the anchor (`seriesOf(task).date + new - task.date`);
   Undo of a series delete re-creates `seriesOf(task)` without completions (the server drops them).
 - Writes use functional updates; a rollback is `revertTask(cur, previous, id)`
-  (`functions/revert-task.ts`), never `setTasks(previous)`. Debt: the `latest` ref mirrors in
-  `useApplyTask` and `useShowCreated` predate the widened setters. Fix when touched.
+  (`functions/revert-task.ts`), never `setTasks(previous)`. Debt: the `latest` ref mirror in
+  `useMewApply` (`mew-chat/apply.ts`) predates the widened setters. Fix when touched.
 
 ## Other writers
 
@@ -52,7 +54,8 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
   `schedule(at)` moves it to the agenda with `date = alert = at`.
 - `useCreateTask().create` is optimistic and queueable; `createMany` (Mew drafts) is online-only,
   sequential, stops at the first failure and returns `true` if any landed (a retry would duplicate).
-  `useShowCreated` shows tasks the server already created, bumps usage per task; Undo deletes them.
+  `useShowCreated` shows tasks the server already created, bumps usage per task; Undo deletes them,
+  queueing offline ones and putting refused ones back with `copy.task.deleteError`.
 - `useCalendarPush` runs after the task exists: a failure never undoes it, one toast retries the
   failed ones. A 409 `INTEGRATION_ERROR.reconnect` anywhere goes through `calendarRevoked`.
 
@@ -62,7 +65,7 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
   values from `zoned()`. `"day"` is the start of the day and changes identity only at midnight.
   Never disable it under reduced motion: the now line's position is data.
 - `useIntegrations`: `undefined` until read; fetches only when nothing is cached or in flight and
-  online, a failure retries on the next mount. Writers: `setIntegrations`/`patchIntegration`.
+  online (`useOnline`, so reconnecting retries), a failure retries on the next mount. Writers: `setIntegrations`/`patchIntegration`.
 - `useOnline` lies upward (connected, no internet): use it to warn; `error.offline` decides.
 - `useEffectEvent` polyfills React 19.2's hook; the lint knows the name, so call it only in effects.
 - `useMediaQuery`: pass a named constant (`SHEET_EDITING`, `dashboard/day-task-row.tsx`) and read
@@ -75,11 +78,11 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 - `useQuotas` is cosmetic; the server enforces. While quotas load everything counts as unlimited,
   so nothing blocks. `bumpUsage` runs only after the server accepted.
 - Status codes: create 429; AI 403 = plan without AI (on `/mew/chat` also no consent), 429 =
-  exhausted. Offer `/premium` only on these; `create`'s error toast still offers it on any error.
+  exhausted. Offer `/premium` only on these.
   `useMewParse` keeps a local `refused` flag because the 429 lands before quotas reload.
 - `useVoiceCreate`: the 60 s `MAX_RECORDING_MS` is a courtesy (the server 413s over 512 KB); the
   `starting` ref blocks a second mic mid-prompt. Re-check cancel after every await: `start` resets
-  `discard` after `getUserMedia`, so closing the sheet mid-prompt records to the cap, then sends.
+  `discard` before `getUserMedia` and drops the stream if a cancel landed during the prompt.
 
 ## Tests
 

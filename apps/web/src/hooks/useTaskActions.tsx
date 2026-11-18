@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { isSameDay } from "date-fns";
 import { toast } from "sonner";
 
 import { useDailify } from "@/components/dailifyContext";
@@ -9,7 +10,7 @@ import { RecurrenceScopeDialog } from "@/components/dashboard/recurrence-scope-d
 import { ActionSheet } from "@/components/kit/action-sheet";
 import { completeTask, createTask, deleteTask, uncompleteTask, updateTask } from "@/functions/api";
 import type { ApiError } from "@/functions/api";
-import { upsertTaskWithRecurrence } from "@/functions/functions";
+import { fill, upsertTaskWithRecurrence } from "@/functions/functions";
 import { revertTask } from "@/functions/revert-task";
 import { enqueue, type Mutation } from "@/functions/offline";
 import { isCalendarEventLink, seriesOf, type TaskInput } from "@dailify/shared";
@@ -59,13 +60,15 @@ export function useTaskActions(
 
   const onComplete = async () => {
     const at = Date.now();
+    // Completion is read per day (`getCompletionDate`): another day's card stamps its own date.
+    const stamp = isSameDay(day, zoned(at)) ? at : task.date;
     const previous = tasks ?? [];
-    const done: TaskProps = { ...task, completed: [...task.completed, at], updatedAt: at };
+    const done: TaskProps = { ...task, completed: [...task.completed, stamp], updatedAt: at };
     setTasks((cur) => upsertTaskWithRecurrence(cur ?? [], done, loadedMonths));
     haptic("success");
 
-    const mutation: Mutation = { op: "complete", taskId: task.id, at };
-    const { error } = await completeTask(task.id, at);
+    const mutation: Mutation = { op: "complete", taskId: task.id, at: stamp };
+    const { error } = await completeTask(task.id, stamp);
     settle(error, previous, mutation, copy.task.completeError);
   };
 
@@ -178,7 +181,7 @@ export function useTaskActions(
       <ActionSheet
         open={confirmOpen}
         onOpenChange={setConfirmOpen}
-        title={copy.calendar.deleteTitle.replace("{title}", task.title)}
+        title={fill(copy.calendar.deleteTitle, { title: task.title })}
         description={task.repeat === "Off" ? undefined : copy.calendar.deleteSeries}
         actions={[
           {

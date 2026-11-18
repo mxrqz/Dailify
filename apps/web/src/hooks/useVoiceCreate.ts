@@ -4,6 +4,7 @@ import { toast } from "sonner";
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { createTaskVoice } from "@/functions/api";
+import { fill } from "@/functions/functions";
 import { appTimeZone } from "@/functions/zone";
 import { useShowCreated } from "@/hooks/useCreateTask";
 import { useQuotas } from "@/hooks/useQuotas";
@@ -55,7 +56,7 @@ export function useVoiceCreate(onCreated?: () => void) {
         created,
         created.length === 1
           ? copy.voice.createdOne
-          : copy.voice.createdMany.replace("{n}", String(created.length)),
+          : fill(copy.voice.createdMany, { n: created.length }),
       );
       onCreated?.();
     } finally {
@@ -90,6 +91,7 @@ export function useVoiceCreate(onCreated?: () => void) {
 
     let stream: MediaStream;
     starting.current = true;
+    discard.current = false;
     try {
       stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     } catch {
@@ -97,6 +99,11 @@ export function useVoiceCreate(onCreated?: () => void) {
       return;
     } finally {
       starting.current = false;
+    }
+    // Cancelled during the permission prompt: there was no recorder for `cancel` to stop.
+    if (discard.current) {
+      for (const track of stream.getTracks()) track.stop();
+      return;
     }
 
     // A onda é enfeite: sem Web Audio a gravação segue igual, só sem ela.
@@ -123,7 +130,6 @@ export function useVoiceCreate(onCreated?: () => void) {
       if (discard.current) setState("idle");
       else void send(new Blob(chunks, { type: rec.mimeType }));
     };
-    discard.current = false;
     rec.start();
     recorder.current = rec;
     setState("recording");
