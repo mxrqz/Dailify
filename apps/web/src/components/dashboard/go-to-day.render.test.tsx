@@ -1,8 +1,9 @@
 /** @vitest-environment jsdom */
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { addDays, addMonths, startOfMonth } from "date-fns";
 
+import { copy } from "./copy";
 import { DayList } from "./day-list";
 import { dayAnchorId } from "./day-section";
 
@@ -12,9 +13,12 @@ vi.mock("@/components/dailifyContext", () => ({ useDailify: () => dailify.curren
 const scrollIntoView = vi.fn();
 
 beforeEach(() => {
-  scrollIntoView.mockClear();
+  // Mid-month noon: the target two days out stays in the loaded months.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(2026, 9, 21, 12));
   Element.prototype.scrollIntoView = scrollIntoView;
 });
+afterEach(() => vi.useRealTimers());
 
 describe("ir até o dia", () => {
   it("dia alvo sem tarefa aparece com 'Nada neste dia' e é rolado", () => {
@@ -33,7 +37,7 @@ describe("ir até o dia", () => {
     dailify.current = { ...dailify.current, targetDay: target };
     rerender(<DayList />);
 
-    expect(screen.getByText("Nada neste dia")).toBeInTheDocument();
+    expect(screen.getByText(copy.day.emptyDay)).toBeInTheDocument();
     expect(document.getElementById(dayAnchorId(target))).not.toBeNull();
     expect(scrollIntoView).toHaveBeenCalledWith({ behavior: "smooth", block: "start" });
   });

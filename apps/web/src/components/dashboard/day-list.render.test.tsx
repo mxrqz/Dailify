@@ -18,7 +18,9 @@ const loadMonth = vi.fn(() => Promise.resolve());
 let fire: (() => void) | undefined;
 
 beforeEach(() => {
-  loadMonth.mockClear();
+  // Mid-month noon: "today" and its months never move under the test.
+  vi.useFakeTimers({ toFake: ["Date"] });
+  vi.setSystemTime(new Date(2026, 9, 21, 12));
   fire = undefined;
   vi.stubGlobal(
     "IntersectionObserver",
@@ -31,7 +33,7 @@ beforeEach(() => {
     },
   );
 });
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => vi.useRealTimers());
 
 const now0 = () => new Date();
 
