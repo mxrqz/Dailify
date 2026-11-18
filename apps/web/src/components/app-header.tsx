@@ -92,13 +92,11 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
         )}
 
         {dashboard && isSignedIn && (
-          <Link
-            to="/profile"
-            aria-label={copy.header.profile}
-            className={cn(barButton, "md:hidden")}
-          >
-            <UserIcon aria-hidden="true" />
-          </Link>
+          <Button asChild variant="ghost" size="bar" className="md:hidden">
+            <Link to="/profile" aria-label={copy.header.profile}>
+              <UserIcon aria-hidden="true" />
+            </Link>
+          </Button>
         )}
       </div>
     </header>

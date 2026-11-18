@@ -25,9 +25,6 @@ import { zoned } from "@/functions/zone";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { cn } from "@/lib/utils";
 
-const iconButton =
-  "grid size-11 cursor-pointer place-items-center rounded-full text-ink transition-colors hover:bg-fill pointer-fine:active:bg-fill-pressed [&_svg]:size-5.5";
-
 /**
  * O mês em grade (props → markup): passado apagado, hoje em `brand-text`, o escolhido num círculo
  * `ink`, e o ponto de "tem tarefa" embaixo do número.
@@ -136,14 +133,9 @@ export function MonthCalendar({
     <div className="fixed inset-0 z-float overflow-y-auto overscroll-contain bg-canvas pb-30 md:static md:z-auto md:overflow-visible md:pb-10">
       {/* Not a landmark: two buttons, no links, and the Sidebar already owns "Navegação". */}
       <div className="sticky top-0 z-10 flex h-bar items-center justify-between bg-material-bar-solid px-2 md:top-10">
-        <button
-          type="button"
-          aria-label={copy.header.back}
-          onClick={onClose}
-          className={iconButton}
-        >
+        <Button variant="ghost" size="bar" aria-label={copy.header.back} onClick={onClose}>
           <ChevronLeftIcon aria-hidden="true" />
-        </button>
+        </Button>
         <Button
           variant="ghost"
           onClick={() => {
@@ -161,22 +153,22 @@ export function MonthCalendar({
           <span className="font-normal text-ink-secondary">{format(month, "yyyy")}</span>
         </h1>
         <div className="flex">
-          <button
-            type="button"
+          <Button
+            variant="ghost"
+            size="bar"
             aria-label={copy.aside.prevMonth}
             onClick={() => setMonth(addMonths(month, -1))}
-            className={iconButton}
           >
             <ChevronLeftIcon aria-hidden="true" />
-          </button>
-          <button
-            type="button"
+          </Button>
+          <Button
+            variant="ghost"
+            size="bar"
             aria-label={copy.aside.nextMonth}
             onClick={() => setMonth(addMonths(month, 1))}
-            className={iconButton}
           >
             <ChevronRightIcon aria-hidden="true" />
-          </button>
+          </Button>
         </div>
       </header>
 

@@ -3,6 +3,7 @@ import { MenuIcon } from "lucide-react";
 import { useLocation } from "react-router-dom";
 
 import { copy } from "@/components/dashboard/copy";
+import { Button } from "@/components/ui/button";
 import {
   Sheet,
   SheetContent,
@@ -25,11 +26,10 @@ export function MobileNav(): JSX.Element {
 
   return (
     <Sheet open={open} onOpenChange={setOpen}>
-      <SheetTrigger
-        aria-label={copy.header.openNav}
-        className="grid size-11 shrink-0 cursor-pointer place-items-center rounded-full text-ink transition-colors duration-fast hover:bg-fill md:hidden [&_svg]:size-5.5"
-      >
-        <MenuIcon aria-hidden="true" />
+      <SheetTrigger asChild>
+        <Button variant="ghost" size="bar" aria-label={copy.header.openNav} className="md:hidden">
+          <MenuIcon aria-hidden="true" />
+        </Button>
       </SheetTrigger>
 
       <SheetContent side="left">
