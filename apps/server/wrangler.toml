@@ -2,6 +2,11 @@ name = "dailify-server"
 main = "src/index.ts"
 compatibility_date = "2026-01-01"
 compatibility_flags = ["nodejs_compat"]
+# Explicit, because deploy treats a missing [observability] as off and would disable Workers Logs.
+upload_source_maps = true
+
+[observability]
+enabled = true
 
 [[d1_databases]]
 binding = "DB"
