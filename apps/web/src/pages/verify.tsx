@@ -1,12 +1,14 @@
 import { Loader2Icon } from "lucide-react";
 import { useEffect, useState } from "react";
+import { Helmet } from "react-helmet-async";
 import { Link, useNavigate } from "react-router-dom";
 
-import { internalPath, type AuthErrorKey } from "@/components/auth/auth-state";
+import type { AuthErrorKey } from "@/components/auth/auth-state";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { copy } from "@/components/auth/copy";
 import { Button } from "@/components/ui/button";
 import { authClient } from "@/lib/auth";
+import { internalPath } from "@/lib/platform";
 
 type Status = "ready" | "verifying" | "invalid" | AuthErrorKey;
 
@@ -62,6 +64,9 @@ export default function Verify() {
   // Mesma casca de /login e /signup, sem título, cross-link ou rodapé legal — todos opcionais.
   return (
     <AuthShell>
+      <Helmet>
+        <title>{copy.verify.pageTitle}</title>
+      </Helmet>
       <div className="flex flex-col items-center gap-4 pt-24 text-center">
         {/* `status`: o desfecho troca o texto sem navegação, então sem live region o leitor de
             tela não anuncia nada. */}

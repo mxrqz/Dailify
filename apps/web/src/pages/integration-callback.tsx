@@ -50,9 +50,9 @@ export default function IntegrationCallback(): JSX.Element {
   }, []);
 
   return (
-    <main className="flex min-h-dvh flex-col items-center justify-center gap-3" aria-busy="true">
-      <Loader2Icon className="size-6 animate-spin text-primary" aria-hidden="true" />
-      <p className="text-sm text-muted-foreground">{t.connecting.replace("{name}", name)}</p>
+    <main className="flex flex-col items-center gap-3 pt-24" aria-busy="true">
+      <Loader2Icon className="size-6 animate-spin text-ink-secondary" aria-hidden="true" />
+      <p className="text-subhead text-ink-secondary">{t.connecting.replace("{name}", name)}</p>
     </main>
   );
 }

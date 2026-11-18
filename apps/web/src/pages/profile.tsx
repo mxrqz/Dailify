@@ -20,7 +20,7 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { authClient, useSession } from "@/lib/auth";
+import { authClient, settle, useSession } from "@/lib/auth";
 import { formString } from "@/lib/form";
 import { signOutAndReload } from "@/lib/native-auth";
 
@@ -61,7 +61,7 @@ export default function ProfilePage(): JSX.Element {
     if (name === user?.name) return setEditOpen(false);
 
     setSaving(true);
-    const { error } = await authClient.updateUser({ name }).catch(() => ({ error: true }));
+    const { error } = await settle(authClient.updateUser({ name }));
     setSaving(false);
     if (error) return void toast.error(copy.profile.nameError);
     setEditOpen(false);

@@ -1,3 +1,4 @@
+import { Helmet } from "react-helmet-async";
 import { Navigate, useSearchParams } from "react-router-dom";
 
 import type { AuthFailure, AuthMode } from "@/components/auth/auth-state";
@@ -8,7 +9,7 @@ import { EmailForm } from "@/components/auth/email-form";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import { useEmailLinkAuth } from "@/components/auth/use-email-link-auth";
 import { useSession } from "@/lib/auth";
-import { isTauri } from "@/lib/native-auth";
+import { isTauri } from "@/lib/platform";
 
 /**
  * Corpo comum de /login e /signup. As duas rotas são a MESMA mecânica — a separação é de
@@ -63,6 +64,9 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
             crossLinkTo: mode === "signUp" ? "/login" : "/signup",
           })}
     >
+      <Helmet>
+        <title>{text.pageTitle}</title>
+      </Helmet>
       {inbox ? (
         <CheckInbox
           email={inbox.email}

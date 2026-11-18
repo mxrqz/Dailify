@@ -66,6 +66,7 @@ describe("parseOpenLink", () => {
     expect(parseOpenLink("https://mewki.mxrqz.com/billing")).toBeNull();
     expect(parseOpenLink("https://mewki.mxrqz.com/apple")).toBeNull();
     expect(parseOpenLink("mewki://open//evil.example")).toBe("/dashboard");
+    expect(parseOpenLink("mewki://open/\\evil.example?x=1")).toBe("/dashboard");
     expect(parseOpenLink("not a url")).toBeNull();
   });
 });

@@ -5,17 +5,19 @@ rules: [/RULES.md](../../../../RULES.md).
 
 ## Files
 
-- `auth.ts`: the Better Auth client, `setBearer`/`authHeaders`, `useSession`, `planOf`. With
+- `auth.ts`: the Better Auth client, `setBearer`/`authHeaders`, `useSession`, `planOf`, `settle`. With
   `native-auth.ts` it is the only `better-auth` import, so tests mock `@/lib/auth` alone.
-- `native-auth.ts`: `isTauri`, `signedOutPath`, the device-bound magic link, keyring access, the
-  deep-link parsers, `initNativeAuth`, `signOut`, `signOutAndReload`.
+- `platform.ts`: `isTauri`, `signedOutPath`, `internalPath` (the open-redirect guard). No imports,
+  so `components/auth/auth-state.ts` and the pages take the guard from here.
+- `native-auth.ts`: the device-bound magic link, keyring access, the deep-link parsers,
+  `initNativeAuth`, `signOut`, `signOutAndReload`. It still re-exports `isTauri` for
+  `components/integrations.tsx`.
 - `back-button.ts` (Android back), `haptics.ts` (`haptic(kind)`), `open-external.ts`
   (`openExternal`).
-- `form.ts`: `formString` reads `FormData` without `as string`. `utils.ts`: `cn()`, `toText`.
+- `form.ts`: `formString` reads `FormData` without `as string`. `utils.ts`: `cn()`.
 - No React components, no app-data calls (`functions/api.ts`), no imports from `components/`: lib
-  is imported by everything, so that edge makes cycles. That is why `parseOpenLink` re-implements
-  `internalPath`. The one outward import is `forgetUser` from `functions/offline`.
-- `formFile` has no caller and `signOutNative` needs no export; drop them when you touch the file.
+  is imported by everything, so that edge makes cycles. The one outward import is `forgetUser`
+  from `functions/offline`.
 
 ## Session
 
@@ -35,10 +37,9 @@ rules: [/RULES.md](../../../../RULES.md).
 
 - `parseAuthLink` accepts only `mewki://auth?token=` and `https://<APP_HOST>/auth/app?token=`, with
   one token matching `TOKEN_RE` and no port, credentials or hash. `parseOpenLink` accepts
-  `mewki://open/<path>` and `https://<APP_HOST>/app/<path>`; a path that starts with `//` or `/\`
-  becomes `/dashboard`.
-- Change them only together with `native-auth.test.ts`. The `/\host` case has no test yet; add it
-  when you touch the parser.
+  `mewki://open/<path>` and `https://<APP_HOST>/app/<path>`; a path `internalPath` rejects becomes
+  `/dashboard`, without its query.
+- Change them only together with `native-auth.test.ts`.
 - `initNativeAuth` dedupes tokens: the same link arrives via `getCurrent` and `onOpenUrl`, and the
   second verify would fail on the deleted verifier. Open links navigate with `pushState` plus a
   synthetic `popstate`, which `BrowserRouter` follows.

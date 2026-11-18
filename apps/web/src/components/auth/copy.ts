@@ -49,8 +49,7 @@ export const copy = {
     // 10 minutos é o `expiresIn` do magicLink no servidor (apps/server). Se mudar lá, mude aqui.
     hint: "Clique no link para entrar. Ele vale por 10 minutos.",
     resend: "Reenviar link",
-    resendIn: "Reenviar em",
-    seconds: "s",
+    resendIn: "Reenviar em {seconds}s",
     back: "Usar outro e-mail",
     spam: "Não chegou? Olhe a caixa de spam ou promoções.",
   },

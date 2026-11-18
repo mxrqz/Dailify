@@ -1,10 +1,9 @@
-import { useEffect, useRef } from "react";
 import { Helmet } from "react-helmet-async";
-import { Link, useLocation } from "react-router-dom";
+import { useLocation } from "react-router-dom";
 
-import { AuthShell } from "@/components/auth/auth-shell";
 import { copy } from "@/components/auth/copy";
-import { Button } from "@/components/ui/button";
+import { HandoffNotice, useOpenOnce } from "@/components/auth/handoff";
+import { internalPath } from "@/lib/platform";
 
 /**
  * `/app/<path>`: where Stripe sends someone who paid from the app. With the app installed the
@@ -12,31 +11,20 @@ import { Button } from "@/components/ui/button";
  */
 export default function AppReturn() {
   const { pathname, search } = useLocation();
-  const path = pathname.slice("/app".length) || "/dashboard";
+  // `/app//evil.com` still matches `/app/*`, and a `Link` to `//evil.com` leaves the site.
+  const path = internalPath(pathname.slice("/app".length) || "/dashboard");
   const deepLink = `mewki://open${path}${search}`;
-
-  // One try only (StrictMode runs effects twice): repeating stacks system dialogs.
-  const tried = useRef(false);
-  useEffect(() => {
-    if (tried.current) return;
-    tried.current = true;
-    window.location.href = deepLink;
-  }, [deepLink]);
+  useOpenOnce(deepLink);
 
   return (
-    <AuthShell>
+    <HandoffNotice
+      message={copy.appReturn.message}
+      open={{ href: deepLink, label: copy.appReturn.open }}
+      browser={{ to: `${path}${search}`, label: copy.appReturn.browser }}
+    >
       <Helmet>
         <title>{copy.appReturn.pageTitle}</title>
       </Helmet>
-      <div className="flex flex-col items-center gap-4 pt-24 text-center">
-        <p className="text-body text-ink">{copy.appReturn.message}</p>
-        <Button asChild size="lg" className="w-full">
-          <a href={deepLink}>{copy.appReturn.open}</a>
-        </Button>
-        <Button asChild size="lg" variant="secondary" className="w-full">
-          <Link to={`${path}${search}`}>{copy.appReturn.browser}</Link>
-        </Button>
-      </div>
-    </AuthShell>
+    </HandoffNotice>
   );
 }

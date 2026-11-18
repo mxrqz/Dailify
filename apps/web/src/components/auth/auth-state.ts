@@ -2,6 +2,7 @@
  * Lógica pura das telas de auth. Fica fora do React de propósito: o que merece teste precisa ser
  * função pura. `use-email-link-auth.ts` é só o fio que liga o Better Auth a este reducer.
  */
+import { internalPath } from "@/lib/platform";
 
 export type AuthMode = "signIn" | "signUp";
 
@@ -90,16 +91,6 @@ export function redirectTarget(state: unknown): string {
   const pathname = "pathname" in from && typeof from.pathname === "string" ? from.pathname : "";
   const search = "search" in from && typeof from.search === "string" ? from.search : "";
   return internalPath(pathname + search);
-}
-
-/**
- * Só caminho interno. `//evil.com` (e `/\evil.com`, que o navegador normaliza pro mesmo) é
- * protocol-relative: sairia do site pelo `<Navigate>` e pelo `callbackURL` do Better Auth.
- */
-export function internalPath(path: string | null | undefined): string {
-  if (!path?.startsWith("/") || path.startsWith("//") || path.startsWith("/\\"))
-    return "/dashboard";
-  return path;
 }
 
 export function canResend(sentAt: number, now: number): boolean {

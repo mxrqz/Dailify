@@ -11,9 +11,9 @@ import { accountGroups, accountPage } from "@/components/settings-list";
 import { Button } from "@/components/ui/button";
 import { parseUserAgent } from "@/functions/user-agent";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
-import { authClient, useSession } from "@/lib/auth";
+import { authClient, settle, useSession } from "@/lib/auth";
 
-type Session = NonNullable<Awaited<ReturnType<typeof authClient.listSessions>>["data"]>[number];
+type Session = typeof authClient.$Infer.Session.session;
 
 /** Uma sessão: o aparelho, onde e quando, e "Este aparelho" ou o "Encerrar" vermelho suave. */
 export function SessionRow({
@@ -60,9 +60,7 @@ export default function SecurityPage(): JSX.Element {
   const [sessions, setSessions] = useState<Session[]>();
 
   const load = async () => {
-    const { data, error } = await authClient
-      .listSessions()
-      .catch(() => ({ data: null, error: true }));
+    const { data, error } = await settle(authClient.listSessions());
     if (error) return void toast.error(copy.profile.sessionsError);
     if (data) setSessions(data);
   };
@@ -74,13 +72,13 @@ export default function SecurityPage(): JSX.Element {
   }, []);
 
   const revoke = async (token: string) => {
-    const { error } = await authClient.revokeSession({ token }).catch(() => ({ error: true }));
+    const { error } = await settle(authClient.revokeSession({ token }));
     if (error) toast.error(copy.profile.revokeError);
     await load();
   };
 
   const revokeOthers = async () => {
-    const { error } = await authClient.revokeOtherSessions().catch(() => ({ error: true }));
+    const { error } = await settle(authClient.revokeOtherSessions());
     if (error) toast.error(copy.profile.revokeError);
     await load();
   };

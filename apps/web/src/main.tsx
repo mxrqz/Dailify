@@ -6,7 +6,8 @@ import { toast } from "sonner";
 import App from "./App";
 import { copy } from "@/components/auth/copy";
 import { initBackButton } from "@/lib/back-button";
-import { initNativeAuth, isTauri } from "@/lib/native-auth";
+import { initNativeAuth } from "@/lib/native-auth";
+import { isTauri } from "@/lib/platform";
 
 // Deploy novo troca os hashes e o SW apaga o precache velho: a aba aberta há horas pede uma rota
 // lazy que não existe mais. Recarrega pro index novo; o piso de 10s impede loop se o chunk quebrou.

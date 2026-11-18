@@ -3,6 +3,7 @@ import { StrictMode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { HelmetProvider } from "react-helmet-async";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 const { verify, notify } = vi.hoisted(() => ({ verify: vi.fn(), notify: vi.fn() }));
@@ -19,14 +20,16 @@ const renderAt = (hash: string) => {
   window.history.replaceState(null, "", `/verify${hash}`);
   return render(
     <StrictMode>
-      <MemoryRouter initialEntries={["/verify"]}>
-        <Routes>
-          <Route path="/verify" element={<Verify />} />
-          <Route path="/dashboard" element={<p>dashboard</p>} />
-          <Route path="/login" element={<p>login</p>} />
-          <Route path="/billing" element={<p>billing</p>} />
-        </Routes>
-      </MemoryRouter>
+      <HelmetProvider>
+        <MemoryRouter initialEntries={["/verify"]}>
+          <Routes>
+            <Route path="/verify" element={<Verify />} />
+            <Route path="/dashboard" element={<p>dashboard</p>} />
+            <Route path="/login" element={<p>login</p>} />
+            <Route path="/billing" element={<p>billing</p>} />
+          </Routes>
+        </MemoryRouter>
+      </HelmetProvider>
     </StrictMode>,
   );
 };

@@ -4,7 +4,7 @@ import { Link, useLocation } from "react-router-dom";
 
 import { copy } from "@/components/auth/copy";
 import { Mew, type MewMood } from "@/components/mew/mew";
-import { isTauri } from "@/lib/native-auth";
+import { isTauri } from "@/lib/platform";
 import { cn } from "@/lib/utils";
 
 const backClass =

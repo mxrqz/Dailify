@@ -1,38 +1,37 @@
 import { MotionConfig } from "motion/react";
 import { lazy, Suspense } from "react";
 import { BrowserRouter as Router, Navigate, Routes, Route } from "react-router-dom";
-import { ThemeProvider } from "./components/theme-provider";
+import { ThemeProvider } from "@/components/theme-provider";
 import "./global.css";
-import Home from "./pages/home";
-import ProtectedRoute from "./components/protected-route";
-import { copy } from "@/components/auth/copy";
-import { DailifyProvider } from "./components/dailifyContext";
+import Home from "@/pages/home";
+import ProtectedRoute from "@/components/protected-route";
+import { DailifyProvider } from "@/components/dailifyContext";
 import { Helmet, HelmetProvider } from "react-helmet-async";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
-import { ErrorBoundary } from "./components/error-boundary";
-import { AppLayout } from "./components/app-layout";
+import { ErrorBoundary } from "@/components/error-boundary";
+import { AppLayout } from "@/components/app-layout";
 import { Refraction } from "@/components/kit/refraction";
 import { ScrollRestoration } from "@/components/scroll-restoration";
-import { isTauri } from "@/lib/native-auth";
+import { isTauri } from "@/lib/platform";
 
 // Só o dashboard (start_url do PWA) vai no bundle de entrada; o resto baixa quando a rota abre.
-const LandingPage = lazy(() => import("./pages/landingPage"));
-const Login = lazy(() => import("./pages/login"));
-const SignUp = lazy(() => import("./pages/signup"));
-const Verify = lazy(() => import("./pages/verify"));
-const AuthApp = lazy(() => import("./pages/auth-app"));
-const AppReturn = lazy(() => import("./pages/app-return"));
-const BillingPage = lazy(() => import("./pages/billing"));
-const PremiumPage = lazy(() => import("./pages/premium"));
-const ProfilePage = lazy(() => import("./pages/profile"));
-const SecurityPage = lazy(() => import("./pages/security"));
-const SettingsPage = lazy(() => import("./pages/settings"));
-const IntegrationsPage = lazy(() => import("./pages/integrations"));
-const IntegrationCallback = lazy(() => import("./pages/integration-callback"));
-const TaskPreview = lazy(() => import("./pages/[id]/taskPreview"));
-const PrivacyPage = lazy(() => import("./pages/privacy"));
-const TermsPage = lazy(() => import("./pages/terms"));
+const LandingPage = lazy(() => import("@/pages/landingPage"));
+const Login = lazy(() => import("@/pages/login"));
+const SignUp = lazy(() => import("@/pages/signup"));
+const Verify = lazy(() => import("@/pages/verify"));
+const AuthApp = lazy(() => import("@/pages/auth-app"));
+const AppReturn = lazy(() => import("@/pages/app-return"));
+const BillingPage = lazy(() => import("@/pages/billing"));
+const PremiumPage = lazy(() => import("@/pages/premium"));
+const ProfilePage = lazy(() => import("@/pages/profile"));
+const SecurityPage = lazy(() => import("@/pages/security"));
+const SettingsPage = lazy(() => import("@/pages/settings"));
+const IntegrationsPage = lazy(() => import("@/pages/integrations"));
+const IntegrationCallback = lazy(() => import("@/pages/integration-callback"));
+const TaskPreview = lazy(() => import("@/pages/[id]/taskPreview"));
+const PrivacyPage = lazy(() => import("@/pages/privacy"));
+const TermsPage = lazy(() => import("@/pages/terms"));
 
 export default function App() {
   return (
@@ -146,44 +145,11 @@ export default function App() {
                         <Route path="/premium" element={<PremiumPage />} />
                       </Route>
 
-                      <Route
-                        path="/login"
-                        element={
-                          <>
-                            <Helmet>
-                              <title>{copy.signIn.pageTitle}</title>
-                            </Helmet>
+                      <Route path="/login" element={<Login />} />
 
-                            <Login />
-                          </>
-                        }
-                      />
+                      <Route path="/signup" element={<SignUp />} />
 
-                      <Route
-                        path="/signup"
-                        element={
-                          <>
-                            <Helmet>
-                              <title>{copy.signUp.pageTitle}</title>
-                            </Helmet>
-
-                            <SignUp />
-                          </>
-                        }
-                      />
-
-                      <Route
-                        path="/verify"
-                        element={
-                          <>
-                            <Helmet>
-                              <title>{copy.verify.pageTitle}</title>
-                            </Helmet>
-
-                            <Verify />
-                          </>
-                        }
-                      />
+                      <Route path="/verify" element={<Verify />} />
 
                       <Route path="/auth/app" element={<AuthApp />} />
 

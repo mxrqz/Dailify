@@ -86,7 +86,11 @@ export default function PrivacyPage() {
               </p>
               <p>
                 O uso e a transferência de informações recebidas das APIs do Google seguem a{" "}
-                <a href="https://developers.google.com/terms/api-services-user-data-policy">
+                <a
+                  href="https://developers.google.com/terms/api-services-user-data-policy"
+                  target="_blank"
+                  rel="noreferrer"
+                >
                   Política de Dados do Usuário dos Serviços de API do Google
                 </a>
                 , incluindo os requisitos de Uso Limitado.

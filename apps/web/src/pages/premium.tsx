@@ -1,5 +1,5 @@
 import { InfoIcon } from "lucide-react";
-import { Link } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 import { PageHeader } from "@/components/kit/page-header";
@@ -91,12 +91,12 @@ export function PlansView({
 /** Escolher plano — pública, fica fora do `ProtectedRoute` de propósito (é a página de venda). */
 export default function PremiumPage(): JSX.Element {
   const user = useSession().data?.user;
+  const navigate = useNavigate();
+  const location = useLocation();
 
   const handleSelectPlan = async (role: PlanRole, cycle: Cycle) => {
-    if (!user) {
-      toast.error(copy.page.signInFirst);
-      return;
-    }
+    // After the login, `redirectTarget` brings them back here to pick the plan again.
+    if (!user) return navigate("/login", { state: { from: location } });
 
     const { url } = await checkout(cycle === "yearly" ? `${role}-year` : role);
     if (url) await openExternal(url);

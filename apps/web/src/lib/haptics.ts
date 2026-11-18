@@ -1,4 +1,4 @@
-import { isTauri } from "@/lib/native-auth";
+import { isTauri } from "@/lib/platform";
 
 type Haptic = "impact" | "selection" | "success";
 
