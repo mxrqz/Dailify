@@ -23,13 +23,11 @@ Repo-wide rules: [/RULES.md](../../../../RULES.md). Token and motion policy:
 
 - Indexed by `Task.priority` 0-4. Each entry is a full literal class (`"text-priority-3"`), never
   `` `text-priority-${n}` ``: Tailwind v4 generates only class names it finds verbatim in source.
-- `conts.test.ts` checks every table in its `scales` map: 5 entries, entry `i` names
-  `priority-i`/`priority-bg-i` (an out-of-order table paints "Urgente" grey and breaks nothing
-  else), no raw palette color, no `/opacity`. Add any new table to that map.
-- Live: `priorityText` and `priorityTextColor` (task-card, task-meta-menus, task-form). The
-  `priorityBorderColor`, `priorityBgColor`, `prioritySelected*`, `tagsBgColors2`,
-  `tagsBorderColors2` and `weekDays` exports have no caller. Weekday names and order come from
-  `weekDays`/`dayMap` in `@dailify/shared`.
+- `conts.test.ts` checks every table in its `scales` map: 5 entries, entry `i` names `priority-i`
+  (an out-of-order table paints "Urgente" grey and breaks nothing else), no raw palette color, no
+  `/opacity`. Add any new table to that map.
+- Tables: `priorityText` and `priorityTextColor` (task-card, task-meta-menus, task-form). Weekday
+  names and order come from `weekDays`/`dayMap` in `@dailify/shared`.
 - `priorityText` is pt-BR copy outside a copy.ts (legacy); new labels go in copy.ts.
 
 ## Plans

@@ -1,12 +1,6 @@
 import { describe, test, expect } from "vitest";
 import { PLAN_ID, planMap } from "./conts";
-import {
-  priorityText,
-  priorityTextColor,
-  priorityBorderColor,
-  priorityBgColor,
-  prioritySelectedBgColor,
-} from "./conts";
+import { priorityText, priorityTextColor } from "./conts";
 
 describe("plan ids", () => {
   test("every PLAN_ID value is a key in planMap", () => {
@@ -17,13 +11,7 @@ describe("plan ids", () => {
 });
 
 describe("priority scale", () => {
-  const scales = {
-    priorityText,
-    priorityTextColor,
-    priorityBorderColor,
-    priorityBgColor,
-    prioritySelectedBgColor,
-  };
+  const scales = { priorityText, priorityTextColor };
 
   test("every scale has exactly 5 levels (0-4)", () => {
     for (const [name, scale] of Object.entries(scales)) {
@@ -32,21 +20,11 @@ describe("priority scale", () => {
   });
 
   test("color scales point at priority tokens, never raw Tailwind colors", () => {
-    const colorScales = {
-      priorityTextColor,
-      priorityBorderColor,
-      priorityBgColor,
-      prioritySelectedBgColor,
-    };
-    for (const [name, scale] of Object.entries(colorScales)) {
-      scale.forEach((cls, i) => {
-        // Aceita `…priority-0` (cor sólida) e `…priority-bg-0` (o fill suave do chip) — o que
-        // importa é o índice do token bater com a posição no array, que é o erro que dói:
-        // um array fora de ordem pinta "urgente" de cinza sem quebrar nada.
-        expect(cls, `${name}[${i}]`).toMatch(new RegExp(`priority-(bg-)?${i}\\b`));
-        expect(cls, `${name}[${i}]`).not.toMatch(/-(red|green|yellow|orange|gray|zinc)-\d/);
-      });
-    }
+    priorityTextColor.forEach((cls, i) => {
+      // An out-of-order table paints "Urgente" grey and breaks nothing else.
+      expect(cls, `priorityTextColor[${i}]`).toMatch(new RegExp(`priority-${i}\\b`));
+      expect(cls, `priorityTextColor[${i}]`).not.toMatch(/-(red|green|yellow|orange|gray|zinc)-\d/);
+    });
   });
 
   test("no scale uses /opacity", () => {

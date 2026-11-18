@@ -3,7 +3,7 @@
 Repo-wide rules: [/RULES.md](../../../../RULES.md). The model is owned by `@dailify/shared`.
 
 - `types.ts` only renames shared types (`TaskProps` = `Task`, `InvoicesProps` = `Invoice`,
-  `PaymentDetailsProps` = `PaymentDetails`) plus `FormDataValues`, which nothing imports.
+  `PaymentDetailsProps` = `PaymentDetails`).
 - New code imports `Task`/`Invoice`/`PaymentDetails` from `@dailify/shared` and adds nothing here.
   Move a file off the aliases when you touch it; the folder goes once none are left.
 - Wire response types belong in `@dailify/shared`, not here or in `functions/api.ts`
