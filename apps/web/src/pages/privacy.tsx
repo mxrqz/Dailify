@@ -6,10 +6,10 @@ import { LegalPage, Placeholder } from "@/components/legal-page";
 export default function PrivacyPage() {
   return (
     <LegalPage
-      pageTitle="Mewki - Política de Privacidade"
+      pageTitle={copy.legal.privacy.pageTitle}
       bar={copy.legal.privacy.bar}
-      title="Política de Privacidade"
-      updated="Última atualização: 17 de novembro de 2026"
+      title={copy.legal.privacy.title}
+      updated={copy.legal.updated}
       intro={
         <>
           Esta Política descreve como a Mewki ("nós") coleta, usa e protege seus dados pessoais, em

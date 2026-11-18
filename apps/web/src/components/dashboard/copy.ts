@@ -476,11 +476,19 @@ export const copy = {
     toc: "Nesta página",
     questions: "Dúvidas?",
     home: "Voltar ao início",
+    updated: "Última atualização: 17 de novembro de 2026",
     privacy: {
+      pageTitle: "Mewki - Política de Privacidade",
+      title: "Política de Privacidade",
       bar: "Privacidade",
       contact: "Fale com a gente sobre seus dados e direitos pela LGPD.",
     },
-    terms: { bar: "Termos", contact: "Fale com a gente sobre sua conta, plano ou estes Termos." },
+    terms: {
+      pageTitle: "Mewki - Termos de Uso",
+      title: "Termos de Uso",
+      bar: "Termos",
+      contact: "Fale com a gente sobre sua conta, plano ou estes Termos.",
+    },
   },
 } as const;
 
