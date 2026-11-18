@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { canResend, RESEND_COOLDOWN_MS } from "@/components/auth/auth-state";
 import { copy } from "@/components/auth/copy";
 import { Button } from "@/components/ui/button";
+import { fill } from "@/functions/functions";
 
 /** Segundos que faltam pro reenvio liberar. Zero = liberado. */
 function useCooldown(sentAt: number): number {
@@ -71,9 +72,7 @@ export function CheckInbox({
           disabled={remaining > 0 || busy}
         >
           <RotateCwIcon className={busy ? "animate-spin" : undefined} />
-          {remaining > 0
-            ? `${copy.inbox.resendIn} ${remaining}${copy.inbox.seconds}`
-            : copy.inbox.resend}
+          {remaining > 0 ? fill(copy.inbox.resendIn, { seconds: remaining }) : copy.inbox.resend}
         </Button>
 
         <Button size="lg" variant="ghost" onClick={onBack}>
