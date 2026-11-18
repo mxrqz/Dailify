@@ -1,4 +1,4 @@
-import { useReducedMotion } from "motion/react";
+import { useInView, useReducedMotion } from "motion/react";
 import {
   type RefObject,
   forwardRef,
@@ -10,7 +10,6 @@ import {
 } from "react";
 
 import { copy } from "@/components/dashboard/copy";
-import { useInView } from "@/components/landing/kit/use-in-view";
 import { cn } from "@/lib/utils";
 
 import { GAZE, MOODS, type MewMood, MewArt, type Pose, poseAttrs, restPose } from "./mew-static";
@@ -510,7 +509,7 @@ export const Mew = forwardRef<MewHandle, MewProps>(function Mew(
 ) {
   const svgRef = useRef<SVGSVGElement>(null);
   const reduce = useReducedMotion() ?? false;
-  const inView = useInView(svgRef);
+  const inView = useInView(svgRef, { margin: "64px" });
   const live = useRef<Live>({
     behaviors: { ...ALL_ON, ...behaviors },
     lookAt,

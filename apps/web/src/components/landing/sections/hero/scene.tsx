@@ -1,4 +1,4 @@
-import { useReducedMotion } from "motion/react";
+import { useInView, useReducedMotion } from "motion/react";
 import {
   ArrowUp,
   Bell,
@@ -16,7 +16,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 
 import { Bubble } from "@/components/landing/kit/bubble";
 import { Tail } from "@/components/landing/kit/tail";
-import { useInView } from "@/components/landing/kit/use-in-view";
 import { Mew, type MewHandle } from "@/components/mew/mew";
 import { damp } from "@/components/mew/spring";
 import { cn } from "@/lib/utils";
@@ -130,7 +129,7 @@ function fly(wrap: HTMLElement, target: HTMLElement) {
 export function HeroScene() {
   const reduce = useReducedMotion() ?? false;
   const root = useRef<HTMLDivElement>(null);
-  const inView = useInView(root);
+  const inView = useInView(root, { margin: "64px" });
   const mew = useRef<MewHandle>(null);
   const look = useRef<Element | null>(null);
   const caret = useRef<HTMLSpanElement>(null);

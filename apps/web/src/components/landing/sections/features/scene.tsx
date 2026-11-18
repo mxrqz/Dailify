@@ -1,7 +1,6 @@
-import { motion, useReducedMotion } from "motion/react";
+import { motion, useInView, useReducedMotion } from "motion/react";
 import { Fragment, type ReactNode, type RefObject, useEffect, useRef } from "react";
 
-import { useInView } from "@/components/landing/kit/use-in-view";
 
 export type Wait = (ms: number) => Promise<void>;
 
@@ -12,7 +11,7 @@ export type Wait = (ms: number) => Promise<void>;
  */
 export function useScene(ref: RefObject<Element | null>, script: (wait: Wait) => Promise<void>) {
   const reduce = useReducedMotion() ?? false;
-  const inView = useInView(ref);
+  const inView = useInView(ref, { margin: "64px" });
   const live = useRef(script);
 
   useEffect(() => {

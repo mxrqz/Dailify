@@ -1,8 +1,7 @@
-import { motion, useReducedMotion } from "motion/react";
+import { motion, useInView, useReducedMotion } from "motion/react";
 import { type ComponentType, type SVGProps, useEffect, useRef, useState } from "react";
 
 import { GoogleCalendarLogo } from "@/components/logos";
-import { useInView } from "@/components/landing/kit/use-in-view";
 import { Mew } from "@/components/mew/mew";
 import { cn } from "@/lib/utils";
 
@@ -63,7 +62,7 @@ export function WorldV2() {
   const tiles = useRef<(HTMLSpanElement | null)[]>([]);
   const target = useRef<Element | null>(null);
   const reduce = useReducedMotion() ?? false;
-  const inView = useInView(gridRef);
+  const inView = useInView(gridRef, { margin: "64px" });
   // `done` = apps acesos, `linked` = linhas já completas, ambos contando na ORDER
   const [done, setDone] = useState(0);
   const [linked, setLinked] = useState(0);

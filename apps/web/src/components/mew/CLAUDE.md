@@ -8,10 +8,10 @@ Repo-wide rules: `/RULES.md` (Frontend and Motion apply most here).
 - `mew-static.tsx`: data + art. `MOODS` (`satisfies Record<string, Mood>`; `MewMood` derives from
   its keys), `GAZE`, pure `restPose(mood, happy)` and `poseAttrs(pose)`, the `MewArt` SVG with
   parts tagged `data-mew` and the mood decoration groups (`mew-waves`, `mew-think`, `mew-zz`,
-  `mew-q`). `MewStatic` = `MewArt` without `pose` (`components/brand-cat.tsx` re-exports it).
+  `mew-q`). `MewStatic` = `MewArt` without `pose`.
 - `mew.tsx`: `Mew` and its imperative `createMew` controller (rAF half-life springs from
-  `spring.ts`, WAAPI for blink, ear flick, hop and the `enter` pop). It imports `useInView` from
-  `components/landing/kit`: legacy direction, move the hook here when touching it.
+  `spring.ts`, WAAPI for blink, ear flick, hop and the `enter` pop). In-view gating is motion's
+  `useInView(ref, { margin: "64px" })`.
 - `mew.css`: decorations keyed by `.mew[data-mood=…]`, plus the `prefers-reduced-motion` block.
 - `eye-path.ts` morphs the open ellipse into the happy "^"; `head-path.ts` holds `HEAD_D`.
 

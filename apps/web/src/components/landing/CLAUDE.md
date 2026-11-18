@@ -12,8 +12,8 @@ local here.
 - Private parts sit beside their section: `hero/scene.tsx` and `hero/script.ts`, the
   `features/*-art.tsx` demos with `features/scene.tsx` (`useScene`, `Slot`, `Words`), and
   `world/logos.tsx`.
-- `kit/` is not landing-only. It is the Mew speech kit (`Bubble`, `Ears`, `Tail`, `MessageBox`,
-  `useInView`), and `mew`, `mew-chat` and `dashboard/composer-views` import it; `integrations.tsx`
+- `kit/` is not landing-only. It is the Mew speech kit (`Bubble`, `Ears`, `Tail`, `MessageBox`),
+  and `mew`, `mew-chat` and `dashboard/composer-views` import it; `integrations.tsx`
   imports `world/logos.tsx`. Both placements are legacy: add no new app -> landing import (RULES
   "Where code goes"), and move a piece to `components/mew/` or `components/kit/` once the app needs
   it.
@@ -73,5 +73,5 @@ local here.
   `reduce` before the first render, restore it afterwards, and assert the final-frame text
   (`features.render.test.tsx`).
 - `src/test/setup.ts` stubs IntersectionObserver, ResizeObserver, matchMedia and `Element.animate`.
-  The observer stub never fires, so `useInView` stays false: scenes never run in a test, which
+  The observer stub never fires, so motion's `useInView` stays false: scenes never run in a test, which
   renders either the initial state or (with reduce) the final frame.
