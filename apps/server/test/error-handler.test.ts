@@ -24,4 +24,10 @@ describe("global error handler", () => {
     expect(res.headers.get("content-type")).toContain("application/json");
     expect(await res.json()).toEqual({ error: "Internal error" });
   });
+
+  it("answers an unknown route with a JSON 404 envelope", async () => {
+    const res = await app.request("/nope", {}, env);
+    expect(res.status).toBe(404);
+    expect(await res.json()).toEqual({ error: "Not found" });
+  });
 });

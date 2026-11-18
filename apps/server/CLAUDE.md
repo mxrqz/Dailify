@@ -7,10 +7,11 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
 
 ## Layout
 
-- `src/index.ts`: `Env` (bindings + secrets) and the app. Order: CORS (built per request, since it
-  reads `ALLOWED_ORIGIN` through `lib/origin.ts`), public `/health`, `AUTH_LIMITER` on
-  `/auth/sign-in/*` and `/auth/magic-link/*`, Better Auth on `/auth/*`, the 7 route modules,
-  `app.onError` -> `fail(c, 500, "Internal error")`. The default export is the app with `scheduled`
+- `src/index.ts`: `Env` (bindings + secrets), `AppEnv` and the app. Order: CORS (its `origin`
+  callback reads `ALLOWED_ORIGIN` from `c.env` through `lib/origin.ts`), public `/health`,
+  `AUTH_LIMITER` on `/auth/sign-in/*` and `/auth/magic-link/*`, Better Auth on `/auth/*`, the 7 route
+  modules (voice before tasks: see `src/routes/CLAUDE.md`), `app.notFound` and `app.onError` ->
+  `fail(c, 500, "Internal error")`. The default export is the app with `scheduled`
   attached, so tests keep `app.request()`.
 - `src/routes/` HTTP validation and wiring · `src/middleware/` `requireAuth`, `rateLimit` ·
   `src/db/` D1 queries · `src/lib/` services (AI, Stripe, push, e-mail, origins, input parsing) ·
@@ -19,8 +20,8 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
   `cloudflare:workers` env.
 - `migrations/` D1 schema · `test/` the worker test suite · `scripts/`: `vapid.ts` (`bun run vapid`),
   `auth-schema.ts` (Better Auth CLI input for 0015). Each script's header has its exact command.
-- There is no shared Hono env type yet: `{ Bindings: Env; Variables: { userId; plan } }` is repeated
-  per file. Import `Env` from `../index` (type-only); never redeclare it.
+- Every Hono app, `Context` and `MiddlewareHandler` uses `AppEnv` from `../index` (type-only), as
+  does `Env`; never redeclare either. `db/limits.ts` still spells the literal out.
 
 ## Auth
 
@@ -42,7 +43,7 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
 
 - App routes answer `{ ...extra, error }` through `fail` (`lib/errors.ts`).
 - `/auth/*` is Better Auth's handler and answers its own `{ message, code }`.
-- Unknown routes get Hono's text/plain `404 Not Found`; there is no `app.notFound` yet.
+- Unknown routes get `app.notFound` -> `fail(c, 404, "Not found")`.
 
 ## wrangler.toml
 

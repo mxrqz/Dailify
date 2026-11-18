@@ -20,7 +20,7 @@ provider work in `lib/` and `integrations/`.
 ## A new module
 
 ```ts
-const things = new Hono<{ Bindings: Env; Variables: { userId: string; plan: Role } }>();
+const things = new Hono<AppEnv>();
 things.use("*", requireAuth);
 things.use("*", rateLimit("API_LIMITER")); // only if every route shares it, else per route (mew.ts)
 // index.ts: app.route("/things", things);
@@ -29,16 +29,14 @@ things.use("*", rateLimit("API_LIMITER")); // only if every route shares it, els
 - Canonical: `tasks.ts:26-28`. Mount once at its own prefix: never `/`, never a taken prefix.
 - Only `/health`, `/auth/*` (index.ts), `/push/key` and `/webhooks/stripe` skip `requireAuth`. A
   new public endpoint goes above the `use("*")` or in its own module.
-- Legacy, don't copy: modules at `/` with per-route or path-scoped auth (billing, push, settings,
-  integrations), and authenticated routes with no limiter (`/permissions`, `/billing/portal`,
-  `/billing/payment-details`, `/billing/invoices`, `GET|DELETE /push/subscription`).
+- Legacy, don't copy: modules at `/` with path-scoped auth (billing, push, settings, integrations).
+- A new authenticated route gets a row in `AUTHENTICATED` (`test/auth.test.ts`).
 
 ## Hono gotchas (verified on 4.13.18)
 
-- Sub-apps at the same prefix share middleware: tasks' `use("*")` also runs for `/tasks/parse` and
-  `/tasks/voice`, which therefore run `requireAuth` twice and also spend `API_LIMITER`.
-- `use("/x/*")` also matches `/x`, so `GET /integrations` runs auth and limiter twice
-  (integrations.ts registers both). Register `/x/*` only.
+- Sub-apps at the same prefix share middleware: tasks' `use("*")` would also run for `/tasks/parse`
+  and `/tasks/voice`. That is why index.ts mounts voice before tasks; keep that order.
+- `use("/x/*")` also matches `/x`. Register `/x/*` only.
 - Middleware and handlers run in registration order; the first to return without `next()` wins.
 
 ## Limiters (`wrangler.toml`)
@@ -47,16 +45,16 @@ things.use("*", rateLimit("API_LIMITER")); // only if every route shares it, els
   route (`/tasks/parse`, `/tasks/voice`, `/mew/chat`). `AUTH_LIMITER` 5/min per
   `cf-connecting-ip`: before login only.
 - Tests run the real bindings (`test/CLAUDE.md`), but none asserts a limiter's 429, and a missing
-  binding is a no-op: a forgotten `rateLimit(...)` passes the gate.
+  binding is a no-op: a forgotten `rateLimit(...)` passes the gate. `auth.test.ts` asserts that
+  `POST /tasks/parse` and `GET /integrations` read the session once.
 
 ## Bodies
 
-- Read to `unknown` without throwing, like `readJson` in tasks.ts. A bare `c.req.json()`, or the
-  uncaught `c.req.json<T>()` in `/billing/checkout`, turns malformed JSON (or a destructured `null`)
-  into a 500 via `app.onError`.
+- Read with `readJson(c)` and narrow with `isRecord` (`lib/task-input.ts`). A bare `c.req.json()`
+  turns malformed JSON (or a destructured `null`) into a 500 via `app.onError`.
 - A parser whose errors aren't all 400 carries `status` in its union (`parseRequest`, mew.ts).
-- Zones: `validZone` (`lib/task-input.ts`); push, settings and integrations still call
-  `IANAZone.isValidZone`. Caps: `TASK_LIMITS`, `DATE_RANGE`, `MEW_*` from `@dailify/shared`.
+- Zones: `validZone`; new endpoints take the body key `timezone`. Months: `parseMonth`; epochs:
+  `isEpochMs`, `parseOccurrence` (all `lib/task-input.ts`). Caps: `TASK_LIMITS`, `DATE_RANGE`, `MEW_*` from `@dailify/shared`.
 - Partial writes: absent key keeps, `null` clears, no known key is a 400 (`parseTaskFields` with
   `partial: true`, `parsePatch` in settings.ts).
 - Multipart (voice.ts): `parseBody()`, `instanceof File`, 413 size cap, 415 MIME, before paying.
@@ -85,7 +83,7 @@ things.use("*", rateLimit("API_LIMITER")); // only if every route shares it, els
    routes share it, with a colocated test.
 2. Test file `apps/server/test/<area>-<feature>.test.ts` (harness: `test/session.ts`, `mockSession`,
    `app.request(path, init, env, createExecutionContext())`; the context is required once the route
-   calls `waitUntil`). Cover the happy path, the 400s, the tier gate, the epoch-ms shape, and a 401
-   with `mockSession(() => null)`: today only `GET /tasks` and `GET /settings` assert 401.
+   calls `waitUntil`). Cover the happy path, the 400s, the tier gate and the epoch-ms shape; the 401
+   is the `AUTHENTICATED` row in `test/auth.test.ts`.
 3. A response richer than `{ <noun>: <shared model> }` gets a type in `@dailify/shared`, built with
    `satisfies`; then wire the client in `apps/web/src/functions/api.ts`.
