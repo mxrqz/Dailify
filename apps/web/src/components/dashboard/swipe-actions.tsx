@@ -5,10 +5,11 @@ import {
   useDragControls,
   useMotionValue,
   useMotionValueEvent,
+  useReducedMotion,
 } from "motion/react";
 import { CheckIcon, Trash2Icon } from "lucide-react";
 
-import { copy } from "@/components/dashboard/copy";
+import { spring } from "@/consts/motion";
 import { haptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
@@ -68,6 +69,8 @@ export function SwipeActions({
   const [armed, setArmed] = useState<Armed>(null);
   const x = useMotionValue(0);
   const controls = useDragControls();
+  // MotionConfig doesn't reach a standalone animate(), so the return reads reduced motion itself.
+  const reduce = useReducedMotion();
   // The click that ends a drag must not open the row's editor.
   const dragged = useRef(false);
 
@@ -118,12 +121,11 @@ export function SwipeActions({
           // A volta é ANIMADA POR NÓS e a ação só roda quando ela termina. Deixar o `dragSnapToOrigin`
           // cuidar disso não funciona aqui: `setTasks` re-renderiza a linha e o snap interno morre no
           // meio do caminho (motion#636), deixando o cartão parado onde o dedo largou.
-          void animate(x, 0, { type: "spring", stiffness: 500, damping: 40 }).then(() => {
+          void animate(x, 0, reduce ? { duration: 0 } : spring.snappy).then(() => {
             if (action === "complete") onComplete();
             else if (action === "delete") onDelete();
           });
         }}
-        aria-label={`${copy.task.complete} / ${copy.task.delete}`}
         className="flex touch-pan-y"
       >
         {/* `-ml-[100%]` é o que põe este painel FORA, à esquerda: sem ele a fileira começaria nele
