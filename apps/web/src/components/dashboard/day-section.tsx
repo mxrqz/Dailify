@@ -10,6 +10,7 @@ import { copy } from "@/components/dashboard/copy";
 import { DayTaskRow, NowLine, SHEET_EDITING } from "@/components/dashboard/day-task-row";
 import { TaskCard } from "@/components/task-card";
 import {
+  capitalize,
   formatClock,
   getTasksForDay,
   getTime,
@@ -37,7 +38,6 @@ export function TaskSkeletons(): JSX.Element {
   );
 }
 
-const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 /** "Terça, 17 nov": o date-fns em pt-BR, com maiúscula e sem o "-feira". */
 export const weekdayDate = (day: Date, pattern: string) =>
   capitalize(format(day, pattern, { locale: ptBR }).replace("-feira", ""));

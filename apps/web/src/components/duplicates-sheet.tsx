@@ -17,7 +17,7 @@ import {
   SheetTitle,
 } from "@/components/ui/sheet";
 import { resolveDuplicate } from "@/functions/api";
-import { formatClock, upsertTaskWithRecurrence } from "@/functions/functions";
+import { capitalize, formatClock, upsertTaskWithRecurrence } from "@/functions/functions";
 import { repeatLabel } from "@/functions/repeat-label";
 import { removeUndated, upsertUndated } from "@/functions/undated";
 import { zoned } from "@/functions/zone";
@@ -36,7 +36,7 @@ function when(task: TaskProps, hour12: boolean): string {
   const at = zoned(task.date);
   const day = format(at, "EEEEEE, d MMM", { locale: ptBR });
   return [
-    task.undated ? t.noDate : `${day.charAt(0).toUpperCase()}${day.slice(1)}`,
+    task.undated ? t.noDate : capitalize(day),
     !task.undated && formatClock(format(at, "HH:mm"), hour12),
     repeatLabel(task.repeat, task.repeatEvery),
   ]

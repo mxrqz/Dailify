@@ -19,7 +19,7 @@ import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { DaySection, weekdayDate } from "@/components/dashboard/day-section";
 import { Button } from "@/components/ui/button";
-import { getTasksForDay } from "@/functions/functions";
+import { capitalize, getTasksForDay } from "@/functions/functions";
 import { zoned } from "@/functions/zone";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { cn } from "@/lib/utils";
@@ -158,7 +158,7 @@ export function MonthCalendar({
 
       <header className="flex items-end justify-between pt-1 pr-3 pl-5">
         <h1 className="text-title-1">
-          {title.charAt(0).toUpperCase() + title.slice(1)}{" "}
+          {capitalize(title)}{" "}
           <span className="font-normal text-ink-secondary">{format(month, "yyyy")}</span>
         </h1>
         <div className="flex">

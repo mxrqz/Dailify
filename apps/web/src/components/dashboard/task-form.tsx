@@ -46,7 +46,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { bareFieldClass } from "@/components/dashboard/styles";
 import { priorityText } from "@/consts/conts";
-import { formatClock } from "@/functions/functions";
+import { capitalize, formatClock } from "@/functions/functions";
 import { linkLabel } from "@/functions/link-label";
 import { everyLabel, everyOptions, repeatLabel } from "@/functions/repeat-label";
 import { cn } from "@/lib/utils";
@@ -123,7 +123,6 @@ const nativeControlClass = "absolute inset-0 cursor-pointer opacity-0 outline-no
 
 const reminderHour = `${String(DEFAULT_HOUR).padStart(2, "0")}:00`;
 
-const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
 /** "Ter, 17 nov" — EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso. */
 const shortDay = (day: Date) => capitalize(format(day, "EEEEEE, d MMM", { locale: ptBR }));
 

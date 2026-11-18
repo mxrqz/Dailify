@@ -9,6 +9,7 @@ import {
   getTime,
   returnFractedDate,
   unixToDate,
+  fill,
   formatClock,
   groupTasksByHour,
   taskToCardData,
@@ -420,6 +421,12 @@ describe("monthsBetween", () => {
 describe("monthsBetween (dia passado)", () => {
   test("de um dia passado até hoje cobre todos os meses do meio", () => {
     expect(monthsBetween(new Date(2026, 7, 15), new Date(2026, 9, 31))).toHaveLength(3);
+  });
+});
+
+describe("fill", () => {
+  test("troca cada {chave} e some com a que falta", () => {
+    expect(fill("{n} movidas para {day}{x}", { n: 3, day: "sexta" })).toBe("3 movidas para sexta");
   });
 });
 

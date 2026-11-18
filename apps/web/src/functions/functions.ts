@@ -14,6 +14,12 @@ import { expandRecurringTask, zonedParts } from "@dailify/shared";
 import { repeatLabel } from "@/functions/repeat-label";
 import { appTimeZone, zoned, zonedAt } from "@/functions/zone";
 
+export const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
+
+/** `fill("{n} criadas", { n: 2 })`: copy placeholders; a missing key becomes "". */
+export const fill = (template: string, values: Record<string, string | number>) =>
+  template.replace(/\{(\w+)\}/g, (_, key: string) => String(values[key] ?? ""));
+
 export const returnFractedDate = (date: Date) => {
   const day = date.getDate();
   const month = date.getMonth() + 1;

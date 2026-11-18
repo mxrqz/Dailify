@@ -6,7 +6,7 @@ import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { ScheduleDrop } from "@/components/dashboard/anytime-block";
 import { dayAnchorId } from "@/components/dashboard/day-section";
-import { getTasksForDay } from "@/functions/functions";
+import { capitalize, getTasksForDay } from "@/functions/functions";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { useNow } from "@/hooks/useNow";
 import { cn } from "@/lib/utils";
@@ -135,10 +135,8 @@ export function WeekDays({
   );
 }
 
-const weekdayLabel = (day: Date) => {
-  const text = format(day, "EEEE, d 'de' MMMM", { locale: ptBR }).replace("-feira", "");
-  return text.charAt(0).toUpperCase() + text.slice(1);
-};
+const weekdayLabel = (day: Date) =>
+  capitalize(format(day, "EEEE, d 'de' MMMM", { locale: ptBR }).replace("-feira", ""));
 
 /** A semana de hoje (respeitando o primeiro dia da config); muda só à meia-noite. */
 export function useWeek(): Date[] {
