@@ -2,7 +2,7 @@
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import type { MewReply, Task } from "@dailify/shared";
+import { MEW_CONSENT_REQUIRED, QUOTA_ERRORS, type MewReply, type Task } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 
@@ -115,7 +115,7 @@ describe("MewChat", () => {
     api.getSettings.mockResolvedValue({ settings: { mewConsent: false } });
     api.mewChat
       .mockResolvedValueOnce({
-        error: { message: "Mew Consent Required", offline: false, status: 403 },
+        error: { message: MEW_CONSENT_REQUIRED, offline: false, status: 403 },
       })
       .mockResolvedValueOnce({ reply: { reply: "Oi!", intent: "answer", blocks: [] } });
     const { chat } = mount();
@@ -131,7 +131,7 @@ describe("MewChat", () => {
 
   it("out of credits, the Mew says so and no credit is counted", async () => {
     api.mewChat.mockResolvedValue({
-      error: { message: "AI Credits Limit Reached", offline: false, status: 429 },
+      error: { message: QUOTA_ERRORS.ai, offline: false, status: 429 },
     });
     const { chat } = mount();
     say("oi");

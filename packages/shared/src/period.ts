@@ -6,6 +6,16 @@ export type WeekStart = 0 | 1 | 2 | 3 | 4 | 5 | 6;
 
 export const DEFAULT_WEEK_START: WeekStart = 1;
 
+/** `GET`/`PUT /settings`. */
+export interface UserSettings {
+  weekStart: WeekStart;
+  /** null = automatic: the device zone. */
+  timeZone: string | null;
+  hour12: boolean;
+  /** The user agreed to send their agenda to OpenAI through the Mew chat. */
+  mewConsent: boolean;
+}
+
 /** Hora em que um período vira: antes das 6h ainda conta como o dia anterior. */
 export const PERIOD_ROLLOVER_HOUR = 6;
 

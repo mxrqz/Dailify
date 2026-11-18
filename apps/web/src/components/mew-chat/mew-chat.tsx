@@ -2,7 +2,13 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
-import { MEW_HISTORY_MAX, MEW_TEXT_MAX, type MewReply } from "@dailify/shared";
+import {
+  MEW_CONSENT_REQUIRED,
+  MEW_HISTORY_MAX,
+  MEW_TEXT_MAX,
+  QUOTA_ERRORS,
+  type MewReply,
+} from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { CreateDock } from "@/components/dashboard/composer-views";
@@ -27,9 +33,6 @@ import {
 } from "./thread";
 
 const t = copy.mewChat;
-// The server's error texts: a 403 or 429 means different things depending on them.
-const CONSENT_REQUIRED = "Mew Consent Required";
-const CREDITS_OUT = "AI Credits Limit Reached";
 
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 const failure = (reply: string): MewReply => ({ reply, intent: "unsupported", blocks: [] });
@@ -82,13 +85,14 @@ export function MewChat({ onCompose, onVoice }: { onCompose: () => void; onVoice
         dispatch({ type: "reply", to: mewId(id), reply });
         return;
       }
-      if (error?.message === CONSENT_REQUIRED) {
+      // A 403 or 429 means different things depending on the server's text.
+      if (error?.message === MEW_CONSENT_REQUIRED) {
         pending.current = { text, image };
         dispatch({ type: "drop", id });
         setConsent(false);
         return;
       }
-      const out = error?.message === CREDITS_OUT;
+      const out = error?.message === QUOTA_ERRORS.ai;
       if (out)
         toast(copy.mew.exhausted, {
           description: copy.voice.limitReachedHint,

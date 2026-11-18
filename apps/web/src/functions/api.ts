@@ -3,13 +3,13 @@ import type {
   MewActionStatus,
   MewReply,
   MewRequest,
+  OccurrenceEdit,
   Task,
   TaskInput,
-  QuotaLimits,
-  QuotaUsage,
+  QuotaSnapshot,
   PaymentDetails,
   Invoice,
-  WeekStart,
+  UserSettings,
   IntegrationLink,
   IntegrationStatus,
   ProviderId,
@@ -109,25 +109,16 @@ export async function getUndatedTasks(): Promise<{ tasks: Task[]; error?: ApiErr
   return { tasks: data?.tasks ?? [], error };
 }
 
-export interface Settings {
-  weekStart: WeekStart;
-  /** null = automático: o fuso do aparelho. */
-  timeZone: string | null;
-  hour12: boolean;
-  /** LGPD: the Mew chat sends the agenda to OpenAI only after this. */
-  mewConsent: boolean;
-}
-
-export async function getSettings(): Promise<{ settings?: Settings; error?: ApiError }> {
-  const { data, error } = await request<Settings>("/settings");
+export async function getSettings(): Promise<{ settings?: UserSettings; error?: ApiError }> {
+  const { data, error } = await request<UserSettings>("/settings");
   return { settings: data, error };
 }
 
 /** Parcial: manda só o que mudou, o servidor mantém o resto. */
 export async function saveSettings(
-  patch: Partial<Settings>,
-): Promise<{ settings?: Settings; error?: ApiError }> {
-  const { data, error } = await request<Settings>("/settings", {
+  patch: Partial<UserSettings>,
+): Promise<{ settings?: UserSettings; error?: ApiError }> {
+  const { data, error } = await request<UserSettings>("/settings", {
     method: "PUT",
     body: JSON.stringify(patch),
   });
@@ -154,7 +145,7 @@ export async function updateTask(
   occurrence?: number,
 ): Promise<{ task?: Task; series?: Task; error?: ApiError }> {
   const query = occurrence === undefined ? "" : `?occurrence=${occurrence}`;
-  const { data, error } = await request<{ task?: Task; series?: Task }>(`/tasks/${id}${query}`, {
+  const { data, error } = await request<OccurrenceEdit>(`/tasks/${id}${query}`, {
     method: "PATCH",
     body: JSON.stringify(patch),
   });
@@ -208,7 +199,7 @@ export async function deleteTask(
   occurrence?: number,
 ): Promise<{ series?: Task; error?: ApiError }> {
   const query = occurrence === undefined ? "" : `?occurrence=${occurrence}`;
-  const { data, error } = await request<{ series?: Task }>(`/tasks/${id}${query}`, {
+  const { data, error } = await request<OccurrenceEdit>(`/tasks/${id}${query}`, {
     method: "DELETE",
   });
   return { series: data?.series, error };
@@ -290,10 +281,8 @@ export async function removePushSubscription(endpoint: string): Promise<void> {
   );
 }
 
-export interface QuotaSnapshot {
-  limits: QuotaLimits;
-  usage: QuotaUsage;
-}
+// dailifyContext imports it from here.
+export type { QuotaSnapshot };
 
 export async function getQuotas(month: Date): Promise<QuotaSnapshot | undefined> {
   const m = `${month.getFullYear()}-${String(month.getMonth() + 1).padStart(2, "0")}`;

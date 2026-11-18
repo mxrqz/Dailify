@@ -27,6 +27,18 @@ function isQuotaKey(value: string): value is QuotaKey {
 export type QuotaLimits = Record<QuotaKey, number>;
 export type QuotaUsage = Record<QuotaKey, number>;
 
+/** `GET /permissions`. */
+export interface QuotaSnapshot {
+  limits: QuotaLimits;
+  usage: QuotaUsage;
+}
+
+/** The `error` of an exhausted quota's 403/429: the web compares it to tell it from a rate limit. */
+export const QUOTA_ERRORS: Record<QuotaKey, string> = {
+  tasks: "Monthly Tasks Limit Reached",
+  ai: "AI Credits Limit Reached",
+};
+
 export interface QuotaState {
   limit: number;
   used: number;

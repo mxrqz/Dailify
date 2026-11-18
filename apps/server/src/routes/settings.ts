@@ -1,10 +1,10 @@
 import { Hono } from "hono";
 import { IANAZone } from "luxon";
-import { isWeekStart } from "@dailify/shared";
+import { isWeekStart, type UserSettings } from "@dailify/shared";
 import type { Env } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
-import { getSettings, saveSettings, type UserSettings } from "../db/settings";
+import { getSettings, saveSettings } from "../db/settings";
 import { fail } from "../lib/errors";
 
 const settings = new Hono<{ Bindings: Env; Variables: { userId: string } }>();

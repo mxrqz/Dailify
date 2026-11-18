@@ -32,9 +32,8 @@ applied to the agenda.
   it bumps usage, records `setMewAction` and pushes Google Calendar targets. The `latest` ref
   exists only because the context setters are typed value-only
   ([Frontend](../../../../../RULES.md#frontend)).
-- mew-chat.tsx matches the server's error texts literally:
-  `Mew Consent Required` (`routes/mew.ts`) and `AI Credits Limit Reached` (`db/limits.ts`). Keep
-  them in sync until they become shared codes ([Backend](../../../../../RULES.md#backend-and-api)).
+- mew-chat.tsx matches the server's error texts, shared with it: `MEW_CONSENT_REQUIRED` and
+  `QUOTA_ERRORS.ai` from `@dailify/shared` (texts, not codes, so the wire stays as it was).
   A send refused for consent is dropped, kept in `pending` and resent after accept: nothing
   reaches OpenAI before consent (LGPD).
 - Caps come from `@dailify/shared` (`MEW_HISTORY_MAX`, `MEW_TEXT_MAX`, `MEW_IMAGE_MAX`). Photos are
