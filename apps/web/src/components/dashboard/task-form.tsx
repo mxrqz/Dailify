@@ -165,7 +165,7 @@ function WeekdayToggle({
           <Chip
             key={day}
             variant="select"
-            size="sm"
+            size="square"
             pressed={on}
             disabled={disabled}
             onClick={() => {
@@ -173,7 +173,6 @@ function WeekdayToggle({
               if (on && value.length === 1) return;
               onChange(on ? value.filter((d) => d !== day) : [...value, day]);
             }}
-            className="size-10 justify-center px-0"
           >
             {copy.form.repeatDays[dayMap[day]]}
           </Chip>

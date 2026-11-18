@@ -9,7 +9,8 @@ type ChipProps = ComponentPropsWithoutRef<"button"> & {
   icon?: ReactNode;
   /** `action` (raio 10, o padrão) age ou liga/desliga; `select` (cápsula) é escolha entre várias. */
   variant?: "action" | "select";
-  size?: "default" | "sm";
+  /** `square`: 40px with one centered glyph (the weekday toggle). */
+  size?: "default" | "sm" | "square";
   /** Estado de toggle/seleção: vira `aria-pressed` e o fundo `ink`. */
   pressed?: boolean;
   /** Mostra o × à direita, num botão próprio. */
@@ -38,7 +39,9 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(function Chip(
   const shape = variant === "select" ? "rounded-full" : "rounded-sm";
   const face = cn(
     "inline-flex flex-none items-center whitespace-nowrap font-medium tabular-nums transition-colors duration-fast [&_svg]:flex-none [&_svg:not([class*='size-'])]:size-4",
-    size === "sm" ? "h-8 text-footnote" : "h-9 text-subhead",
+    size === "default" ? "h-9 text-subhead" : "text-footnote",
+    size === "sm" && "h-8",
+    size === "square" && "size-10 justify-center",
     shape,
     pressed ? "bg-ink text-canvas" : "bg-fill text-ink hover:bg-fill-pressed",
   );
@@ -54,7 +57,7 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(function Chip(
       aria-pressed={pressed}
       className={cn(
         press,
-        onRemove ? "pr-1 pl-3" : "px-3",
+        onRemove ? "pr-1 pl-3" : size !== "square" && "px-3",
         !onRemove && face,
         !onRemove && className,
       )}
