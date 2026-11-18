@@ -21,7 +21,7 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
 - `migrations/` D1 schema · `test/` the worker test suite · `scripts/`: `vapid.ts` (`bun run vapid`),
   `auth-schema.ts` (Better Auth CLI input for 0015). Each script's header has its exact command.
 - Every Hono app, `Context` and `MiddlewareHandler` uses `AppEnv` from `../index` (type-only), as
-  does `Env`; never redeclare either. `db/limits.ts` still spells the literal out.
+  does `Env`; never redeclare either.
 
 ## Auth
 

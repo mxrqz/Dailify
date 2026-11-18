@@ -14,7 +14,7 @@ import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { getSettings } from "../db/settings";
 import { getUndatedTasks, readMonth } from "../db/tasks";
-import { aiQuotaError, debitAi } from "../db/limits";
+import { aiQuota, debitAi } from "../db/limits";
 import { aiTargets } from "../db/integrations";
 import { logProposals, setActionStatus } from "../db/mew";
 import { WINDOW_DAYS, agendaOf, askMew } from "../lib/mew";
@@ -68,8 +68,8 @@ mew.post("/chat", rateLimit("VOICE_LIMITER"), async (c) => {
   const req = parseRequest(await readJson(c));
   if ("error" in req) return fail(c, req.status, req.error);
   if (!(await getSettings(c.env.DB, userId)).mewConsent) return fail(c, 403, MEW_CONSENT_REQUIRED);
-  const quotaError = await aiQuotaError(c);
-  if (quotaError) return quotaError;
+  const quota = await aiQuota(c.env.DB, userId, c.get("plan"));
+  if (quota) return fail(c, quota.status, quota.error);
 
   const now = Date.now();
   const [agenda, allowed] = await Promise.all([
@@ -83,7 +83,7 @@ mew.post("/chat", rateLimit("VOICE_LIMITER"), async (c) => {
     console.error(err);
     return fail(c, 502, "AI request failed");
   }
-  await debitAi(c);
+  await debitAi(c.env.DB, userId);
   await logProposals(c.env.DB, userId, reply.blocks, now);
   return c.json(reply);
 });

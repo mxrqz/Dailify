@@ -15,8 +15,8 @@ The Worker's SQL, hand-written over the raw `D1Database` binding (no ORM). Repo-
   add a third copy.
 - `push.ts`: subscriptions and the cron's cross-user alert queries. `settings.ts`: `user_settings`,
   defaults when no row. `usage.ts`: the `usage` counter, keyed `(user_id, quota, period)`.
-- `limits.ts`: quota policy. `aiQuotaError`/`debitAi` take a Hono `Context` and return a `Response`,
-  the one exception to "db never returns a Response"; slated for `lib/`, don't extend it.
+- `limits.ts`: quota policy. `aiQuota` answers `{ status, error }` or null (the route maps it with
+  `fail`); `debitAi` spends one credit.
 - `mew.ts`: the `mew_actions` log, task ids only, never titles.
 
 SQL still outside db/, to move here: `lib/user.ts` and `middleware/auth.ts` (`"user"`),

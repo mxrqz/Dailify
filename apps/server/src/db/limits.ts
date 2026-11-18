@@ -8,24 +8,23 @@ import {
   type Role,
   type Task,
 } from "@dailify/shared";
-import type { Context } from "hono";
-import type { Env } from "../index";
-import { fail } from "../lib/errors";
 import { countMonthlyTasks } from "./tasks";
 import { bumpStoredUsage, periodFor, readStoredUsage } from "./usage";
 
-type Ctx = Context<{ Bindings: Env; Variables: { userId: string; plan: Role } }>;
-
 /** Barra antes de qualquer chamada à OpenAI. Bloqueado (limite 0) e esgotado: sem crédito, 403/429. */
-export async function aiQuotaError(c: Ctx): Promise<Response | null> {
-  const limits = limitsFor(c.get("plan"));
-  const err = await enforce(c.env.DB, c.get("userId"), limits, "ai", new Date());
-  return err ? fail(c, limits.ai === 0 ? 403 : 429, err) : null;
+export async function aiQuota(
+  db: D1Database,
+  userId: string,
+  plan: Role,
+): Promise<{ status: 403 | 429; error: string } | null> {
+  const limits = limitsFor(plan);
+  const error = await enforce(db, userId, limits, "ai", new Date());
+  return error ? { status: limits.ai === 0 ? 403 : 429, error } : null;
 }
 
 /** Crédito só depois da IA responder dentro do contrato: falha, timeout ou lixo não custam nada. */
-export const debitAi = (c: Ctx) =>
-  bumpStoredUsage(c.env.DB, c.get("userId"), "ai", periodFor(new Date()));
+export const debitAi = (db: D1Database, userId: string) =>
+  bumpStoredUsage(db, userId, "ai", periodFor(new Date()));
 
 type Counter = (db: D1Database, userId: string, at: Date) => Promise<number>;
 

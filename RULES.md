@@ -176,7 +176,7 @@ relative to the package they name (`apps/web/src`, `apps/server/src`, `packages/
   fails the user's write (`integrations/propagate.ts`).
 - Every outbound call has an explicit timeout (`{ timeout }` per SDK call, `AbortSignal.timeout` on
   fetch): the OpenAI SDK defaults to 600 s with retries, and fetch has none.
-- AI: `aiQuotaError` before the call, `debitAi` only after a reply that passed its guard, 502 with no
+- AI: `aiQuota` before the call, `debitAi` only after a reply that passed its guard, 502 with no
   debit on failure. The model names refs and the server builds every Task; untrusted text (titles,
   invites, chat) never goes into `instructions`. Call details: `apps/server/src/lib/CLAUDE.md`.
 - Cron and batch passes isolate failures per item and always persist progress (`syncIfDue` in
