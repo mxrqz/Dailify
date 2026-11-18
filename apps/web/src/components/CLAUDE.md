@@ -83,6 +83,8 @@ Numa tarefa **recorrente**, excluir e editar primeiro perguntam o escopo: o hook
 `?occurrence=` e a data entra no `exdates` da série, sem apagar nada. Essa exclusão não tem
 "Desfazer": não há rota que tire uma data do `exdates`.
 The day view's write path is **`dashboard/day-task-row.tsx`** for complete/delete actions.
+The Mew chat (`mew-chat/`, the mobile dock opens it) writes the same way: `apply.ts` swaps a
+confirm box's `before`/`after` into `tasks`/`undatedTasks` and rolls back if a write is refused.
 There is **no** `newTask` mechanism anymore (it only mutated a local copy and desynced — removed in
 `pz9.3`). If you add a write, surface it into `tasks`, not a component-local list.
 

@@ -1,83 +1,82 @@
-import { TZDate } from "@date-fns/tz";
-import { describe, expect, it } from "vitest";
+/** @vitest-environment jsdom */
+import { beforeEach, describe, expect, it } from "vitest";
+import type { MewReply, Task } from "@dailify/shared";
 
-import { type ConfirmBlock, reply, seedAgenda } from "./engine";
-import { type ChatState, chatReducer, mewId } from "./thread";
+import { type ConfirmBlock, type Message, chatReducer, loadChat, mewId, saveChat } from "./thread";
 
-const now = new TZDate(2026, 10, 17, 9, 0, "America/Sao_Paulo");
+const task = (id: string, extra: Partial<Task> = {}): Task => ({
+  id,
+  title: id,
+  date: 1_763_380_800_000,
+  duration: "",
+  priority: 0,
+  repeat: "Off",
+  completed: [],
+  ...extra,
+});
 
-/** Sends `text` and plays every event the engine returns. */
-function converse(state: ChatState, text: string): ChatState {
-  let n = state.messages.length;
-  const events = reply(text, { tasks: state.tasks, now, nextId: () => `b${++n}` });
-  const id = `s${state.messages.length}`;
-  return events.reduce(
-    (s, event) => chatReducer(s, { type: "event", to: mewId(id), event }),
-    chatReducer(state, { type: "send", id, text }),
-  );
-}
-const lastConfirm = (state: ChatState): ConfirmBlock => {
-  const m = state.messages.at(-1);
-  const b = m?.from === "mew" ? m.blocks.at(-1) : undefined;
+const created: MewReply = {
+  reply: "Achei 2 tarefas.",
+  intent: "propose",
+  blocks: [
+    { kind: "confirm", id: "c", action: "create", before: [], after: [task("a"), task("b")] },
+  ],
+};
+
+const asked = (reply: MewReply = created) =>
+  chatReducer(chatReducer([], { type: "send", id: "s", text: "oi" }), {
+    type: "reply",
+    to: mewId("s"),
+    reply,
+  });
+
+const box = (messages: Message[]): ConfirmBlock => {
+  const b = messages.flatMap((m) => (m.from === "mew" ? m.blocks : [])).at(-1);
   if (b?.kind !== "confirm") throw new Error("no confirm");
   return b;
 };
 
-const start: ChatState = { messages: [], tasks: seedAgenda(now) };
+beforeEach(() => localStorage.clear());
 
 describe("chatReducer", () => {
-  it("adds my message and a typing Mew, then fills in its text", () => {
-    const sent = chatReducer(start, { type: "send", id: "a", text: "oi" });
-    expect(sent.messages.map((m) => m.from)).toEqual(["me", "mew"]);
-    const played = chatReducer(sent, {
-      type: "event",
-      to: mewId("a"),
-      event: { type: "text", text: "Olá, tudo bem?" },
-    });
-    expect(played.messages[1]).toMatchObject({ typing: false, text: "Olá, tudo bem?" });
+  it("a send adds my message and a typing Mew, the reply fills it with intent and draft boxes", () => {
+    const sent = chatReducer([], { type: "send", id: "s", text: "oi" });
+    expect(sent.map((m) => m.from)).toEqual(["me", "mew"]);
+    expect(asked()[1]).toMatchObject({ typing: false, text: created.reply, intent: "propose" });
+    expect(box(asked())).toMatchObject({ step: "draft", off: [] });
   });
 
-  it("settles a status box into a draft", () => {
-    expect(lastConfirm(converse(start, "joga os atrasados pra sexta")).step).toBe("draft");
+  it("confirm freezes only the checked, titled rows; undo and cancel follow the steps", () => {
+    let s = chatReducer(asked(), { type: "toggle", block: "c", task: "b" });
+    s = chatReducer(s, { type: "edit", block: "c", task: "a", title: "Pão" });
+    s = chatReducer(s, { type: "confirm", block: "c" });
+    expect(box(s).step).toBe("done");
+    expect(box(s).after.map((x) => x.title)).toEqual(["Pão"]);
+    // A cancel after confirming does nothing; undo does.
+    expect(box(chatReducer(s, { type: "cancel", block: "c" })).step).toBe("done");
+    expect(box(chatReducer(s, { type: "undo", block: "c" })).step).toBe("undone");
+    expect(box(chatReducer(s, { type: "settle", block: "c", step: "draft" })).step).toBe("draft");
   });
 
-  it("confirms a move into the agenda, and undo puts it back", () => {
-    const asked = converse(start, "joga os atrasados pra sexta");
-    const id = lastConfirm(asked).id;
-    const done = chatReducer(asked, { type: "confirm", block: id });
-    expect(lastConfirm(done).step).toBe("done");
-    expect(done.tasks).not.toEqual(start.tasks);
-    const undone = chatReducer(done, { type: "undo", block: id });
-    expect(lastConfirm(undone).step).toBe("undone");
-    expect([...undone.tasks].sort((a, b) => a.id.localeCompare(b.id))).toEqual(
-      [...start.tasks].sort((a, b) => a.id.localeCompare(b.id)),
+  it("drop takes back a refused send", () => {
+    expect(
+      chatReducer(chatReducer([], { type: "send", id: "s", text: "oi" }), {
+        type: "drop",
+        id: "s",
+      }),
+    ).toEqual([]);
+  });
+
+  it("persists per user, keeps the last 50 and drops a reply that was still typing", () => {
+    const many = Array.from(
+      { length: 60 },
+      (_, i) => chatReducer([], { type: "send", id: `${i}`, text: "x" })[0],
     );
-  });
-
-  it("creates only the included drafts, with edited titles", () => {
-    const asked = converse(start, "comprar pão, pagar luz dia 20");
-    const block = lastConfirm(asked);
-    const [bread, light] = block.after;
-    let s = chatReducer(asked, { type: "edit", block: block.id, task: bread.id, title: "Pão" });
-    s = chatReducer(s, { type: "toggle", block: block.id, task: light.id });
-    s = chatReducer(s, { type: "confirm", block: block.id });
-    expect(s.tasks.length).toBe(start.tasks.length + 1);
-    expect(s.tasks.at(-1)?.title).toBe("Pão");
-  });
-
-  it("cancel leaves the agenda alone and confirm can't run after it", () => {
-    const asked = converse(start, "apaga 'academia'");
-    const id = lastConfirm(asked).id;
-    const s = chatReducer(chatReducer(asked, { type: "cancel", block: id }), {
-      type: "confirm",
-      block: id,
-    });
-    expect(lastConfirm(s).step).toBe("cancelled");
-    expect(s.tasks).toEqual(start.tasks);
-  });
-
-  it("clear empties the thread but keeps the agenda", () => {
-    const s = chatReducer(converse(start, "o que tenho hoje"), { type: "clear" });
-    expect(s).toEqual({ messages: [], tasks: start.tasks });
+    saveChat("u1", [...many, ...chatReducer([], { type: "send", id: "z", text: "y" })]);
+    const loaded = loadChat("u1");
+    expect(loaded).toHaveLength(49);
+    expect(loaded.some((m) => m.from === "mew")).toBe(false);
+    expect(loadChat("u2")).toEqual([]);
+    expect(loadChat(undefined)).toEqual([]);
   });
 });

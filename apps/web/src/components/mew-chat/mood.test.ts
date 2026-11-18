@@ -1,17 +1,19 @@
 import { describe, expect, it } from "vitest";
-
-import { copy } from "@/components/dashboard/copy";
+import type { MewIntent } from "@dailify/shared";
 
 import { moodOf } from "./chat-drawer";
-import type { ConfirmBlock } from "./engine";
-import type { Message } from "./thread";
+import type { Message, Step } from "./thread";
 
-const mew = (text: string, blocks: ConfirmBlock["step"][] = [], typing = false): Message => ({
+const mew = (
+  steps: Step[] = [],
+  { typing = false, intent = "answer" }: { typing?: boolean; intent?: MewIntent } = {},
+): Message => ({
   id: "m",
   from: "mew",
-  text,
+  text: "Oi",
   typing,
-  blocks: blocks.map((step) => ({
+  intent,
+  blocks: steps.map((step) => ({
     kind: "confirm",
     id: "c",
     action: "create",
@@ -24,12 +26,13 @@ const mew = (text: string, blocks: ConfirmBlock["step"][] = [], typing = false):
 
 describe("moodOf", () => {
   it("follows the latest turn", () => {
-    expect(moodOf(undefined, false, true)).toBe("listening");
-    expect(moodOf({ id: "u", from: "me", text: "oi" }, true, false)).toBe("thinking");
-    expect(moodOf(mew("", [], true), true, false)).toBe("thinking");
-    expect(moodOf(mew("Achei", ["draft"]), false, false)).toBe("alert");
-    expect(moodOf(mew("Achei", ["done"]), false, false)).toBe("happy");
-    expect(moodOf(mew(copy.mewChat.reply.fallback), false, false)).toBe("confused");
-    expect(moodOf(mew("Você tem 2 coisas hoje:"), false, false)).toBe("idle");
+    expect(moodOf(undefined, false)).toBe("idle");
+    expect(moodOf({ id: "u", from: "me", text: "oi" }, true)).toBe("thinking");
+    expect(moodOf(mew([], { typing: true }), true)).toBe("thinking");
+    expect(moodOf(mew(["draft"]), false)).toBe("alert");
+    expect(moodOf(mew(["done"]), false)).toBe("happy");
+    expect(moodOf(mew([], { intent: "notFound" }), false)).toBe("confused");
+    expect(moodOf(mew([], { intent: "unsupported" }), false)).toBe("confused");
+    expect(moodOf(mew(), false)).toBe("idle");
   });
 });

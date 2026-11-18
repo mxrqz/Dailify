@@ -26,6 +26,15 @@ vi.mock("@/hooks/useCreateTask", () => ({
   useCreateTask: () => ({ createMany: vi.fn(), submitting: false }),
 }));
 vi.mock("@/hooks/useIntegrations", () => ({ useCalendarReady: () => false }));
+// The chat has its own render test; here only its two ways into the composer matter.
+vi.mock("@/components/mew-chat/mew-chat", () => ({
+  MewChat: ({ onCompose, onVoice }: { onCompose: () => void; onVoice?: () => void }) => (
+    <>
+      <button onClick={onCompose}>Nova tarefa</button>
+      {onVoice && <button onClick={onVoice}>Falar com a Mewki</button>}
+    </>
+  ),
+}));
 
 import { CreateFab } from "./create-fab";
 
@@ -59,7 +68,7 @@ describe("<CreateFab> mobile", () => {
     env.desktop = false;
   });
 
-  it("o dock abre a folha com o campo focado; Cancelar fecha", async () => {
+  it("o Nova tarefa do chat abre a folha com o campo focado; Cancelar fecha", async () => {
     const { user } = setup();
 
     await user.click(screen.getByRole("button", { name: "Nova tarefa" }));

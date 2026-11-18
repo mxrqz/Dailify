@@ -4,8 +4,8 @@ import { LayoutGroup, motion, useReducedMotion } from "motion/react";
 import { Minimize2, Pin, PlusIcon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
-import { CreateDock } from "@/components/dashboard/composer-views";
 import { TaskComposer, type ComposerValues } from "@/components/dashboard/task-composer";
+import { MewChat } from "@/components/mew-chat/mew-chat";
 import { Dialog, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
@@ -38,9 +38,9 @@ interface CreateFabProps {
 }
 
 /**
- * A criação. No mobile, o dock fixo embaixo ("Ei Mewki, anota…" + mic) abre a folha de vidro. No
- * desktop, dois modos lembrados por device: só o "+" que abre a folha, ou o campo sempre aberto no
- * rodapé do painel. Sem portal de propósito: lá a folha se ancora no próprio botão, que mora no
+ * A criação. No mobile, o dock fixo embaixo abre o chat da Mew (que tem "Nova tarefa" pra esta
+ * folha) e o mic abre a folha já gravando. No desktop, dois modos lembrados por device: só o "+"
+ * que abre a folha, ou o campo sempre aberto no rodapé do painel. Sem portal de propósito: lá a folha se ancora no próprio botão, que mora no
  * painel da agenda e desliza com ele.
  */
 export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabProps): JSX.Element {
@@ -149,8 +149,9 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
   if (!desktop)
     return (
       <>
-        <CreateDock
-          onOpen={() => changeOpen(true)}
+        {/* ponytail: the chat has no transcription route, so the mic still opens the voice composer. */}
+        <MewChat
+          onCompose={() => changeOpen(true)}
           onVoice={
             online && voiceSupported()
               ? () => {

@@ -9,7 +9,8 @@ import {
   useRef,
   useState,
 } from "react";
-import { format } from "date-fns";
+import { addDays, format, isSameDay } from "date-fns";
+import { ptBR } from "date-fns/locale";
 import {
   ArrowRightIcon,
   ArrowUpIcon,
@@ -17,13 +18,17 @@ import {
   EllipsisIcon,
   ImagePlusIcon,
   MicIcon,
-  SearchIcon,
+  PlusIcon,
   XIcon,
 } from "lucide-react";
 import { motion } from "motion/react";
+import { toast } from "sonner";
+import { isCalendarEventLink, MEW_IMAGE_MAX, MEW_TEXT_MAX, type Task } from "@dailify/shared";
 
+import { useDailify } from "@/components/dailifyContext";
+import { DockButton } from "@/components/dashboard/composer-views";
 import { copy } from "@/components/dashboard/copy";
-import { CheckCircle } from "@/components/dashboard/day-task-row";
+import { CheckCircle, TaskRow } from "@/components/dashboard/day-task-row";
 import { Chip } from "@/components/kit/chip";
 import { MessageBox } from "@/components/landing/kit/message-box";
 import { CalendarBadge } from "@/components/logos";
@@ -38,78 +43,92 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { spring } from "@/consts/motion";
-import { zoned } from "@/functions/zone";
-import { useEffectEvent } from "@/hooks/useEffectEvent";
+import { fill, formatClock, getCompletionDate } from "@/functions/functions";
+import { fromDateInput, zoned } from "@/functions/zone";
 import { cn } from "@/lib/utils";
 
-import { type AgendaTask, type ConfirmBlock, type Step, dayName, fill } from "./engine";
-import type { ChatAction, ChatState, Message } from "./thread";
+import type { Block, ChatAction, ConfirmBlock, Message, Step } from "./thread";
 
 const t = copy.mewChat;
-const LISTEN_MS = 2400;
 const THUMB_PX = 320;
+const UPLOAD_PX = 1024;
+const CHIP_DELAY = 0.1;
+const CHIP_STAGGER = 0.05;
+const DOT_STAGGER_MS = 150;
+const INPUT_ID = "mew-input";
 
-/** "sexta-feira · 10:00", "hoje". */
-export const whenOf = (task: AgendaTask) =>
-  [dayName(task.date, zoned()), task.hasTime && format(zoned(task.date), "HH:mm")]
-    .filter(Boolean)
-    .join(" · ");
+/** "hoje", "amanhã" or the weekday ("sexta-feira"), as the Mew says it. */
+function dayName(ms: number): string {
+  const day = zoned(ms);
+  const now = zoned();
+  if (isSameDay(day, now)) return t.todayWord;
+  if (isSameDay(day, addDays(now, 1))) return t.tomorrowWord;
+  return format(day, "EEEE", { locale: ptBR });
+}
 
-/** Shrinks a photo to a thumbnail data URL: a full photo would blow the localStorage quota. */
-async function thumbnail(file: File): Promise<string> {
+const dayOf = (task: Task) => (task.undated ? copy.undated.title : dayName(task.date));
+const clockOf = (task: Task, hour12: boolean) =>
+  formatClock(format(zoned(task.date), "HH:mm"), hour12);
+/** "sexta-feira · 10:00". */
+const whenOf = (task: Task, hour12: boolean) =>
+  task.undated ? dayOf(task) : `${dayOf(task)} · ${clockOf(task, hour12)}`;
+
+/** The thread keeps a thumbnail (a full photo would blow the localStorage quota); the upload is bigger. */
+export interface Photo {
+  thumb: string;
+  full: string;
+}
+
+function scaled(img: HTMLImageElement, px: number): string {
+  const scale = Math.min(1, px / Math.max(img.width, img.height));
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(img.width * scale);
+  canvas.height = Math.round(img.height * scale);
+  canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
+  return canvas.toDataURL("image/jpeg", 0.8);
+}
+
+async function photoOf(file: File): Promise<Photo> {
   const url = URL.createObjectURL(file);
   try {
     const img = new Image();
     img.src = url;
     await img.decode();
-    const scale = Math.min(1, THUMB_PX / Math.max(img.width, img.height));
-    const canvas = document.createElement("canvas");
-    canvas.width = Math.round(img.width * scale);
-    canvas.height = Math.round(img.height * scale);
-    canvas.getContext("2d")?.drawImage(img, 0, 0, canvas.width, canvas.height);
-    return canvas.toDataURL("image/jpeg", 0.8);
+    return { thumb: scaled(img, THUMB_PX), full: scaled(img, UPLOAD_PX) };
   } finally {
     URL.revokeObjectURL(url);
   }
 }
 
 type Props = {
-  state: ChatState;
+  messages: Message[];
   dispatch: (action: ChatAction) => void;
   busy: boolean;
-  listening: boolean;
-  /** AI credits left this month; `null` when unlimited or not loaded. */
-  credits: number | null;
-  onSend: (text: string, image?: string) => void;
+  /** "Créditos de IA · 3 restantes"; `null` when unlimited or not loaded. */
+  credits: string | null;
+  /** `false`: the LGPD card shows until accepted; `undefined` = not read yet. */
+  consent: boolean | undefined;
+  onConsent: () => void;
+  onSend: (text: string) => void;
   onPhoto: () => void;
-  onOpenTask: (id: string) => void;
-  onReset: () => void;
+  onCompose: () => void;
+  onOpenTask: (task: Task) => void;
 };
 
-const INPUT_ID = "mew-input";
+const isConfirm = (b: Block): b is ConfirmBlock => b.kind === "confirm";
 
 /** The header Mew reacts to the latest turn: thinks, waits for a confirmation, cheers, gets lost. */
-export function moodOf(last: Message | undefined, busy: boolean, listening: boolean): MewMood {
-  if (listening) return "listening";
+export function moodOf(last: Message | undefined, busy: boolean): MewMood {
   if (last?.from !== "mew") return busy ? "thinking" : "idle";
-  if (busy && (last.typing || !last.text)) return "thinking";
-  const step = last.blocks.filter((b): b is ConfirmBlock => b.kind === "confirm").at(-1)?.step;
-  if (step === "status") return "thinking";
+  if (last.typing) return "thinking";
+  const step = last.blocks.filter(isConfirm).at(-1)?.step;
   if (step === "draft") return "alert";
   if (step === "done") return "happy";
-  // ponytail: the simulated engine has no intent; the real /mew/chat should send one.
-  if (last.text === t.reply.fallback || last.text === t.reply.notFound) return "confused";
+  if (last.intent === "notFound" || last.intent === "unsupported") return "confused";
   return "idle";
 }
 
-const creditsLabel = (n: number) =>
-  n === 0 ? t.creditsNone : n === 1 ? t.creditsOne : fill(t.creditsMany, { n });
-
-/**
- * The Mew's chat: a near-full-height bottom sheet on the `z-chat` layer, under the floating dock,
- * which turns into its message box (`ChatInput`). Non-modal, so the dock outside stays focusable;
- * the scrim is the page's.
- */
+/** Near-full-height, non-modal sheet under the dock, which becomes its message box (`ChatInput`). */
 export function ChatDrawer({
   open,
   onOpenChange,
@@ -139,20 +158,20 @@ export function ChatDrawer({
 }
 
 function ChatPanel({
-  state,
+  messages,
   dispatch,
   busy,
-  listening,
   credits,
+  consent,
+  onConsent,
   onSend,
   onPhoto,
+  onCompose,
   onOpenTask,
-  onReset,
 }: Props) {
   const log = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
-  const { messages } = state;
   // What was already there when the chat opened shows up as is; only new messages and blocks enter.
   const [initial] = useState(() => new Set(messages.map((m) => m.id)));
 
@@ -181,8 +200,6 @@ function ChatPanel({
     pinned.current = true;
   }, [messages.length]);
 
-  const mood = moodOf(messages.at(-1), busy, listening);
-
   return (
     <>
       <header className="grid grid-cols-[1fr_auto_1fr] items-center px-3 pb-2">
@@ -193,22 +210,20 @@ function ChatPanel({
             </Button>
           </DropdownMenuTrigger>
           <DropdownMenuContent align="start">
+            <DropdownMenuItem onSelect={onCompose}>{copy.composer.open}</DropdownMenuItem>
             <DropdownMenuItem onSelect={() => dispatch({ type: "clear" })}>
               {t.clear}
             </DropdownMenuItem>
-            <DropdownMenuItem onSelect={onReset}>{t.reset}</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
         <div className="flex flex-col items-center">
-          <Mew mood={mood} className="w-14" />
+          <Mew mood={moodOf(messages.at(-1), busy)} className="w-14" />
           <SheetTitle className="sr-only">{t.title}</SheetTitle>
           <p aria-live="polite" className="sr-only">
-            {listening ? t.listeningNow : busy ? t.thinking : ""}
+            {busy ? t.thinking : ""}
           </p>
           {credits !== null && (
-            <p className="mt-1 text-footnote text-ink-secondary tabular-nums">
-              {creditsLabel(credits)}
-            </p>
+            <p className="mt-1 text-footnote text-ink-secondary tabular-nums">{credits}</p>
           )}
         </div>
         <SheetClose asChild>
@@ -226,22 +241,22 @@ function ChatPanel({
         className="fade-top flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4"
       >
         <div ref={list} className="flex grow flex-col justify-end pt-6 pb-dock-clear">
-          {messages.length === 0 ? (
-            <Empty onPick={(value) => onSend(value)} onPhoto={onPhoto} />
-          ) : (
-            messages.map((m) => {
-              const fresh = !initial.has(m.id);
-              return (
-                <Reveal key={m.id} enter={fresh} className="py-1.5">
-                  {m.from === "me" ? (
-                    <Mine message={m} />
-                  ) : (
-                    <Reply message={m} fresh={fresh} dispatch={dispatch} onOpenTask={onOpenTask} />
-                  )}
-                </Reveal>
-              );
-            })
+          {messages.length === 0 && consent !== false && (
+            <Empty onPick={onSend} onPhoto={onPhoto} onCompose={onCompose} />
           )}
+          {messages.map((m) => {
+            const fresh = !initial.has(m.id);
+            return (
+              <Reveal key={m.id} enter={fresh} className="py-1.5">
+                {m.from === "me" ? (
+                  <Mine message={m} />
+                ) : (
+                  <Reply message={m} fresh={fresh} dispatch={dispatch} onOpenTask={onOpenTask} />
+                )}
+              </Reveal>
+            );
+          })}
+          {consent === false && <Consent onAccept={onConsent} />}
         </div>
       </div>
     </>
@@ -250,43 +265,39 @@ function ChatPanel({
 
 /**
  * The dock's pill while the chat is open (`CreateDock chat={…}`): attach, field and one round
- * button that is the mic when empty, send with text, stop while listening (the landing's `.cin`).
+ * button that is the mic when empty (opens the voice composer) and send with text.
  */
 export function ChatInput({
   busy,
-  listening,
-  onListening,
+  offline,
   onSend,
+  onVoice,
   file,
 }: {
   busy: boolean;
-  listening: boolean;
-  onListening: (on: boolean) => void;
-  onSend: (text: string, image?: string) => void;
+  offline: boolean;
+  onSend: (text: string, image?: Photo) => void;
+  onVoice?: () => void;
   file: RefObject<HTMLInputElement>;
 }) {
   const [text, setText] = useState("");
-  const [image, setImage] = useState<string>();
+  const [image, setImage] = useState<Photo>();
   const filled = !!text.trim() || !!image;
-  const sends = filled && !listening;
-
-  // Simulated voice: after a beat the fixed transcript lands in the field.
-  const heard = useEffectEvent(() => {
-    onListening(false);
-    setText(t.transcript);
-  });
-  useEffect(() => {
-    if (!listening) return;
-    const id = window.setTimeout(heard, LISTEN_MS);
-    return () => clearTimeout(id);
-  }, [listening]);
+  const mic = !filled && !!onVoice;
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
-    if (busy || !filled) return;
+    if (busy || offline || !filled) return;
     onSend(text.trim(), image);
     setText("");
     setImage(undefined);
+  };
+
+  const pick = async (picked: File) => {
+    const photo = await photoOf(picked).catch(() => undefined);
+    if (!photo) return;
+    if (photo.full.length > MEW_IMAGE_MAX) toast.error(t.tooBig);
+    else setImage(photo);
   };
 
   return (
@@ -298,15 +309,22 @@ export function ChatInput({
           transition={spring.soft}
           className="absolute bottom-full left-1 mb-3"
         >
-          <img src={image} alt={t.photo} className="h-16 rounded-md object-cover shadow-raised" />
-          <button
-            type="button"
+          <img
+            src={image.thumb}
+            alt={t.photo}
+            className="h-16 rounded-md object-cover shadow-raised"
+          />
+          <Button
+            variant="ghost"
+            size="icon"
             aria-label={t.removeImage}
             onClick={() => setImage(undefined)}
-            className="absolute -top-2 -right-2 grid size-6 cursor-pointer place-items-center rounded-full bg-ink text-canvas"
+            className="absolute -top-5 -right-5 rounded-full hover:bg-transparent"
           >
-            <XIcon aria-hidden="true" className="size-3.5" />
-          </button>
+            <span className="grid size-6 place-items-center rounded-full bg-ink text-canvas">
+              <XIcon aria-hidden="true" className="size-3.5" />
+            </span>
+          </Button>
         </motion.div>
       )}
       <input
@@ -317,114 +335,108 @@ export function ChatInput({
         onChange={(event) => {
           const picked = event.target.files?.[0];
           event.target.value = "";
-          if (picked) void thumbnail(picked).then(setImage, () => undefined);
+          if (picked) void pick(picked);
         }}
       />
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="icon"
         aria-label={t.attach}
         onClick={() => file.current?.click()}
-        className="grid size-11 flex-none cursor-pointer place-items-center rounded-full text-ink-secondary transition-colors duration-fast hover:bg-fill hover:text-ink"
+        className="rounded-full text-ink-secondary hover:text-ink"
       >
-        <ImagePlusIcon aria-hidden="true" className="size-5" />
-      </button>
-      {listening ? (
-        <Listening />
-      ) : (
-        // text-body: below 16px iOS zooms the page on focus.
-        <input
-          id={INPUT_ID}
-          value={text}
-          onChange={(event) => setText(event.target.value)}
-          placeholder={t.placeholder}
-          aria-label={t.placeholder}
-          enterKeyHint="send"
-          autoComplete="off"
-          className="h-full min-w-0 flex-1 bg-transparent text-body text-ink outline-none placeholder:text-ink-secondary"
-        />
-      )}
-      <button
-        type={sends ? "submit" : "button"}
-        aria-label={listening ? t.micStop : filled ? t.send : t.mic}
-        aria-pressed={listening}
-        disabled={busy && sends}
-        onClick={sends ? undefined : () => onListening(!listening)}
-        className={cn(
-          "relative grid size-11 flex-none cursor-pointer place-items-center rounded-full bg-ink text-canvas transition-[background-color,color,scale] duration-fast active:scale-95 disabled:cursor-default disabled:bg-fill-pressed disabled:text-ink-tertiary",
-          (filled || listening) && "bg-brand text-on-brand",
-          listening && "scale-110",
-        )}
+        <ImagePlusIcon aria-hidden="true" />
+      </Button>
+      {/* text-body: below 16px iOS zooms the page on focus. */}
+      <input
+        id={INPUT_ID}
+        value={text}
+        onChange={(event) => setText(event.target.value)}
+        placeholder={offline ? t.offline : t.placeholder}
+        aria-label={t.placeholder}
+        maxLength={MEW_TEXT_MAX}
+        enterKeyHint="send"
+        autoComplete="off"
+        className="h-full min-w-0 flex-1 bg-transparent text-body text-ink outline-none placeholder:text-ink-secondary"
+      />
+      <DockButton
+        type={mic ? "button" : "submit"}
+        aria-label={mic ? t.mic : t.send}
+        disabled={!mic && (busy || offline || !filled)}
+        onClick={mic ? onVoice : undefined}
+        className={cn(filled && "bg-brand text-on-brand")}
       >
-        {listening && (
-          <span
-            aria-hidden="true"
-            className="absolute inset-0 animate-ping rounded-full border-2 border-brand motion-reduce:hidden"
-          />
-        )}
         <MicIcon
           aria-hidden="true"
           className={cn(
             "absolute size-5 transition-[opacity,scale] duration-fast",
-            sends && "scale-60 opacity-0",
+            !mic && "scale-60 opacity-0",
           )}
         />
         <ArrowUpIcon
           aria-hidden="true"
           className={cn(
             "absolute size-5 transition-[opacity,scale] duration-fast",
-            !sends && "scale-60 opacity-0",
+            mic && "scale-60 opacity-0",
           )}
         />
-      </button>
+      </DockButton>
     </form>
   );
 }
 
-function Listening() {
-  return (
-    <span role="img" aria-label={t.listeningNow} className="flex h-full flex-1 items-center gap-2">
-      <span className="size-2 flex-none animate-pulse rounded-full bg-brand motion-reduce:animate-none" />
-      <span className="flex h-5 items-center gap-0.5">
-        {Array.from({ length: 18 }, (_, i) => (
-          <span
-            key={i}
-            className="h-full w-0.5 animate-bar rounded-full bg-ink-secondary motion-reduce:scale-y-50 motion-reduce:animate-none"
-            style={{ animationDelay: `${(i % 6) * 90}ms` }}
-          />
-        ))}
-      </span>
-    </span>
-  );
-}
-
-function Empty({ onPick, onPhoto }: { onPick: (text: string) => void; onPhoto: () => void }) {
+function Empty({
+  onPick,
+  onPhoto,
+  onCompose,
+}: {
+  onPick: (text: string) => void;
+  onPhoto: () => void;
+  onCompose: () => void;
+}) {
   const s = t.suggestions;
+  const chips = [
+    ...[s.today, s.overdue, s.steps].map((label) => ({
+      label,
+      icon: undefined,
+      onClick: () => onPick(label),
+    })),
+    { label: s.photo, icon: <ImagePlusIcon aria-hidden="true" />, onClick: onPhoto },
+    { label: copy.composer.open, icon: <PlusIcon aria-hidden="true" />, onClick: onCompose },
+  ];
   return (
     <div className="my-auto flex flex-col items-center px-4 text-center">
       <MewStatic mood="happy" className="w-20" />
       <p className="mt-4 text-title-3 font-semibold">{t.emptyTitle}</p>
       <p className="mt-1 text-subhead text-ink-secondary">{t.emptyHint}</p>
       <div className="mt-6 flex flex-wrap justify-center gap-2">
-        {[s.today, s.overdue, s.steps].map((value, i) => (
+        {chips.map((chip, i) => (
           <motion.span
-            key={value}
+            key={chip.label}
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ ...spring.soft, delay: 0.1 + i * 0.05 }}
+            transition={{ ...spring.soft, delay: CHIP_DELAY + i * CHIP_STAGGER }}
           >
-            <Chip onClick={() => onPick(value)}>{value}</Chip>
+            <Chip icon={chip.icon} onClick={chip.onClick}>
+              {chip.label}
+            </Chip>
           </motion.span>
         ))}
-        <motion.span
-          initial={{ opacity: 0, y: 8 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ ...spring.soft, delay: 0.25 }}
-        >
-          <Chip icon={<ImagePlusIcon aria-hidden="true" />} onClick={onPhoto}>
-            {s.photo}
-          </Chip>
-        </motion.span>
       </div>
+    </div>
+  );
+}
+
+/** LGPD: nothing reaches OpenAI before this. */
+function Consent({ onAccept }: { onAccept: () => void }) {
+  return (
+    <div className="my-auto flex flex-col items-center px-4 py-6 text-center">
+      <MewStatic className="w-20" />
+      <p className="mt-4 text-title-3 font-semibold">{t.consentTitle}</p>
+      <p className="mt-1 text-subhead text-ink-secondary">{t.consentBody}</p>
+      <Button onClick={onAccept} className="mt-6">
+        {t.consentAccept}
+      </Button>
     </div>
   );
 }
@@ -449,14 +461,15 @@ function Mine({ message }: { message: Extract<Message, { from: "me" }> }) {
   );
 }
 
-function Dots({ label }: { label: string }) {
+// Decorative: the header's live region already says "Pensando…".
+function Dots() {
   return (
-    <span role="status" aria-label={label} className="inline-flex h-5 items-center gap-0.75">
+    <span aria-hidden="true" className="inline-flex h-5 items-center gap-0.75">
       {[0, 1, 2].map((i) => (
         <i
           key={i}
           className="size-1.5 animate-dot rounded-full bg-ink-tertiary motion-reduce:animate-none"
-          style={{ animationDelay: `${i * 150}ms` }}
+          style={{ animationDelay: `${i * DOT_STAGGER_MS}ms` }}
         />
       ))}
     </span>
@@ -466,14 +479,15 @@ function Dots({ label }: { label: string }) {
 /** Steps that close a confirmation: the whole message morphs to them (MessageBox). */
 const FINAL: Step[] = ["done", "cancelled", "undone"];
 
-/**
- * One Mew message = one container (`.mwrap/.mbox`, ears on top): the text, then each block opens
- * under it (`.cslot`), its buttons at the container's foot. Typing → text and a confirmation
- * closing morph the whole box; status → draft reopens the block's slot.
- */
-/** `--i` drives the `word-in` stagger (global.css). */
-const wordAt = (i: number): CSSProperties & Record<string, number> => ({ "--i": i });
+/** `--i` staggers a word (`word-in`), `--words` delays what follows the text (`delay-words`). */
+const cssVar = (name: "--i" | "--words", n: number): CSSProperties & Record<string, number> => ({
+  [name]: n,
+});
 
+/**
+ * One Mew message = one container (ears on top): the text, then each block opens under it, its
+ * buttons at the foot. Typing → text and a confirmation closing morph the whole box.
+ */
 function Reply({
   message,
   fresh,
@@ -483,70 +497,54 @@ function Reply({
   message: Extract<Message, { from: "mew" }>;
   fresh: boolean;
   dispatch: (action: ChatAction) => void;
-  onOpenTask: (id: string) => void;
+  onOpenTask: (task: Task) => void;
 }) {
-  const confirm = message.blocks.find((b): b is ConfirmBlock => b.kind === "confirm");
+  const confirm = message.blocks.find(isConfirm);
   const key = message.typing
     ? "typing"
     : confirm && FINAL.includes(confirm.step)
       ? confirm.step
       : "text";
+  const words = message.text.split(" ");
   return (
     <div className="flex items-end gap-2">
       <MewStatic happy={confirm?.step === "done"} className="mb-0.5 w-6.5 flex-none" />
       <MessageBox type="text" contentKey={key} className="max-w-bubble">
         {message.typing ? (
-          <Dots label={t.thinking} />
+          <Dots />
         ) : (
           <>
             {/* Every word is in the DOM at once, so the box morphs to its final size. */}
             <p className="min-h-2lh text-subhead">
-              {message.text.split(" ").map((word, i) => (
+              {words.map((word, i) => (
                 <Fragment key={i}>
                   {i > 0 && " "}
-                  <span className={cn("inline-block", fresh && "word-in")} style={wordAt(i)}>
+                  <span className={cn("inline-block", fresh && "word-in")} style={cssVar("--i", i)}>
                     {word}
                   </span>
                 </Fragment>
               ))}
             </p>
-            {message.blocks.map((block, i) =>
-              block.kind === "tasks" ? (
-                <Slot key={i} enter={fresh}>
-                  <ul className="flex flex-col divide-y divide-separator rounded-md bg-fill px-3">
+            {message.blocks.map((block, i) => (
+              <Reveal
+                key={i}
+                enter={fresh && (block.kind === "tasks" || !FINAL.includes(block.step))}
+                words={words.length}
+                className="pt-2.5"
+              >
+                {block.kind === "tasks" ? (
+                  <ul className="flex flex-col gap-1.5">
                     {block.tasks.map((task) => (
-                      <li key={task.id}>
-                        <button
-                          type="button"
-                          onClick={() => onOpenTask(task.id)}
-                          className="flex w-full cursor-pointer flex-col gap-0.5 py-2 text-left"
-                        >
-                          <span
-                            className={cn(
-                              "truncate text-subhead font-semibold",
-                              task.done && "text-ink-tertiary line-through",
-                            )}
-                          >
-                            {task.title}
-                          </span>
-                          <Meta>
-                            {task.hasTime ? format(zoned(task.date), "HH:mm") : t.allDay}
-                            {task.calendar && <Calendar />}
-                          </Meta>
-                        </button>
+                      <li key={`${task.id}-${task.date}`}>
+                        <Row task={task} onOpen={() => onOpenTask(task)} />
                       </li>
                     ))}
                   </ul>
-                </Slot>
-              ) : (
-                <Slot
-                  key={`${i}-${block.step === "status" ? "status" : "body"}`}
-                  enter={fresh && !FINAL.includes(block.step)}
-                >
+                ) : (
                   <ConfirmBody block={block} dispatch={dispatch} />
-                </Slot>
-              ),
-            )}
+                )}
+              </Reveal>
+            ))}
           </>
         )}
       </MessageBox>
@@ -554,41 +552,33 @@ function Reply({
   );
 }
 
-/** `.cslot` inside a message: the block opens its own height after the text. */
-function Slot({ enter, children }: { enter: boolean; children: ReactNode }) {
-  return (
-    <Reveal enter={enter} className="pt-2.5">
-      {children}
-    </Reveal>
-  );
-}
-
-/**
- * Opens its own height on mount (grid rows 0fr → 1fr) while the content fades up: CSS from
- * `@starting-style`, no height in JS, no blur. `enter={false}` just shows it.
- */
+// Opens its own height on mount (grid rows 0fr → 1fr via `@starting-style`) while the content fades up.
 function Reveal({
   enter,
+  words,
   className,
   children,
 }: {
   enter: boolean;
+  /** Under a reply: wait for its last word. */
+  words?: number;
   className: string;
   children: ReactNode;
 }) {
   return (
     <div
+      style={words ? cssVar("--words", words) : undefined}
       className={cn(
         "grid flex-none grid-rows-[1fr]",
         enter &&
-          "transition-[grid-template-rows] duration-460 ease-out-quint starting:grid-rows-[0fr] motion-reduce:transition-none",
+          "transition-[grid-template-rows] delay-words duration-open ease-out-quint starting:grid-rows-[0fr] motion-reduce:transition-none",
       )}
     >
       <div
         className={cn(
           "min-h-0 overflow-hidden",
           enter &&
-            "transition-[opacity,translate] delay-80 duration-slow ease-out starting:translate-y-2.5 starting:opacity-0 motion-reduce:transition-none",
+            "transition-[opacity,translate] delay-words-lag duration-slow ease-out starting:translate-y-2.5 starting:opacity-0 motion-reduce:transition-none",
         )}
       >
         <div className={className}>{children}</div>
@@ -597,17 +587,29 @@ function Reveal({
   );
 }
 
-function Calendar() {
+/** A task as the agenda shows it; `meta` replaces the day line. */
+function Row({ task, meta, onOpen }: { task: Task; meta?: ReactNode; onOpen?: () => void }) {
+  const { hour12 } = useDailify();
+  const calendar = task.links?.some(isCalendarEventLink);
   return (
-    <>
-      <CalendarBadge />
-      <span>{copy.calendar.name}</span>
-    </>
+    <TaskRow
+      time={task.undated ? "" : clockOf(task, hour12)}
+      title={task.title}
+      done={getCompletionDate(task, zoned(task.date)) === true}
+      meta={
+        meta ?? (
+          <>
+            {calendar && <CalendarBadge />}
+            <span className="truncate">
+              {[dayOf(task), calendar && copy.calendar.name].filter(Boolean).join(" · ")}
+            </span>
+          </>
+        )
+      }
+      onOpen={onOpen}
+    />
   );
 }
-
-/** `.pbtn`: the 34px pill buttons at the foot of a message. */
-const PILL = "h-8.5 rounded-full px-3.5 text-sm font-semibold";
 
 function ConfirmBody({
   block,
@@ -616,24 +618,14 @@ function ConfirmBody({
   block: ConfirmBlock;
   dispatch: (action: ChatAction) => void;
 }) {
+  const { hour12 } = useDailify();
   const b = t.box;
   const { action, step } = block;
   const picked = block.after.filter((x) => !block.off.includes(x.id));
   const n = action === "delete" || action === "move" ? block.before.length : picked.length;
-  const values = { n, day: block.label ?? "", task: block.label ?? "" };
-
-  if (step === "status")
-    return (
-      <div className="flex items-center gap-2 text-subhead whitespace-nowrap text-ink-secondary">
-        {action === "event" ? (
-          <CalendarBadge />
-        ) : (
-          <SearchIcon aria-hidden="true" className="size-4 text-ink" />
-        )}
-        {action === "event" ? b.connecting : b.searching}
-        <Dots label={action === "event" ? b.connecting : b.searching} />
-      </div>
-    );
+  // A move's label is its target day ("2026-11-21"); a steps' label, the parent title.
+  const day = action === "move" && block.label ? dayName(+fromDateInput(block.label)) : "";
+  const values = { n, day, task: block.label ?? "" };
 
   if (step === "cancelled" || step === "undone")
     return (
@@ -667,7 +659,6 @@ function ConfirmBody({
             size="sm"
             variant="secondary"
             onClick={() => dispatch({ type: "undo", block: block.id })}
-            className={PILL}
           >
             {b.undo}
           </Button>
@@ -697,30 +688,9 @@ function ConfirmBody({
         <b className="block text-subhead font-semibold">{fill(head[0], values)}</b>
         <span className="text-footnote text-ink-secondary">{head[1]}</span>
       </div>
-      <ul className="flex flex-col divide-y divide-separator rounded-md bg-fill px-3">
-        {action === "move" &&
-          block.after.map((task, i) => (
-            <Row key={task.id} title={task.title}>
-              <s className="text-ink-tertiary">{whenOf(block.before[i])}</s>
-              <ArrowRightIcon aria-hidden="true" />
-              <span className="text-ink">{whenOf(task)}</span>
-            </Row>
-          ))}
-        {action === "delete" &&
-          block.before.map((task) => (
-            <Row key={task.id} title={task.title}>
-              {whenOf(task)}
-            </Row>
-          ))}
-        {action === "event" &&
-          block.after.map((task) => (
-            <Row key={task.id} title={task.title}>
-              <CalendarBadge />
-              {whenOf(task)}
-            </Row>
-          ))}
-        {(action === "create" || action === "steps") &&
-          block.after.map((task) => {
+      {action === "create" || action === "steps" ? (
+        <ul className="flex flex-col divide-y divide-separator rounded-md bg-fill px-3">
+          {block.after.map((task) => {
             const on = !block.off.includes(task.id);
             const toggle = () => dispatch({ type: "toggle", block: block.id, task: task.id });
             return (
@@ -743,27 +713,54 @@ function ConfirmBody({
                           title: event.target.value,
                         })
                       }
-                      className="min-w-0 bg-transparent text-base font-semibold outline-none"
+                      className="min-w-0 bg-transparent text-body font-semibold outline-none"
                     />
                   ) : (
                     <span className="text-subhead font-medium">{task.title}</span>
                   )}
                   {action === "create" && (
                     <span className="text-footnote text-ink-secondary tabular-nums">
-                      {whenOf(task)}
+                      {whenOf(task, hour12)}
                     </span>
                   )}
                 </span>
               </li>
             );
           })}
-      </ul>
+        </ul>
+      ) : (
+        <ul className="flex flex-col gap-1.5">
+          {(action === "delete" ? block.before : block.after).map((task) => {
+            const was = block.before.find((x) => x.id === task.id);
+            return (
+              <li key={task.id}>
+                <Row
+                  task={task}
+                  meta={
+                    action === "move" && was ? (
+                      <>
+                        <s className="text-ink-tertiary">{whenOf(was, hour12)}</s>
+                        <ArrowRightIcon aria-hidden="true" />
+                        <span className="text-ink">{dayOf(task)}</span>
+                      </>
+                    ) : action === "event" ? (
+                      <>
+                        <CalendarBadge />
+                        <span>{dayOf(task)}</span>
+                      </>
+                    ) : undefined
+                  }
+                />
+              </li>
+            );
+          })}
+        </ul>
+      )}
       <div className="mt-3 flex justify-end gap-2">
         <Button
           size="sm"
           variant="secondary"
           onClick={() => dispatch({ type: "cancel", block: block.id })}
-          className={PILL}
         >
           {b.cancel}
         </Button>
@@ -771,28 +768,10 @@ function ConfirmBody({
           size="sm"
           disabled={!n}
           onClick={() => dispatch({ type: "confirm", block: block.id })}
-          className={PILL}
         >
           {fill(cta, values)}
         </Button>
       </div>
     </>
-  );
-}
-
-function Row({ title, children }: { title: string; children: ReactNode }) {
-  return (
-    <li className="flex flex-col gap-0.5 py-2">
-      <span className="truncate text-subhead font-semibold">{title}</span>
-      <Meta>{children}</Meta>
-    </li>
-  );
-}
-
-function Meta({ children }: { children: ReactNode }) {
-  return (
-    <span className="flex items-center gap-1.5 text-footnote text-ink-secondary tabular-nums [&_svg]:size-3.5 [&_svg]:flex-none">
-      {children}
-    </span>
   );
 }

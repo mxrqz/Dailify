@@ -494,8 +494,26 @@ export function VoiceSheet({
   );
 }
 
+/** The dock's round ink button: the mic, and the chat's send. */
+export function DockButton({
+  className,
+  type = "button",
+  ...props
+}: ComponentPropsWithoutRef<"button">): JSX.Element {
+  return (
+    <button
+      type={type}
+      className={cn(
+        "relative grid size-11 flex-none cursor-pointer place-items-center rounded-full bg-ink text-canvas transition-[background-color,color,scale] duration-fast active:scale-95 disabled:cursor-default disabled:bg-fill-pressed disabled:text-ink-tertiary",
+        className,
+      )}
+      {...props}
+    />
+  );
+}
+
 /**
- * O dock do mobile: pílula fixa embaixo com o "Ei Mewki, anota…" (abre a folha) e o mic
+ * O dock do mobile: pílula fixa embaixo com o "Ei Mewki, anota…" (abre o chat da Mew) e o mic
  * (abre já gravando). Um espaçador do mesmo tamanho no fluxo deixa a última tarefa rolar acima dele.
  * Mora num portal no `body`, na camada `z-dock`: acima do chat da Mew, abaixo das folhas e da gaveta.
  * Com `chat`, a mesma pílula vira a caixa de mensagem do chat aberto por baixo dela.
@@ -536,7 +554,7 @@ export function CreateDock({
               <>
                 <button
                   type="button"
-                  aria-label={copy.composer.open}
+                  aria-label={copy.mewChat.open}
                   onClick={onOpen}
                   className="flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left outline-none"
                 >
@@ -546,14 +564,9 @@ export function CreateDock({
                   </span>
                 </button>
                 {onVoice && (
-                  <button
-                    type="button"
-                    aria-label={copy.composer.dockVoice}
-                    onClick={onVoice}
-                    className="grid size-11 flex-none cursor-pointer place-items-center rounded-full bg-ink text-canvas transition-[scale] duration-fast active:scale-95"
-                  >
+                  <DockButton aria-label={copy.composer.dockVoice} onClick={onVoice}>
                     <MicIcon aria-hidden="true" className="size-5" />
-                  </button>
+                  </DockButton>
                 )}
               </>
             )}

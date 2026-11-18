@@ -1,163 +1,129 @@
-import { type AgendaTask, type Block, type ChatEvent, type ConfirmBlock, swap } from "./engine";
+import type { MewBlock, MewIntent, MewReply } from "@dailify/shared";
+
+/** `draft` → `done` → `undone`, or `draft` → `cancelled`. */
+export type Step = "draft" | "done" | "cancelled" | "undone";
+
+/** A server confirm box plus what only the device knows: where it is and which rows are unchecked. */
+export type ConfirmBlock = Extract<MewBlock, { kind: "confirm" }> & { step: Step; off: string[] };
+export type Block = Extract<MewBlock, { kind: "tasks" }> | ConfirmBlock;
 
 export type Message =
   | { id: string; from: "me"; text: string; image?: string }
-  | { id: string; from: "mew"; text: string; typing: boolean; blocks: Block[] };
-
-export interface ChatState {
-  messages: Message[];
-  tasks: AgendaTask[];
-}
+  | {
+      id: string;
+      from: "mew";
+      text: string;
+      typing: boolean;
+      intent?: MewIntent;
+      blocks: Block[];
+    };
 
 export type ChatAction =
   | { type: "send"; id: string; text: string; image?: string }
-  | { type: "event"; to: string; event: ChatEvent }
+  | { type: "reply"; to: string; reply: MewReply }
+  /** Takes back a send the server refused before answering (no consent). */
+  | { type: "drop"; id: string }
   | { type: "edit"; block: string; task: string; title: string }
   | { type: "toggle"; block: string; task: string }
   | { type: "confirm" | "cancel" | "undo"; block: string }
-  | { type: "complete"; task: string }
-  | { type: "clear" }
-  | { type: "reset"; tasks: AgendaTask[] };
+  /** Rollback when the writes behind a confirm or undo failed. */
+  | { type: "settle"; block: string; step: Step }
+  | { type: "clear" };
 
 export const mewId = (sendId: string) => `${sendId}-mew`;
 
-const mapConfirm = (state: ChatState, id: string, fn: (block: ConfirmBlock) => ConfirmBlock) => ({
-  ...state,
-  messages: state.messages.map((m) =>
-    m.from === "mew"
-      ? {
-          ...m,
-          blocks: m.blocks.map((b) => (b.kind === "confirm" && b.id === id ? fn(b) : b)),
-        }
-      : m,
-  ),
+/** What a confirm writes: the checked rows with a title, frozen so undo reverts exactly that. */
+export const frozen = (block: ConfirmBlock): ConfirmBlock => ({
+  ...block,
+  after: block.after.filter((x) => !block.off.includes(x.id) && x.title.trim()),
+  off: [],
 });
 
-const findConfirm = (state: ChatState, id: string) =>
-  state.messages
-    .flatMap((m) => (m.from === "mew" ? m.blocks : []))
-    .find((b): b is ConfirmBlock => b.kind === "confirm" && b.id === id);
+const mapConfirm = (
+  messages: Message[],
+  id: string,
+  fn: (block: ConfirmBlock) => ConfirmBlock,
+): Message[] =>
+  messages.map((m) =>
+    m.from === "mew"
+      ? { ...m, blocks: m.blocks.map((b) => (b.kind === "confirm" && b.id === id ? fn(b) : b)) }
+      : m,
+  );
 
-function play(message: Message, event: ChatEvent): Message {
-  if (message.from !== "mew") return message;
-  if (event.type === "text") return { ...message, typing: false, text: event.text };
-  if (event.type === "block")
-    return { ...message, typing: false, blocks: [...message.blocks, event.block] };
-  if (event.type === "settle")
-    return {
-      ...message,
-      blocks: message.blocks.map((b) =>
-        b.kind === "confirm" && b.id === event.id && b.step === "status"
-          ? { ...b, step: "draft" }
-          : b,
-      ),
-    };
-  return message;
-}
+const from = (step: Step, to: Step) => (b: ConfirmBlock) =>
+  b.step === step ? { ...b, step: to } : b;
 
-/** The whole preview — thread and fake agenda — in one reducer, so confirm and undo stay atomic. */
-export function chatReducer(state: ChatState, action: ChatAction): ChatState {
+export function chatReducer(messages: Message[], action: ChatAction): Message[] {
   switch (action.type) {
     case "send":
-      return {
-        ...state,
-        messages: [
-          ...state.messages,
-          { id: action.id, from: "me", text: action.text, image: action.image },
-          { id: mewId(action.id), from: "mew", text: "", typing: true, blocks: [] },
-        ],
-      };
-    case "event":
-      return {
-        ...state,
-        messages: state.messages.map((m) => (m.id === action.to ? play(m, action.event) : m)),
-      };
+      return [
+        ...messages,
+        { id: action.id, from: "me", text: action.text, image: action.image },
+        { id: mewId(action.id), from: "mew", text: "", typing: true, blocks: [] },
+      ];
+    case "reply":
+      return messages.map((m) =>
+        m.id === action.to && m.from === "mew"
+          ? {
+              ...m,
+              typing: false,
+              text: action.reply.reply,
+              intent: action.reply.intent,
+              blocks: action.reply.blocks.map((b) =>
+                b.kind === "confirm" ? { ...b, step: "draft", off: [] } : b,
+              ),
+            }
+          : m,
+      );
+    case "drop":
+      return messages.filter((m) => m.id !== action.id && m.id !== mewId(action.id));
     case "edit":
-      return mapConfirm(state, action.block, (b) => ({
+      return mapConfirm(messages, action.block, (b) => ({
         ...b,
         after: b.after.map((x) => (x.id === action.task ? { ...x, title: action.title } : x)),
       }));
     case "toggle":
-      return mapConfirm(state, action.block, (b) => ({
+      return mapConfirm(messages, action.block, (b) => ({
         ...b,
         off: b.off.includes(action.task)
           ? b.off.filter((id) => id !== action.task)
           : [...b.off, action.task],
       }));
-    case "confirm": {
-      const block = findConfirm(state, action.block);
-      if (block?.step !== "draft") return state;
-      // What was applied is frozen into `after`, so undo reverts exactly that.
-      const after = block.after.filter((x) => !block.off.includes(x.id) && x.title.trim());
-      if (!after.length && !block.before.length) return state;
-      return {
-        ...mapConfirm(state, block.id, (b) => ({ ...b, step: "done", after, off: [] })),
-        tasks: swap(state.tasks, block.before, after),
-      };
-    }
-    case "cancel":
-      return mapConfirm(state, action.block, (b) =>
-        b.step === "draft" ? { ...b, step: "cancelled" } : b,
+    case "confirm":
+      return mapConfirm(messages, action.block, (b) =>
+        b.step === "draft" ? { ...frozen(b), step: "done" } : b,
       );
-    case "undo": {
-      const block = findConfirm(state, action.block);
-      if (block?.step !== "done") return state;
-      return {
-        ...mapConfirm(state, block.id, (b) => ({ ...b, step: "undone" })),
-        tasks: swap(state.tasks, block.after, block.before),
-      };
-    }
-    case "complete":
-      return {
-        ...state,
-        tasks: state.tasks.map((x) => (x.id === action.task ? { ...x, done: !x.done } : x)),
-      };
+    case "cancel":
+      return mapConfirm(messages, action.block, from("draft", "cancelled"));
+    case "undo":
+      return mapConfirm(messages, action.block, from("done", "undone"));
+    case "settle":
+      return mapConfirm(messages, action.block, (b) => ({ ...b, step: action.step }));
     case "clear":
-      return { ...state, messages: [] };
-    case "reset":
-      return { messages: [], tasks: action.tasks };
+      return [];
   }
 }
 
-// v2: a reply is one `text`, no longer `words`.
-const KEY = "mewki:preview-mew:v2";
+const KEEP = 50;
+const keyOf = (userId: string) => `mewki:mew:${userId}:v1`;
 
-const isChatState = (value: unknown): value is ChatState =>
-  typeof value === "object" &&
-  value !== null &&
-  "messages" in value &&
-  "tasks" in value &&
-  Array.isArray(value.messages) &&
-  Array.isArray(value.tasks);
+const isMessages = (value: unknown): value is Message[] => Array.isArray(value);
 
-/** A reload mid-reply would leave it typing forever; settle whatever was in flight. */
-export function loadChat(): ChatState | null {
+/** A reload mid-request leaves a reply typing forever: drop it. */
+export function loadChat(userId: string | undefined): Message[] {
+  if (!userId) return [];
   try {
-    const raw: unknown = JSON.parse(localStorage.getItem(KEY) ?? "null");
-    if (!isChatState(raw)) return null;
-    return {
-      tasks: raw.tasks,
-      messages: raw.messages.map((m) =>
-        m.from === "mew"
-          ? {
-              ...m,
-              typing: false,
-              blocks: m.blocks.map((b) =>
-                b.kind === "confirm" && b.step === "status" ? { ...b, step: "draft" } : b,
-              ),
-            }
-          : m,
-      ),
-    };
+    const raw: unknown = JSON.parse(localStorage.getItem(keyOf(userId)) ?? "null");
+    return isMessages(raw) ? raw.filter((m) => !(m.from === "mew" && m.typing)) : [];
   } catch {
-    return null;
+    return [];
   }
 }
 
-export function saveChat(state: ChatState): void {
+export function saveChat(userId: string, messages: Message[]): void {
   try {
-    localStorage.setItem(KEY, JSON.stringify(state));
+    localStorage.setItem(keyOf(userId), JSON.stringify(messages.slice(-KEEP)));
   } catch {
-    // Quota or private mode: the preview just stops remembering.
+    // Quota or private mode: the chat just stops remembering.
   }
 }
