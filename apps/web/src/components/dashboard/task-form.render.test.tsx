@@ -50,6 +50,39 @@ describe("<TaskForm> intervalo", () => {
   });
 });
 
+describe("<TaskForm> dias da semana", () => {
+  it("keeps the last day pressed, so a weekly series never saves empty", () => {
+    const { submit } = setup(task);
+    const day = (name: string) => screen.getByRole("button", { name });
+    const [, mon, tue] = copy.form.repeatDays;
+
+    fireEvent.click(day(mon));
+    expect(day(mon)).toHaveAttribute("aria-pressed", "true");
+
+    fireEvent.click(day(tue));
+    fireEvent.click(day(mon));
+    expect(day(mon)).toHaveAttribute("aria-pressed", "false");
+    expect(submit()).toMatchObject({ repeat: { Weekly: ["Tuesday"] } });
+  });
+});
+
+describe("<TaskForm> tags", () => {
+  it("names the removal in each tag's label, and tapping removes it", () => {
+    const onSubmit = vi.fn();
+    render(
+      <TaskForm
+        id="f"
+        task={{ ...task, tags: ["casa"] }}
+        view="tags"
+        onView={vi.fn()}
+        onSubmit={onSubmit}
+      />,
+    );
+    fireEvent.click(screen.getByRole("button", { name: "Tirar a tag casa" }));
+    expect(screen.queryByRole("button", { name: "Tirar a tag casa" })).toBeNull();
+  });
+});
+
 describe("<TaskForm> raiz", () => {
   it("o subtítulo diz o dia e o intervalo pela duração", () => {
     const tomorrow = new Date();
