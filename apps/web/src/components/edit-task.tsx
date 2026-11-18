@@ -52,14 +52,27 @@ export function EditTask({
 }
 
 /** Sem data marca por período e exclui sem diálogo de escopo; só quem é Sem data paga o hook. */
-function WithUndatedActions({
+function UndatedFooterButtons({
   task,
-  children,
+  onClose,
+  completeButton,
+  deleteButton,
 }: {
   task: TaskProps;
-  children: (actions: ReturnType<typeof useUndatedActions>) => JSX.Element;
+  onClose: () => void;
+  completeButton: (done: boolean, toggle: () => Promise<unknown>) => JSX.Element;
+  deleteButton: (onClick: () => void) => JSX.Element;
 }): JSX.Element {
-  return children(useUndatedActions(task));
+  const { done, toggle, remove } = useUndatedActions(task);
+  return (
+    <>
+      {completeButton(done, toggle)}
+      {deleteButton(() => {
+        void remove();
+        onClose();
+      })}
+    </>
+  );
 }
 
 interface EditTaskContentProps {
@@ -314,23 +327,17 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
           )}
           {/* Concluída não desabilita o botão: ele vira o reabrir. */}
           {wasUndated ? (
-            <WithUndatedActions task={task}>
-              {({ done, toggle }) => completeButton(done, toggle)}
-            </WithUndatedActions>
+            <UndatedFooterButtons
+              task={task}
+              onClose={onClose}
+              completeButton={completeButton}
+              deleteButton={deleteButton}
+            />
           ) : (
-            completeButton(completedOnDay, completedOnDay ? onUncomplete : onComplete)
-          )}
-          {wasUndated ? (
-            <WithUndatedActions task={task}>
-              {({ remove }) =>
-                deleteButton(() => {
-                  void remove();
-                  onClose();
-                })
-              }
-            </WithUndatedActions>
-          ) : (
-            deleteButton(() => void onDelete())
+            <>
+              {completeButton(completedOnDay, completedOnDay ? onUncomplete : onComplete)}
+              {deleteButton(() => void onDelete())}
+            </>
           )}
         </SheetFooter>
       )}
