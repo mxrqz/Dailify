@@ -16,7 +16,7 @@ vi.mock("../src/lib/email", () => ({ sendEmail }));
 
 import { env, applyD1Migrations } from "cloudflare:test";
 import { auth } from "../src/auth";
-import { insertTask, getTask } from "../src/db/tasks";
+import { insertTask, getTask, USER_TABLES } from "../src/db/tasks";
 import { bumpStoredUsage, readStoredUsage } from "../src/db/usage";
 import { insertState, upsertConnection } from "../src/db/integrations";
 import { sealTokens } from "../src/integrations/connection";
@@ -46,6 +46,14 @@ const task = (id: string) => ({
 
 // Conta apagada leva os dados junto (a /privacidade promete) e a cobrança junto.
 describe("auth.api.deleteUser", () => {
+  it("deleteUserData covers every table with a user_id column", async () => {
+    // instr over the DDL, not pragma_table_info, which workerd's authorizer may reject.
+    const { results } = await env.DB.prepare(
+      `SELECT name FROM sqlite_master WHERE type='table' AND instr(sql, 'user_id') > 0`,
+    ).all<{ name: string }>();
+    expect(results.map((r) => r.name).sort()).toEqual([...USER_TABLES].sort());
+  });
+
   it("cancela a assinatura ativa e apaga as tarefas", async () => {
     stripeMock.subscriptions.search.mockResolvedValue({
       data: [
