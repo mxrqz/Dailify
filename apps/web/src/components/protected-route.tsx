@@ -153,7 +153,6 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     };
   }, []);
 
-  // 📅 Função principal para carregar as tasks
   const getTasks = useEffectEvent(async () => {
     if (!userId) return;
 
@@ -247,7 +246,6 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   }, [held]);
   const splash = loading || held;
 
-  // 🧭 Redirecionar se não estiver logado
   if (!loading && !userId) {
     return <Navigate to="/login" replace state={{ from: location }} />;
   }
