@@ -17,10 +17,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
   (`day-picker`, `date-time-picker`, `links-field`), `recurrence-scope-dialog.tsx` (copy over kit
   `ActionSheet`). `push-toggle.tsx` is a settings row (`pages/settings.tsx`).
 - `copy.ts` is the dictionary of the whole authenticated app (see `components/CLAUDE.md`).
-- `styles.ts`: only `calendarPanel` is shared; `fieldClass`/`bareFieldClass` have one user each, and
-  the `chip*` exports are dead.
-- Legacy-alias holdouts, don't copy: `undated-column.tsx`, `SchedulePicker` in `anytime-block.tsx`,
-  `styles.ts` `fieldClass`, `day-picker.tsx`, `create-fab.tsx`.
+- `styles.ts` holds only `calendarPanel`, shared by `task-meta-menus` and `anytime-block`.
+- Legacy-alias holdouts, don't copy: `undated-column.tsx`, `SchedulePicker` in `anytime-block.tsx`.
 
 ## Two editing modes, never both
 
@@ -39,7 +37,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
   the mic opens the bottom `Sheet` already recording (`listen`). Desktop: the "+" morphs into a
   Radix Dialog, or a docked panel (`useStoredFlag("dailify:composer-docked")`).
 - The desktop modes share `layoutId="composer-surface"`; its radii follow the morph rule in
-  `apps/web/src/CLAUDE.md` › Motion, and today's `RADIUS_*` (12) have drifted from it.
+  `apps/web/src/CLAUDE.md` › Motion: `RADIUS_PANEL` = `--radius-panel` (22), `RADIUS_FAB` =
+  `--radius-md` (14).
 - Submit contract: the composer never writes a single task. `onSubmit(values, again)` returns
   `Promise<boolean>`; the sheet closes at once (optimistic) and reopens with the `retry` text on
   `false`; Shift+Enter (`again`) keeps it open. Multi-draft Mew creates go through `createMany`
@@ -53,8 +52,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
 - Chip slots stay mounted in a fixed order (repeat or day, time, duration, reminder, first link), so
   the strip doesn't reflow per keystroke. `MetaChip` without `onRemove` only edits (`ghost` = the
   empty "+ x" look); without `editor` it only displays (the reminder).
-- The textarea id `composer-text` is also read by `create-fab.tsx` (`n` and `/` focus, focus after a
-  calendar day pick, the pointer-leave "has text" guard). Rename it in both files.
+- The textarea id is `COMPOSER_TEXT_ID` (`task-composer.tsx`), which `create-fab.tsx` reads (`n`
+  and `/` focus, focus after a calendar day pick, the pointer-leave "has text" guard).
 
 ## Chip editors (`task-meta-menus.tsx`)
 
@@ -80,8 +79,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
   through `undatedReminder`. Toggling undated carries the chosen day across.
 - `locked` (a Calendar invite you don't organize) disables title, date, time, duration, the undated
   switch, repeat, interval and weekdays. Priority, tags and links stay editable.
-- Weekly starts with the task's own weekday: an empty `Weekly` never fires (shared `normalizeRepeat`
-  turns it into "Off"). `copy.form.repeatDays` and `copy.aside.weekDayInitials` are Sunday-first,
+- Weekly starts with the task's own weekday and `WeekdayToggle` won't drop the last day: an empty
+  `Weekly` never fires (shared `normalizeRepeat` turns it into "Off"). `copy.form.repeatDays` and `copy.aside.weekDayInitials` are Sunday-first,
   aligned with shared `weekDays`/`dayMap`.
 
 ## How to add a chip field

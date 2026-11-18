@@ -22,10 +22,7 @@ export const copy = {
     forward: "Avançar",
     upgrade: "Assinar",
     profile: "Perfil",
-    accountMenu: "Menu da conta",
     openNav: "Abrir navegação",
-    settings: "Configurações",
-    signOut: "Sair",
     signIn: "Entrar",
     dashboard: "Dashboard",
     themeToggle: "Alternar tema",
@@ -63,7 +60,6 @@ export const copy = {
     listFirstRunHint: "Escreva a tarefa do jeito que você falaria. O campo abaixo entende a data.",
     listFirstRunTry: "Experimente",
     listFirstRunExample: "dentista amanhã às 15h por 1h",
-    newTask: "Nova tarefa",
     // A Hoje e a agenda do redesign: hoje é "Agenda" (a página já se chama Hoje).
     agenda: "Agenda",
     week: "Semana",
@@ -83,8 +79,6 @@ export const copy = {
   },
 
   aside: {
-    nextTaskLabel: "PRÓXIMA TAREFA",
-    noNextTask: "Nada pela frente neste mês.",
     prevMonth: "Mês anterior",
     nextMonth: "Próximo mês",
     weekDayInitials: ["D", "S", "T", "Q", "Q", "S", "S"],
@@ -105,8 +99,6 @@ export const copy = {
   },
 
   form: {
-    newTitle: "Nova tarefa",
-    newDescription: "Descreva o que precisa ser feito e quando.",
     editTitle: "Tarefa",
     editDescription: "Edite e salve, ou conclua direto.",
     title: "Tarefa",
@@ -117,12 +109,11 @@ export const copy = {
     minute: "Minuto",
     meridiem: "AM ou PM",
     undated: "Sem horário",
-    undatedOn: "Sim · A qualquer hora",
-    undatedOff: "Não",
     undatedChip: "A qualquer hora",
     // Subtítulo da tarefa aberta: "Amanhã, 15:00 às 16:00".
     when: "{day}, {start} às {end}",
     reminder: "Lembrete",
+    reminderValue: "{day} · {time}",
     noReminder: "Sem lembrete",
     duration: "Duração",
     links: "Links",
@@ -141,11 +132,14 @@ export const copy = {
     meetError: "Não foi possível gerar o Meet",
     priority: "Prioridade",
     tags: "Tags",
-    tagPlaceholder: "adicionar tag",
+    tagRemove: "Tirar a tag {tag}",
+    // As tags além das duas que a linha mostra.
+    moreTags: "+{n}",
     repeat: "Repetição",
     repeatOff: "Não repetir",
     repeatDaily: "Diária",
     repeatWeekly: "Semanal",
+    repeatWeeklyDays: "Semanal · {days}",
     repeatMonthly: "Mensal",
     repeatYearly: "Anual",
     repeatEvery: "Intervalo",
@@ -160,14 +154,10 @@ export const copy = {
     // Ordem de `weekDays` do shared (domingo primeiro) — o índice vem do `dayMap`.
     repeatDays: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
     back: "Voltar",
-    empty: "—",
     tagSearch: "buscar ou criar tag",
-    tagCreate: "Criar",
     cancel: "Cancelar",
     save: "Salvar",
-    create: "Criar tarefa",
     titleRequired: "O título é obrigatório",
-    fieldsRequired: "Preencha todos os campos",
     created: "Tarefa criada",
     createdUndated: "Anotado para qualquer hora",
     updated: "Tarefa atualizada",
@@ -183,8 +173,6 @@ export const copy = {
     scopeSeries: "Todas as ocorrências",
     scopeDetached: "Ocorrência atualizada",
     scopeDeleteDescription: "O que você quer excluir?",
-    notificationsEnable: "Ativar neste dispositivo",
-    notificationsDisable: "Desativar",
     notificationsOff: "Receba um lembrete na hora do alerta da tarefa.",
     notificationsUnsupported: "Este navegador não suporta notificações.",
     notificationsDenied:
@@ -395,6 +383,8 @@ export const copy = {
     dock: "Ei Mewki, anota…",
     dockVoice: "Falar com a Mewki",
     reminderAt: "Lembrete {value}",
+    // O `{value}` do `reminderAt`: "Ter 09:00".
+    alertAt: "{day} {time}",
   },
 
   // Puxador da coluna lateral do desktop, vazia desde que a Sem data foi para o topo de hoje.
@@ -452,6 +442,7 @@ export const copy = {
     remainingMany: "{n} restantes",
     exhausted: "Créditos de IA esgotados",
     upgrade: "Assinar",
+    upgradeLabel: "Créditos de IA esgotados · Assinar",
     failed: "A Mew não conseguiu agora",
     noCredit: "Nenhum crédito foi usado.",
     draft: "Lido pela Mew",
