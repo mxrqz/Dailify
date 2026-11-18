@@ -1,4 +1,3 @@
-import { nanoid } from "nanoid";
 import {
   DEFAULT_DURATION,
   TASK_LIMITS,
@@ -30,6 +29,7 @@ import {
 import { deleteLink, getLink, setLinkState } from "../../db/integrations";
 import { getSettings } from "../../db/settings";
 import { getTask, setExdatesStatement, updateTask } from "../../db/tasks";
+import { newTaskId } from "../../lib/task-input";
 import { loadCtx } from "../connection";
 import { appendLinks, withoutLink } from "../links";
 import type { Ctx } from "../types";
@@ -261,7 +261,7 @@ async function create(
   }
   const endsAt = mapped.fields.repeat === "Off" ? mapped.end : mapped.fields.repeatUntil;
   if (!opts.base && endsAt !== undefined && endsAt < s.cutoff) return; // passado: fica na Agenda
-  const id = nanoid(6);
+  const id = newTaskId();
   const task: Task = {
     priority: 0,
     ...opts.base,
