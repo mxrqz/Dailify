@@ -148,7 +148,9 @@ export function HeroScene() {
   const v = reduce ? FINAL : state;
   // enviado: o texto some mas segue no DOM; o campo volta a 1 linha (h-11) em vez de ficar vazio alto
   const sent = useRef(false);
-  sent.current = v.phase === "sent";
+  useEffect(() => {
+    sent.current = v.phase === "sent";
+  });
 
   // a setinha dos dois balões segue a cabeça da Mew, sem re-render
   const onHeadMove = useCallback((px: number) => {

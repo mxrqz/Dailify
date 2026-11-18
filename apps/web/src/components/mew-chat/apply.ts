@@ -1,4 +1,3 @@
-import { useRef } from "react";
 import { toast } from "sonner";
 import type { Task } from "@dailify/shared";
 
@@ -51,22 +50,21 @@ export function swap(lists: Lists, out: Task[], into: Task[], months: Date[]): L
  * Optimistic; any refused write rolls the screen back and returns `false`.
  */
 export function useMewApply() {
-  const { tasks, setTasks, undatedTasks, setUndatedTasks, loadedMonths, bumpUsage } = useDailify();
+  const { setTasks, setUndatedTasks, loadedMonths, bumpUsage } = useDailify();
   const pushCalendar = useCalendarPush();
-  // The writes take a round-trip; later taps must start from the lists of now.
-  const latest = useRef<Lists>({ tasks: [], undated: [] });
-  latest.current = { tasks: tasks ?? [], undated: undatedTasks ?? [] };
 
-  const show = (lists: Lists) => {
-    latest.current = lists;
-    setTasks(lists.tasks);
-    setUndatedTasks(lists.undated);
+  // Functional: the writes take a round-trip, and whatever landed meanwhile must survive.
+  // `swap` reads each list only for its own half, so one empty side is safe.
+  const show = (out: Task[], into: Task[]) => {
+    setTasks((tasks) => swap({ tasks: tasks ?? [], undated: [] }, out, into, loadedMonths).tasks);
+    setUndatedTasks(
+      (undated) => swap({ tasks: [], undated: undated ?? [] }, out, into, loadedMonths).undated,
+    );
   };
 
   return async (block: ConfirmBlock, way: "do" | "undo"): Promise<boolean> => {
     const [out, into] = way === "do" ? [block.before, block.after] : [block.after, block.before];
-    const previous = latest.current;
-    show(swap(previous, out, into, loadedMonths));
+    show(out, into);
 
     const at = Date.now();
     const plan = writes(out, into);
@@ -81,7 +79,7 @@ export function useMewApply() {
     if (error) {
       // ponytail: a partial failure rolls back writes that did land too (until the next reload);
       // a batch route applying a box atomically would fix it.
-      show(previous);
+      show(into, out);
       toast.error(copy.mewChat.applyError, { description: error.message });
       return false;
     }
