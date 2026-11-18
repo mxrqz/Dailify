@@ -17,8 +17,8 @@ Each has a colocated `<module>.test.ts`, except `push.ts`.
   `normalizeUrl`), `quota-label` (+ `creditsLabel`), `count-label`, `date-label` (day and clock
   labels), `task-options` (editor choice lists), `task-lists` (`swapTasks`/`swapUndated`),
   `undated`, `user-agent`,
-  `compose-input` (composer chip state: `onDay`, `fromWire`, `markSegments`, `withEdits`; not
-  shared's `composeTaskInput`), `edit-input` (edit form to `TaskInput`, `buildEdit`), `billing-sections`,
+  `compose-input` (composer chip state: `onDay`, `markSegments`, `withEdits`; `fromWire` and
+  `composeTaskInput` are shared's), `edit-input` (edit form to `TaskInput`, `buildEdit`), `billing-sections`,
   `revert-task`.
 - Imports: shared, date libs, `@/consts`, `@/lib`, siblings, `components/*/copy.ts`, `import type`
   from components.

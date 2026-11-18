@@ -7,6 +7,7 @@ import {
   DEFAULT_HOUR,
   TASK_LIMITS,
   composeTaskInput,
+  fromWire,
   parseTaskText,
   remapSpans,
   type Field,
@@ -39,7 +40,7 @@ import { copy } from "@/components/dashboard/copy";
 import { MewStatic } from "@/components/mew/mew-static";
 import { Button } from "@/components/ui/button";
 import { Label } from "@/components/ui/label";
-import { fromWire, markSegments, onDay, withEdits, type Edits } from "@/functions/compose-input";
+import { markSegments, onDay, withEdits, type Edits } from "@/functions/compose-input";
 import type { CalendarPick } from "@/hooks/useCalendarPush";
 import { useCreateTask } from "@/hooks/useCreateTask";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
@@ -59,7 +60,7 @@ import { useDailify } from "@/components/dailifyContext";
 import { clockAt, dayDot } from "@/functions/date-label";
 import { fill } from "@/functions/functions";
 import { remainingLabel } from "@/functions/quota-label";
-import { zoned } from "@/functions/zone";
+import { appTimeZone, zoned } from "@/functions/zone";
 
 export interface ComposerValues {
   parsed: ParsedTask;
@@ -124,7 +125,10 @@ export function TaskComposer({
   );
   // A leitura da Mew vale pro texto que ela leu: editar chama `mew.reset` e volta pro parser local.
   const drafts = useMemo(
-    () => (mew.result?.intent === "create" ? mew.result.drafts.map(fromWire) : []),
+    () =>
+      mew.result?.intent === "create"
+        ? mew.result.drafts.map((draft) => fromWire(draft, appTimeZone()))
+        : [],
     [mew.result],
   );
   const draftTasks = useMemo(() => drafts.map((d) => composeTaskInput(d, zoned())), [drafts]);

@@ -1,11 +1,4 @@
-import {
-  quotedSpans,
-  type Field,
-  type ParsedTask,
-  type ParsedTaskWire,
-  type Repeat,
-  type Span,
-} from "@dailify/shared";
+import { quotedSpans, type Field, type ParsedTask, type Repeat, type Span } from "@dailify/shared";
 
 import { zoned } from "./zone";
 
@@ -17,14 +10,6 @@ export function onDay(parsed: ParsedTask, day: Date | null | undefined): ParsedT
   date.setHours(time?.getHours() ?? 0, time?.getMinutes() ?? 0, 0, 0);
   return { ...parsed, date, hasDay: true };
 }
-
-/** Rascunho da Mew (`POST /tasks/parse`) no formato do parser local, pros chips e o `composeTaskInput`. */
-export const fromWire = (wire: ParsedTaskWire): ParsedTask => ({
-  ...wire,
-  date: wire.date === null ? null : zoned(wire.date),
-  unsure: [],
-  fields: { day: [], time: [], duration: [], repeat: [], links: [] },
-});
 
 const FIELDS: Field[] = ["day", "time", "duration", "repeat", "links"];
 
