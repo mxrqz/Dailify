@@ -3,7 +3,13 @@ import { fireEvent, render, screen, waitFor, within } from "@testing-library/rea
 import type { SetStateAction } from "react";
 import { MemoryRouter } from "react-router-dom";
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { MEW_CONSENT_REQUIRED, QUOTA_ERRORS, type MewReply, type Task } from "@dailify/shared";
+import {
+  API_ERROR,
+  MEW_CONSENT_REQUIRED,
+  QUOTA_ERRORS,
+  type MewReply,
+  type Task,
+} from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 
@@ -123,7 +129,12 @@ describe("MewChat", () => {
     api.getSettings.mockResolvedValue({ settings: { mewConsent: false } });
     api.mewChat
       .mockResolvedValueOnce({
-        error: { message: MEW_CONSENT_REQUIRED, offline: false, status: 403 },
+        error: {
+          message: MEW_CONSENT_REQUIRED,
+          offline: false,
+          status: 403,
+          code: API_ERROR.mewConsentRequired,
+        },
       })
       .mockResolvedValueOnce({ reply: { reply: "Oi!", intent: "answer", blocks: [] } });
     const { chat } = mount();
@@ -139,7 +150,7 @@ describe("MewChat", () => {
 
   it("out of credits, the Mew says so and no credit is counted", async () => {
     api.mewChat.mockResolvedValue({
-      error: { message: QUOTA_ERRORS.ai, offline: false, status: 429 },
+      error: { message: QUOTA_ERRORS.ai, offline: false, status: 429, code: API_ERROR.aiExhausted },
     });
     const { chat } = mount();
     say("oi");

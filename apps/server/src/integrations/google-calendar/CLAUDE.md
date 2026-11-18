@@ -69,8 +69,9 @@ tokens, `propagate`) is in `../CLAUDE.md`.
 - Scope `calendar.events.owned` (+ `openid email`): sensitive but verified without a CASA audit
   (bd `Dailify-zpq`). Don't widen it. `access_type=offline` + `prompt=consent` are what make a
   reconnect return a refresh_token.
-- `ActionError` messages here are pt-BR because `components/add-to-calendar.tsx` (web) toasts
-  `error.message`. Legacy against RULES.md "Backend and API": a new error gets a `code`.
+- Uncoded `ActionError` messages here are pt-BR because `components/add-to-calendar.tsx` (web)
+  toasts `error.message`. Legacy against RULES.md "Backend and API": a new error gets a `code`
+  from `API_ERROR` (shared) and an English message, like the 409 `already_linked`.
 
 ## Adding a synced field
 

@@ -52,7 +52,7 @@ through `PROVIDERS[id]` first.
   user.
 - `state` is single-use (`consumeState`: `DELETE ... RETURNING`, 10 min) and must match `user_id`
   and the provider, else 403.
-- A `required` scope left unticked on the consent screen answers 400 `MISSING_SCOPE_ERROR` and
+- A `required` scope left unticked on the consent screen answers 400 `code: missing_scope` and
   revokes the grant.
 - Plausible bug, not in bd yet: from the Tauri app `appOrigin` returns the webview origin (it is in
   `ALLOWED_ORIGIN`), so the `redirect_uri` points at `tauri://localhost` or `tauri.localhost`

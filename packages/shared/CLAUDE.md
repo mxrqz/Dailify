@@ -20,12 +20,14 @@ are in [Shared model](../../RULES.md#shared-model); required zones are in
 
 - `types.ts`: `Task`, `TaskInput` (PATCH: `null` resets, absent keeps), `OccurrenceEdit`, `Repeat`, `Role`, `PLAN_ID`,
   `ParsedTaskWire`, `AiIntent`/`AiParse`, Stripe `Invoice`/`PaymentDetails` (Unix seconds).
+- `errors.ts`: `API_ERROR`, the `code` registry of every error the web reacts to, and
+  `isApiErrorCode`.
 - `mew.ts`: the Mew chat wire (`MewRequest`/`MewReply`/`MewBlock`) and the `MEW_*` caps, plus the
-  `MEW_CONSENT_REQUIRED` error text the web compares.
+  `MEW_CONSENT_REQUIRED` error text older app builds compare.
 - `integrations.ts`: `ProviderId`/`INTEGRATIONS`/`PROVIDER_IDS`, `CalendarTarget`,
-  `IntegrationStatus`, `IntegrationLink`, `INTEGRATION_ERROR`, `calendarSlot`, `matchDuplicate`,
-  and `calendarEventPreview`, the web card and the server action preview alike.
-  `MISSING_SCOPE_ERROR` is a message the web compares: legacy, new errors get a code.
+  `IntegrationStatus`, `IntegrationLink`, `INTEGRATION_ERROR` (a slice of `API_ERROR`),
+  `calendarSlot`, `matchDuplicate`, and `calendarEventPreview`, the web card and the server action
+  preview alike. `MISSING_SCOPE_ERROR` is a legacy text kept for older app builds.
 - `copy.ts`: the pt-BR text shared code renders (`sharedCopy`, `{placeholder}` + `fillShared`),
   not exported from the barrel. It is the file that gets an English pair (bd `Dailify-1xy`).
 - `duration.ts`: the `Task.duration` format (`DEFAULT_DURATION`, `DURATION_RE`/`isDuration`,

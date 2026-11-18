@@ -1,4 +1,5 @@
 import type { MiddlewareHandler } from "hono";
+import { API_ERROR } from "@dailify/shared";
 import type { AppEnv } from "../index";
 import { fail } from "../lib/errors";
 
@@ -17,7 +18,7 @@ export function rateLimit(name: Limiter): MiddlewareHandler<AppEnv> {
     if (!limiter) return next(); // binding ausente (teste/dev local): nada a limitar
     const who = name === "AUTH_LIMITER" ? c.req.header("cf-connecting-ip") : c.get("userId");
     const { success } = await limiter.limit({ key: `${name}:${who}` });
-    if (!success) return fail(c, 429, "Too many requests");
+    if (!success) return fail(c, 429, "Too many requests", { code: API_ERROR.rateLimited });
     await next();
   };
 }

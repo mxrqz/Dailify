@@ -3,7 +3,7 @@ import { StrictMode } from "react";
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
-import { MISSING_SCOPE_ERROR } from "@dailify/shared";
+import { API_ERROR } from "@dailify/shared";
 
 const { completeIntegration, toast, reloadMonths } = vi.hoisted(() => ({
   reloadMonths: vi.fn(),
@@ -59,7 +59,7 @@ describe("<IntegrationCallback>", () => {
 
   it("escopo desmarcado vira o recado específico", async () => {
     completeIntegration.mockResolvedValue({
-      error: { message: MISSING_SCOPE_ERROR, offline: false, status: 400 },
+      error: { message: "x", offline: false, status: 400, code: API_ERROR.missingScope },
     });
     renderAt("code=c&state=s");
 

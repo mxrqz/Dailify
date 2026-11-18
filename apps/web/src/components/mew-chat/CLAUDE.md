@@ -30,9 +30,8 @@ applied to the agenda.
   back and returns `false` (ponytail: partial failure). `ChatInput` is disabled offline. On success
   it bumps usage, records `setMewAction` and pushes Google Calendar targets. Both the apply and
   the rollback are functional `swap`s (the rollback swaps back), so writes landing meanwhile stay.
-- mew-chat.tsx matches the server's error texts, shared with it: `MEW_CONSENT_REQUIRED` and
-  `QUOTA_ERRORS.ai` from `@dailify/shared` (texts, not codes, so the wire stays as it was).
-  A send refused for consent is dropped, kept in `pending` and resent after accept: nothing
+- mew-chat.tsx branches on the error `code` (`API_ERROR` from `@dailify/shared`):
+  `mewConsentRequired`, `aiExhausted`, `rateLimited`. A send refused for consent is dropped, kept in `pending` and resent after accept: nothing
   reaches OpenAI before consent (LGPD).
 - Caps come from `@dailify/shared` (`MEW_HISTORY_MAX`, `MEW_TEXT_MAX`, `MEW_IMAGE_MAX`). Photos are
   stored as a 320px thumb (localStorage quota) and uploaded at 1024px (`THUMB_PX`/`UPLOAD_PX`).

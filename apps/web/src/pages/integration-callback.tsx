@@ -2,7 +2,7 @@ import { useEffect, useRef } from "react";
 import { Loader2Icon } from "lucide-react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
-import { isProviderId, MISSING_SCOPE_ERROR } from "@dailify/shared";
+import { API_ERROR, isProviderId } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
@@ -33,7 +33,7 @@ export default function IntegrationCallback(): JSX.Element {
     if (!isProviderId(provider) || !code || !state) return fail(t.failed);
 
     const { error } = await completeIntegration(provider, code, state);
-    if (error?.message === MISSING_SCOPE_ERROR) return fail(t.missingScope);
+    if (error?.code === API_ERROR.missingScope) return fail(t.missingScope);
     if (error?.status === 403) return fail(t.wrongUser);
     if (error) return fail(t.failed);
 

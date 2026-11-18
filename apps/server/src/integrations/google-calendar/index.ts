@@ -90,7 +90,7 @@ export const createEvent = {
     const task = await ownTask(ctx, input.taskId);
     const existing = await getLink(ctx.env.DB, ctx.userId, "google-calendar", task.id);
     if (existing)
-      throw new ActionError(409, "Esta tarefa já está na Agenda", {
+      throw new ActionError(409, "Task already on the calendar", {
         code: INTEGRATION_ERROR.alreadyLinked,
         link: existing,
         task,

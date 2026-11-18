@@ -2,13 +2,7 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
-import {
-  MEW_CONSENT_REQUIRED,
-  MEW_HISTORY_MAX,
-  MEW_TEXT_MAX,
-  QUOTA_ERRORS,
-  type MewReply,
-} from "@dailify/shared";
+import { API_ERROR, MEW_HISTORY_MAX, MEW_TEXT_MAX, type MewReply } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { CreateDock } from "@/components/dashboard/composer-views";
@@ -85,14 +79,14 @@ export function MewChat({ onCompose, onVoice }: { onCompose: () => void; onVoice
         dispatch({ type: "reply", to: mewId(id), reply });
         return;
       }
-      // A 403 or 429 means different things depending on the server's text.
-      if (error?.message === MEW_CONSENT_REQUIRED) {
+      // A 403 or 429 means different things depending on the server's code.
+      if (error?.code === API_ERROR.mewConsentRequired) {
         pending.current = { text, image };
         dispatch({ type: "drop", id });
         setConsent(false);
         return;
       }
-      const out = error?.message === QUOTA_ERRORS.ai;
+      const out = error?.code === API_ERROR.aiExhausted;
       if (out)
         toast(copy.mew.exhausted, {
           description: copy.voice.limitReachedHint,
@@ -100,7 +94,7 @@ export function MewChat({ onCompose, onVoice }: { onCompose: () => void; onVoice
         });
       const line = out
         ? copy.mew.exhausted
-        : error?.status === 429
+        : error?.code === API_ERROR.rateLimited
           ? t.tooFast
           : error?.status === 413
             ? t.tooBig

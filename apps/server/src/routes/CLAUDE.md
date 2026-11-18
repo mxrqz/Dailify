@@ -63,10 +63,12 @@ things.use("*", rateLimit("API_LIMITER")); // only if every route shares it, els
 
 - 400 invalid input · 401 no session · 403 plan gate, AI blocked on the plan, Mew consent, OAuth
   state of another user · 404 unknown or not owned · 409 conflict (`id already in use`) or
-  `INTEGRATION_ERROR.reconnect` · 413/415 payload · 429 rate limit or quota · 502 upstream failure
+  `API_ERROR.reconnect` · 413/415 payload · 429 rate limit or quota · 502 upstream failure
   (no AI debit) · 503 optional feature not configured. A 500 comes only from `app.onError`.
-- The 429s (`Too many requests`, `AI Credits Limit Reached`, `Monthly Tasks Limit Reached`) differ
-  only by message and `mew-chat.tsx` matches the text; a new branch needs a `code`.
+- Codes (`API_ERROR`, shared) ride beside the old texts, which older app builds still compare:
+  `rate_limited` (`rateLimit`), `ai_blocked`/`ai_exhausted` (`aiQuotaError`),
+  `mew_consent_required`, `missing_scope`, `reconnect`, `already_linked`. A new branch the web
+  reacts to adds a code there.
 - Success: `c.json({ <noun>: ... })` (`{ task }`, `{ tasks }`, `{ series }`, `{ url }`) or
   `c.body(null, 204)`. Bare bodies (settings, integrations list, invoices, `AiParse`, `MewReply`)
   are legacy.

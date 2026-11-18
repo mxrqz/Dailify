@@ -1,7 +1,7 @@
 import { Hono, type Context } from "hono";
 import {
+  API_ERROR,
   canUseIntegration,
-  INTEGRATION_ERROR,
   isProviderId,
   MISSING_SCOPE_ERROR,
   PROVIDER_IDS,
@@ -53,7 +53,7 @@ const integrations = new Hono<AppEnv>();
 integrations.use("/integrations/*", requireAuth, rateLimit("API_LIMITER"));
 
 const reconnect = (c: Context<AppEnv>) =>
-  fail(c, 409, "Reconecte a Agenda para continuar", { code: INTEGRATION_ERROR.reconnect });
+  fail(c, 409, "Reconnect the calendar", { code: API_ERROR.reconnect });
 const planBlocked = (c: Context<AppEnv>) => fail(c, 403, "Seu plano não inclui esta integração");
 
 // O Google volta pro SPA, que manda {code, state} com a sessão: é isso que amarra a conta
@@ -166,7 +166,7 @@ integrations.post("/integrations/:provider/callback", async (c) => {
   }
   if (!hasScopes(provider.oauth, tokens.scope)) {
     await revoke(provider.oauth, tokens).catch(() => {}); // grant inútil não fica na conta da pessoa
-    return fail(c, 400, MISSING_SCOPE_ERROR);
+    return fail(c, 400, MISSING_SCOPE_ERROR, { code: API_ERROR.missingScope });
   }
 
   const account = await provider.identify(makeCtx(c.env, userId, provider, tokens));

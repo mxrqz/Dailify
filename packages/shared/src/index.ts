@@ -12,6 +12,7 @@ export * from "./parse-task";
 export * from "./parse-links";
 export * from "./compose-input";
 export * from "./duration";
+export * from "./errors";
 export * from "./integrations";
 export * from "./app-url";
 export * from "./mew";

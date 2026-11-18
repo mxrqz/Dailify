@@ -33,7 +33,7 @@ export interface QuotaSnapshot {
   usage: QuotaUsage;
 }
 
-/** The `error` of an exhausted quota's 403/429: the web compares it to tell it from a rate limit. */
+/** The `error` of an exhausted quota's 403/429; older app builds compare it, new ones read the `code`. */
 export const QUOTA_ERRORS: Record<QuotaKey, string> = {
   tasks: "Monthly Tasks Limit Reached",
   ai: "AI Credits Limit Reached",

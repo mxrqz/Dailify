@@ -164,7 +164,7 @@ describe("POST /tasks/parse", () => {
     }
     const res = await parse({ text: "comprar pão", timezone: "UTC" });
     expect(res.status).toBe(429);
-    expect(await res.json()).toEqual({ error: "AI Credits Limit Reached" });
+    expect(await res.json()).toEqual({ error: "AI Credits Limit Reached", code: "ai_exhausted" });
     expect(openaiMock.responses.create).not.toHaveBeenCalled();
   });
 

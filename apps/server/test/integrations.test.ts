@@ -226,7 +226,7 @@ describe("POST /integrations/:provider/callback", () => {
     const url = await connect();
     const res = await callback({ code: "4/code", state: url.searchParams.get("state") });
     expect(res.status).toBe(400);
-    expect((await res.json<{ error: string }>()).error).toMatch(/agenda/);
+    expect(await res.json()).toMatchObject({ code: "missing_scope" });
     expect(callsTo(REVOKE)).toHaveLength(1);
     expect(await getConnection(env.DB, userId, "google-calendar")).toBeNull();
   });

@@ -1,4 +1,5 @@
 import {
+  API_ERROR,
   limitsFor,
   QUOTA_ERRORS,
   QUOTA_KEYS,
@@ -20,7 +21,10 @@ type Ctx = Context<{ Bindings: Env; Variables: { userId: string; plan: Role } }>
 export async function aiQuotaError(c: Ctx): Promise<Response | null> {
   const limits = limitsFor(c.get("plan"));
   const err = await enforce(c.env.DB, c.get("userId"), limits, "ai", new Date());
-  return err ? fail(c, limits.ai === 0 ? 403 : 429, err) : null;
+  if (!err) return null;
+  return limits.ai === 0
+    ? fail(c, 403, err, { code: API_ERROR.aiBlocked })
+    : fail(c, 429, err, { code: API_ERROR.aiExhausted });
 }
 
 /** Crédito só depois da IA responder dentro do contrato: falha, timeout ou lixo não custam nada. */

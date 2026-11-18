@@ -1,5 +1,7 @@
+import { isApiErrorCode } from "@dailify/shared";
 import type {
   AiParse,
+  ApiErrorCode,
   MewActionStatus,
   MewReply,
   MewRequest,
@@ -27,8 +29,8 @@ export interface ApiError {
   offline: boolean;
   /** HTTP status quando o servidor respondeu: 429 (créditos esgotados) pede outra reação que 502. */
   status?: number;
-  /** `code` do corpo de erro (`INTEGRATION_ERROR`): o recado muda com ele, não com o texto. */
-  code?: string;
+  /** The body's `API_ERROR` code: branch on it, never on `message`. */
+  code?: ApiErrorCode;
 }
 
 const OFFLINE: ApiError = { message: "Sem conexão com o servidor.", offline: true };
@@ -54,9 +56,9 @@ function serverMessage(body: unknown): string | undefined {
   return undefined;
 }
 
-function serverCode(body: unknown): string | undefined {
+function serverCode(body: unknown): ApiErrorCode | undefined {
   const code = body && typeof body === "object" ? Reflect.get(body, "code") : undefined;
-  return typeof code === "string" ? code : undefined;
+  return isApiErrorCode(code) ? code : undefined;
 }
 
 /**

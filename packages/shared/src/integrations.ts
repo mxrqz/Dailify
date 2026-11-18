@@ -1,6 +1,7 @@
 import type { Role, Task } from "./types";
 import { fillShared, sharedCopy } from "./copy";
 import { durationMinutes } from "./duration";
+import { API_ERROR } from "./errors";
 import { videoLink, isCalendarEventLink } from "./parse-links";
 import { dayMap, seriesEvery, seriesOf } from "./recurrence";
 import { civilDay, zonedParts, type ZonedParts } from "./timezone";
@@ -28,7 +29,7 @@ export const PROVIDER_IDS: readonly ProviderId[] = Object.keys(INTEGRATIONS).fil
 export const canUseIntegration = (role: Role, id: ProviderId): boolean =>
   role === "admin" || INTEGRATIONS[id].roles.includes(role);
 
-/** O 400 do callback quando a pessoa desmarcou o escopo: o SPA compara pra trocar pelo recado certo. */
+/** Legacy 400 text for an unticked scope, kept for app builds that compare it. */
 export const MISSING_SCOPE_ERROR = "Faltou permissão: marque o acesso à agenda na tela do Google";
 
 export interface IntegrationStatus {
@@ -57,10 +58,10 @@ export interface IntegrationLink {
   url: string | null;
 }
 
-/** `code` dos 409 das actions: o cliente troca o recado conforme ele. */
+/** The integration slice of `API_ERROR`: the 409 codes of the actions. */
 export const INTEGRATION_ERROR = {
-  reconnect: "reconnect",
-  alreadyLinked: "already_linked",
+  reconnect: API_ERROR.reconnect,
+  alreadyLinked: API_ERROR.alreadyLinked,
 } as const;
 
 /**

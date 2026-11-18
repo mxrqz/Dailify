@@ -106,7 +106,10 @@ describe("POST /mew/chat", () => {
     userId = "mw-noconsent";
     const res = await chat({});
     expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: "Mew Consent Required" });
+    expect(await res.json()).toEqual({
+      error: "Mew Consent Required",
+      code: "mew_consent_required",
+    });
     expect(openaiMock.responses.create).not.toHaveBeenCalled();
     expect(await used(userId)).toBe(0);
   });
@@ -227,7 +230,7 @@ describe("POST /mew/chat", () => {
       await bumpStoredUsage(env.DB, userId, "ai", periodFor(new Date()));
     const res = await chat({});
     expect(res.status).toBe(429);
-    expect(await res.json()).toEqual({ error: "AI Credits Limit Reached" });
+    expect(await res.json()).toEqual({ error: "AI Credits Limit Reached", code: "ai_exhausted" });
     expect(openaiMock.responses.create).not.toHaveBeenCalled();
   });
 
