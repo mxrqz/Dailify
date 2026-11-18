@@ -91,7 +91,7 @@ export const ComposerField = forwardRef<
           ),
         )}
         {/* Uma linha mesmo vazio: o espelho é quem dá a altura. */}
-        {"​"}
+        {"\u200B"}
       </div>
       {/* text-base: abaixo de 16px o iOS dá zoom na página ao focar o campo. */}
       <textarea
@@ -254,7 +254,7 @@ export function MewCard({
       {exhausted && (
         <Link
           to="/premium"
-          aria-label={`${copy.mew.exhausted} · ${copy.mew.upgrade}`}
+          aria-label={copy.mew.upgradeLabel}
           className="mr-2 flex h-11 items-center rounded-sm px-3 text-subhead font-semibold text-brand-text hover:bg-fill-pressed"
         >
           {copy.mew.upgrade}

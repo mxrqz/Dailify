@@ -1,4 +1,4 @@
-import { FormEvent, useEffect, useMemo, useState } from "react";
+import { FormEvent, useEffect, useMemo, useRef, useState } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BellIcon, CalendarIcon, ClockIcon, LinkIcon, Loader2Icon, RepeatIcon } from "lucide-react";
@@ -56,7 +56,7 @@ import {
   RepeatMenu,
 } from "@/components/dashboard/task-meta-menus";
 import { useDailify } from "@/components/dailifyContext";
-import { formatClock } from "@/functions/functions";
+import { fill, formatClock } from "@/functions/functions";
 import { zoned } from "@/functions/zone";
 
 export interface ComposerValues {
@@ -88,6 +88,9 @@ interface TaskComposerProps {
   listen?: boolean;
 }
 
+/** O campo da frase; `create-fab` o foca pelo id (atalhos `n` e `/`, dia escolhido no calendário). */
+export const COMPOSER_TEXT_ID = "composer-text";
+
 // EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso.
 const dayOf = (date: Date) => format(date, "EEEEEE · d MMM", { locale: ptBR });
 
@@ -109,6 +112,7 @@ export function TaskComposer({
   // Trechos de chips tirados: voltam pro título como texto. Valem pro texto atual (`remapSpans`).
   const [ignore, setIgnore] = useState<Span[]>([]);
   const [edits, setEdits] = useState<Edits>({});
+  const textRef = useRef<HTMLTextAreaElement>(null);
   const { hour12 } = useDailify();
   const online = useOnline();
   const mew = useMewParse();
@@ -168,7 +172,7 @@ export function TaskComposer({
     calendar.reset();
   };
 
-  const focusText = () => document.getElementById("composer-text")?.focus();
+  const focusText = () => textRef.current?.focus();
   const edit = (next: Edits) => setEdits((current) => ({ ...current, ...next }));
   // As palavras que deram o campo voltam pro título; sem palavras (Mew, calendário), o campo só zera.
   const remove = (field: Field) => {
@@ -189,7 +193,10 @@ export function TaskComposer({
   const clockAt = zoned(parsed.date ?? undefined);
   if (!timeLabel) clockAt.setHours(DEFAULT_HOUR, 0, 0, 0);
   const alertLabel = (alert: number) =>
-    `${format(zoned(alert), "EEEEEE", { locale: ptBR })} ${formatClock(format(zoned(alert), "HH:mm"), hour12)}`;
+    fill(copy.composer.alertAt, {
+      day: format(zoned(alert), "EEEEEE", { locale: ptBR }),
+      time: formatClock(format(zoned(alert), "HH:mm"), hour12),
+    });
 
   const submit = (again: boolean) => {
     if (!canSubmit) return;
@@ -339,11 +346,12 @@ export function TaskComposer({
           start={onCancel && <HeaderButton onClick={onCancel}>{copy.kit.cancel}</HeaderButton>}
         />
       )}
-      <Label htmlFor="composer-text" className="sr-only">
+      <Label htmlFor={COMPOSER_TEXT_ID} className="sr-only">
         {copy.composer.text}
       </Label>
       <ComposerField
-        id="composer-text"
+        ref={textRef}
+        id={COMPOSER_TEXT_ID}
         large={large}
         marks={marks}
         value={input}
