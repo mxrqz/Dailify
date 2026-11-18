@@ -19,8 +19,7 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
 - `copy.ts` is the dictionary of the whole authenticated app (see `components/CLAUDE.md`).
 - `styles.ts`: only `calendarPanel` is shared; `fieldClass`/`bareFieldClass` have one user each, and
   the `chip*` exports are dead.
-- Legacy-alias holdouts, don't copy: `undated-column.tsx`, `SchedulePicker` in `anytime-block.tsx`,
-  `styles.ts` `fieldClass`, `day-picker.tsx`, `create-fab.tsx`.
+- Legacy-alias holdouts, don't copy: `undated-column.tsx`, `styles.ts` `fieldClass`, `day-picker.tsx`, `create-fab.tsx`.
 
 ## Two editing modes, never both
 

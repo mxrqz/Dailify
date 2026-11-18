@@ -153,6 +153,17 @@ describe("<AnytimeBlock>", () => {
     expect(screen.getByText(/qui 09:00/)).toBeInTheDocument();
   });
 
+  it("shows the reminder time in the 12h format when the user picked it", () => {
+    context([task({ id: "a", alert: new Date(2026, 9, 29, 9).getTime() })]);
+    dailify.mockReturnValue({ ...dailify(), hour12: true });
+    render(
+      <MemoryRouter>
+        <AnytimeBlock />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(/qui 09:00 AM/)).toBeInTheDocument();
+  });
+
   it("tocar na linha abre a edição com Sem horário ligado e o dia do lembrete", () => {
     renderList([task({ id: "a", title: "Pagar", alert: new Date(2026, 9, 29, 9).getTime() })]);
     act(() => screen.getByRole("button", { name: /Pagar/ }).click());
