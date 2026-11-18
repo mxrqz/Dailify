@@ -42,7 +42,7 @@ export async function saveSyncState(
 }
 
 /** As conexões que o cron varre: as ativas que esperam há mais tempo. */
-export async function oldestSyncs(db: D1Database, limit: number): Promise<string[]> {
+export async function listOldestSyncs(db: D1Database, limit: number): Promise<string[]> {
   const { results } = await db
     .prepare(
       `SELECT user_id FROM integration_connections WHERE provider=? AND status='active'
@@ -82,7 +82,7 @@ const toSyncLink = (r: SyncRow): SyncLink => ({
 
 const LINK_COLS = "task_id, external_id, url, imported, remote_updated, readonly";
 
-export async function linkByExternal(
+export async function getLinkByExternal(
   db: D1Database,
   userId: string,
   externalId: string,
@@ -98,7 +98,7 @@ export async function linkByExternal(
 }
 
 /** As instâncias da série que viraram tarefa solta: id `${master}_${data}`. `substr` e não LIKE: `_` é curinga. */
-export async function instanceLinks(
+export async function listInstanceLinks(
   db: D1Database,
   userId: string,
   masterId: string,
@@ -115,7 +115,7 @@ export async function instanceLinks(
 }
 
 /** Tarefas sem nenhum vínculo: as candidatas a duplicata de uma importada. */
-export async function unlinkedTasks(db: D1Database, userId: string): Promise<Task[]> {
+export async function listUnlinkedTasks(db: D1Database, userId: string): Promise<Task[]> {
   const { results } = await db
     .prepare(
       `SELECT * FROM tasks t WHERE t.user_id=? AND NOT EXISTS (

@@ -16,19 +16,19 @@ import type { Env } from "../../index";
 import {
   claimSync,
   dropTasks,
+  getLinkByExternal,
   importTask,
-  instanceLinks,
-  linkByExternal,
   linkStatement,
-  oldestSyncs,
+  listInstanceLinks,
+  listOldestSyncs,
+  listUnlinkedTasks,
   saveSyncState,
   setRemoteState,
-  unlinkedTasks,
   type SyncLink,
 } from "../../db/calendar-sync";
 import { deleteLink, getLink, setLinkState } from "../../db/integrations";
 import { getSettings } from "../../db/settings";
-import { getTask, setExdatesStatement, updateTask } from "../../db/tasks";
+import { addExdatesStatement, getTask, updateTask } from "../../db/tasks";
 import { newTaskId } from "../../lib/task-input";
 import { loadCtx } from "../connection";
 import { appendLinks, withoutLink } from "../links";
@@ -206,11 +206,8 @@ function zoneOf(s: Pass, ev: Remote): string {
   return isTimeZone(zone) ? zone : s.zone;
 }
 
-async function addExdate(s: Pass, taskId: string, at: number): Promise<void> {
-  const task = await getTask(s.db, s.userId, taskId);
-  if (!task || task.exdates?.includes(at)) return;
-  await setExdatesStatement(s.db, s.userId, taskId, [...(task.exdates ?? []), at]).run();
-}
+const addExdate = (s: Pass, taskId: string, at: number) =>
+  addExdatesStatement(s.db, s.userId, taskId, [at]).run();
 
 /** LWW: Google mais novo aplica; a Mewki mais nova ganha e o vínculo fica `stale` (o reenvio). */
 async function update(s: Pass, ev: Remote, link: SyncLink): Promise<void> {
@@ -241,9 +238,8 @@ async function update(s: Pass, ev: Remote, link: SyncLink): Promise<void> {
     ),
     updatedAt: Math.max(ev.updated, task.updatedAt ?? 0),
   });
-  const exdates = [...new Set([...(task.exdates ?? []), ...mapped.exdates])];
-  if (exdates.length !== (task.exdates?.length ?? 0))
-    await setExdatesStatement(s.db, s.userId, task.id, exdates).run();
+  if (mapped.exdates.length)
+    await addExdatesStatement(s.db, s.userId, task.id, mapped.exdates).run();
   await setRemoteState(s.db, s.userId, task.id, state);
 }
 
@@ -277,7 +273,7 @@ async function create(
   };
   let duplicateOf: string | undefined;
   if (!opts.base) {
-    s.own ??= await unlinkedTasks(s.db, s.userId);
+    s.own ??= await listUnlinkedTasks(s.db, s.userId);
     duplicateOf = matchDuplicate(task, s.own, tz)?.id;
   }
   await importTask(
@@ -301,16 +297,16 @@ async function create(
 
 /** Apagado no Google: a Mewki desvincula o que ela criou e apaga o que veio de lá. */
 async function cancel(s: Pass, ev: Remote): Promise<void> {
-  const link = await linkByExternal(s.db, s.userId, ev.id);
+  const link = await getLinkByExternal(s.db, s.userId, ev.id);
   if (ev.recurringEventId) {
-    const master = await linkByExternal(s.db, s.userId, ev.recurringEventId);
+    const master = await getLinkByExternal(s.db, s.userId, ev.recurringEventId);
     const at = Date.parse(ev.originalStart?.dateTime ?? "");
     if (master && !Number.isNaN(at)) await addExdate(s, master.taskId, at);
     if (link) await dropTasks(s.db, s.userId, [link.taskId]);
     return;
   }
   if (!link) return;
-  const all = [link, ...(await instanceLinks(s.db, s.userId, ev.id))];
+  const all = [link, ...(await listInstanceLinks(s.db, s.userId, ev.id))];
   if (link.externalId !== eventId(link.taskId))
     return dropTasks(
       s.db,
@@ -318,23 +314,24 @@ async function cancel(s: Pass, ev: Remote): Promise<void> {
       all.map((l) => l.taskId),
     );
   for (const l of all) {
-    await deleteLink(s.db, s.userId, P, l.taskId);
     const task = await getTask(s.db, s.userId, l.taskId);
-    // Sem o endereço o web para de ler a tarefa como "Na Agenda" (como no `pushLink`).
+    // Sem o endereço o web para de ler a tarefa como "Na Agenda" (como no `pushLink`). The URL goes
+    // first: a failure in between then leaves a link to retry, not a URL nothing will remove.
     const links = withoutLink(task?.links, l.url);
     if (task && links) await updateTask(s.db, s.userId, task.id, { links });
+    await deleteLink(s.db, s.userId, P, l.taskId);
   }
 }
 
 async function apply(s: Pass, ev: Remote): Promise<void> {
   if (ev.status === "cancelled") return cancel(s, ev);
   if (ev.eventType !== "default" || ev.declined) return; // ausência, foco, Gmail, recusado
-  const link = await linkByExternal(s.db, s.userId, ev.id);
+  const link = await getLinkByExternal(s.db, s.userId, ev.id);
   if (link) return update(s, ev, link);
 
   if (ev.recurringEventId) {
     // Ocorrência mexida no Google: vira tarefa solta e sai da série, como o "editar só esta".
-    const master = await linkByExternal(s.db, s.userId, ev.recurringEventId);
+    const master = await getLinkByExternal(s.db, s.userId, ev.recurringEventId);
     const base = master && (await getTask(s.db, s.userId, master.taskId));
     if (!master || !base) return;
     const at = Date.parse(ev.originalStart?.dateTime ?? "");
@@ -456,5 +453,5 @@ export async function syncIfDue(env: Env, userId: string): Promise<void> {
 
 /** O cron: as 25 conexões que esperam há mais tempo, uma de cada vez (teto de subrequests). */
 export async function syncOldest(env: Env): Promise<void> {
-  for (const userId of await oldestSyncs(env.DB, 25)) await syncIfDue(env, userId);
+  for (const userId of await listOldestSyncs(env.DB, 25)) await syncIfDue(env, userId);
 }

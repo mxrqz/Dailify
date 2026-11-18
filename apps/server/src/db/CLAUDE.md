@@ -11,7 +11,7 @@ The Worker's SQL, hand-written over the raw `D1Database` binding (no ORM). Repo-
 - `integrations.ts`: `integration_connections`, `oauth_states`, `integration_links` for the
   propagation and the web.
 - `calendar-sync.ts`: Google-only sync (claim, sync token, import batch), provider hardcoded as `P`.
-  Legacy split: `linkByExternal`/`instanceLinks`/`linkStatement` duplicate integrations.ts. Don't
+  Legacy split: `getLinkByExternal`/`listInstanceLinks`/`linkStatement` duplicate integrations.ts. Don't
   add a third copy.
 - `push.ts`: subscriptions and the cron's cross-user alert queries. `settings.ts`: `user_settings`,
   defaults when no row. `usage.ts`: the `usage` counter, keyed `(user_id, quota, period)`.
@@ -24,7 +24,7 @@ SQL still outside db/, to move here: `lib/user.ts` and `middleware/auth.ts` (`"u
 
 ## Conventions
 
-- Signature `(db, userId, ...)`. Cross-user by design: push.ts's cron queries, `oldestSyncs`, and
+- Signature `(db, userId, ...)`. Cross-user by design: push.ts's cron queries, `listOldestSyncs`, and
   `oauth_states`, keyed by a random state (`insertState` sweeps everyone's expired rows).
 - snake_case row interfaces stay in db/; exports return camelCase types via a mapper (`rowToTask`,
   `toLink`, `toSyncLink`) that narrows `provider` with `isProviderId` (`listTaskLinks`).
