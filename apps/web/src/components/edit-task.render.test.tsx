@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 import type { Task } from "@dailify/shared";
 
@@ -21,7 +21,7 @@ vi.mock("@/components/dashboard/task-form", () => ({
       id={id}
       onSubmit={(e) => {
         e.preventDefault();
-        onSubmit({ ...values, title: "Dentista às 16h" });
+        onSubmit({ ...values, ...form, title: "Dentista às 16h" });
       }}
     />
   ),
@@ -29,6 +29,8 @@ vi.mock("@/components/dashboard/task-form", () => ({
 
 import { EditTask, EditTaskContent } from "./edit-task";
 import { flushQueue, readQueue } from "@/functions/offline";
+import { copy } from "@/components/dashboard/copy";
+import { upsertTaskWithRecurrence } from "@/functions/functions";
 
 const task: Task = {
   id: "t",
@@ -48,6 +50,8 @@ const values = {
   repeatEvery: 1,
   undated: false,
 };
+// What the form submits on top of `values`: the real form starts from the tapped task.
+let form: Partial<typeof values> = {};
 
 describe("<EditTaskContent> offline", () => {
   it("edição sem rede entra na fila e sobe como PATCH com a hora da edição", async () => {
@@ -101,5 +105,39 @@ describe("<EditTaskContent> preguiçosa", () => {
     dailify.mockClear();
     rerender(sheet(false));
     expect(dailify).toHaveBeenCalled();
+  });
+});
+
+describe("<EditTaskContent> series", () => {
+  it("a whole-series edit from a later instance keeps the series anchor", async () => {
+    const anchor: Task = { ...task, repeat: "Daily" };
+    const month = new Date(2026, 9, 1);
+    const instance = upsertTaskWithRecurrence([], anchor, [month]).find(
+      (t) => new Date(t.date).getDate() === 30,
+    );
+    if (!instance) throw new Error("no instance");
+    form = { date: new Date(instance.date), repeat: "Daily" };
+    dailify.mockReturnValue({ tasks: [], setTasks: vi.fn(), loadedMonths: [month] });
+    api.updateTask.mockResolvedValueOnce({ error: { message: "rede", offline: true } });
+
+    render(
+      <MemoryRouter>
+        <EditTask open>
+          <EditTaskContent task={instance} day={new Date(instance.date)} open onClose={vi.fn()} />
+        </EditTask>
+      </MemoryRouter>,
+    );
+    const sheet = document.querySelector("form");
+    if (sheet) fireEvent.submit(sheet);
+    await act(async () =>
+      (await screen.findByRole("button", { name: copy.form.scopeSeries })).click(),
+    );
+
+    await waitFor(() => expect(api.updateTask).toHaveBeenCalled());
+    expect(api.updateTask.mock.lastCall?.[1]).toMatchObject({
+      date: anchor.date,
+      alert: anchor.date,
+    });
+    form = {};
   });
 });

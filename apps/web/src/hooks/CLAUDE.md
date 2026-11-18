@@ -38,10 +38,11 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
   the series' `exdates`, and has no Undo: no route removes an exdate.
 - `onPatch`: `repeatEvery: null` on the wire is back to 1 (locally `undefined`). Apply the reply's
   `series` before `updated`: re-expanding it drops the occurrence that became its own task.
-- Debt, don't copy: `onComplete`/`onUncomplete`/`onPatch`/`restore` pass the on-screen instance
-  (`date` = occurrence) to `upsertTaskWithRecurrence`, which replaces every entry with that id, and
-  reuse the render-time `previous` after awaits and from Undo. The `latest` ref mirrors in
-  `useApplyTask` and `useShowCreated` are the value-only-setter workaround. Fix when touched.
+- A series-scope `onPatch` with a `date` shifts the anchor (`seriesOf(task).date + new - task.date`);
+  Undo of a series delete re-creates `seriesOf(task)` without completions (the server drops them).
+- Writes use functional updates; a rollback is `revertTask(cur, previous, id)`
+  (`functions/revert-task.ts`), never `setTasks(previous)`. Debt: the `latest` ref mirrors in
+  `useApplyTask` and `useShowCreated` predate the widened setters. Fix when touched.
 
 ## Other writers
 
@@ -86,5 +87,6 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
   `useDailify` mocked; only `dashboard/create-fab.render.test.tsx` mocks a write hook.
 - Queue and rollback branches need a direct `renderHook` test. Reference: the `useUndatedActions`
   block in `dashboard/anytime-block.render.test.tsx` (real `offline.ts`, asserted with
-  `readQueue("u1")`; render `<Toaster />` to click Undo). `useTaskActions` has none yet.
+  `readQueue("u1")`; render `<Toaster />` to click Undo). `useTaskActions.render.test.tsx` mocks
+  `setTasks` as a stateful setter, so a functional update reads the list of the moment.
 - `useNow.render.test.tsx` pins the single interval and the midnight-only `"day"` render.

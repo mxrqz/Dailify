@@ -40,7 +40,8 @@ motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hoo
   itself, and a newer request for the same key turns older responses into no-ops (`isCurrent`).
   `reloadMonths` prunes tasks outside the map's months only when no request errored. Pinned by
   `dailifyContext.render.test.tsx`.
-- Setters are the raw `useState` setters typed value-only (RULES Frontend says how to widen them).
+- `setTasks`/`setUndatedTasks` are the raw `useState` setters, typed `Dispatch<SetStateAction>`:
+  after an await or from an Undo, update functionally.
 
 ## Boot: `protected-route.tsx`
 

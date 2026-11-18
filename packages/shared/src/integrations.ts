@@ -1,5 +1,5 @@
 import type { Role, Task } from "./types";
-import { dayMap } from "./recurrence";
+import { dayMap, seriesOf } from "./recurrence";
 import { zonedParts, type ZonedParts } from "./timezone";
 
 export type ProviderId = "google-calendar";
@@ -194,8 +194,7 @@ export function calendarEventPreview(
   timeZone: string,
   opts: { meet: boolean; now: number },
 ): string | null {
-  const task =
-    instance.seriesStart === undefined ? instance : { ...instance, date: instance.seriesStart };
+  const task = seriesOf(instance);
   const slot = calendarSlot(task, timeZone);
   if (!slot) return null;
   const at = slot.allDay ? Date.UTC(slot.day.year, slot.day.month, slot.day.day, 12) : slot.start;

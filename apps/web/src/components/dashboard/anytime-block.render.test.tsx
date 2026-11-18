@@ -2,6 +2,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
+import type { SetStateAction } from "react";
 import type { Task } from "@dailify/shared";
 import { Toaster, toast } from "sonner";
 
@@ -48,14 +49,26 @@ const task = (patch: Partial<Task>): Task => ({
   ...patch,
 });
 
+// Like the provider's useState setter: a functional update reads the current list. Each call
+// returns the resulting list, so a test reads it from `mock.results`.
+const listSetter = (initial: Task[] | undefined) => {
+  let list = initial;
+  return vi.fn((next: SetStateAction<Task[] | undefined>) => {
+    list = typeof next === "function" ? next(list) : next;
+    return list;
+  });
+};
+const last = (setter: { mock: { results: { value: unknown }[] } }) =>
+  setter.mock.results.at(-1)?.value;
+
 const context = (undatedTasks: Task[] | undefined) => {
-  const setUndatedTasks = vi.fn();
+  const setUndatedTasks = listSetter(undatedTasks);
   dailify.mockReturnValue({
     undatedTasks,
     setUndatedTasks,
     weekStart: 1,
     tasks: [],
-    setTasks: vi.fn(),
+    setTasks: listSetter([]),
     bumpUsage: vi.fn(),
     selectedDay: new Date(FRIDAY),
     quotas: undefined,
@@ -276,8 +289,8 @@ describe("useUndatedActions", () => {
     await act(() => result.current.toggle());
 
     expect(api.uncompleteTaskRange).toHaveBeenCalledWith("s", MONDAY_6H, FRIDAY);
-    const [[next]] = setUndatedTasks.mock.calls;
-    expect(next[0].completed).toEqual([MONDAY - WEEK]);
+    const [{ value: next }] = setUndatedTasks.mock.results;
+    expect(next?.[0].completed).toEqual([MONDAY - WEEK]);
   });
 
   it("marcar chama completeTask com o instante do toque", async () => {
@@ -300,7 +313,7 @@ describe("useUndatedActions", () => {
     const { result } = renderHook(() => useUndatedActions(single));
     await act(() => result.current.remove());
 
-    expect(setUndatedTasks).toHaveBeenLastCalledWith([single]);
+    expect(last(setUndatedTasks)).toEqual([single]);
   });
 
   // Avulsa concluída some da lista: o toast é o único caminho de volta.
@@ -321,7 +334,7 @@ describe("useUndatedActions", () => {
     await undo();
 
     expect(api.uncompleteTaskRange).toHaveBeenCalledWith("x", 0, FRIDAY);
-    expect(setUndatedTasks.mock.lastCall?.[0][0].completed).toEqual([]);
+    expect(setUndatedTasks.mock.results.at(-1)?.value?.[0].completed).toEqual([]);
   });
 
   it("desfazer offline cancela a conclusão na fila", async () => {
@@ -402,8 +415,8 @@ describe("arrastar da Sem data pra um dia", () => {
       undated: false,
       updatedAt: FRIDAY,
     });
-    expect(setUndatedTasks).toHaveBeenCalledWith([]);
-    expect(dailify().setTasks.mock.calls[0][0]).toContainEqual(
+    expect(last(setUndatedTasks)).toEqual([]);
+    expect(last(dailify().setTasks)).toContainEqual(
       expect.objectContaining({ id: "a", date: at, undated: false }),
     );
     expect(screen.queryByRole("dialog", { name: /Horário em/ })).not.toBeInTheDocument();
@@ -436,7 +449,7 @@ describe("arrastar da Sem data pra um dia", () => {
     const { result } = renderHook(() => useUndatedActions(pagar));
     await act(() => result.current.schedule(SATURDAY.getTime()));
 
-    expect(setUndatedTasks).toHaveBeenLastCalledWith([pagar]);
-    expect(dailify().setTasks).toHaveBeenLastCalledWith([]);
+    expect(last(setUndatedTasks)).toEqual([pagar]);
+    expect(last(dailify().setTasks)).toEqual([]);
   });
 });

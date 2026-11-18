@@ -29,7 +29,7 @@ import { copy } from "@/components/dashboard/copy";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import { useCalendarReady, useIntegrations } from "@/hooks/useIntegrations";
 import { calendarRevoked, useApplyTask } from "@/hooks/useCalendarPush";
-import { INTEGRATION_ERROR, isCalendarEventLink } from "@dailify/shared";
+import { INTEGRATION_ERROR, isCalendarEventLink, seriesOf } from "@dailify/shared";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
 import { editTaskInput } from "@/functions/edit-input";
 import { enqueue } from "@/functions/offline";
@@ -101,7 +101,7 @@ export function EditTaskContent(props: EditTaskContentProps) {
 }
 
 function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
-  const { tasks, setTasks, undatedTasks, setUndatedTasks, loadedMonths, hour12 } = useDailify();
+  const { tasks, setTasks, setUndatedTasks, loadedMonths, hour12 } = useDailify();
   const knownTags = useMemo(
     () => [...new Set((tasks ?? []).flatMap((t) => t.tags ?? []))],
     [tasks],
@@ -200,7 +200,12 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
 
     // `alert: null` limpa o lembrete no servidor; ausente ele manteria o antigo. `updatedAt` é a
     // hora da edição (LWW), não a do envio — vale também quando ela sobe pela fila.
-    const patch = { ...input, date, alert: alert ?? null, updatedAt: at };
+    // The form shows the tapped occurrence: a whole-series edit shifts the anchor by the same
+    // amount, or it would re-anchor the series there and drop every earlier occurrence.
+    const shift = occurrence === undefined && !values.undated ? seriesOf(task).date - task.date : 0;
+    // An instance's own `alert` is already the anchor's; only one that fell back to `date` moves.
+    const seriesAlert = task.alert === undefined && alert !== undefined ? alert + shift : alert;
+    const patch = { ...input, date: date + shift, alert: seriesAlert ?? null, updatedAt: at };
     const result = await updateTask(task.id, patch, occurrence);
     const { series, error } = result;
     let updated = result.task;
@@ -211,14 +216,14 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
       toast(copy.task.queued);
       if (occurrence !== undefined) {
         // O destaque da ocorrência é do servidor; até lá só a instância da tela muda.
-        setTasks(
-          (tasks ?? []).map((t) => (t.id === task.id && t.date === occurrence ? taskData : t)),
+        setTasks((cur = []) =>
+          cur.map((t) => (t.id === task.id && t.date === occurrence ? taskData : t)),
         );
         onClose();
         setLoading(false);
         return;
       }
-      updated = taskData;
+      updated = { ...seriesOf(taskData), date: patch.date, alert: seriesAlert };
     } else if (error || !updated) {
       toast(copy.form.createError, {
         description: error?.message,
@@ -235,16 +240,18 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
 
     // A série vem primeiro: reexpandi-la é o que tira da lista a ocorrência que virou tarefa
     // própria (ela some pelo `exdates` novo), antes de inserir a tarefa destacada.
-    const base = series
-      ? upsertTaskWithRecurrence(tasks ?? [], series, loadedMonths)
-      : (tasks ?? []);
+    const saved = updated;
+    const base = (cur: TaskProps[] = []) =>
+      series ? upsertTaskWithRecurrence(cur, series, loadedMonths) : cur;
     // Mudar de lado tira de uma lista e põe na outra; série só expande na agenda.
-    if (updated.undated) {
-      setTasks(occurrence === undefined ? base.filter((t) => t.id !== updated.id) : base);
-      setUndatedTasks(upsertUndated(undatedTasks ?? [], updated));
+    if (saved.undated) {
+      setTasks((cur) =>
+        occurrence === undefined ? base(cur).filter((t) => t.id !== saved.id) : base(cur),
+      );
+      setUndatedTasks((cur) => upsertUndated(cur ?? [], saved));
     } else {
-      setTasks(upsertTaskWithRecurrence(base, updated, loadedMonths));
-      if (wasUndated) setUndatedTasks(removeUndated(undatedTasks ?? [], updated.id));
+      setTasks((cur) => upsertTaskWithRecurrence(base(cur), saved, loadedMonths));
+      if (wasUndated) setUndatedTasks((cur) => removeUndated(cur ?? [], saved.id));
     }
     onClose();
     setLoading(false);

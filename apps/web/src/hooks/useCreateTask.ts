@@ -57,7 +57,7 @@ export function useShowCreated() {
  */
 export function useCreateTask() {
   const userId = useSession().data?.user.id;
-  const { tasks, setTasks, undatedTasks, setUndatedTasks, bumpUsage, loadedMonths } = useDailify();
+  const { setTasks, setUndatedTasks, bumpUsage, loadedMonths } = useDailify();
   const quotas = useQuotas();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
@@ -92,14 +92,14 @@ export function useCreateTask() {
       updatedAt: at,
     };
     const undated = input.undated === true;
-    const previous = (undated ? undatedTasks : tasks) ?? [];
     const optimistic = { ...input, repeatEvery: input.repeatEvery ?? undefined, completed: [] };
-    const apply = (list: Task[], task: Task) =>
+    const apply = (task: Task) =>
       undated
-        ? setUndatedTasks(upsertUndated(list, task))
-        : setTasks(upsertTaskWithRecurrence(list, task, loadedMonths));
-    const restore = (list: Task[]) => (undated ? setUndatedTasks(list) : setTasks(list));
-    apply(previous, optimistic);
+        ? setUndatedTasks((cur) => upsertUndated(cur ?? [], task))
+        : setTasks((cur) => upsertTaskWithRecurrence(cur ?? [], task, loadedMonths));
+    const remove = (list: Task[] | undefined) => (list ?? []).filter((t) => t.id !== input.id);
+    const restore = () => (undated ? setUndatedTasks(remove) : setTasks(remove));
+    apply(optimistic);
 
     try {
       const { task, error } = await createTask(input);
@@ -114,7 +114,7 @@ export function useCreateTask() {
       }
 
       if (error || !task) {
-        restore(previous);
+        restore();
         toast(copy.form.createError, {
           description: error?.message,
           action: { label: copy.form.upgrade, onClick: () => navigate("/premium") },
@@ -122,7 +122,7 @@ export function useCreateTask() {
         return false;
       }
 
-      apply(previous, task);
+      apply(task);
       bumpUsage("tasks");
       // Com a etiqueta, o toast de criado vem depois, junto do resultado do Google.
       if (calendar) void pushCalendar([{ id: task.id, ...calendar }]);

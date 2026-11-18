@@ -31,7 +31,8 @@ are in [Shared model](../../RULES.md#shared-model); required zones are in
 - `timezone.ts`: `zonedParts`/`zonedEpoch` (two-pass DST fix, one cached formatter per zone).
 - `dates.ts`: `startOfMonthMs`/`endOfMonthMs`, legacy optional zone, no test.
 - `period.ts`: `WeekStart`, the 06:00 rollover, `periodStart`, `doneThisPeriod`.
-- `recurrence.ts`: `expandRecurringTask`, `normalizeRepeat`, `weekDays`/`dayMap`. `rrule.ts`:
+- `recurrence.ts`: `expandRecurringTask`, `seriesOf` (instance back to its stored series),
+  `normalizeRepeat`, `weekDays`/`dayMap`. `rrule.ts`:
   `toRrule`/`fromRrule` for Google Calendar.
 - `hash.ts`: `taskHash`, `stampUpdatedAt` (LWW clock-skew clamp). Server-only today.
 - `compose-input.ts`: `composeTaskInput`, `undatedReminder`, `DEFAULT_HOUR`/`DEFAULT_DURATION`. The
