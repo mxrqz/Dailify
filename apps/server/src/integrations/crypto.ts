@@ -1,5 +1,5 @@
 import type { Env } from "../index";
-import { base64urlToBytes, bytesToBase64url } from "../lib/push";
+import { base64urlToBytes, bytesToBase64url } from "../lib/encoding";
 
 // Tokens de terceiros em repouso: AES-GCM 256, IV novo por escrita, AAD = `${userId}:${provider}`
 // (um blob copiado pra outra linha não decifra). O prefixo de versão escolhe a chave, então a

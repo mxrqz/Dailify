@@ -36,7 +36,7 @@ export function dueOccurrenceAlert(
  * Os meses que a janela toca, no fuso do usuário. São dois só quando a janela cruza a virada do
  * mês — e é justamente aí que olhar um mês só perderia a ocorrência.
  */
-function monthsTouching(now: number, graceMs: number, timeZone: string): Date[] {
+export function monthsTouching(now: number, graceMs: number, timeZone: string): Date[] {
   const end = zonedParts(now, timeZone);
   const start = zonedParts(now - graceMs, timeZone);
   const months = [new Date(end.year, end.month, 1)];

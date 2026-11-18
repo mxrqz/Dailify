@@ -1,9 +1,7 @@
 import { IANAZone } from "luxon";
 import {
-  calendarEventPreview,
   INTEGRATION_ERROR,
   meetLink,
-  TASK_LIMITS,
   zonedParts,
   type IntegrationLink,
   type Task,
@@ -17,10 +15,11 @@ import {
   type StoredLink,
 } from "../../db/integrations";
 import { getTask, updateTask } from "../../db/tasks";
-import { ActionError, type Action, type Ctx, type Provider } from "../types";
+import { appendLinks } from "../links";
+import { ActionError, type Ctx, type Provider } from "../types";
+import { EVENTS_API, field, json, text, updatedOf } from "./api";
 import { eventId, newMeet, toEvent, type GoogleEvent } from "./event";
 
-const EVENTS_API = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
 const NO_DAY = "Tarefa sem dia não vira evento: escolha um dia antes";
 
 // Só eventos de agendas que a pessoa é dona: sensível, mas sem auditoria CASA (zpq).
@@ -38,13 +37,6 @@ async function ownTask(ctx: Ctx, id: string): Promise<Task> {
   return task;
 }
 
-const field = (body: unknown, key: string): unknown =>
-  typeof body === "object" && body !== null ? Reflect.get(body, key) : undefined;
-const text = (body: unknown, key: string): string | undefined => {
-  const v = field(body, key);
-  return typeof v === "string" ? v : undefined;
-};
-
 async function ensureOk(res: Response): Promise<void> {
   if (res.ok) return;
   console.error(`Google Agenda ${res.status}`, await res.text().catch(() => ""));
@@ -56,10 +48,8 @@ async function ensureOk(res: Response): Promise<void> {
   );
 }
 
-/** Os links novos entram no fim e, se passar do teto, quem sai são os mais antigos do fim. */
 async function addLinks(ctx: Ctx, task: Task, added: string[]): Promise<Task> {
-  const kept = (task.links ?? []).filter((l) => !added.includes(l));
-  const links = [...kept.slice(0, TASK_LIMITS.linksMax - added.length), ...added];
+  const links = appendLinks(task.links, added);
   return (await updateTask(ctx.env.DB, ctx.userId, task.id, { links })) ?? task;
 }
 
@@ -70,17 +60,12 @@ const conferenceQuery = (body: object) =>
 /** Insert; 409 = o id já existe (retry depois de o D1 falhar, ou evento apagado que volta). */
 async function saveEvent(ctx: Ctx, event: GoogleEvent) {
   const query = conferenceQuery(event);
-  const init = (method: string, body: object): RequestInit => ({
-    method,
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify(body),
-  });
-  let res = await ctx.api(`${EVENTS_API}${query}`, init("POST", event));
+  let res = await ctx.api(`${EVENTS_API}${query}`, json("POST", event));
   // PATCH com status confirmado: recupera o que existe e revive o que foi pra lixeira.
   if (res.status === 409)
     res = await ctx.api(
       `${EVENTS_API}/${event.id}${query}`,
-      init("PATCH", { ...event, status: "confirmed" }),
+      json("PATCH", { ...event, status: "confirmed" }),
     );
   await ensureOk(res);
   const body: unknown = await res.json();
@@ -89,37 +74,19 @@ async function saveEvent(ctx: Ctx, event: GoogleEvent) {
   return { htmlLink, hangoutLink: text(body, "hangoutLink"), updated: updatedOf(body) };
 }
 
-/** O `updated` (RFC 3339) da resposta: o sync compara com ele pra reconhecer o próprio eco. */
-const updatedOf = (body: unknown): number | undefined => {
-  const at = Date.parse(text(body, "updated") ?? "");
-  return Number.isNaN(at) ? undefined : at;
-};
-
-export const createEvent: Action<CreateEventInput> = {
-  name: "create-event",
-  kind: "write",
-  parse(raw) {
-    const field = (k: string) =>
-      typeof raw === "object" && raw !== null ? Reflect.get(raw, k) : undefined;
-    const taskId = field("taskId");
-    const timeZone = field("timezone");
-    const meet = field("meet");
+export const createEvent = {
+  /** The input comes from the client (or an AI draft) and only passes validated. */
+  parse(raw: unknown): { input: CreateEventInput } | { error: string } {
+    const taskId = field(raw, "taskId");
+    const timeZone = field(raw, "timezone");
+    const meet = field(raw, "meet");
     if (typeof taskId !== "string" || !taskId) return { error: "taskId é obrigatório" };
     if (typeof timeZone !== "string" || !IANAZone.isValidZone(timeZone))
       return { error: "Fuso inválido" };
     if (meet !== undefined && typeof meet !== "boolean") return { error: "meet inválido" };
     return { input: { taskId, timeZone, meet: meet === true } };
   },
-  async preview(ctx, input) {
-    const task = await ownTask(ctx, input.taskId);
-    const preview = calendarEventPreview(task, input.timeZone, {
-      meet: input.meet,
-      now: Date.now(),
-    });
-    if (!preview) throw new ActionError(400, NO_DAY);
-    return preview;
-  },
-  async run(ctx, input): Promise<{ link: IntegrationLink; task: Task }> {
+  async run(ctx: Ctx, input: CreateEventInput): Promise<{ link: IntegrationLink; task: Task }> {
     const task = await ownTask(ctx, input.taskId);
     const existing = await getLink(ctx.env.DB, ctx.userId, "google-calendar", task.id);
     if (existing)
@@ -264,11 +231,7 @@ async function syncEvent(
       before && toEvent(await withoutLinkedInstances(ctx, link, before, tz), tz, NO_MEET);
     const body = patchFor(link, prev, next);
     if (!Object.keys(body).length) return;
-    res = await ctx.api(url + conferenceQuery(body), {
-      method: "PATCH",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    res = await ctx.api(url + conferenceQuery(body), json("PATCH", body));
   }
   if (res.status === 404 || res.status === 410) return "unlink";
   if (!res.ok) throw new Error(`Google Agenda ${res.status}: ${await res.text().catch(() => "")}`);
@@ -290,11 +253,10 @@ export async function replaceMeet(ctx: Ctx, taskId: string): Promise<{ task: Tas
   );
   if (!link) throw new ActionError(404, "Tarefa não está na Agenda");
   if (link.readonly) throw new ActionError(400, "Só quem convidou pode mudar");
-  const res = await ctx.api(`${EVENTS_API}/${link.externalId}?conferenceDataVersion=1`, {
-    method: "PATCH",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ conferenceData: newMeet(crypto.randomUUID()) }),
-  });
+  const res = await ctx.api(
+    `${EVENTS_API}/${link.externalId}?conferenceDataVersion=1`,
+    json("PATCH", { conferenceData: newMeet(crypto.randomUUID()) }),
+  );
   if (res.status === 404 || res.status === 410)
     throw new ActionError(404, "O evento não existe mais na Agenda");
   await ensureOk(res);
@@ -325,11 +287,9 @@ export const googleCalendar: Provider = {
     const res = await ctx.api("https://openidconnect.googleapis.com/v1/userinfo");
     if (!res.ok) throw new Error(`userinfo ${res.status}`);
     const body: unknown = await res.json();
-    const sub = typeof body === "object" && body !== null ? Reflect.get(body, "sub") : undefined;
-    const email = typeof body === "object" && body !== null ? Reflect.get(body, "email") : null;
-    if (typeof sub !== "string") throw new Error("userinfo sem sub");
-    return { accountId: sub, email: typeof email === "string" ? email : null };
+    const sub = text(body, "sub");
+    if (sub === undefined) throw new Error("userinfo sem sub");
+    return { accountId: sub, email: text(body, "email") ?? null };
   },
-  actions: [createEvent],
   onTaskChanged: syncEvent,
 };

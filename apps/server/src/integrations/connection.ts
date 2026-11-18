@@ -55,7 +55,7 @@ export function makeCtx(env: Env, userId: string, provider: Provider, tokens: To
       }
       const headers = new Headers(init?.headers);
       headers.set("authorization", `Bearer ${current.accessToken}`);
-      return fetch(url, { ...init, headers });
+      return fetch(url, { ...init, headers, signal: init?.signal ?? AbortSignal.timeout(15_000) });
     },
   };
 }

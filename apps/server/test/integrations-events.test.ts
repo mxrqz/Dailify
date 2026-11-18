@@ -15,8 +15,7 @@ import {
   type Task,
 } from "@dailify/shared";
 import app from "../src/index";
-import { sealTokens, loadCtx } from "../src/integrations/connection";
-import { createEvent } from "../src/integrations/google-calendar";
+import { sealTokens } from "../src/integrations/connection";
 import { eventId, toEvent } from "../src/integrations/google-calendar/event";
 import {
   getConnection,
@@ -288,14 +287,6 @@ describe("POST /integrations/google-calendar/events", () => {
     expect((await post({ ...input(), taskId: "nope00" })).status).toBe(404);
     await insertTask(env.DB, userId, task({ id: `u${tid}`, undated: true }));
     expect((await post({ ...input(), taskId: `u${tid}` })).status).toBe(400);
-  });
-
-  it("preview da action é o texto da confirmação", async () => {
-    await seed();
-    const ctx = await loadCtx(env, userId, "google-calendar");
-    if (!ctx) throw new Error("sem ctx");
-    const text = await createEvent.preview(ctx, { taskId: tid, timeZone: TZ, meet: true });
-    expect(text).toMatch(/^Criar evento na Agenda · .* 15:00–16:30 · com Meet$/);
   });
 });
 

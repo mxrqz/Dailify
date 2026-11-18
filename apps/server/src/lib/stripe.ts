@@ -4,7 +4,11 @@ import type { Env } from "../index";
 import { updateUserRole } from "./user";
 
 export const stripeClient = (env: Env): Stripe =>
-  new Stripe(env.STRIPE_SECRET_KEY, { httpClient: Stripe.createFetchHttpClient() });
+  new Stripe(env.STRIPE_SECRET_KEY, {
+    httpClient: Stripe.createFetchHttpClient(),
+    // The SDK default is 80 s.
+    timeout: 20_000,
+  });
 
 const PRODUCT_NAMES = ["pro", "pro-year", "max", "max-year"] as const;
 export type ProductName = (typeof PRODUCT_NAMES)[number];
@@ -31,8 +35,9 @@ export function priceMap(env: Env): Record<ProductName, string> {
   };
 }
 
-export function isProductName(env: Env, value: string): value is ProductName {
-  return value in priceMap(env);
+// ponytail: `_env` is unused; it stays until routes/billing.ts stops passing it.
+export function isProductName(_env: Env, value: string): value is ProductName {
+  return PRODUCT_NAMES.some((n) => n === value);
 }
 
 interface PriceInfo {
@@ -174,17 +179,24 @@ export async function listInvoices(
   stripeCustomerId: string,
 ): Promise<Invoice[]> {
   const invoices = await stripe.invoices.list({ customer: stripeCustomerId, limit: 10 });
+  // Usually one subscription behind all 10 invoices: fetch it once, only for the card.
+  const subs = new Map<string, Promise<Stripe.Subscription>>();
+  const subscriptionOf = (id: string) => {
+    const known = subs.get(id);
+    if (known) return known;
+    const fetched = stripe.subscriptions.retrieve(id, { expand: ["default_payment_method"] });
+    subs.set(id, fetched);
+    return fetched;
+  };
 
   return Promise.all(
     invoices.data.map(async (invoice): Promise<Invoice> => {
       const subId = subscriptionId(invoice.parent?.subscription_details?.subscription);
-      const subscription = subId
-        ? await stripe.subscriptions.retrieve(subId, { expand: ["default_payment_method"] })
-        : undefined;
+      const subscription = subId ? await subscriptionOf(subId) : undefined;
       const paymentMethod = paymentMethodOf(subscription?.default_payment_method);
       const card = paymentMethod?.card;
-      const priceId =
-        priceIdOf(planLine(invoice.lines.data)) ?? subscription?.items.data[0]?.price.id;
+      // The invoice's own plan line: the subscription's current price is wrong after a plan change.
+      const priceId = priceIdOf(planLine(invoice.lines.data));
 
       return {
         recurring: (priceId && priceInfo(env, priceId)?.recurring) || "month",

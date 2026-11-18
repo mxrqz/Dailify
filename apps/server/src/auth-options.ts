@@ -4,7 +4,7 @@ import type { GenericEndpointContext } from "better-auth";
 import { bearer, captcha, magicLink, oneTimeToken } from "better-auth/plugins";
 import type { Env } from "./index";
 import { allowedOrigins, NATIVE_ORIGINS } from "./lib/origin";
-import { challengeOf } from "./integrations/oauth";
+import { sha256b64url } from "./lib/encoding";
 import { sendEmail } from "./lib/email";
 import { magicLinkEmail } from "./lib/email/templates/magic-link";
 import { cancelSubscriptionsOf, stripeClient } from "./lib/stripe";
@@ -58,18 +58,20 @@ async function sendMagicLink(
       env.DB.prepare(`DELETE FROM magic_link_challenge WHERE expires_at<?`).bind(sentAt),
       env.DB.prepare(
         `INSERT INTO magic_link_challenge (token_hash, challenge, expires_at) VALUES (?, ?, ?)`,
-      ).bind(await challengeOf(data.token), challenge, sentAt + LINK_TTL_S * 1000),
+      ).bind(await sha256b64url(data.token), challenge, sentAt + LINK_TTL_S * 1000),
     ]);
     url = `${web}/auth/app?token=${data.token}`;
   }
 
   // Envio que falhou devolve a vaga: senão a pessoa espera um minuto por um e-mail que não saiu.
-  const send = sendEmail(env, { to: data.email, ...magicLinkEmail(url) }).catch(async (err) => {
-    await env.DB.prepare(`DELETE FROM magic_link_sent WHERE email=? AND sent_at=?`)
-      .bind(email, sentAt)
-      .run();
-    throw err;
-  });
+  const send = sendEmail(env, { to: data.email, ...magicLinkEmail(url, LINK_TTL_S / 60) }).catch(
+    async (err) => {
+      await env.DB.prepare(`DELETE FROM magic_link_sent WHERE email=? AND sent_at=?`)
+        .bind(email, sentAt)
+        .run();
+      throw err;
+    },
+  );
   await (ctx ? ctx.context.runInBackgroundOrAwait(send) : send);
 }
 
@@ -110,11 +112,11 @@ const requireVerifier = (db: D1Database) =>
     if (ctx.path !== VERIFY || typeof ctx.query?.token !== "string") return;
     const row = await db
       .prepare(`SELECT challenge FROM magic_link_challenge WHERE token_hash=?`)
-      .bind(await challengeOf(ctx.query.token))
+      .bind(await sha256b64url(ctx.query.token))
       .first<{ challenge: string }>();
     if (!row) return;
     const verifier = ctx.headers?.get("x-mewki-verifier");
-    if (!verifier || (await challengeOf(verifier)) !== row.challenge)
+    if (!verifier || (await sha256b64url(verifier)) !== row.challenge)
       throw new APIError("FORBIDDEN", { message: "invalid verifier" });
   });
 
@@ -122,7 +124,7 @@ const requireVerifier = (db: D1Database) =>
 const dropChallenge = (db: D1Database) =>
   createAuthMiddleware(async (ctx) => {
     if (ctx.path !== VERIFY || typeof ctx.query?.token !== "string") return;
-    const hash = await challengeOf(ctx.query.token);
+    const hash = await sha256b64url(ctx.query.token);
     await db
       .prepare(
         `DELETE FROM magic_link_challenge WHERE token_hash=?

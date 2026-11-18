@@ -9,7 +9,7 @@ vi.mock("../src/lib/email", () => ({ sendEmail }));
 
 import { env, applyD1Migrations } from "cloudflare:test";
 import { auth } from "../src/auth";
-import { challengeOf } from "../src/integrations/oauth";
+import { sha256b64url as challengeOf } from "../src/lib/encoding";
 
 beforeAll(async () => {
   await applyD1Migrations(env.DB, env.TEST_MIGRATIONS);
@@ -45,6 +45,7 @@ describe("magic link", () => {
   it("pedido pela web: link pra /verify#token (nunca o GET de verify) e entra sem verifier", async () => {
     const url = await requestLink("web@test.local");
     expect(url).toMatch(new RegExp(`^${web}/verify#token=[A-Za-z]{32}$`));
+    expect(sendEmail.mock.calls.at(-1)?.[1].text).toContain("expira em 10 minutos");
     const { user, token } = await verify(tokenOf(url ?? ""));
     expect(user.email).toBe("web@test.local");
     expect(token).toBeTruthy();

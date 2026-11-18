@@ -7,16 +7,16 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
 
 - `openai.ts`: the AI kit. `openaiClient(env)` (a new client per call), `transcribe`, `PERSONA`,
   `clock(tz)`, `taskRules`/`taskSchema`, the guards, `readOutput`, `toEpoch`, `toDraft`,
-  `draftToTask`, and `interpretText` (shared by `/tasks/parse` and voice). `mew.ts` builds the chat
-  on top of it: `agendaOf`, `toBlocks`, `askMew`.
+  `draftToTask`, `structured` (the one Responses call), and `interpretText` (shared by
+  `/tasks/parse` and voice). `mew.ts` builds the chat on top of it: `agendaOf`, `toBlocks`,
+  `askMew`.
 - `stripe.ts`: `stripeClient(env)` with `createFetchHttpClient` (Workers has no Node http), the
   price maps, the expandable-field normalisers, the invoice and payment DTOs, `handleInvoicePaid`
   and `cancelSubscriptionsOf`. The subscription webhook branches and the checkout and portal calls
   still sit in `routes/billing.ts`.
 - `push.ts`: Web Push written by hand (RFC 8291 payload, RFC 8292 VAPID) on WebCrypto, because the
-  npm libraries are Node-only. On a 404/410 from `sendPush` the caller deletes the subscription. It
-  also hosts the base64url helpers that `integrations/` imports; that location is legacy, so new
-  byte helpers go elsewhere.
+  npm libraries are Node-only. On a 404/410 from `sendPush` the caller deletes the subscription.
+- `encoding.ts`: base64url and `sha256b64url` (PKCE S256, the magic-link verifier hash).
 - `email/`: `sendEmail` is the only entry point, with one file per vendor in `providers/` (today
   the Cloudflare `EMAIL` binding). Templates are pure, return `{ subject, text, html }`, and use
   inline styles with no images or tracking. `FROM` (`entrar@${APP_HOST}`) must be in wrangler.toml
@@ -27,12 +27,12 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   `ALLOWED_ORIGIN`. `returnBase` sends native callers to `${APP_URL}/app`, because Stripe can't
   reopen the app. `NATIVE_ORIGINS` repeats the tauri entries of `ALLOWED_ORIGIN` by hand and also
   feeds Better Auth `trustedOrigins`, so change both together.
-- `occurrence-alert.ts` (series alert math), `errors.ts` (`fail`), `task-input.ts` (body gate).
+- `occurrence-alert.ts` (series alert math; `monthsTouching` is the one "which month starts does
+  this window touch" helper), `errors.ts` (`fail`), `task-input.ts` (body gate).
 
 ## Input helpers: reuse before writing a guard
 
-- `isRecord` (openai.ts). Its `isStringArray` is private and mew.ts copies it as `isStrings`:
-  export one instead of writing a third. `isEpochMs` (task-input.ts) is private too: export it.
+- `isRecord` and `isStringArray` (openai.ts). `isEpochMs` (task-input.ts) is private: export it.
 - task-input.ts: `validZone`, `isRepeatEvery`, `sanitizeLinks`, `parseClientId`,
   `parseTaskFields`, `parseNewTask`.
 - Contract: an absent key keeps the stored value and `null` clears it (`alert`, `repeatEvery`,
@@ -44,17 +44,16 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
 
 ## AI calls
 
-- Every `responses.create` uses `model: "gpt-6-luna"`, `reasoning: { effort: "low" }`,
-  `store: false`, a strict `json_schema`, a `{ timeout }` and then `readOutput(text, guard)`. The
-  setup is copied in `interpretText` (20 s) and `askMew` (30 s); a third caller extracts a helper.
-- Budget gaps today: `transcribe` (`gpt-transcribe`) passes no timeout, and `openaiClient` keeps the
-  SDK default `maxRetries: 2`, so a call can take up to 3× its timeout.
+- Every Responses call goes through `structured(env, req, guard)` (`req` = name, schema,
+  instructions, input, timeout): `MODEL`, `reasoning: { effort: "low" }`, `store: false`, a
+  strict `json_schema`, then `readOutput`. `interpretText` passes 20 s, `askMew` 30 s, `transcribe` 20 s.
+- `openaiClient` sets `maxRetries: 1`; the SDK retries timeouts, so a call can take 2× its timeout.
 - The model gets naive local wall time (`clock`). `toEpoch(iso, tz)` reads its dates in the client
   zone, drops any `Z`/offset, and rejects values outside `DATE_RANGE`.
 - Mew agenda: ±`WINDOW_DAYS` (14) plus the undated tasks, capped at `AGENDA_MAX` (300). A series
   instance's ref is `id@yyyy-mm-dd`, and `toBlocks` resolves refs only through that map.
-- Known injection path: `lines()` puts agenda titles into `instructions`, and the client sends
-  `history`, assistant turns included. Don't add more untrusted text there.
+- Agenda titles are untrusted (Google invites): `lines()` goes in as the first user-role input
+  item, never into `instructions`. The client also sends `history`, assistant turns included.
 
 ## Stripe
 
@@ -64,8 +63,8 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   throw makes Stripe retry and eventually disable the endpoint.
 - The plan comes from `planLine` (the first non-proration subscription line): after a plan change
   Stripe lists the prorations, priced at the old plan, first. An unknown price never writes a role.
-- Known bugs, don't copy: `isProductName` uses `in` (accepts `"toString"`); `stripeClient` sets no
-  timeout (SDK default 80 s).
+  `listInvoices` reads each invoice's own plan line and fetches a shared subscription once.
+- `stripeClient` sets a 20 s timeout (SDK default 80 s).
 
 ## occurrence-alert
 

@@ -14,8 +14,10 @@ tokens, `propagate`) is in `../CLAUDE.md`.
   `syncOldest` (the cron). Its SQL is in `db/calendar-sync.ts`.
 - `routes/integrations.ts` calls `createEvent` and `replaceMeet` directly through `withCalendar`
   (plan gate, connection, `ActionError`/`InvalidGrantError` -> `fail`).
-- Legacy: `EVENTS_API`, `field`/`text`, `pad` and the link cap (`addLinks`/`withLinks`) are copied
-  between `index.ts` and `sync.ts`. Don't add a third copy.
+- `api.ts`: `EVENTS_API`, `field`/`text`, `json(method, body)` and `updatedOf`, shared by `index.ts`
+  and `sync.ts`. The link cap is `appendLinks` in `../links.ts`.
+- Errors: route-facing actions throw `ActionError` (`ensureOk`); `syncEvent` and sync throw a plain
+  `Error`, which their callers catch on purpose.
 
 ## Push (Mewki -> Google)
 
@@ -50,7 +52,8 @@ tokens, `propagate`) is in `../CLAUDE.md`.
 - Last-write-wins (`update`): `ev.updated <= remoteUpdated` is our own echo; a task `updatedAt`
   at or after `ev.updated` keeps Mewki's version and marks the link `stale`; else Google applies.
   Readonly invites: Google always wins.
-- Google owns title, date, duration, recurrence and the Meet link; the alert shifts with the start;
+- Google owns title (capped at `TASK_LIMITS.titleMax` in `toFields`), date, duration, recurrence
+  and the Meet link; the alert shifts with the start;
   priority, tags and completions stay Mewki's.
 - All-day events become `undated` tasks anchored at 09:00 in the event zone (its valid
   `start.timeZone`, else the settings zone, else UTC). Multi-day, recurring all-day and RRULEs

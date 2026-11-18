@@ -119,7 +119,14 @@ describe("GET /billing/invoices", () => {
           created: 1735689600,
           hosted_invoice_url: "https://invoice.stripe.com/i/1",
           parent: { subscription_details: { subscription: "sub_1" } },
-          lines: { data: [] },
+          lines: {
+            data: [
+              {
+                parent: { type: "subscription_item_details", subscription_item_details: {} },
+                pricing: { price_details: { price: "price_max_year" } },
+              },
+            ],
+          },
         },
       ],
     });
@@ -157,5 +164,42 @@ describe("GET /billing/invoices", () => {
     expect(stripeMock.subscriptions.retrieve).toHaveBeenCalledWith("sub_1", {
       expand: ["default_payment_method"],
     });
+  });
+
+  it("reads recurring from each invoice's plan line and fetches a shared subscription once", async () => {
+    await seedUser(env.DB, "u1", { stripeCustomerId: "cus_1" });
+    const invoice = (price: string) => ({
+      amount_paid: 100,
+      currency: "brl",
+      status: "paid",
+      created: 1735689600,
+      hosted_invoice_url: null,
+      parent: { subscription_details: { subscription: "sub_1" } },
+      lines: {
+        data: [
+          {
+            parent: {
+              type: "subscription_item_details",
+              subscription_item_details: { proration: false },
+            },
+            pricing: { price_details: { price } },
+          },
+        ],
+      },
+    });
+    stripeMock.invoices.list.mockResolvedValue({
+      data: [invoice("price_max_year"), invoice("price_pro_month")],
+    });
+    // The subscription moved to yearly since: the older invoice must still say month.
+    stripeMock.subscriptions.retrieve.mockResolvedValue({
+      items: { data: [{ price: { id: "price_max_year" } }] },
+      default_payment_method: null,
+    });
+
+    const body = await (
+      await app.request("/billing/invoices", {}, env)
+    ).json<{ recurring: string }[]>();
+    expect(body.map((i) => i.recurring)).toEqual(["year", "month"]);
+    expect(stripeMock.subscriptions.retrieve).toHaveBeenCalledTimes(1);
   });
 });

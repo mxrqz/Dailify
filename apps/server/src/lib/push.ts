@@ -1,4 +1,8 @@
 import type { Env } from "../index";
+import { base64urlToBytes, bytesToBase64url } from "./encoding";
+
+// ponytail: re-export only for routes/integrations.ts; drop it once that imports ./encoding.
+export { bytesToBase64url };
 
 // Web Push na mão: RFC 8291 (payload aes128gcm) + RFC 8292 (VAPID). Tudo isso existe no WebCrypto
 // do Worker; as libs de push do npm ou são Node-only (usam `https`) ou estão paradas há anos.
@@ -10,21 +14,6 @@ export interface PushSubscriptionKeys {
   endpoint: string;
   p256dh: string; // chave pública do browser, base64url (ponto P-256 não comprimido, 65 bytes)
   auth: string; // segredo de autenticação, base64url (16 bytes)
-}
-
-export function base64urlToBytes(value: string): Uint8Array {
-  const padded = value.replace(/-/g, "+").replace(/_/g, "/");
-  const binary = atob(padded + "=".repeat((4 - (padded.length % 4)) % 4));
-  const bytes = new Uint8Array(binary.length);
-  for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
-  return bytes;
-}
-
-export function bytesToBase64url(input: ArrayBuffer | Uint8Array): string {
-  const bytes = input instanceof Uint8Array ? input : new Uint8Array(input);
-  let binary = "";
-  for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
 }
 
 function concat(...parts: Uint8Array[]): Uint8Array {
@@ -187,6 +176,7 @@ export async function sendPush(
       TTL: "3600",
     },
     body,
+    signal: AbortSignal.timeout(15_000),
   });
   return res.status;
 }
