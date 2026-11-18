@@ -76,6 +76,12 @@ const connect = (connected: boolean) =>
     },
   ]);
 
+// One paste, not a keystroke per character: the per-key parse is task-composer.render.test's job,
+// and ~40 re-renders per phrase timed this facet out under the parallel check.
+const write = async (user: ReturnType<typeof userEvent.setup>, text: string) => {
+  await user.click(screen.getByRole("textbox"));
+  await user.paste(text);
+};
 const send = (user: ReturnType<typeof userEvent.setup>) =>
   user.click(screen.getByRole("button", { name: copy.composer.submit }));
 // A frase única liga num switch; os rascunhos da Mew, num chip por linha.
@@ -119,20 +125,20 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
   it("escondida sem conexão; sem dia fica desativada (a linha não pula ao digitar)", async () => {
     connect(false);
     const user = setup();
-    await user.type(screen.getByRole("textbox"), "dentista amanhã às 15h");
+    await write(user, "dentista amanhã às 15h");
     expect(chip()).not.toBeInTheDocument();
 
     connect(true);
     expect(await screen.findByRole("switch", { name: t.chipLabel })).toBeEnabled();
     await user.clear(screen.getByRole("textbox"));
-    await user.type(screen.getByRole("textbox"), "comprar pão");
+    await write(user, "comprar pão");
     expect(chip()).toBeDisabled();
   });
 
   it("padrão Sempre (Configurações): já vem ligada e volta ligada depois do envio", async () => {
     localStorage.setItem(CALENDAR_DEFAULT_KEY, "1");
     const user = setup();
-    await user.type(screen.getByRole("textbox"), "dentista amanhã às 15h");
+    await write(user, "dentista amanhã às 15h");
     expect(chip()).toHaveAttribute("aria-checked", "true");
     await user.click(chip()!);
     expect(chip()).toHaveAttribute("aria-checked", "false");
@@ -145,13 +151,13 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
   it("offline, não aparece", async () => {
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     const user = setup();
-    await user.type(screen.getByRole("textbox"), "dentista amanhã às 15h");
+    await write(user, "dentista amanhã às 15h");
     expect(chip()).not.toBeInTheDocument();
   });
 
   it("desligada por padrão: criar não chama o Google", async () => {
     const user = setup();
-    await user.type(screen.getByRole("textbox"), "dentista amanhã às 15h");
+    await write(user, "dentista amanhã às 15h");
     expect(chip()).toHaveAttribute("aria-checked", "false");
     expect(meet()).not.toBeInTheDocument();
     await user.keyboard("{Enter}");
@@ -161,7 +167,7 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
 
   it("ligada: cria, manda pro Google, aplica a tarefa com o link e zera a etiqueta", async () => {
     const user = setup();
-    await user.type(screen.getByRole("textbox"), "dentista amanhã às 15h");
+    await write(user, "dentista amanhã às 15h");
     await user.click(chip()!);
     expect(chip()).toHaveAttribute("aria-checked", "true");
     await send(user);
@@ -171,13 +177,13 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
     expect(api.createCalendarEvent).toHaveBeenCalledWith(id, false);
     expect(ctx.setTasks).toHaveBeenLastCalledWith([expect.objectContaining({ links: [EVENT] })]);
 
-    await user.type(screen.getByRole("textbox"), "outra amanhã às 9h");
+    await write(user, "outra amanhã às 9h");
     expect(chip()).toHaveAttribute("aria-checked", "false");
   });
 
   it("+ Meet manda meet: true; com link de vídeo no texto, some", async () => {
     const user = setup();
-    await user.type(screen.getByRole("textbox"), "call amanhã às 15h");
+    await write(user, "call amanhã às 15h");
     await user.click(chip()!);
     await user.click(meet()!);
     expect(meet()).toHaveAttribute("aria-pressed", "true");
@@ -186,7 +192,7 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
       expect(api.createCalendarEvent).toHaveBeenCalledWith(expect.any(String), true),
     );
 
-    await user.type(screen.getByRole("textbox"), "call amanhã às 15h https://meet.google.com/abc");
+    await write(user, "call amanhã às 15h https://meet.google.com/abc");
     await user.click(chip()!);
     expect(meet()).not.toBeInTheDocument();
   });
@@ -194,7 +200,7 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
   it("o Google falha: a tarefa fica e o toast tenta de novo", async () => {
     api.createCalendarEvent.mockResolvedValueOnce({ error: { message: "boom", offline: false } });
     const user = setup();
-    await user.type(screen.getByRole("textbox"), "dentista amanhã às 15h");
+    await write(user, "dentista amanhã às 15h");
     await user.click(chip()!);
     await send(user);
 
@@ -214,7 +220,7 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
       error: { message: "revoked", offline: false, code: "reconnect" },
     });
     const user = setup();
-    await user.type(screen.getByRole("textbox"), "dentista amanhã às 15h");
+    await write(user, "dentista amanhã às 15h");
     await user.click(chip()!);
     await send(user);
 
@@ -230,7 +236,7 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
   it("a criação falha: o Google nem é chamado", async () => {
     api.createTask.mockResolvedValue({ error: { message: "nope", offline: false } });
     const user = setup();
-    await user.type(screen.getByRole("textbox"), "dentista amanhã às 15h");
+    await write(user, "dentista amanhã às 15h");
     await user.click(chip()!);
     await send(user);
     await waitFor(() =>
@@ -251,7 +257,7 @@ describe("<TaskComposer> etiqueta Google Agenda", () => {
       .mockResolvedValueOnce({ error: { message: "boom", offline: false } })
       .mockResolvedValueOnce({ error: { message: "boom", offline: false } });
     const user = setup();
-    await user.type(screen.getByRole("textbox"), "pão às 9, leite às 10 e café às 11");
+    await write(user, "pão às 9, leite às 10 e café às 11");
     await user.click(screen.getByRole("button", { name: /Melhorar com a Mew/ }));
 
     const chips = screen.getAllByRole("button", { name: t.chipLabel });
@@ -280,7 +286,7 @@ describe("<TaskComposer> destino sugerido pela Mew", () => {
   const mewReads = (...drafts: ParsedTaskWire[]) =>
     api.parseTaskAi.mockResolvedValue({ result: { reply: "", intent: "create", drafts } });
   const ask = async (user: ReturnType<typeof userEvent.setup>, text: string) => {
-    await user.type(screen.getByRole("textbox"), text);
+    await write(user, text);
     await user.click(screen.getByRole("button", { name: /Melhorar com a Mew/ }));
   };
 

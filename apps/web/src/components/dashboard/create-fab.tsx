@@ -1,10 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import * as DialogPrimitive from "@radix-ui/react-dialog";
 import { LayoutGroup, motion, useReducedMotion } from "motion/react";
-import { Minimize2, Pin, PlusIcon } from "lucide-react";
+import { Minimize2Icon, PinIcon, PlusIcon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
-import { TaskComposer, type ComposerValues } from "@/components/dashboard/task-composer";
+import {
+  COMPOSER_TEXT_ID,
+  TaskComposer,
+  type ComposerValues,
+} from "@/components/dashboard/task-composer";
 import { MewChat } from "@/components/mew-chat/mew-chat";
 import { Dialog, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
@@ -20,13 +24,14 @@ const DOCKED_KEY = "dailify:composer-docked";
 // Botão, folha e campo fixo são a MESMA superfície: o framer morfa uma na outra pelo layoutId.
 const SURFACE = "composer-surface";
 
-// Espelham rounded-xl e --radius-panel. Têm que ser números: o framer só corrige o raio durante a
-// escala do morph quando ele vem pelo style, não por classe.
-const RADIUS_FAB = 12;
-const RADIUS_PANEL = 12;
+// px of --radius-md (14: rounded-xl's 22 would make the 48px FAB nearly a circle) and --radius-panel
+// (22, so the inner rounded-field stays concentric). Numbers, because motion only corrects a radius
+// during the morph's scale when it comes through `style`.
+const RADIUS_FAB = 14;
+const RADIUS_PANEL = 22;
 
 const iconButton =
-  "flex size-7 cursor-pointer items-center justify-center rounded-md border border-highlight bg-surface-panel text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground";
+  "flex size-7 cursor-pointer items-center justify-center rounded-md border border-separator bg-surface-raised text-ink-secondary transition-colors duration-fast hover:bg-fill hover:text-ink";
 
 interface CreateFabProps {
   /** `false`: não criou — a folha reabre com o texto. */
@@ -80,7 +85,7 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
         return;
 
       event.preventDefault();
-      if (docked) document.getElementById("composer-text")?.focus();
+      if (docked) document.getElementById(COMPOSER_TEXT_ID)?.focus();
       else setOpen(true);
     };
 
@@ -96,7 +101,7 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
     if (!day) return;
     openForDay();
     // Depois do frame: a folha ainda está montando e o popover do calendário acabou de fechar.
-    const frame = requestAnimationFrame(() => document.getElementById("composer-text")?.focus());
+    const frame = requestAnimationFrame(() => document.getElementById(COMPOSER_TEXT_ID)?.focus());
     return () => cancelAnimationFrame(frame);
   }, [day]);
 
@@ -169,7 +174,7 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
             // Pelo mic, sem teclado: o foco fica na folha. Senão, direto no campo.
             onOpenAutoFocus={(event) => {
               event.preventDefault();
-              if (!listen) document.getElementById("composer-text")?.focus();
+              if (!listen) document.getElementById(COMPOSER_TEXT_ID)?.focus();
             }}
             className="px-5"
           >
@@ -189,7 +194,7 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
             transition={morph}
             style={{ borderRadius: RADIUS_PANEL }}
             aria-label={label}
-            className="relative border border-highlight bg-surface-panel p-1 shadow-panel"
+            className="relative border border-separator bg-surface-raised p-1 shadow-panel"
           >
             <motion.div {...content}>
               <TaskComposer
@@ -209,7 +214,7 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
               onClick={unpin}
               className={cn(iconButton, "absolute -top-3.5 right-4")}
             >
-              <Minimize2 className="size-3.5" aria-hidden="true" />
+              <Minimize2Icon className="size-3.5" aria-hidden="true" />
             </motion.button>
           </motion.section>
         </div>
@@ -225,7 +230,7 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
               aria-label={label}
               onClick={() => changeOpen(true)}
               whileTap={reduce ? undefined : { scale: 0.96 }}
-              className="absolute right-6 bottom-6 flex size-12 cursor-pointer items-center justify-center bg-brand text-on-brand transition-colors hover:bg-brand-pressed"
+              className="absolute right-6 bottom-6 flex size-12 cursor-pointer items-center justify-center bg-brand text-on-brand transition-colors duration-fast hover:bg-brand-pressed"
             >
               <motion.span {...content} className="flex">
                 <PlusIcon className="size-5" strokeWidth={2.2} aria-hidden="true" />
@@ -249,12 +254,12 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
                 // Texto pela metade segura a folha: sair com o mouse não pode jogar fora o que foi digitado.
                 onPointerLeave={(event) => {
                   if (!closeOnLeave || event.pointerType !== "mouse") return;
-                  const field = document.getElementById("composer-text");
+                  const field = document.getElementById(COMPOSER_TEXT_ID);
                   if (field instanceof HTMLTextAreaElement && field.value) return;
                   changeOpen(false);
                 }}
                 style={{ borderRadius: RADIUS_PANEL }}
-                className="absolute right-6 bottom-6 w-sheet border border-highlight bg-surface-panel p-1 shadow-panel"
+                className="absolute right-6 bottom-6 w-sheet border border-separator bg-surface-raised p-1 shadow-panel"
               >
                 <DialogTitle className="sr-only">{label}</DialogTitle>
                 <motion.div {...content}>{sheetComposer}</motion.div>
@@ -265,7 +270,7 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
                   onClick={pin}
                   className={cn(iconButton, "absolute -top-3.5 right-4")}
                 >
-                  <Pin className="size-3.5" aria-hidden="true" />
+                  <PinIcon className="size-3.5" aria-hidden="true" />
                 </motion.button>
               </motion.div>
             </DialogPrimitive.Content>

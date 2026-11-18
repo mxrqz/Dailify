@@ -1,4 +1,5 @@
 import { useId, useState, type ReactNode } from "react";
+import { FlagIcon } from "lucide-react";
 import { normalizeRepeat, weekDays, type Repeat } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
@@ -18,7 +19,6 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { priorityText, priorityTextColor } from "@/consts/conts";
 import { cn } from "@/lib/utils";
-import { Flag } from "lucide-react";
 import { everyLabel, everyOptions } from "@/functions/repeat-label";
 import { zoned } from "@/functions/zone";
 
@@ -51,7 +51,7 @@ export function PriorityMenu({
         >
           {priorityText.map((label, index) => (
             <DropdownMenuRadioItem key={label} value={String(index)}>
-              <Flag className={cn("size-3.5", priorityTextColor[index])} aria-hidden="true" />
+              <FlagIcon className={cn("size-3.5", priorityTextColor[index])} aria-hidden="true" />
               {label}
             </DropdownMenuRadioItem>
           ))}

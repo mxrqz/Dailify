@@ -17,10 +17,11 @@ import { ChevronDownIcon, ChevronLeftIcon, ChevronRightIcon } from "lucide-react
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
+import { zoned } from "@/functions/zone";
 import { cn } from "@/lib/utils";
 
 const navButton =
-  "flex size-7 cursor-pointer items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-surface-hover hover:text-foreground";
+  "flex size-7 cursor-pointer items-center justify-center rounded-md text-ink-secondary transition-colors duration-fast hover:bg-fill hover:text-ink";
 
 /**
  * Calendário de um dia: fechado mostra só a semana do dia escolhido numa linha; o chevron abre o
@@ -37,7 +38,10 @@ export function DayPicker({
   const [open, setOpen] = useState(false);
   // As setas só folheiam: o dia escolhido muda só com clique num dia.
   const [viewMonth, setViewMonth] = useState(value);
-  useEffect(() => setViewMonth(value), [value]);
+  // Keyed on the month, not the Date: callers pass a fresh `zoned()` every render, which would
+  // snap a browsed month back on any parent re-render.
+  const month = startOfMonth(value).getTime();
+  useEffect(() => setViewMonth(zoned(month)), [month]);
 
   const opts = { weekStartsOn: weekStart };
   const days = open
@@ -60,7 +64,7 @@ export function DayPicker({
             <ChevronLeftIcon className="size-4" />
           </button>
         )}
-        <span className="flex-1 px-1 font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground">
+        <span className="flex-1 px-1 font-mono text-2xs uppercase text-ink-secondary">
           {format(open ? viewMonth : value, "MMMM yyyy", { locale: ptBR })}
         </span>
         {open && (
@@ -83,7 +87,9 @@ export function DayPicker({
           }}
           className={navButton}
         >
-          <ChevronDownIcon className={cn("size-4 transition-transform", open && "rotate-180")} />
+          <ChevronDownIcon
+            className={cn("size-4 transition-transform duration-fast", open && "rotate-180")}
+          />
         </button>
       </div>
 
@@ -91,10 +97,7 @@ export function DayPicker({
         {copy.aside.weekDayInitials
           .map((_, index) => copy.aside.weekDayInitials[(index + weekStart) % 7])
           .map((initial, index) => (
-            <li
-              key={index}
-              className="font-mono text-2xs uppercase tracking-[0.04em] text-muted-foreground"
-            >
+            <li key={index} className="font-mono text-2xs uppercase text-ink-secondary">
               {initial}
             </li>
           ))}
@@ -108,12 +111,10 @@ export function DayPicker({
                 aria-label={format(day, "d 'de' MMMM", { locale: ptBR })}
                 onClick={() => onSelect(day)}
                 className={cn(
-                  "flex size-8 cursor-pointer items-center justify-center rounded-lg font-mono text-xs transition-colors",
-                  open && !isSameMonth(day, viewMonth)
-                    ? "text-muted-foreground"
-                    : "text-foreground",
+                  "flex size-8 cursor-pointer items-center justify-center rounded-full font-mono text-xs transition-colors duration-fast",
+                  open && !isSameMonth(day, viewMonth) ? "text-ink-secondary" : "text-ink",
                   isToday(day) && "text-brand-text",
-                  selected ? "bg-surface-line" : "hover:bg-surface-hover",
+                  selected ? "bg-ink text-canvas" : "hover:bg-fill",
                 )}
               >
                 {format(day, "d")}

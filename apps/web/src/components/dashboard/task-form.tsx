@@ -24,29 +24,30 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import {
+  DEFAULT_DURATION,
   DEFAULT_HOUR,
+  TASK_LIMITS,
   dayMap,
   durationMinutes,
   isCalendarEventLink,
   meetLink,
+  normalizeRepeat,
   undatedReminder,
   videoLink,
   weekDays,
   type Repeat,
 } from "@dailify/shared";
 
-import { TASK_LIMITS } from "@dailify/shared";
-
 import { copy } from "@/components/dashboard/copy";
 import { LinksField, MeetEditor } from "@/components/dashboard/links-field";
 import { DURATIONS } from "@/components/dashboard/task-meta-menus";
+import { Chip } from "@/components/kit/chip";
 import { ListGroup, ListRow } from "@/components/kit/list";
 import { Switch } from "@/components/kit/switch";
 import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
-import { bareFieldClass } from "@/components/dashboard/styles";
 import { priorityText } from "@/consts/conts";
-import { capitalize, formatClock } from "@/functions/functions";
+import { capitalize, fill, formatClock } from "@/functions/functions";
 import { linkLabel } from "@/functions/link-label";
 import { everyLabel, everyOptions, repeatLabel } from "@/functions/repeat-label";
 import { cn } from "@/lib/utils";
@@ -123,6 +124,10 @@ const nativeControlClass = "absolute inset-0 cursor-pointer opacity-0 outline-no
 
 const reminderHour = `${String(DEFAULT_HOUR).padStart(2, "0")}:00`;
 
+// Frameless field, text only: the line under it is a sibling `Separator`.
+const bareFieldClass =
+  "h-11 rounded-none border-0 bg-transparent px-0 text-base shadow-none focus-visible:border-0 focus-visible:ring-0";
+
 /** "Ter, 17 nov" — EEEEEE, não EEE: no locale pt-BR o `EEE` devolve "segunda" por extenso. */
 const shortDay = (day: Date) => capitalize(format(day, "EEEEEE, d MMM", { locale: ptBR }));
 
@@ -136,6 +141,117 @@ function NativeRow({
     <ListRow asChild accessory={disabled ? undefined : "chevron"} {...row}>
       <div className="relative pointer-fine:focus-within:bg-fill">{control}</div>
     </ListRow>
+  );
+}
+
+function WeekdayToggle({
+  value,
+  disabled,
+  onChange,
+}: {
+  value: string[];
+  disabled: boolean;
+  onChange: (days: string[]) => void;
+}) {
+  return (
+    <div
+      role="group"
+      aria-label={copy.form.repeatWeekly}
+      className="flex justify-between border-t border-separator px-3.5 py-3"
+    >
+      {weekDays.map((day) => {
+        const on = value.includes(day);
+        return (
+          <Chip
+            key={day}
+            variant="select"
+            size="sm"
+            pressed={on}
+            disabled={disabled}
+            onClick={() => {
+              // The last day stays: an empty Weekly is saved as "Off" and the series stops.
+              if (on && value.length === 1) return;
+              onChange(on ? value.filter((d) => d !== day) : [...value, day]);
+            }}
+            className="size-10 justify-center px-0"
+          >
+            {copy.form.repeatDays[dayMap[day]]}
+          </Chip>
+        );
+      })}
+    </div>
+  );
+}
+
+/**
+ * Tags: a `<datalist>`, so the autocomplete is the browser's, fed by the tags of the other tasks.
+ * Enter adds what is typed; tapping a tag removes it.
+ */
+function TagsView({
+  listId,
+  tags,
+  known,
+  onAdd,
+  onRemove,
+}: {
+  listId: string;
+  tags: string[];
+  known: string[];
+  onAdd: (tag: string) => void;
+  onRemove: (tag: string) => void;
+}) {
+  const [draft, setDraft] = useState("");
+  const add = () => {
+    const tag = draft.trim();
+    if (!tag) return;
+    onAdd(tag);
+    setDraft("");
+  };
+
+  return (
+    <div className="flex flex-col gap-3">
+      <input
+        autoFocus
+        list={listId}
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key !== "Enter") return;
+          e.preventDefault();
+          add();
+        }}
+        onBlur={add}
+        maxLength={TASK_LIMITS.tagMax}
+        disabled={tags.length >= TASK_LIMITS.tagsMax}
+        placeholder={copy.form.tagSearch}
+        aria-label={copy.form.tags}
+        className={bareFieldClass}
+      />
+      <datalist id={listId}>
+        {known.map((tag) => (
+          <option key={tag} value={tag} />
+        ))}
+      </datalist>
+
+      {tags.length > 0 && (
+        <ul className="flex flex-wrap gap-1.5">
+          {tags.map((tag) => (
+            <li key={tag}>
+              <Chip
+                variant="select"
+                size="sm"
+                aria-label={fill(copy.form.tagRemove, { tag })}
+                onClick={() => onRemove(tag)}
+                className="gap-1"
+              >
+                {tag}
+                <XIcon className="size-3" aria-hidden="true" />
+              </Chip>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }
 
@@ -170,7 +286,7 @@ export function TaskForm({
     const now = zoned();
     return undatedReminder(now, "Daily", now) ?? now;
   });
-  const [duration, setDuration] = useState(task?.duration ?? "10m");
+  const [duration, setDuration] = useState(task?.duration ?? DEFAULT_DURATION);
   const [priority, setPriority] = useState(task?.priority ?? 0);
   const [repeat, setRepeat] = useState<Repeat>(task?.repeat ?? "Off");
   const [every, setEvery] = useState(task?.repeatEvery ?? 1);
@@ -237,23 +353,10 @@ export function TaskForm({
         .replace("{end}", clock(addMinutes(date, durationMinutes(duration))));
   const repeatValue =
     repeatMode === "Weekly" && weekly.length
-      ? `${copy.form.repeatWeekly} · ${repeatLabel({ Weekly: weekly })}`
+      ? fill(copy.form.repeatWeeklyDays, { days: repeatLabel({ Weekly: weekly }) })
       : REPEAT_MODES.find((mode) => mode.value === repeatMode)?.label;
   const linkName = link ? linkLabel(link) : copy.form.links;
   const linkHost = link && URL.canParse(link) ? new URL(link).hostname.replace(/^www\./, "") : "";
-
-  const [tagDraft, setTagDraft] = useState("");
-  const tagsListId = `${id}-tags`;
-
-  const addTag = (raw: string) => {
-    const tag = raw.trim();
-    if (!tag) return;
-    setTags((prev) => (prev.includes(tag) ? prev : [...prev, tag]));
-    setTagDraft("");
-  };
-
-  const toggleTag = (tag: string) =>
-    setTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
 
   const generateMeet = async () => {
     setMeetPending(true);
@@ -414,7 +517,10 @@ export function TaskForm({
                 label={copy.form.reminder}
                 value={
                   shownReminder
-                    ? `${shortDay(shownReminder)} · ${reminderHour}`
+                    ? fill(copy.form.reminderValue, {
+                        day: shortDay(shownReminder),
+                        time: reminderHour,
+                      })
                     : copy.form.noReminder
                 }
                 control={
@@ -448,9 +554,7 @@ export function TaskForm({
                       next === "Weekly"
                         ? // Semanal já nasce no dia da própria tarefa: lista vazia não repete nunca.
                           { Weekly: weekly.length ? weekly : [weekDays[date.getDay()]] }
-                        : next === "Daily" || next === "Monthly" || next === "Yearly"
-                          ? next
-                          : "Off",
+                        : normalizeRepeat(next),
                     );
                   }}
                   className={nativeControlClass}
@@ -488,35 +592,11 @@ export function TaskForm({
             )}
             {/* Os dias ficam na própria raiz, não numa página: sem eles "semanal" não diz QUANDO. */}
             {repeatMode === "Weekly" && (
-              <div
-                role="group"
-                aria-label={copy.form.repeatWeekly}
-                className="flex justify-between border-t border-separator px-3.5 py-3"
-              >
-                {weekDays.map((day) => {
-                  const on = weekly.includes(day);
-                  return (
-                    <button
-                      key={day}
-                      type="button"
-                      aria-pressed={on}
-                      disabled={locked}
-                      onClick={() =>
-                        setRepeat({
-                          Weekly: on ? weekly.filter((d) => d !== day) : [...weekly, day],
-                        })
-                      }
-                      className={cn(
-                        "size-10 cursor-pointer rounded-full text-footnote font-medium transition-colors duration-fast outline-none",
-                        "focus-visible:ring-[3px] focus-visible:ring-ring/50",
-                        on ? "bg-ink text-canvas" : "bg-fill text-ink hover:bg-fill-pressed",
-                      )}
-                    >
-                      {copy.form.repeatDays[dayMap[day]]}
-                    </button>
-                  );
-                })}
-              </div>
+              <WeekdayToggle
+                value={weekly}
+                disabled={locked}
+                onChange={(days) => setRepeat({ Weekly: days })}
+              />
             )}
           </ListGroup>
 
@@ -558,7 +638,9 @@ export function TaskForm({
                       </span>
                     ))}
                     {tags.length > 2 && (
-                      <span className="text-footnote text-ink-secondary">+{tags.length - 2}</span>
+                      <span className="text-footnote text-ink-secondary">
+                        {fill(copy.form.moreTags, { n: tags.length - 2 })}
+                      </span>
                     )}
                   </span>
                 )
@@ -578,51 +660,14 @@ export function TaskForm({
         </div>
       )}
 
-      {/* Tags: `<datalist>` — o autocomplete é o do navegador, alimentado pelas tags que você já
-          usou nas outras tarefas. Enter adiciona a que estiver escrita, o × tira. */}
       {view === "tags" && (
-        <div className="flex flex-col gap-3">
-          <input
-            autoFocus
-            list={tagsListId}
-            value={tagDraft}
-            onChange={(e) => setTagDraft(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key !== "Enter") return;
-              e.preventDefault();
-              addTag(tagDraft);
-            }}
-            onBlur={() => addTag(tagDraft)}
-            maxLength={TASK_LIMITS.tagMax}
-            disabled={tags.length >= TASK_LIMITS.tagsMax}
-            placeholder={copy.form.tagSearch}
-            aria-label={copy.form.tags}
-            className={bareFieldClass}
-          />
-          <datalist id={tagsListId}>
-            {knownTags.map((tag) => (
-              <option key={tag} value={tag} />
-            ))}
-          </datalist>
-
-          {tags.length > 0 && (
-            <ul className="flex flex-wrap gap-1.5">
-              {tags.map((tag) => (
-                <li key={tag}>
-                  <button
-                    type="button"
-                    onClick={() => toggleTag(tag)}
-                    aria-label={`${copy.form.tags}: ${tag}`}
-                    className="flex h-8 cursor-pointer items-center gap-1 rounded-full bg-fill px-3 text-footnote font-medium text-ink transition-colors duration-fast outline-none hover:bg-fill-pressed focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                  >
-                    {tag}
-                    <XIcon className="size-3 shrink-0" aria-hidden="true" />
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+        <TagsView
+          listId={`${id}-tags`}
+          tags={tags}
+          known={knownTags}
+          onAdd={(tag) => setTags((prev) => (prev.includes(tag) ? prev : [...prev, tag]))}
+          onRemove={(tag) => setTags((prev) => prev.filter((t) => t !== tag))}
+        />
       )}
 
       {view === "title" && (
