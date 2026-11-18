@@ -17,7 +17,7 @@ vi.mock("@/components/edit-task", () => ({
   EditTaskContent: ({ open }: { open: boolean }) => (open ? <div>folha aberta</div> : null),
 }));
 
-import { DayTaskRow, TaskRow, durationText } from "./day-task-row";
+import { DayTaskRow, durationText } from "./day-task-row";
 import { copy } from "./copy";
 import { useTaskActions } from "@/hooks/useTaskActions";
 
@@ -49,14 +49,6 @@ describe("DayTaskRow", () => {
     expect(screen.queryByText("folha aberta")).toBeNull();
     fireEvent.click(screen.getByRole("button", { name: /Reunião/ }));
     expect(screen.getByText("folha aberta")).toBeInTheDocument();
-  });
-
-  it("em curso ganha o Agora; feita sai riscada", () => {
-    const { rerender } = render(<TaskRow time="10:00" title="Proposta" live />);
-    expect(screen.getByText(copy.day.now)).toBeInTheDocument();
-    rerender(<TaskRow time="10:00" title="Proposta" done />);
-    expect(screen.queryByText(copy.day.now)).toBeNull();
-    expect(screen.getByText("Proposta").className).toContain("line-through");
   });
 
   it("ligada à Agenda: selo na meta e excluir pede confirmação, sem desfazer", async () => {

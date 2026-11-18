@@ -6,7 +6,7 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
 ## File map
 
 - Agenda: `day-list.tsx` → `day-section.tsx` (`dayAnchorId`) → `day-task-row.tsx`
-  (`DayTaskRow` container; `TaskRow`, `CheckCircle`, `NowLine` views).
+  (`DayTaskRow` container, `NowLine`), over kit `TaskRow`/`CheckCircle`.
 - Undated: `anytime-block.tsx` (today's card, `ScheduleDrop`), `check-history.tsx`;
   `undated-column.tsx` is a reserved, empty desktop column (bd `Dailify-1td`).
 - Navigation: `week-strip.tsx` (`WeekDays`/`WeekStrip`), `month-calendar.tsx` (`MonthGrid`/
@@ -25,7 +25,6 @@ Task writes and their hooks: `hooks/CLAUDE.md`. This file also covers `sidebar/`
   `CheckCircle` inside `SwipeActions`, and all editing happens in the `EditTask` sheet. Otherwise:
   the legacy `TaskCard` with chip popovers (its `edit` prop).
 - Read once per list and passed down (`DaySection` → `DayTaskRow sheetEditing`; `AnytimeBlock`).
-  `mew-chat/chat-drawer.tsx` also renders `TaskRow`/`CheckCircle`: keep them props-only.
 - A recurring reschedule from the desktop time chip asks the scope (`RecurrenceScopeDialog`); the
   alert shifts by the same delta. Delete scope and Calendar-linked confirm are
   `useTaskActions().deleteDialog`, rendered by the caller. Per-row dialogs mount on first use.

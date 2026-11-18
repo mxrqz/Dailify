@@ -9,6 +9,8 @@ import { ListGroup, ListRow } from "./list";
 import { Refraction } from "./refraction";
 import { SegmentedControl } from "./segmented-control";
 import { Switch } from "./switch";
+import { CheckCircle, TaskRow } from "./task-row";
+import { copy } from "@/components/dashboard/copy";
 
 describe("ActionSheet", () => {
   it("é um alertdialog; escolher roda a ação e fecha, Cancelar só fecha", async () => {
@@ -103,6 +105,24 @@ describe("controles", () => {
     expect(screen.getByRole("link", { name: "Google Agenda" })).toHaveAttribute("target", "_blank");
     expect(screen.getByRole("button", { name: "Sair" })).toHaveAttribute("type", "button");
     expect(screen.getByText("Versão").closest("a, button")).toBeNull();
+  });
+});
+
+describe("TaskRow", () => {
+  it("shows the now badge while live and strikes the title once done", () => {
+    const { rerender } = render(<TaskRow time="10:00" title="Proposta" live />);
+    expect(screen.getByText(copy.day.now)).toBeInTheDocument();
+    rerender(<TaskRow time="10:00" title="Proposta" done />);
+    expect(screen.queryByText(copy.day.now)).toBeNull();
+    expect(screen.getByText("Proposta").className).toContain("line-through");
+  });
+
+  it("CheckCircle is a checkbox that asks for the opposite state", async () => {
+    const user = userEvent.setup();
+    const onCheckedChange = vi.fn();
+    render(<CheckCircle checked={false} onCheckedChange={onCheckedChange} />);
+    await user.click(screen.getByRole("checkbox", { name: copy.task.complete }));
+    expect(onCheckedChange).toHaveBeenCalledWith(true);
   });
 });
 

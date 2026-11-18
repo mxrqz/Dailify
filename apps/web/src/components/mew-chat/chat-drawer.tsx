@@ -28,7 +28,7 @@ import { isCalendarEventLink, MEW_IMAGE_MAX, MEW_TEXT_MAX, type Task } from "@da
 import { useDailify } from "@/components/dailifyContext";
 import { DockButton } from "./dock";
 import { copy } from "@/components/dashboard/copy";
-import { CheckCircle, TaskRow } from "@/components/dashboard/day-task-row";
+import { CheckCircle, TaskRow } from "@/components/kit/task-row";
 import { Chip } from "@/components/kit/chip";
 import { MessageBox } from "@/components/mew/message-box";
 import { CalendarBadge } from "@/components/logos";

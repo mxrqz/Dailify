@@ -5,7 +5,7 @@ import { DEFAULT_HOUR, parseTaskText, type Task } from "@dailify/shared";
 import { useDailify } from "@/components/dailifyContext";
 import { CheckHistory, periodKind } from "@/components/dashboard/check-history";
 import { copy } from "@/components/dashboard/copy";
-import { CheckCircle } from "@/components/dashboard/day-task-row";
+import { CheckCircle } from "@/components/kit/task-row";
 import { TimeWheel } from "@/components/dashboard/date-time-picker";
 import { calendarPanel } from "@/components/dashboard/styles";
 import { SwipeActions } from "@/components/dashboard/swipe-actions";
