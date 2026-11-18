@@ -133,10 +133,8 @@ export function MonthCalendar({
 
   return (
     <div className="fixed inset-0 z-30 overflow-y-auto overscroll-contain bg-canvas pb-30 md:static md:z-auto md:overflow-visible md:pb-10">
-      <nav
-        aria-label={copy.profile.navLabel}
-        className="sticky top-0 z-10 flex h-bar items-center justify-between bg-material-bar-solid px-2 md:top-10"
-      >
+      {/* Not a landmark: two buttons, no links, and the Sidebar already owns "Navegação". */}
+      <div className="sticky top-0 z-10 flex h-bar items-center justify-between bg-material-bar-solid px-2 md:top-10">
         <button
           type="button"
           aria-label={copy.header.back}
@@ -154,7 +152,7 @@ export function MonthCalendar({
         >
           {copy.day.today}
         </Button>
-      </nav>
+      </div>
 
       <header className="flex items-end justify-between pt-1 pr-3 pl-5">
         <h1 className="text-title-1">

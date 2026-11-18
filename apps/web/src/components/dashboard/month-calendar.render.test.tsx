@@ -40,6 +40,8 @@ describe("<MonthCalendar>", () => {
       weekStart: 0,
     });
     render(<MonthCalendar onClose={() => {}} onCreateOn={onCreateOn} />);
+    // The back/Today bar is no landmark: the Sidebar's nav already has that name.
+    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
 
     const grid = within(screen.getByRole("group", { name: "novembro de 2026" }));
     expect(grid.getAllByRole("button")).toHaveLength(30);
