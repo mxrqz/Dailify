@@ -5,7 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 
 import { Sheet, SheetContent, SheetTitle, canDragSheet, shouldCloseSheet } from "./sheet";
-import { copy } from "@/components/dashboard/copy";
+import { copy } from "@/components/kit/copy";
 
 describe("canDragSheet", () => {
   const panel = document.createElement("div");
@@ -103,7 +103,7 @@ describe("<SheetContent side='bottom'>", () => {
     render(<Controlled />);
     const closes = screen.getAllByRole("button");
     expect(closes).toHaveLength(1);
-    await userEvent.click(screen.getByRole("button", { name: copy.kit.close }));
+    await userEvent.click(screen.getByRole("button", { name: copy.close }));
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
   });
 });

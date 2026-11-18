@@ -2,11 +2,11 @@ import { toast } from "sonner";
 import type { Task } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
-import { copy } from "@/components/dashboard/copy";
 import { createTask, deleteTask, setMewAction, updateTask } from "@/functions/api";
 import { swapTasks, swapUndated } from "@/functions/task-lists";
 import { useCalendarPush } from "@/hooks/useCalendarPush";
 
+import { copy } from "./copy";
 import type { ConfirmBlock } from "./thread";
 
 /** Turning `out` into `into` on the server: same id = update, otherwise create or delete. */
@@ -53,7 +53,7 @@ export function useMewApply() {
       // ponytail: a partial failure rolls back writes that did land too (until the next reload);
       // a batch route applying a box atomically would fix it.
       show(into, out);
-      toast.error(copy.mewChat.applyError, { description: error.message });
+      toast.error(copy.applyError, { description: error.message });
       return false;
     }
 

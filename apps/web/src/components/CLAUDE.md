@@ -6,7 +6,7 @@ motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hoo
 ## Where code goes
 
 - `ui/`: Radix/shadcn wrappers adapted to the DS (`ui/CLAUDE.md`). No app logic, no strings beyond
-  `copy.kit`.
+  `kit/copy.ts`.
 - `kit/`: DS presentational primitives, props to markup (`kit/CLAUDE.md`). No `useDailify`,
   `useSession`, api or router hooks.
 - Feature folders own their code and `copy.ts`: `dashboard/` (agenda, composer, sidebar), `auth/`,
@@ -19,7 +19,8 @@ motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hoo
   widgets for `pages/`: `hour-format-select`, `week-start-select`, `time-zone-select`,
   `mode-toggle.tsx:ThemeSelect`, `delete-account`, `integrations`,
   `settings-list.tsx:accountPage/accountGroups`.
-- `dashboard/copy.ts` is the dictionary of the root components, `functions/` and `hooks/` too.
+- `dashboard/copy.ts` is the dictionary of the root components, `functions/` and `hooks/` too;
+  `kit/`, `mew/` and `mew-chat/` have their own `copy.ts`.
 - `landing/kit/` is the Mew speech kit the app imports, a legacy placement
   (`landing/CLAUDE.md`): never add app pieces there.
 

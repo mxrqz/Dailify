@@ -53,7 +53,6 @@ applied to the agenda.
 
 ## Known debt
 
-- Copy lives in `dashboard/copy.ts` under `mewChat`; move it to a local `copy.ts` when touching it.
 - `MessageBox` comes from `components/landing/kit`, against the dependency direction in
   [Where code goes](../../../../../RULES.md#where-code-goes).
 

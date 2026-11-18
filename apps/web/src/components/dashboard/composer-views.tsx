@@ -15,9 +15,11 @@ import type { Field } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { Chip } from "@/components/kit/chip";
+import { copy as kitCopy } from "@/components/kit/copy";
 import { BUBBLE_FILTER, BubbleDefs } from "@/components/landing/kit/bubble";
 import { Ears } from "@/components/landing/kit/ears";
 import { Tail } from "@/components/landing/kit/tail";
+import { copy as mewChatCopy } from "@/components/mew-chat/copy";
 import { Mew } from "@/components/mew/mew";
 import { MewStatic } from "@/components/mew/mew-static";
 import { Button } from "@/components/ui/button";
@@ -484,7 +486,7 @@ export function VoiceSheet({
           onClick={onCancel}
           className="flex-1"
         >
-          {copy.kit.cancel}
+          {kitCopy.cancel}
         </Button>
         <Button size="lg" disabled={sending} onClick={onStop} className="flex-1">
           <SquareIcon aria-hidden="true" className="size-4 fill-current" />
@@ -555,7 +557,7 @@ export function CreateDock({
               <>
                 <button
                   type="button"
-                  aria-label={copy.mewChat.open}
+                  aria-label={mewChatCopy.open}
                   onClick={onOpen}
                   className="flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left outline-none"
                 >

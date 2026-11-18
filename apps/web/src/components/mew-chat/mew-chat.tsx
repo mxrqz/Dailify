@@ -16,6 +16,7 @@ import { useQuotas } from "@/hooks/useQuotas";
 import { useSession } from "@/lib/auth";
 
 import { useMewApply } from "./apply";
+import { copy as t } from "./copy";
 import { ChatDrawer, ChatInput, type Photo } from "./chat-drawer";
 import {
   type ChatAction,
@@ -26,8 +27,6 @@ import {
   mewId,
   saveChat,
 } from "./thread";
-
-const t = copy.mewChat;
 
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 const failure = (reply: string): MewReply => ({ reply, intent: "unsupported", blocks: [] });

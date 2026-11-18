@@ -6,7 +6,7 @@ Repo-wide rules: [/RULES.md](../../../../../RULES.md). This file adds only what 
 
 - Props in, markup out: no `useDailify`, `useSession`, `@/functions/api` or router hooks. React's
   own hooks for local UI only (`useId` in ListGroup, Refraction's `useEffect`).
-- Every visible string is a prop. Defaults come from `copy.kit` (`@/components/dashboard/copy`) and
+- Every visible string is a prop. Defaults come from `./copy` (`kit/copy.ts`) and
   stay overridable: Chip `removeLabel`, ActionSheet `cancelLabel`.
 
 ## Catalogue
@@ -67,7 +67,7 @@ Repo-wide rules: [/RULES.md](../../../../../RULES.md). This file adds only what 
 ## Adding a primitive
 
 1. A kebab-case file with a named export, built per RULES.md › Frontend (forwardRef + props spread).
-2. DS tokens only; strings as props, with any default in `copy.kit`.
+2. DS tokens only; strings as props, with any default in `copy.ts`.
 3. A case in `kit.render.test.tsx` asserting role and accessible name, with an English `it` sentence
    (the existing ones are legacy pt-BR).
 4. A catalogue line here. Verify: `bun run test src/components/kit` from `apps/web`.

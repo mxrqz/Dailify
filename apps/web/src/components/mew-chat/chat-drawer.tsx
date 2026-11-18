@@ -48,9 +48,9 @@ import { fill, getCompletionDate } from "@/functions/functions";
 import { fromDateInput, zoned } from "@/functions/zone";
 import { cn } from "@/lib/utils";
 
+import { copy as t } from "./copy";
 import type { Block, ChatAction, ConfirmBlock, Message, Step } from "./thread";
 
-const t = copy.mewChat;
 const THUMB_PX = 320;
 const UPLOAD_PX = 1024;
 const CHIP_DELAY = 0.1;

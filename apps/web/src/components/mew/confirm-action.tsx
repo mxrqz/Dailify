@@ -1,4 +1,3 @@
-import { copy } from "@/components/dashboard/copy";
 import { Switch } from "@/components/kit/switch";
 import { Button } from "@/components/ui/button";
 import {
@@ -10,9 +9,8 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 
+import { copy as t } from "./copy";
 import { MewStatic } from "./mew-static";
-
-const t = copy.confirmAction;
 
 /**
  * A confirmação de toda ação externa (epic zpq): nada sai da Mewki sem a pessoa ver o que vai

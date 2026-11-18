@@ -25,6 +25,7 @@ vi.mock("react-router-dom", async (importOriginal) => ({
 import { AddToCalendar } from "./add-to-calendar";
 import { ConfirmAction } from "./mew/confirm-action";
 import { copy } from "@/components/dashboard/copy";
+import { copy as confirmCopy } from "@/components/mew/copy";
 import { setIntegrations } from "@/hooks/useIntegrations";
 
 const t = copy.calendar;
@@ -89,9 +90,9 @@ describe("<ConfirmAction>", () => {
     expect(within(dialog).getByText(/amanhã 15:00–15:30/)).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("switch", { name: t.meet }));
     expect(onChange).toHaveBeenCalledWith(true);
-    await userEvent.click(within(dialog).getByRole("button", { name: copy.confirmAction.confirm }));
+    await userEvent.click(within(dialog).getByRole("button", { name: confirmCopy.confirm }));
     expect(onConfirm).toHaveBeenCalled();
-    await userEvent.click(within(dialog).getByRole("button", { name: copy.confirmAction.cancel }));
+    await userEvent.click(within(dialog).getByRole("button", { name: confirmCopy.cancel }));
     expect(onOpenChange).toHaveBeenCalledWith(false);
   });
 });
@@ -131,7 +132,7 @@ describe("<AddToCalendar>", () => {
     expect(within(dialog).getByText(/^Criar evento na Agenda · amanhã/)).toBeInTheDocument();
     await userEvent.click(within(dialog).getByRole("switch", { name: t.meet }));
     expect(within(dialog).getByText(/com Meet$/)).toBeInTheDocument();
-    await userEvent.click(within(dialog).getByRole("button", { name: copy.confirmAction.confirm }));
+    await userEvent.click(within(dialog).getByRole("button", { name: confirmCopy.confirm }));
 
     await waitFor(() => expect(toast.success).toHaveBeenCalled());
     expect(api.createCalendarEvent).toHaveBeenCalledWith("task01", true);
@@ -146,7 +147,7 @@ describe("<AddToCalendar>", () => {
     await userEvent.click(screen.getByRole("button", { name: t.add }));
     await userEvent.click(
       within(await screen.findByRole("dialog")).getByRole("button", {
-        name: copy.confirmAction.confirm,
+        name: confirmCopy.confirm,
       }),
     );
 
@@ -173,7 +174,7 @@ describe("<AddToCalendar>", () => {
     await userEvent.click(screen.getByRole("button", { name: t.add }));
     await userEvent.click(
       within(await screen.findByRole("dialog")).getByRole("button", {
-        name: copy.confirmAction.confirm,
+        name: confirmCopy.confirm,
       }),
     );
     await waitFor(() => expect(toast.info).toHaveBeenCalledWith(t.alreadyLinked));

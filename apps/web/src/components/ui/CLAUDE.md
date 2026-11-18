@@ -16,7 +16,7 @@ diff the output and re-apply them. App widgets live in `components/` or `kit/`, 
 - `dialog.tsx`: `DialogContent` is `glass` over a `scrim` overlay, with fade and zoom on the panel
   itself; `showCloseButton`. Exports `OverlayClose` (44px target, `plain` drops the fill circle),
   reused by sheet, and `DialogOverlay`, reused by `kit/action-sheet.tsx`. The close label is
-  `copy.kit.close` from `components/dashboard/copy.ts`.
+  `close` from `components/kit/copy.ts`.
 - `sheet.tsx`: a glass panel on `motion`. `bottom` and `left` close on drag (`canDragSheet` picks
   where a drag may start, `shouldCloseSheet` decides on release) by clicking a hidden
   `SheetPrimitive.Close`, so the caller's `onOpenChange` runs as for Esc. Only those two sides are
