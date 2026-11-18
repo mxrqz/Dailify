@@ -48,11 +48,9 @@ local here.
 - `HeroScene` (a `setTimeout` set) and `WorldV2` (an `AbortSignal` `wait`) hand-roll their own
   schedulers. They are legacy; don't copy them.
 - On top of RULES "Motion": a scale duration equal to a token uses the token (`duration-200` ->
-  `duration-base`, `duration-300` -> `duration-slow`). These literal curves are legacy, not
-  precedent: `OUT` (scene.tsx), `POINTER_EASE` (ok-art.tsx) and world's `[0.22, 1, 0.36, 1]`, which
-  are all `ease.outQuint`, and `[0.2, 0.7, 0.2, 1]` (`Words`, pricing `Swap`).
-- Need the Mew asleep or alert? Use its `mood`. `remind-art.tsx` redrawing the zzz and faking closed
-  eyes from outside is legacy.
+  `duration-base`, `duration-300` -> `duration-slow`). JS curves come from `ease` in
+  `@/consts/motion` (WAAPI: `` `cubic-bezier(${ease.outQuint.join()})` ``).
+- Need the Mew asleep or alert? Use its `mood` (`remind-art.tsx`: `sleepy`, then `alert`).
 
 ## Demos and data
 

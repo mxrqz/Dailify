@@ -1,9 +1,11 @@
 import { PLAN_PRICING, QUOTAS, formatPrice, yearlySavings } from "@dailify/shared";
+import { CheckIcon } from "lucide-react";
 import { motion } from "motion/react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
 import { Ears } from "@/components/landing/kit/ears";
+import { fade } from "@/consts/motion";
 import { cn } from "@/lib/utils";
 
 import { copy } from "./copy";
@@ -24,15 +26,15 @@ const PLANS: Plan[] = [
 
 const [noteBefore, noteAfter] = copy.note.split("{credits}");
 
-/** Texto que troca com o ciclo: remonta pela `key` e entra com fade + blur curto. */
+/** Texto que troca com o ciclo: remonta pela `key` e entra com fade + subida curta. */
 function Swap({ id, className, children }: { id: string; className?: string; children: string }) {
   return (
     <motion.span
       key={id}
       className={className}
-      initial={{ opacity: 0, filter: "blur(4px)", y: 6 }}
-      animate={{ opacity: 1, filter: "blur(0px)", y: 0 }}
-      transition={{ duration: 0.36, ease: [0.2, 0.7, 0.2, 1] }}
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={fade.transition}
     >
       {children}
     </motion.span>
@@ -109,15 +111,7 @@ function PlanCard({ plan, cycle }: { plan: Plan; cycle: Cycle }) {
       <ul className="mb-auto flex flex-col gap-2.5">
         {c.features.map((f) => (
           <li key={f} className="flex items-center gap-2.5 text-base">
-            <svg
-              viewBox="0 0 24 24"
-              aria-hidden="true"
-              className="size-4 flex-none fill-none stroke-brand-text stroke-3"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M20 6 9 17l-5-5" />
-            </svg>
+            <CheckIcon aria-hidden="true" className="size-4 flex-none stroke-brand-text stroke-3" />
             <span>{f.replace("{n}", credits)}</span>
           </li>
         ))}

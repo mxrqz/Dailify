@@ -1,7 +1,6 @@
-import { motion } from "motion/react";
 import { useRef, useState } from "react";
 
-import { Mew, type MewHandle } from "@/components/mew/mew";
+import { Mew } from "@/components/mew/mew";
 import { MewStatic } from "@/components/mew/mew-static";
 import { cn } from "@/lib/utils";
 
@@ -20,14 +19,12 @@ const JIGGLE = [
 export function RemindArt() {
   const ref = useRef<HTMLDivElement>(null);
   const note = useRef<HTMLDivElement>(null);
-  const mew = useRef<MewHandle>(null);
   const [ring, setRing] = useState(false);
 
   const reduce = useScene(ref, async (wait) => {
     setRing(false);
     await wait(2200);
     setRing(true);
-    mew.current?.hop();
     note.current?.animate(JIGGLE, { duration: 500, delay: 500, easing: "ease-in-out" });
     await wait(2800);
     setRing(false);
@@ -55,30 +52,7 @@ export function RemindArt() {
           <span>{t.body}</span>
         </span>
       </div>
-      <span
-        className={cn(
-          "absolute top-1/2 left-1/2 mt-1.5 ml-8.5 flex gap-0.5 font-bold text-ink-secondary transition-opacity duration-base",
-          awake && "opacity-0",
-        )}
-      >
-        {[13, 16, 19].map((size, i) => (
-          <motion.i
-            key={i}
-            className="not-italic"
-            style={{ fontSize: size }}
-            animate={{ opacity: [0, 1, 0], x: [0, 2, 6], y: [6, -4, -26] }}
-            transition={{ duration: 2.4, delay: i * 0.5, repeat: Infinity, times: [0, 0.3, 1] }}
-          >
-            z
-          </motion.i>
-        ))}
-      </span>
-      <Mew
-        ref={mew}
-        className="mt-14 w-24"
-        happy={!awake}
-        behaviors={{ look: false, tilt: false, blink: awake, ears: awake }}
-      />
+      <Mew className="mt-14 w-24" mood={awake ? "alert" : "sleepy"} />
     </div>
   );
 }

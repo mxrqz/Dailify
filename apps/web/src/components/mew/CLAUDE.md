@@ -54,8 +54,8 @@ Repo-wide rules: `/RULES.md` (Frontend and Motion apply most here).
    opacity 0, add it to the reduced-motion override so it shows statically.
 3. Optionally a one-shot on entering it, in `onMood` (mew.tsx), as `alert` hops.
 
-Never draw zzz, dots or fake eyes around a Mew from outside: `features/remind-art.tsx` does (motion
-zzz, `happy` as closed eyes) though `sleepy` already shuts the lids and shows the zzz. The literal
+Never draw zzz, dots or fake eyes around a Mew from outside: `sleepy` already shuts the lids and
+shows the zzz (`features/remind-art.tsx`). The literal
 curves and durations in mew.css and mew.tsx keyframes are legacy; new ones use motion tokens.
 
 ## confirm-action.tsx

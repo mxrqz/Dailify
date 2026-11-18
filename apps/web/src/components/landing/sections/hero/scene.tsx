@@ -119,11 +119,15 @@ function fly(wrap: HTMLElement, target: HTMLElement) {
     composite: "add",
   });
   wrap.animate([{ opacity: 1 }, { opacity: 1, offset: 0.82 }, { opacity: 0 }], o);
-  // raio corrigido pela escala: chega com o rounded-md do ícone, não achatado
-  wrap.firstElementChild?.animate(
-    [{ borderRadius: "22px" }, { borderRadius: `${14 / sx}px / ${14 / sy}px` }],
-    { ...o, easing: "cubic-bezier(0.55,0,0.25,1)" },
-  );
+  // Radius corrected for the scale, so it lands as the icon's own radius instead of squashed.
+  const shell = wrap.firstElementChild;
+  if (!shell) return;
+  const from = getComputedStyle(shell).borderTopLeftRadius;
+  const to = parseFloat(getComputedStyle(target).borderTopLeftRadius) || 0;
+  shell.animate([{ borderRadius: from }, { borderRadius: `${to / sx}px / ${to / sy}px` }], {
+    ...o,
+    easing: "cubic-bezier(0.55,0,0.25,1)",
+  });
 }
 
 export function HeroScene() {
