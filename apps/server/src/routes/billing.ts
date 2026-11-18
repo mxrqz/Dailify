@@ -1,7 +1,7 @@
 import { Hono } from "hono";
 import type Stripe from "stripe";
-import { limitsFor, type QuotaSnapshot, type Role } from "@dailify/shared";
-import type { Env } from "../index";
+import { limitsFor, type QuotaSnapshot } from "@dailify/shared";
+import type { AppEnv } from "../index";
 import { requireAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { billingProfile, updateUserRole } from "../lib/user";
@@ -17,36 +17,29 @@ import {
   stripeClient,
 } from "../lib/stripe";
 import { fail } from "../lib/errors";
+import { isRecord, parseMonth, readJson } from "../lib/task-input";
 import { returnBase } from "../lib/origin";
 
-const billing = new Hono<{ Bindings: Env; Variables: { userId: string; plan: Role } }>();
+const billing = new Hono<AppEnv>();
+// /webhooks/stripe stays public (signature-checked).
+billing.use("/billing/*", requireAuth, rateLimit("API_LIMITER"));
+billing.use("/permissions", requireAuth, rateLimit("API_LIMITER"));
 
-/**
- * O mês vem do cliente porque quota de escopo mensal é contada contra o mês que ele está olhando —
- * a agenda de agosto tem as suas 30 vagas, setembro tem outras 30.
- */
-function monthParam(value: string | undefined): Date {
-  const match = value === undefined ? null : /^(\d{4})-(\d{2})$/.exec(value);
-  if (!match) return new Date();
-  const year = Number(match[1]);
-  const month = Number(match[2]);
-  if (month < 1 || month > 12) return new Date();
-  return new Date(year, month - 1, 1);
-}
-
-billing.get("/permissions", requireAuth, async (c) => {
+billing.get("/permissions", async (c) => {
   const userId = c.get("userId");
-  const at = monthParam(c.req.query("month"));
+  // The client sends the month it is viewing: a monthly quota is counted against that month.
+  const at = parseMonth(c.req.query("month")) ?? new Date();
   return c.json({
     limits: limitsFor(c.get("plan")),
     usage: await readAllUsage(c.env.DB, userId, at),
   } satisfies QuotaSnapshot);
 });
 
-billing.post("/billing/checkout", requireAuth, rateLimit("API_LIMITER"), async (c) => {
+billing.post("/billing/checkout", async (c) => {
   if (!c.env.STRIPE_SECRET_KEY) return fail(c, 503, "Billing não configurado");
-  const { productName } = await c.req.json<{ productName?: string }>();
-  if (!productName || !isProductName(c.env, productName))
+  const body = await readJson(c);
+  const productName = isRecord(body) ? body.productName : undefined;
+  if (typeof productName !== "string" || !isProductName(c.env, productName))
     return fail(c, 400, "Unknown productName");
 
   const userId = c.get("userId");
@@ -82,7 +75,7 @@ billing.post("/billing/checkout", requireAuth, rateLimit("API_LIMITER"), async (
   return c.json({ url: session.url });
 });
 
-billing.get("/billing/portal", requireAuth, async (c) => {
+billing.get("/billing/portal", async (c) => {
   if (!c.env.STRIPE_SECRET_KEY) return fail(c, 503, "Billing não configurado");
   const { stripeCustomerId } = await billingProfile(c.env.DB, c.get("userId"));
   if (!stripeCustomerId) return fail(c, 400, "No Stripe customer");
@@ -94,7 +87,7 @@ billing.get("/billing/portal", requireAuth, async (c) => {
   return c.json({ url: portal.url });
 });
 
-billing.get("/billing/payment-details", requireAuth, async (c) => {
+billing.get("/billing/payment-details", async (c) => {
   if (!c.env.STRIPE_SECRET_KEY) return c.json(null);
   const { stripeCustomerId } = await billingProfile(c.env.DB, c.get("userId"));
   if (!stripeCustomerId) return fail(c, 400, "No Stripe customer");
@@ -103,7 +96,7 @@ billing.get("/billing/payment-details", requireAuth, async (c) => {
   return c.json(details);
 });
 
-billing.get("/billing/invoices", requireAuth, async (c) => {
+billing.get("/billing/invoices", async (c) => {
   if (!c.env.STRIPE_SECRET_KEY) return c.json([]);
   const { stripeCustomerId } = await billingProfile(c.env.DB, c.get("userId"));
   if (!stripeCustomerId) return fail(c, 400, "No Stripe customer");
@@ -111,6 +104,8 @@ billing.get("/billing/invoices", requireAuth, async (c) => {
   const invoices = await listInvoices(c.env, stripeClient(c.env), stripeCustomerId);
   return c.json(invoices);
 });
+
+const PAYING = new Set<Stripe.Subscription.Status>(["active", "trialing", "past_due"]);
 
 billing.post("/webhooks/stripe", async (c) => {
   const sig = c.req.header("stripe-signature");
@@ -127,20 +122,18 @@ billing.post("/webhooks/stripe", async (c) => {
 
   if (event.type === "invoice.paid") {
     await handleInvoicePaid(c.env, event.data.object);
-  } else if (event.type === "customer.subscription.deleted") {
+  } else if (
+    event.type === "customer.subscription.deleted" ||
+    event.type === "customer.subscription.updated"
+  ) {
     const sub = event.data.object;
     const clerkUserId = sub.metadata.clerkUserId;
-    if (typeof clerkUserId === "string") {
-      await updateUserRole(c.env.DB, {
-        userId: clerkUserId,
-        role: "free",
-        stripeCustomerId: customerId(sub.customer),
-      });
-    }
-  } else if (event.type === "customer.subscription.updated") {
-    const sub = event.data.object;
-    const clerkUserId = sub.metadata.clerkUserId;
-    const role = roleForPrice(c.env, sub.items.data[0]?.price.id ?? "");
+    // Stripe doesn't order events, so a stale `updated` can land after `deleted`: the plan follows
+    // the subscription as it is now, and only a paying status keeps a paid role.
+    const current = await stripe.subscriptions.retrieve(sub.id);
+    const role = PAYING.has(current.status)
+      ? roleForPrice(c.env, current.items.data[0]?.price.id ?? "")
+      : "free";
     if (typeof clerkUserId === "string" && role) {
       await updateUserRole(c.env.DB, {
         userId: clerkUserId,

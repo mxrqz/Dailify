@@ -125,26 +125,36 @@ describe("POST /webhooks/stripe", () => {
     expect(await billingOf("u1")).toEqual({ plan: "max", stripeCustomerId: "cus_1" });
   });
 
+  /** A subscription event, plus what `subscriptions.retrieve` answers now (the webhook re-reads it). */
+  const subscriptionEvent = (
+    type: "customer.subscription.updated" | "customer.subscription.deleted",
+    object: { customer: string | null; metadata: object; price?: string },
+    status = type === "customer.subscription.deleted" ? "canceled" : "active",
+  ) => {
+    const { price, ...rest } = object;
+    const items = { data: price ? [{ price: { id: price } }] : [] };
+    stripeMock.webhooks.constructEventAsync.mockResolvedValue({
+      type,
+      data: { object: { id: "sub_1", items, ...rest } },
+    });
+    stripeMock.subscriptions.retrieve.mockResolvedValue({ id: "sub_1", status, items, ...rest });
+  };
+
   it("customer.subscription.updated with an unknown price doesn't downgrade a paying user", async () => {
     await seedUser(env.DB, "u1", { plan: "max", stripeCustomerId: "cus_1" });
-    stripeMock.webhooks.constructEventAsync.mockResolvedValue({
-      type: "customer.subscription.updated",
-      data: {
-        object: {
-          customer: "cus_1",
-          metadata: { clerkUserId: "u1" },
-          items: { data: [{ price: { id: "price_legacy" } }] },
-        },
-      },
+    subscriptionEvent("customer.subscription.updated", {
+      customer: "cus_1",
+      metadata: { clerkUserId: "u1" },
+      price: "price_legacy",
     });
     await post("{}", "t=1,v1=abc");
     expect(await billingOf("u1")).toEqual({ plan: "max", stripeCustomerId: "cus_1" });
   });
 
   it("routes customer.subscription.deleted to a free-role update", async () => {
-    stripeMock.webhooks.constructEventAsync.mockResolvedValue({
-      type: "customer.subscription.deleted",
-      data: { object: { customer: "cus_1", metadata: { clerkUserId: "u1" } } },
+    subscriptionEvent("customer.subscription.deleted", {
+      customer: "cus_1",
+      metadata: { clerkUserId: "u1" },
     });
 
     const res = await post("{}", "t=1,v1=abc");
@@ -153,26 +163,43 @@ describe("POST /webhooks/stripe", () => {
   });
 
   it("routes customer.subscription.updated to a role resolved from the new price", async () => {
-    stripeMock.webhooks.constructEventAsync.mockResolvedValue({
-      type: "customer.subscription.updated",
-      data: {
-        object: {
-          customer: "cus_1",
-          metadata: { clerkUserId: "u1" },
-          items: { data: [{ price: { id: "price_max_year" } }] },
-        },
-      },
+    subscriptionEvent("customer.subscription.updated", {
+      customer: "cus_1",
+      metadata: { clerkUserId: "u1" },
+      price: "price_max_year",
     });
 
     const res = await post("{}", "t=1,v1=abc");
     expect(res.status).toBe(200);
     expect(await billingOf("u1")).toEqual({ plan: "max", stripeCustomerId: "cus_1" });
+    expect(stripeMock.subscriptions.retrieve).toHaveBeenCalledWith("sub_1");
+  });
+
+  it("customer.subscription.updated for an unpaid subscription drops to free", async () => {
+    await seedUser(env.DB, "u1", { plan: "max", stripeCustomerId: "cus_1" });
+    subscriptionEvent(
+      "customer.subscription.updated",
+      { customer: "cus_1", metadata: { clerkUserId: "u1" }, price: "price_max_year" },
+      "unpaid",
+    );
+    await post("{}", "t=1,v1=abc");
+    expect(await billingOf("u1")).toEqual({ plan: "free", stripeCustomerId: "cus_1" });
+  });
+
+  it("a stale updated delivered after the cancel keeps the user on free", async () => {
+    subscriptionEvent(
+      "customer.subscription.updated",
+      { customer: "cus_1", metadata: { clerkUserId: "u1" }, price: "price_max_year" },
+      "canceled",
+    );
+    await post("{}", "t=1,v1=abc");
+    expect(await billingOf("u1")).toEqual({ plan: "free", stripeCustomerId: "cus_1" });
   });
 
   it("a deleted user is a no-op, not a 500 (Stripe would retry and disable the endpoint)", async () => {
-    stripeMock.webhooks.constructEventAsync.mockResolvedValue({
-      type: "customer.subscription.deleted",
-      data: { object: { customer: "cus_9", metadata: { clerkUserId: "gone" } } },
+    subscriptionEvent("customer.subscription.deleted", {
+      customer: "cus_9",
+      metadata: { clerkUserId: "gone" },
     });
     expect((await post("{}", "t=1,v1=abc")).status).toBe(200);
     expect(await billingOf("gone")).toBeNull();
@@ -180,9 +207,9 @@ describe("POST /webhooks/stripe", () => {
 
   it("an event without a customer keeps the one already saved", async () => {
     await seedUser(env.DB, "u1", { plan: "pro", stripeCustomerId: "cus_1" });
-    stripeMock.webhooks.constructEventAsync.mockResolvedValue({
-      type: "customer.subscription.deleted",
-      data: { object: { customer: null, metadata: { clerkUserId: "u1" } } },
+    subscriptionEvent("customer.subscription.deleted", {
+      customer: null,
+      metadata: { clerkUserId: "u1" },
     });
     await post("{}", "t=1,v1=abc");
     expect(await billingOf("u1")).toEqual({ plan: "free", stripeCustomerId: "cus_1" });
