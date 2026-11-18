@@ -4,7 +4,7 @@ import { motion } from "motion/react";
 import { useState } from "react";
 import { Link } from "react-router-dom";
 
-import { Ears } from "@/components/landing/kit/ears";
+import { Ears } from "@/components/mew/ears";
 import { fade } from "@/consts/motion";
 import { fill } from "@/functions/functions";
 import { cn } from "@/lib/utils";

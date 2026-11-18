@@ -14,8 +14,8 @@ import {
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 
-import { Bubble } from "@/components/landing/kit/bubble";
-import { Tail } from "@/components/landing/kit/tail";
+import { Bubble } from "@/components/mew/bubble";
+import { Tail } from "@/components/mew/tail";
 import { Mew } from "@/components/mew/mew";
 import { damp } from "@/components/mew/spring";
 import { duration } from "@/consts/motion";

@@ -30,7 +30,7 @@ import { DockButton } from "@/components/dashboard/composer-views";
 import { copy } from "@/components/dashboard/copy";
 import { CheckCircle, TaskRow } from "@/components/dashboard/day-task-row";
 import { Chip } from "@/components/kit/chip";
-import { MessageBox } from "@/components/landing/kit/message-box";
+import { MessageBox } from "@/components/mew/message-box";
 import { CalendarBadge } from "@/components/logos";
 import { Mew, type MewMood } from "@/components/mew/mew";
 import { MewStatic } from "@/components/mew/mew-static";

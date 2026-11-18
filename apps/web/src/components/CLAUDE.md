@@ -20,8 +20,6 @@ motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hoo
   `mode-toggle.tsx:ThemeSelect`, `delete-account`, `integrations`,
   `settings-list.tsx:accountPage/accountGroups`.
 - `dashboard/copy.ts` is the dictionary of the root components, `functions/` and `hooks/` too.
-- `landing/kit/` is the Mew speech kit the app imports, a legacy placement
-  (`landing/CLAUDE.md`): never add app pieces there.
 
 ## DailifyContext (`dailifyContext.tsx:DailifyContextType`)
 

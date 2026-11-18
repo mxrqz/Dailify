@@ -1,4 +1,4 @@
-import { BubbleDefs } from "@/components/landing/kit/bubble";
+import { BubbleDefs } from "@/components/mew/bubble";
 import { SiteHeaderV2 } from "@/components/landing/sections/header";
 import { HeroV2 } from "@/components/landing/sections/hero";
 import { FeaturesV2 } from "@/components/landing/sections/features";

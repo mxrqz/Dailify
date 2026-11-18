@@ -12,11 +12,9 @@ local here.
 - Private parts sit beside their section: `hero/scene.tsx` and `hero/script.ts`, the
   `features/*-art.tsx` demos with `features/scene.tsx` (`useScene`, `Slot`, `Words`), and
   `world/logos.tsx`.
-- `kit/` is not landing-only. It is the Mew speech kit (`Bubble`, `Ears`, `Tail`, `MessageBox`),
-  and `mew`, `mew-chat` and `dashboard/composer-views` import it; `integrations.tsx`
-  imports `world/logos.tsx`. Both placements are legacy: add no new app -> landing import (RULES
-  "Where code goes"), and move a piece to `components/mew/` or `components/kit/` once the app needs
-  it.
+- The Mew speech kit (`Bubble`, `Ears`, `Tail`, `MessageBox`) lives in `components/mew/`, since
+  the app uses it too. `integrations.tsx` imports `world/logos.tsx`, a legacy placement: add no
+  new app -> landing import (RULES "Where code goes").
 
 ## Add a section
 

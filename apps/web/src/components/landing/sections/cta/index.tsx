@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { Bubble } from "@/components/landing/kit/bubble";
+import { Bubble } from "@/components/mew/bubble";
 import { Mew } from "@/components/mew/mew";
 import { cn } from "@/lib/utils";
 

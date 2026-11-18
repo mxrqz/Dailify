@@ -14,6 +14,9 @@ Repo-wide rules: `/RULES.md` (Frontend and Motion apply most here).
   `useInView(ref, { margin: "64px" })`.
 - `mew.css`: decorations keyed by `.mew[data-mood=…]`, plus the `prefers-reduced-motion` block.
 - `eye-path.ts` morphs the open ellipse into the happy "^"; `head-path.ts` holds `HEAD_D`.
+- Speech kit, shared by the landing, the chat and the composer: `bubble.tsx` (`Bubble`,
+  `BubbleDefs`, which renders once per page before any Bubble), `ears.tsx`, `tail.tsx`,
+  `message-box.tsx`.
 
 ## Choosing and using
 

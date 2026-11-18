@@ -15,9 +15,9 @@ import type { Field } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { Chip } from "@/components/kit/chip";
-import { BUBBLE_FILTER, BubbleDefs } from "@/components/landing/kit/bubble";
-import { Ears } from "@/components/landing/kit/ears";
-import { Tail } from "@/components/landing/kit/tail";
+import { BUBBLE_FILTER, BubbleDefs } from "@/components/mew/bubble";
+import { Ears } from "@/components/mew/ears";
+import { Tail } from "@/components/mew/tail";
 import { Mew } from "@/components/mew/mew";
 import { MewStatic } from "@/components/mew/mew-static";
 import { Button } from "@/components/ui/button";

@@ -2,7 +2,7 @@ import { Check, CircleDot, Hash, Mail } from "lucide-react";
 import { motion } from "motion/react";
 import { useRef, useState } from "react";
 
-import { MessageBox } from "@/components/landing/kit/message-box";
+import { MessageBox } from "@/components/mew/message-box";
 import { MewStatic } from "@/components/mew/mew-static";
 import { ease } from "@/consts/motion";
 import { cn } from "@/lib/utils";
