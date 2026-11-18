@@ -25,6 +25,7 @@ stay out of the dashboard entry). A new page gets a `lazy()` import too, unless 
 | `/app/*`                           | `app-return.tsx`           | where Stripe returns someone who paid from the app; hands `<path>` to `mewki://open` (App Link opens the app first) |
 | `/task/:id`                        | `[id]/taskPreview.tsx`     | public, shareable task rendered as an image (`html-to-image`)                                                       |
 | `/premium`                         | `premium.tsx`              | pricing + Stripe checkout                                                                                           |
+| `/preview/mew`                     | `mew-preview.tsx`          | public, noindex; simulated Mew chat over a fake agenda (`components/mew-chat/`), localStorage only                  |
 
 **There is no catch-all route** — a link to a non-existent path lands on a blank page. Only navigate
 to paths listed above (this caused the `/prices` vs `/premium` bug).

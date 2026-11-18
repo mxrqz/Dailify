@@ -33,6 +33,7 @@ const IntegrationCallback = lazy(() => import("./pages/integration-callback"));
 const TaskPreview = lazy(() => import("./pages/[id]/taskPreview"));
 const PrivacyPage = lazy(() => import("./pages/privacy"));
 const TermsPage = lazy(() => import("./pages/terms"));
+const MewPreview = lazy(() => import("./pages/mew-preview"));
 
 export default function App() {
   return (
@@ -194,6 +195,9 @@ export default function App() {
                       <Route path="/privacidade" element={<PrivacyPage />} />
 
                       <Route path="/termos" element={<TermsPage />} />
+
+                      {/* Simulated Mew chat for design review: public, noindex, no server calls. */}
+                      <Route path="/preview/mew" element={<MewPreview />} />
 
                       {/* Sem isto, path inexistente renderiza tela branca — já custou o bug /prices. */}
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />
