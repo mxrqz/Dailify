@@ -3,15 +3,12 @@ import {
   calendarEventPreview,
   calendarSlot,
   canUseIntegration,
-  durationMinutes,
-  minutesToDuration,
-  isCalendarEventLink,
   isProviderId,
   matchDuplicate,
   PROVIDER_IDS,
-  videoLink,
-  meetLink,
 } from "./integrations";
+import { isCalendarEventLink, meetLink, videoLink } from "./parse-links";
+import { durationMinutes, isDuration, minutesToDuration } from "./duration";
 import { zonedEpoch } from "./timezone";
 import type { Task } from "./types";
 
@@ -52,6 +49,12 @@ describe("calendário", () => {
     expect(durationMinutes("")).toBe(10);
     for (const m of [90, 120, 45, 5]) expect(durationMinutes(minutesToDuration(m))).toBe(m);
     expect(minutesToDuration(60)).toBe("1h");
+  });
+
+  it("isDuration accepts only the Task.duration format", () => {
+    for (const d of ["10m", "1h", "1h30m", "0m"]) expect(isDuration(d)).toBe(true);
+    for (const d of ["", "10", "1h 30m", "30m1h", "dez minutos", 10])
+      expect(isDuration(d)).toBe(false);
   });
 
   it("slot: horário, dia inteiro pelo lembrete, e Sem data sem dia", () => {

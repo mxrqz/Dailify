@@ -1,4 +1,5 @@
-import type { ProviderId } from "./integrations";
+import type { CalendarTarget } from "./integrations";
+import type { PlanRole } from "./pricing";
 
 export type Repeat = "Off" | "Daily" | "Monthly" | "Yearly" | { Weekly: string[] };
 
@@ -43,8 +44,8 @@ export interface OccurrenceEdit {
 }
 
 /**
- * Rascunho de tarefa lido de uma frase — o mesmo formato do parser local (`ParsedTask` do web,
- * sem `unsure`) com a data em epoch-ms, pra resposta da IA caber nas mesmas etiquetas do composer.
+ * A task draft read from a sentence: `ParsedTask` (`parse-task/index.ts`) without `unsure`/`fields`,
+ * dated in epoch-ms, so the AI reply fills the same composer chips.
  */
 export interface ParsedTaskWire {
   text: string;
@@ -58,7 +59,7 @@ export interface ParsedTaskWire {
   repeat: Repeat;
   repeatEvery?: number;
   /** Só da IA: o app conectado em que a pessoa pediu pra pôr a tarefa. Sugestão — o cliente confirma. */
-  targets?: { provider: ProviderId; meet?: boolean }[];
+  targets?: CalendarTarget[];
 }
 
 export type AiIntent = "create" | "question" | "command" | "unsupported";
@@ -72,7 +73,10 @@ export interface AiParse {
 
 export type Role = "free" | "pro" | "max" | "admin";
 
-export const PLAN_ID = { free: "free", pro: "pro", max: "max" } as const;
+export const PLAN_ID = { free: "free", pro: "pro", max: "max" } as const satisfies Record<
+  PlanRole,
+  PlanRole
+>;
 
 export interface PaymentDetails {
   amount: number;

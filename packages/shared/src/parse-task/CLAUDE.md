@@ -56,10 +56,9 @@ Each step masks what it consumed before the next one looks, so reordering change
 - An unsure code: extend `UnsureCode` in `unsure.ts`; the compiler then asks for its label in
   `copy.mew.unsure` (`apps/web/src/components/dashboard/copy.ts`). Add rows with `unsure: [code]`
   to `parse-task.corpus/unsure.ts`. A code firing on a clean row fails the ratchet as a false alarm.
-- Exports: `index.ts` also re-exports test-only detectors (`parseDuration`, `parseInterval`,
-  `parseRepeat`, `parseWhen`, `cut`, `normalize`), which reach the package root. Add no more; the
-  apps use `parseTaskText`, `ParsedTask`, `Field`, `Span`, `remapSpans`, `quotedSpans` and
-  `UnsureCode`. New tests import a detector from its module (`./parse-task/when`).
+- Exports: `index.ts` exports only what the apps use (`parseTaskText`, `ParsedTask`, `Field`,
+  `Span`, `remapSpans`, `quotedSpans`, `Unsure`, `UnsureCode`). Tests import a detector from its
+  module (`./parse-task/when`).
 
 ## Golden corpus
 

@@ -1,14 +1,11 @@
 import { TZDate } from "@date-fns/tz";
 import { describe, expect, it } from "vitest";
-import {
-  cut,
-  normalize,
-  parseDuration,
-  parseRepeat,
-  parseTaskText,
-  parseWhen,
-  remapSpans,
-} from "./parse-task";
+import { parseTaskText, remapSpans } from "./parse-task";
+import { parseDuration } from "./parse-task/durations";
+import { parseRepeat } from "./parse-task/repeat";
+import { cut } from "./parse-task/title";
+import { normalize } from "./parse-task/vocab";
+import { parseWhen } from "./parse-task/when";
 
 // Fuso explícito: o resultado não depende do fuso da máquina.
 const sp = (year: number, month: number, day: number, hours = 0, minutes = 0) =>

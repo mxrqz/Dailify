@@ -1,4 +1,4 @@
-import type { ProviderId } from "./integrations";
+import type { CalendarTarget } from "./integrations";
 import type { Task } from "./types";
 
 /** `POST /mew/chat`. One call, one credit; the reply lands whole. */
@@ -34,7 +34,7 @@ export type MewBlock =
       before: Task[];
       after: Task[];
       /** `event`: the connected app to also put the tasks on. */
-      targets?: { provider: ProviderId; meet?: boolean }[];
+      targets?: CalendarTarget[];
       /** The parent task (steps) or the target day (move), for the box title. */
       label?: string;
     };

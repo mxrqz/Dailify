@@ -1,12 +1,21 @@
 import type { Role, Task } from "./types";
-import { dayMap, seriesOf } from "./recurrence";
-import { zonedParts, type ZonedParts } from "./timezone";
+import { fillShared, sharedCopy } from "./copy";
+import { durationMinutes } from "./duration";
+import { videoLink, isCalendarEventLink } from "./parse-links";
+import { dayMap, seriesEvery, seriesOf } from "./recurrence";
+import { civilDay, zonedParts, type ZonedParts } from "./timezone";
 
 export type ProviderId = "google-calendar";
 
+/** An integration the AI may put a task in; `meet` asks for a Meet room. */
+export type CalendarTarget = { provider: ProviderId; meet?: boolean };
+
 /** Catálogo das integrações e quem pode usar cada uma. O gate é por plano, não por quota. */
 export const INTEGRATIONS: Record<ProviderId, { name: string; roles: Role[] }> = {
-  "google-calendar": { name: "Google Agenda", roles: ["free", "pro", "max"] },
+  "google-calendar": {
+    name: sharedCopy.providers["google-calendar"],
+    roles: ["free", "pro", "max"],
+  },
 };
 
 export function isProviderId(value: unknown): value is ProviderId {
@@ -54,21 +63,6 @@ export const INTEGRATION_ERROR = {
   alreadyLinked: "already_linked",
 } as const;
 
-/** "1h30m" → 90; vazio ou ilegível → 10, o `DEFAULT_DURATION`. */
-export function durationMinutes(duration: string): number {
-  const h = /(\d+)\s*h/.exec(duration);
-  const m = /(\d+)\s*m/.exec(duration);
-  return (h ? Number(h[1]) * 60 : 0) + (m ? Number(m[1]) : 0) || 10;
-}
-
-/** 90 → "1h30m", 60 → "1h", 45 → "45m": o inverso de `durationMinutes` (fim − início do evento). */
-export function minutesToDuration(minutes: number): string {
-  const total = Math.max(0, Math.round(minutes));
-  const h = Math.floor(total / 60);
-  const m = total % 60;
-  return `${h ? `${h}h` : ""}${m || !h ? `${m}m` : ""}`;
-}
-
 /**
  * Onde a tarefa cai na agenda: com horário = início e fim; Sem data com lembrete = dia inteiro, no
  * dia do lembrete (o 09:00 é só a hora do push); Sem data sem lembrete não tem dia = `null`.
@@ -84,35 +78,6 @@ export function calendarSlot(task: Task, timeZone: string): CalendarSlot | null 
       end: task.date + durationMinutes(task.duration) * 60_000,
     };
   return task.alert === undefined ? null : { allDay: true, day: zonedParts(task.alert, timeZone) };
-}
-
-const VIDEO_HOSTS = [/^meet\.google\.com$/, /(^|\.)zoom\.us$/];
-
-/** O primeiro link de Meet/Zoom: vira o `location` e dispensa criar outro Meet. */
-export function videoLink(links: string[] = []): string | undefined {
-  return links.find(
-    (url) => URL.canParse(url) && VIDEO_HOSTS.some((re) => re.test(new URL(url).hostname)),
-  );
-}
-
-/**
- * O primeiro link de sala do Meet (`meet.google.com/abc-defg-hij`): é o que vira o `conferenceData`
- * do evento — o código da sala é o `conferenceId` que o Google aceita.
- */
-export function meetLink(links: string[] = []): string | undefined {
-  return links.find(
-    (url) =>
-      URL.canParse(url) &&
-      new URL(url).hostname === "meet.google.com" &&
-      /^\/[a-z]{3}-[a-z]{4}-[a-z]{3}$/.test(new URL(url).pathname),
-  );
-}
-
-/** O `htmlLink` de um evento do Google Agenda — é ele, nos links da tarefa, que marca "já está lá". */
-export function isCalendarEventLink(url: string): boolean {
-  if (!URL.canParse(url)) return false;
-  const { hostname, pathname } = new URL(url);
-  return hostname === "www.google.com" && pathname === "/calendar/event";
 }
 
 const MATCH_WINDOW = 15;
@@ -163,25 +128,31 @@ export function matchDuplicate(imported: Task, own: Task[], timeZone: string): T
   });
 }
 
-const WEEKDAYS = ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"];
 const list = (items: string[]) =>
-  items.length > 1 ? `${items.slice(0, -1).join(", ")} e ${items.at(-1)}` : items[0];
+  items.length > 1
+    ? fillShared(sharedCopy.listAnd, {
+        rest: items.slice(0, -1).join(", "),
+        last: items[items.length - 1],
+      })
+    : items[0];
 
 /** "toda segunda e quarta", "a cada 3 dias", "todo dia 16": a regra da série, como no RRULE. */
 function repeatText(task: Task, start: ZonedParts): string {
   const { repeat } = task;
-  const every = task.repeatEvery && task.repeatEvery > 1 ? task.repeatEvery : 1;
-  const ddmm = `${String(start.day).padStart(2, "0")}/${String(start.month + 1).padStart(2, "0")}`;
+  const t = sharedCopy.repeat;
+  const n = seriesEvery(task);
+  const pad = (v: number) => String(v).padStart(2, "0");
+  const date = fillShared(sharedCopy.dayMonth, { dd: pad(start.day), mm: pad(start.month + 1) });
   if (typeof repeat === "object") {
     const days = repeat.Weekly.map((d) => dayMap[d]).sort((a, b) => a - b);
-    const names = list(days.map((d) => WEEKDAYS[d]));
-    if (every > 1) return `a cada ${every} semanas, ${names}`;
-    return `${days[0] === 0 || days[0] === 6 ? "todo" : "toda"} ${names}`;
+    const names = list(days.map((d) => sharedCopy.weekdays[d]));
+    if (n > 1) return fillShared(t.weeklyEvery, { n, days: names });
+    return fillShared(days[0] === 0 || days[0] === 6 ? t.weeklyWeekend : t.weekly, { days: names });
   }
-  if (repeat === "Daily") return every > 1 ? `a cada ${every} dias` : "todo dia";
+  if (repeat === "Daily") return n > 1 ? fillShared(t.dailyEvery, { n }) : t.daily;
   if (repeat === "Monthly")
-    return every > 1 ? `a cada ${every} meses, dia ${start.day}` : `todo dia ${start.day}`;
-  return every > 1 ? `a cada ${every} anos em ${ddmm}` : `todo ano em ${ddmm}`;
+    return fillShared(n > 1 ? t.monthlyEvery : t.monthly, { n, day: start.day });
+  return fillShared(n > 1 ? t.yearlyEvery : t.yearly, { n, date });
 }
 
 /**
@@ -199,41 +170,40 @@ export function calendarEventPreview(
   if (!slot) return null;
   const at = slot.allDay ? Date.UTC(slot.day.year, slot.day.month, slot.day.day, 12) : slot.start;
   const zone = slot.allDay ? "UTC" : timeZone;
+  const t = sharedCopy.calendarPreview;
+  const { locale } = sharedCopy;
   const clock = (ms: number) =>
-    new Intl.DateTimeFormat("pt-BR", { hour: "2-digit", minute: "2-digit", timeZone }).format(ms);
-  const time = slot.allDay ? "dia inteiro" : `${clock(slot.start)}–${clock(slot.end)}`;
+    new Intl.DateTimeFormat(locale, { hour: "2-digit", minute: "2-digit", timeZone }).format(ms);
+  const time = slot.allDay ? t.allDay : `${clock(slot.start)}–${clock(slot.end)}`;
 
   let when: string;
   if (task.repeat !== "Off") {
     const start = zonedParts(at, zone);
     const sameYear = start.year === zonedParts(opts.now, timeZone).year;
-    const since = new Intl.DateTimeFormat("pt-BR", {
+    const since = new Intl.DateTimeFormat(locale, {
       day: "2-digit",
       month: "2-digit",
       ...(!sameYear && { year: "numeric" }),
       timeZone: zone,
     }).format(at);
-    when = `${repeatText(task, start)}${slot.allDay ? "," : ""} ${time}, desde ${since}`;
+    const rule = repeatText(task, start);
+    when = fillShared(t.series, { rule, sep: slot.allDay ? "," : "", time, since });
   } else {
-    const dayKey = (ms: number, tz: string) => {
-      const p = zonedParts(ms, tz);
-      return Date.UTC(p.year, p.month, p.day);
-    };
-    const diff = (dayKey(at, zone) - dayKey(opts.now, timeZone)) / 86_400_000;
+    const diff = civilDay(zonedParts(at, zone)) - civilDay(zonedParts(opts.now, timeZone));
     const day =
       diff === 0
-        ? "hoje"
+        ? t.today
         : diff === 1
-          ? "amanhã"
-          : new Intl.DateTimeFormat("pt-BR", {
+          ? t.tomorrow
+          : new Intl.DateTimeFormat(locale, {
               weekday: "short",
               day: "numeric",
               month: "short",
               timeZone: zone,
             }).format(at);
-    when = slot.allDay ? `${day} · dia inteiro` : `${day} ${time}`;
+    when = fillShared(slot.allDay ? t.allDayOn : t.timedOn, { day, time });
   }
-  return ["Criar evento na Agenda", when, opts.meet && !videoLink(task.links) && "com Meet"]
+  return [t.title, when, opts.meet && !videoLink(task.links) && t.withMeet]
     .filter(Boolean)
     .join(" · ");
 }

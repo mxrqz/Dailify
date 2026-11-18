@@ -1,6 +1,7 @@
 import { TZDate } from "@date-fns/tz";
 import { format } from "date-fns";
-import { normalize, parseTaskText, type UnsureCode } from "../parse-task";
+import { parseTaskText, type UnsureCode } from "../parse-task";
+import { normalize } from "../parse-task/vocab";
 import { weekDays } from "../recurrence";
 import type { Repeat } from "../types";
 

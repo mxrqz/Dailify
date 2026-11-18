@@ -1,12 +1,12 @@
 import { TZDate } from "@date-fns/tz";
 
+import { DEFAULT_DURATION } from "./duration";
 import type { ParsedTask } from "./parse-task";
 import { dateIn, zoneOf } from "./parse-task/vocab";
 import { weekDays } from "./recurrence";
-import type { Repeat, Task } from "./types";
+import type { ParsedTaskWire, Repeat, Task } from "./types";
 
 export const DEFAULT_HOUR = 9; // dia sem hora ("amanhã" puro) cai no começo do dia útil, não em 00:00
-export const DEFAULT_DURATION = "10m";
 
 /**
  * Onde a tarefa vai parar: só o que tem horário entra na agenda. Sem horário vai para Sem data —
@@ -38,6 +38,14 @@ export function composeTaskInput(
 
   return { ...base, date: now.getTime(), undated: true };
 }
+
+/** An AI draft (`ParsedTaskWire`) as a local parse, dated in `timeZone`, for `composeTaskInput`. */
+export const fromWire = (wire: ParsedTaskWire, timeZone: string): ParsedTask => ({
+  ...wire,
+  date: wire.date === null ? null : new TZDate(wire.date, timeZone),
+  unsure: [],
+  fields: { day: [], time: [], duration: [], repeat: [], links: [] },
+});
 
 /** Lembrete de Sem data: o dia às 09:00, ou `null` se já passou e não há próxima ocorrência. */
 export function undatedReminder(day: Date, repeat: Repeat, now: TZDate): TZDate | null {
