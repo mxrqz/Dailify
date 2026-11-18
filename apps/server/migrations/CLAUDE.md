@@ -41,8 +41,8 @@ The schema of the `dailify` D1 database, one numbered file per change. Repo-wide
 - Indexes are named `idx_<table>_<cols>`, partial for sparse columns (`idx_tasks_alert`, with
   `WHERE alert IS NOT NULL`), and added only with the query that needs them, checked with
   `EXPLAIN QUERY PLAN`: every index costs every write.
-- Outliers, don't copy: `push_subscriptions.created`/`.timezone`, the index `mew_actions_user`, and
-  `idx_tasks_user_updated` (no query uses it). The pt-BR headers in 0001-0015 stay as they are.
+- Outliers, don't copy: `push_subscriptions.created`/`.timezone` and the index `mew_actions_user`
+  (renaming them would break the running worker). The pt-BR headers in 0001-0015 stay as they are.
 
 ## Better Auth tables (0015)
 

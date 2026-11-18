@@ -6,8 +6,8 @@ The Worker's SQL, hand-written over the raw `D1Database` binding (no ORM). Repo-
 
 ## Modules
 
-- `tasks.ts`: `tasks` rows, `Row` + `rowToTask` (reused by push.ts and calendar-sync.ts), JSON
-  codecs, the LWW upsert, completions and occurrences, `deleteUserData`.
+- `tasks.ts`: `tasks` rows, `TaskRow` + `rowToTask` (reused by push.ts and calendar-sync.ts), JSON
+  codecs, the LWW upsert, completions and occurrences, `USER_TABLES` + `deleteUserData`.
 - `integrations.ts`: `integration_connections`, `oauth_states`, `integration_links` for the
   propagation and the web.
 - `calendar-sync.ts`: Google-only sync (claim, sync token, import batch), provider hardcoded as `P`.
@@ -48,9 +48,9 @@ SQL still outside db/, to move here: `lib/user.ts` and `middleware/auth.ts` (`"u
 - The `tasks` PK is global and ids come from the client, so ownership is the upsert's
   `WHERE tasks.user_id=excluded.user_id`. `insertTask` returning null = another account owns the id;
   `routes/tasks.ts` answers 409.
-- `insertStatement` never writes `exdates`; only `setExdatesStatement` does, added explicitly by the
-  import and merge batches.
-- `alert_sent` (not in `Row`) = send time for one-offs, alert instant of the last notified
+- `insertStatement` never writes `exdates`. `addExdatesStatement` merges dates in SQL (occurrences,
+  merge); `setExdatesStatement` replaces the list, only for the import batch.
+- `alert_sent` (not in `TaskRow`) = send time for one-offs, alert instant of the last notified
   occurrence for series. `updateTask` resets it to NULL when `alert` changes. Imported undated
   tasks get `alert_sent=alert`: their 09:00 alert is an anchor, not a push.
 - `hash` is computed in `rowToTask`, never stored. `undated=1` makes `date` an anchor month reads
@@ -60,8 +60,11 @@ SQL still outside db/, to move here: `lib/user.ts` and `middleware/auth.ts` (`"u
 - Instance links: external_id `${masterId}_<YYYYMMDDTHHMMSSZ>` (all-day `_<YYYYMMDD>`), built in
   `integrations/google-calendar/index.ts`.
 
-Known gaps: `updateTask`, `appendCompletion`/`removeCompletions`, `excludeOccurrence`,
-`detachOccurrence` and `mergeDuplicate` decide in JS between read and write. Id lists go in one
+LWW and list merges live in SQL: `updateTask` repeats `updated_at<=?` in its UPDATE,
+`appendCompletion` keeps `MAX(updated_at, ?)`, completions and exdates merge through `json_each`.
+Writes end in `RETURNING *` (or a SELECT in the same batch when a refused upsert returns no row,
+`insertTask`), never a separate read. Known gap: `mergeDuplicate` still merges `links` in JS. Id
+lists go in one
 JSON param (`IN (SELECT value FROM json_each(?))`, `markAlertsSent`), never one `?` per id.
 
 ## D1 facts beyond RULES.md
@@ -74,8 +77,8 @@ JSON param (`IN (SELECT value FROM json_each(?))`, `markAlertsSent`), never one 
 
 1. Migration (migrations/CLAUDE.md), then a row interface and its mapper.
 2. Verb-first `(db, userId, ...)` functions, `*Statement` builders for batched writes.
-3. A `DELETE ... WHERE user_id=?` in `deleteUserData`, asserted in `test/account-delete.test.ts`
-   (it skips `push_subscriptions` today; `user_settings` is covered in `settings.test.ts`).
+3. Its name in `USER_TABLES` (`deleteUserData`); `test/account-delete.test.ts` fails on any table
+   with a `user_id` column that is missing there.
 4. A test on the real D1 (`applyD1Migrations(env.DB, env.TEST_MIGRATIONS)` in `beforeAll`) for the
    epoch-ms/boolean shape and that another userId sees nothing. Existing: `db-tasks`, `db-usage`,
    `limits`, `alerts`; calendar-sync and mew via `integrations-sync` and `mew-chat`. Harness:
