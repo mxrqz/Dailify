@@ -147,16 +147,16 @@ relative to the package they name (`apps/web/src`, `apps/server/src`, `packages/
 - Every visible string, aria-labels, toasts and error fallbacks included, lives in a feature's
   `copy.ts` in pt-BR: an English locale is planned (bd `Dailify-1xy`) and copy.ts is the file that
   gets one per language. A new shared feature gets its own folder and `copy.ts`. Today
-  `components/dashboard/copy.ts` is the dictionary of the whole authenticated app.
+  `components/dashboard/copy.ts` is the dictionary of the authenticated app beyond `kit/`, `mew/`
+  and `mew-chat/`.
 - Interpolate with `fill(template, values)` (`functions/functions.ts`) and `{placeholder}` keys, not
   `.replace`: a string replacement expands `$&` from user text and replaces only once. Never build a
   phrase with a template literal or by concatenating keys, since word order changes per language.
   This supersedes the `.replace` advice in bd `copy-i18n`.
 - Copy maps keyed by a domain union use `satisfies Record<Union, string>`. API enum values (e.g.
   Stripe invoice status) reach the UI through such a map, never raw.
-- Standing exceptions: the existing Helmet `<title>` literals in `App.tsx` (a new page's title goes
-  in copy, `apps/web/src/pages/CLAUDE.md`), legal body text, and strings riding along with a
-  component being moved (migrate them in their own step).
+- Standing exceptions: legal body text, and strings riding along with a component being moved
+  (migrate them in their own step).
 
 ## Backend and API
 

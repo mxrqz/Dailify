@@ -10,6 +10,15 @@ import type { QuotaKey, UnsureCode } from "@dailify/shared";
  * Não hard-codar números de plano aqui: limites vêm de `@dailify/shared` `limitsFor`/`QUOTAS`.
  */
 export const copy = {
+  /** O `<title>` de cada página do app, no formato de `auth/copy.ts`. */
+  pageTitle: {
+    dashboard: "Mewki — Hoje",
+    profile: "Mewki — Perfil",
+    settings: "Mewki — Configurações",
+    security: "Mewki — Segurança",
+    integrations: "Mewki — Integrações",
+  },
+
   header: {
     back: "Voltar",
     forward: "Avançar",
@@ -478,13 +487,13 @@ export const copy = {
     home: "Voltar ao início",
     updated: "Última atualização: 17 de novembro de 2026",
     privacy: {
-      pageTitle: "Mewki - Política de Privacidade",
+      pageTitle: "Mewki — Política de Privacidade",
       title: "Política de Privacidade",
       bar: "Privacidade",
       contact: "Fale com a gente sobre seus dados e direitos pela LGPD.",
     },
     terms: {
-      pageTitle: "Mewki - Termos de Uso",
+      pageTitle: "Mewki — Termos de Uso",
       title: "Termos de Uso",
       bar: "Termos",
       contact: "Fale com a gente sobre sua conta, plano ou estes Termos.",

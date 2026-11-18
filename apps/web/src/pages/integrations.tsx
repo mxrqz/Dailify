@@ -1,4 +1,5 @@
 import { ChevronLeftIcon } from "lucide-react";
+import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 
 import { copy } from "@/components/dashboard/copy";
@@ -11,6 +12,9 @@ const t = copy.integrations;
 export default function IntegrationsPage(): JSX.Element {
   return (
     <main className={accountPage}>
+      <Helmet>
+        <title>{copy.pageTitle.integrations}</title>
+      </Helmet>
       {/* Volta pra /settings, de onde se chega aqui; não é a barra do app, então não gruda. */}
       <Link
         to="/settings"

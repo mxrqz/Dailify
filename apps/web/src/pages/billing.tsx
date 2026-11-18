@@ -10,6 +10,7 @@ import {
 } from "lucide-react";
 import { FaCcAmex, FaCcVisa } from "react-icons/fa";
 import { RiMastercardFill } from "react-icons/ri";
+import { Helmet } from "react-helmet-async";
 import { useEffect } from "react";
 import { Link, useSearchParams } from "react-router-dom";
 import {
@@ -280,12 +281,17 @@ export default function BillingPage(): JSX.Element {
   };
 
   return (
-    <BillingView
-      currentPlan={planOf(data?.user)}
-      quotas={quotas}
-      paymentDetails={paymentDetails}
-      invoices={invoices}
-      onManage={getBillingPortalUrl}
-    />
+    <>
+      <Helmet>
+        <title>{copy.account.pageTitle}</title>
+      </Helmet>
+      <BillingView
+        currentPlan={planOf(data?.user)}
+        quotas={quotas}
+        paymentDetails={paymentDetails}
+        invoices={invoices}
+        onManage={getBillingPortalUrl}
+      />
+    </>
   );
 }

@@ -1,12 +1,12 @@
 import { MotionConfig } from "motion/react";
 import { lazy, Suspense } from "react";
-import { BrowserRouter as Router, Navigate, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Navigate, Outlet, Routes, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./global.css";
 import Home from "@/pages/home";
 import ProtectedRoute from "@/components/protected-route";
 import { DailifyProvider } from "@/components/dailifyContext";
-import { Helmet, HelmetProvider } from "react-helmet-async";
+import { HelmetProvider } from "react-helmet-async";
 import { Toaster } from "@/components/ui/sonner";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ErrorBoundary } from "@/components/error-boundary";
@@ -54,92 +54,24 @@ export default function App() {
                       {/* Tudo que é "o app" divide a mesma top bar (components/app-layout.tsx). */}
                       <Route element={<AppLayout />}>
                         <Route
-                          path="/dashboard"
                           element={
                             <ProtectedRoute>
-                              <Helmet>
-                                <title>Mewki - Dashboard</title>
-                              </Helmet>
-
-                              <Home />
+                              <Outlet />
                             </ProtectedRoute>
                           }
-                        />
-
-                        <Route
-                          path="/profile"
-                          element={
-                            <ProtectedRoute>
-                              <Helmet>
-                                <title>Mewki - Profile</title>
-                              </Helmet>
-
-                              <ProfilePage />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        <Route
-                          path="/settings"
-                          element={
-                            <ProtectedRoute>
-                              <Helmet>
-                                <title>Mewki - Configurações</title>
-                              </Helmet>
-
-                              <SettingsPage />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        <Route
-                          path="/security"
-                          element={
-                            <ProtectedRoute>
-                              <Helmet>
-                                <title>Mewki - Segurança</title>
-                              </Helmet>
-
-                              <SecurityPage />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        <Route
-                          path="/billing"
-                          element={
-                            <ProtectedRoute>
-                              <Helmet>
-                                <title>Mewki - Premium</title>
-                              </Helmet>
-
-                              <BillingPage />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        <Route
-                          path="/integrations"
-                          element={
-                            <ProtectedRoute>
-                              <Helmet>
-                                <title>Mewki - Integrações</title>
-                              </Helmet>
-
-                              <IntegrationsPage />
-                            </ProtectedRoute>
-                          }
-                        />
-
-                        {/* redirect_uri do OAuth: o servidor só aceita o code com o bearer de quem pediu. */}
-                        <Route
-                          path="/integrations/:provider/callback"
-                          element={
-                            <ProtectedRoute>
-                              <IntegrationCallback />
-                            </ProtectedRoute>
-                          }
-                        />
+                        >
+                          <Route path="/dashboard" element={<Home />} />
+                          <Route path="/profile" element={<ProfilePage />} />
+                          <Route path="/settings" element={<SettingsPage />} />
+                          <Route path="/security" element={<SecurityPage />} />
+                          <Route path="/billing" element={<BillingPage />} />
+                          <Route path="/integrations" element={<IntegrationsPage />} />
+                          {/* redirect_uri do OAuth: o servidor só aceita o code com o bearer de quem pediu. */}
+                          <Route
+                            path="/integrations/:provider/callback"
+                            element={<IntegrationCallback />}
+                          />
+                        </Route>
 
                         <Route path="/premium" element={<PremiumPage />} />
                       </Route>
