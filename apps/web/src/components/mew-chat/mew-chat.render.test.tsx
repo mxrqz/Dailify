@@ -11,7 +11,9 @@ import {
   type Task,
 } from "@dailify/shared";
 
+import { CreditsTray } from "@/components/credits-tray";
 import { copy } from "@/components/dashboard/copy";
+import { setCreditsTray } from "@/hooks/useCreditsTray";
 
 import { copy as t } from "./copy";
 import { MewChat } from "./mew-chat";
@@ -67,6 +69,7 @@ const mount = () => {
   render(
     <MemoryRouter>
       <MewChat onCompose={onCompose} />
+      <CreditsTray />
     </MemoryRouter>,
   );
   fireEvent.click(screen.getByRole("button", { name: t.open }));
@@ -81,6 +84,7 @@ const say = (text: string) => {
 };
 
 beforeEach(() => {
+  setCreditsTray(false);
   localStorage.clear();
   ctx.tasks = [];
   ctx.undatedTasks = [];
@@ -147,13 +151,14 @@ describe("MewChat", () => {
     expect(within(chat).queryByText(t.consentTitle)).toBeNull();
   });
 
-  it("out of credits, the Mew says so and no credit is counted", async () => {
+  it("out of credits, the Mew says so, the upgrade tray rises and no credit is counted", async () => {
     api.mewChat.mockResolvedValue({
       error: { message: QUOTA_ERRORS.ai, offline: false, status: 429, code: API_ERROR.aiExhausted },
     });
     const { chat } = mount();
     say("oi");
     expect(await within(chat).findByText(/esgotados/)).toBeInTheDocument();
+    expect(screen.getByRole("alertdialog", { name: copy.quota.trayTitle })).toBeInTheDocument();
     expect(ctx.bumpUsage).not.toHaveBeenCalled();
   });
 

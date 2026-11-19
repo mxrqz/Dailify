@@ -43,6 +43,12 @@ export const copy = {
      * nomes de quota não compartilham.
      */
     summaryUnlimited: "{used} {name} · ilimitado",
+    // A bandeja que sobe quando os créditos de IA acabam, em vez de levar pra outra página.
+    trayTitle: "Seus créditos acabaram",
+    trayBody:
+      "Eles voltam na renovação do seu plano. Se quiser continuar com a Mew agora, os planos pagos têm mais créditos por mês.",
+    trayUpgrade: "Ver planos",
+    trayLater: "Agora não",
   },
 
   day: {
@@ -404,6 +410,7 @@ export const copy = {
     record: "Criar por voz",
     stop: "Parar e criar",
     sending: "Criando pela voz",
+    understanding: "Entendendo…",
     listening: "Ouvindo…",
     cancel: "Cancelar gravação",
     wave: "Microfone captando",
@@ -416,8 +423,6 @@ export const copy = {
     error: "Não foi possível criar pela voz",
     micDenied: "Sem acesso ao microfone",
     micDeniedHint: "Libere o microfone nas permissões do navegador.",
-    limitReached: "Créditos de IA esgotados",
-    limitReachedHint: "Você usou os créditos de IA do seu plano neste mês.",
   },
 
   // "Melhorar com a Mew": a leitura por IA do texto do composer, sempre a pedido (1 crédito).

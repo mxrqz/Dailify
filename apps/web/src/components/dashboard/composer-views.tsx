@@ -8,7 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import { Link } from "react-router-dom";
-import { Loader2Icon, MicIcon, SquareIcon } from "lucide-react";
+import { MicIcon, SquareIcon } from "lucide-react";
 import { useReducedMotion } from "motion/react";
 import type { Field } from "@dailify/shared";
 
@@ -20,6 +20,7 @@ import { Ears } from "@/components/mew/ears";
 import { Tail } from "@/components/mew/tail";
 import { Mew } from "@/components/mew/mew";
 import { MewStatic } from "@/components/mew/mew-static";
+import { Dots } from "@/components/mew-chat/bubbles";
 import { Button } from "@/components/ui/button";
 import type { Segment } from "@/functions/compose-input";
 import { fill } from "@/functions/functions";
@@ -425,13 +426,14 @@ function VoiceWave({ analyser }: { analyser: AnalyserNode | null }): JSX.Element
 const clock = (seconds: number) =>
   `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, "0")}`;
 
-/** Quanto já gravou, de quanto cabe. Conta desde que montou: monta junto com a gravação. */
-function VoiceTimer({ maxMs }: { maxMs: number }): JSX.Element {
+/** Quanto já gravou, de quanto cabe. Conta desde que montou e para quando `running` cai. */
+function VoiceTimer({ maxMs, running }: { maxMs: number; running: boolean }): JSX.Element {
   const [seconds, setSeconds] = useState(0);
   useEffect(() => {
+    if (!running) return;
     const id = setInterval(() => setSeconds((s) => s + 1), 1000);
     return () => clearInterval(id);
-  }, []);
+  }, [running]);
 
   return (
     <p className="mt-4 text-title-3 font-semibold tabular-nums">
@@ -464,17 +466,9 @@ export function VoiceSheet({
         {sending ? copy.voice.sending : copy.voice.listening}
       </p>
       <p className="mt-1.5 text-body text-ink-secondary">{copy.voice.hint}</p>
-      {sending ? (
-        <Loader2Icon
-          aria-label={copy.voice.sending}
-          className="mt-8 mb-12 size-8 animate-spin text-ink-secondary"
-        />
-      ) : (
-        <>
-          <VoiceWave analyser={analyser} />
-          <VoiceTimer maxMs={maxMs} />
-        </>
-      )}
+      {/* Sending, the wave rests (the hook drops the analyser) and the clock stops where it was. */}
+      <VoiceWave analyser={analyser} />
+      <VoiceTimer maxMs={maxMs} running={!sending} />
       <div className="flex w-full gap-2.5 pt-9 pb-3">
         <Button
           variant="secondary"
@@ -486,9 +480,21 @@ export function VoiceSheet({
         >
           {kitCopy.cancel}
         </Button>
-        <Button size="lg" disabled={sending} onClick={onStop} className="flex-1">
-          <SquareIcon aria-hidden="true" className="size-4 fill-current" />
-          {copy.voice.stop}
+        {/* The stop button becomes the wait: same slot, fill tone, dots instead of the square. */}
+        <Button
+          size="lg"
+          variant={sending ? "secondary" : "default"}
+          disabled={sending}
+          aria-busy={sending || undefined}
+          onClick={onStop}
+          className="flex-1"
+        >
+          {sending ? (
+            <Dots className="bg-current" />
+          ) : (
+            <SquareIcon aria-hidden="true" className="size-4 fill-current" />
+          )}
+          {sending ? copy.voice.understanding : copy.voice.stop}
         </Button>
       </div>
     </div>

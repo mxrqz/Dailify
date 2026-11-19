@@ -45,7 +45,7 @@ export function ActionSheet({
           role="alertdialog"
           // Sem descrição o Radix avisa no console; com ela, ele mesmo liga o aria-describedby.
           {...(!description && { "aria-describedby": undefined })}
-          className="fixed inset-x-2 bottom-2 z-overlay mx-auto flex max-w-md flex-col gap-2 pb-safe outline-none data-[state=open]:animate-in data-[state=open]:slide-in-from-bottom-full data-[state=open]:duration-slow data-[state=open]:ease-out data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom-full data-[state=closed]:duration-base data-[state=closed]:ease-exit"
+          className="fixed inset-x-2 bottom-2 z-overlay mx-auto flex max-w-md flex-col gap-2 pb-safe outline-none data-[state=open]:animate-in motion-reduce:animate-none! data-[state=open]:slide-in-from-bottom-full data-[state=open]:duration-slow data-[state=open]:ease-out data-[state=closed]:animate-out data-[state=closed]:slide-out-to-bottom-full data-[state=closed]:duration-base data-[state=closed]:ease-exit"
         >
           <div className="glass rounded-md text-center">
             <div className="px-4 pt-3.5 pb-3">

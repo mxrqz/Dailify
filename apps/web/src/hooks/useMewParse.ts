@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import type { AiParse } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { parseTaskAi } from "@/functions/api";
+import { setCreditsTray } from "@/hooks/useCreditsTray";
 import { useQuotas } from "@/hooks/useQuotas";
 
 /**
@@ -15,7 +15,6 @@ import { useQuotas } from "@/hooks/useQuotas";
 export function useMewParse() {
   const { bumpUsage } = useDailify();
   const ai = useQuotas().states.ai;
-  const navigate = useNavigate();
   const [pending, setPending] = useState(false);
   const [result, setResult] = useState<AiParse | null>(null);
   // O 429 chega antes de as quotas recarregarem: sem isto o botão continuaria aceso.
@@ -28,10 +27,7 @@ export function useMewParse() {
       const { result: read, error } = await parseTaskAi(text);
       if (error?.status === 429 || error?.status === 403) {
         setRefused(true);
-        toast(copy.mew.exhausted, {
-          description: copy.voice.limitReachedHint,
-          action: { label: copy.mew.upgrade, onClick: () => navigate("/premium") },
-        });
+        setCreditsTray(true);
         return null;
       }
       if (!read) {
