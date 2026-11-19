@@ -41,7 +41,7 @@ applied to the agenda.
   stored as a 320px thumb (localStorage quota) and uploaded at 1024px (`THUMB_PX`/`UPLOAD_PX`).
 - The drawer is a non-modal bottom `Sheet` so the dock stays usable; the scrim is rendered by
   mew-chat.tsx. The dock is the input (`CreateDock chat={<ChatInput/>}`, from
-  `dock.tsx`), so `onInteractOutside` ignores `[data-slot="create-dock"]`.
+  `dock.tsx`), so `onInteractOutside` ignores `[data-slot="create-dock"]` and the credits tray (`[role="alertdialog"]`).
 - One `ResizeObserver` is the only writer of `scrollTop` (pinned within 48px of the bottom; a new
   message re-pins). Only messages absent when the drawer opened animate (the `initial` set).
 - Enter animations are CSS tokens, not motion: `word-in` + `--i`, `delay-words`/`delay-words-lag` +

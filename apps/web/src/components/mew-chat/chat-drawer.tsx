@@ -57,9 +57,12 @@ export function ChatDrawer({
           event.preventDefault();
           document.getElementById(INPUT_ID)?.focus();
         }}
-        // Typing in the dock is not leaving the chat.
+        // Typing in the dock, or the credits tray rising over the chat, is not leaving it.
         onInteractOutside={(event) => {
-          if (event.target instanceof Element && event.target.closest('[data-slot="create-dock"]'))
+          if (
+            event.target instanceof Element &&
+            event.target.closest('[data-slot="create-dock"], [role="alertdialog"]')
+          )
             event.preventDefault();
         }}
         className="z-chat h-11/12 px-0 pb-0 sm:mx-auto sm:w-sheet"

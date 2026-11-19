@@ -13,11 +13,13 @@ export function dayRows(rows: Row[], done: (task: Task) => boolean): Row[] {
   const isDone = (row: Row) => "task" in row && done(row.task);
   const sorted = [...rows].sort((a, b) => Number(isDone(a)) - Number(isDone(b)) || a.at - b.at);
   let last: string | undefined;
+  let lastDone = false;
   return sorted.map((row) => {
     if (!("task" in row)) return row;
     const hour = hourOf(row.at);
-    const first = hour !== last;
+    const first = hour !== last || isDone(row) !== lastDone;
     last = hour;
+    lastDone = isDone(row);
     return { ...row, hour: first ? hour : undefined };
   });
 }
