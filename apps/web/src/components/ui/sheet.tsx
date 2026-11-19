@@ -154,7 +154,7 @@ function SheetContent({
             } else void animate(shift, 0, reduce ? { duration: 0 } : spring.snappy);
           }}
           className={cn(
-            "glass text-ink fixed z-overlayflex flex-col data-[state=open]:animate-in data-[state=open]:duration-slow data-[state=open]:ease-out data-[state=closed]:animate-out data-[state=closed]:duration-base",
+            "glass text-ink fixed z-overlay flex flex-col data-[state=open]:animate-in data-[state=open]:duration-slow data-[state=open]:ease-out data-[state=closed]:animate-out data-[state=closed]:duration-base",
             exit,
             side === "right" &&
               "data-[state=closed]:slide-out-to-right-full data-[state=open]:slide-in-from-right-full inset-y-0 right-0 h-full w-3/4 rounded-l-sheet sm:max-w-sm",
