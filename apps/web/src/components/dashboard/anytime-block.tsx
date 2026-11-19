@@ -5,7 +5,7 @@ import { DEFAULT_HOUR, parseTaskText, type Task } from "@dailify/shared";
 import { useDailify } from "@/components/dailifyContext";
 import { CheckHistory, periodKind } from "@/components/dashboard/check-history";
 import { copy } from "@/components/dashboard/copy";
-import { CheckCircle } from "@/components/kit/task-row";
+import { CheckCircle, strike } from "@/components/kit/task-row";
 import { TimeWheel } from "@/components/dashboard/date-time-picker";
 import { calendarPanel } from "@/components/dashboard/styles";
 import { SwipeActions } from "@/components/dashboard/swipe-actions";
@@ -68,14 +68,7 @@ export function AnytimeItem({
           !first && "border-t",
         )}
       >
-        <span
-          className={cn(
-            "truncate text-body font-semibold",
-            done && "text-ink-secondary line-through decoration-ink-tertiary",
-          )}
-        >
-          {title}
-        </span>
+        <span className={cn("truncate text-body font-semibold", strike(done))}>{title}</span>
         <span className="flex min-w-0 items-center gap-1.5 text-footnote text-ink-secondary tabular-nums [&_svg]:size-3.5 [&_svg]:flex-none">
           {meta}
         </span>

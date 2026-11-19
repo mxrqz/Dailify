@@ -43,7 +43,7 @@ vi.mock("@/components/dailifyContext", () => ({
 import { copy } from "@/components/dashboard/copy";
 import { readQueue } from "@/functions/offline";
 import { zoned } from "@/functions/zone";
-import { useCreateTask, useShowCreated } from "./useCreateTask";
+import { isSaving, useCreateTask, useShowCreated } from "./useCreateTask";
 
 const wrapper = ({ children }: { children: ReactNode }) => <MemoryRouter>{children}</MemoryRouter>;
 const task = (id: string): Task => ({
@@ -95,5 +95,23 @@ describe("useCreateTask", () => {
 
     expect(toast.error.mock.calls[0][1].action).toBeUndefined();
     expect(toast.error.mock.calls[1][1].action.label).toBe(copy.form.upgrade);
+  });
+
+  it("marks the optimistic task as saving until the server's copy replaces it", async () => {
+    const { result } = renderHook(() => useCreateTask(), { wrapper });
+    let reply: (value: { task: Task }) => void = () => {};
+    api.createTask.mockReturnValueOnce(new Promise((resolve) => (reply = resolve)));
+
+    let created: Promise<boolean> = Promise.resolve(false);
+    act(() => void (created = result.current.create(parseTaskText("x amanhã às 10h", zoned()))));
+    const [optimistic] = tasks;
+    expect(isSaving(optimistic)).toBe(true);
+
+    await act(async () => {
+      reply({ task: { ...optimistic } });
+      await created;
+    });
+    expect(tasks).toHaveLength(1);
+    expect(isSaving(tasks[0])).toBe(false);
   });
 });

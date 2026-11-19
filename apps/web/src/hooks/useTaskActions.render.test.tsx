@@ -101,6 +101,42 @@ describe("useTaskActions", () => {
     expect(store).toHaveLength(31);
   });
 
+  it("an occurrence delete waits for its toast: Undo puts the row back and sends nothing", async () => {
+    if (!day18) throw new Error("no day 18");
+    store = series;
+    api.deleteTask.mockResolvedValue({});
+    render(<Toaster />);
+    render(<Delete task={day18} />);
+
+    await act(async () => screen.getByRole("button", { name: "excluir" }).click());
+    await act(async () =>
+      (await screen.findByRole("button", { name: copy.form.scopeOccurrence })).click(),
+    );
+    expect(store).toHaveLength(30);
+    await act(async () => (await screen.findByRole("button", { name: copy.task.undo })).click());
+
+    expect(store).toHaveLength(31);
+    expect(api.deleteTask).not.toHaveBeenCalled();
+  });
+
+  it("an occurrence delete is sent once its toast closes", async () => {
+    if (!day18) throw new Error("no day 18");
+    store = series;
+    api.deleteTask.mockResolvedValue({});
+    render(<Toaster />);
+    render(<Delete task={day18} />);
+
+    await act(async () => screen.getByRole("button", { name: "excluir" }).click());
+    await act(async () =>
+      (await screen.findByRole("button", { name: copy.form.scopeOccurrence })).click(),
+    );
+    await screen.findByRole("button", { name: copy.task.undo });
+    await act(async () => void toast.dismiss());
+
+    await vi.waitFor(() => expect(api.deleteTask).toHaveBeenCalledWith("r", day18.date));
+    expect(store).toHaveLength(30);
+  });
+
   it("undo of a delete keeps a write to another task that landed meanwhile", async () => {
     const a: Task = { ...anchor, id: "a", repeat: "Off" };
     const b: Task = { ...anchor, id: "b", repeat: "Off" };

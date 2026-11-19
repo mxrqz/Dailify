@@ -35,7 +35,10 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 - `onDelete`: recurring asks occurrence vs series first; Calendar-linked (`isCalendarEventLink`)
   confirms in an ActionSheet, no Undo (the Google event goes too); a plain delete is immediate with
   a 6 s "Desfazer" that re-creates the same id. "Only this one" sends `?occurrence=`, the date joins
-  the series' `exdates`, and has no Undo: no route removes an exdate.
+  the series' `exdates`; no route removes an exdate, so it is sent only when its 6 s toast closes
+  (`onAutoClose`/`onDismiss`) and its Undo just puts the instance back.
+- `useCreateTask` marks the optimistic object (`isSaving`, a WeakSet) until the server's copy, or a
+  fresh one on queueing, replaces it; the agenda row reads "Salvando…" meanwhile.
 - `onPatch`: `repeatEvery: null` on the wire is back to 1 (locally `undefined`). Apply the reply's
   `series` before `updated`: re-expanding it drops the occurrence that became its own task.
 - A series-scope `onPatch` with a `date` shifts the anchor (`seriesOf(task).date + new - task.date`);

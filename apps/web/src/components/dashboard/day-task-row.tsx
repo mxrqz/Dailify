@@ -22,6 +22,7 @@ import { useDailify } from "@/components/dailifyContext";
 import { clockAt } from "@/functions/date-label";
 import { fill, formatClock, taskToCardData } from "@/functions/functions";
 import { repeatLabel } from "@/functions/repeat-label";
+import { isSaving } from "@/hooks/useCreateTask";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import type { Task } from "@dailify/shared";
 import { zoned } from "@/functions/zone";
@@ -189,7 +190,13 @@ export function DayTaskRow({
       time={formatClock(data.time, hour12)}
       duration={task.duration ? durationText(durationMinutes(task.duration)) : undefined}
       title={task.title}
-      meta={taskMeta(task, live && !data.completed, hour12)}
+      meta={
+        isSaving(task) ? (
+          <span className="truncate">{copy.task.saving}</span>
+        ) : (
+          taskMeta(task, live && !data.completed, hour12)
+        )
+      }
       done={data.completed}
       live={live && !data.completed}
       onOpen={() => setOpen(true)}

@@ -143,26 +143,6 @@ export function isTaskModified(task: Task, updated: Task): boolean {
   return false;
 }
 
-export interface TimeGroup {
-  /** "HH:MM" zero-padded, o mesmo formato de `getTime(date, "HH:MM")`. */
-  time: string;
-  tasks: Task[];
-}
-
-/** Agrupa as tarefas do dia pela hora cheia ("16:00" junta 16:00 e 16:45), em ordem. Não muta. */
-export function groupTasksByHour(tasks: ReadonlyArray<Task>): TimeGroup[] {
-  // One day's tasks: epoch order is clock order.
-  const sorted = [...tasks].sort((a, b) => a.date - b.date);
-  const byHour = new Map<string, Task[]>();
-  for (const task of sorted) {
-    const hour = `${getTime(task.date, "HH:MM").slice(0, 2)}:00`;
-    const bucket = byHour.get(hour);
-    if (bucket) bucket.push(task);
-    else byHour.set(hour, [task]);
-  }
-  return [...byHour.entries()].map(([time, group]) => ({ time, tasks: group }));
-}
-
 /** "HH:MM" → minutos desde a meia-noite; `getTime` já garante o zero-padding. */
 export function timeToMinutes(time: string): number {
   const [hours, minutes] = time.split(":").map(Number);

@@ -91,7 +91,9 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
   via `getComputedStyle`. `ease-out` overrides Tailwind's default curve; a `transition-*` with no
   duration gets `duration-fast` and `ease-out`.
 - Exceptions to transform/opacity: the `grid-template-rows` reveal (`starting:grid-rows-[0fr]`, the
-  Reveal in `mew-chat/bubbles.tsx`) and the side column's width and margin (`dashboard/undated-column.tsx`).
+  Reveal in `mew-chat/bubbles.tsx`), the side column's width and margin (`dashboard/undated-column.tsx`),
+  the check's `stroke-dashoffset` (a 14px path, `kit/task-row.tsx`) and an exiting agenda row's
+  `height`/`margin` collapse after it has faded (motion `exit`, `dashboard/day-section.tsx`).
 - Motion corrects a radius during a layout morph only when it comes through `style`, so a morphing
   surface takes a px number equal to its token: `radius.panel` from `@/consts/motion` (tested).
   `create-fab.tsx`: `RADIUS_PANEL` = 22 (`--radius-panel`), `RADIUS_FAB` = 14 (`--radius-md`).
