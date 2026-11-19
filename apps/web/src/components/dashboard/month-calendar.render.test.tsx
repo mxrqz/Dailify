@@ -59,4 +59,15 @@ describe("<MonthCalendar>", () => {
     fireEvent.click(screen.getByRole("button", { name: /^Criar tarefa em/ }));
     expect(onCreateOn).toHaveBeenCalledWith(day);
   });
+
+  it("pages to the picked day once the context lands on it", () => {
+    const value = { tasks: [], goToDay: vi.fn(), loadMonth: vi.fn(), weekStart: 0 };
+    dailify.mockReturnValue({ ...value, selectedDay: day });
+    const view = render(<MonthCalendar onClose={() => {}} onCreateOn={() => {}} />);
+    expect(screen.getByTestId("day")).toHaveTextContent("17");
+
+    dailify.mockReturnValue({ ...value, selectedDay: new Date(2026, 10, 18) });
+    view.rerender(<MonthCalendar onClose={() => {}} onCreateOn={() => {}} />);
+    expect(screen.getAllByTestId("day").at(-1)).toHaveTextContent("18");
+  });
 });

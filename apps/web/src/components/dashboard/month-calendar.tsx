@@ -12,6 +12,7 @@ import {
   startOfMonth,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
+import { AnimatePresence, motion, type Variants } from "motion/react";
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
 import type { WeekStart } from "@dailify/shared";
 
@@ -19,11 +20,20 @@ import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { DaySection } from "@/components/dashboard/day-section";
 import { Button } from "@/components/ui/button";
+import { duration, ease } from "@/consts/motion";
 import { weekdayDate, weekdayInitials } from "@/functions/date-label";
 import { capitalize, fill, getTasksForDay } from "@/functions/functions";
 import { zoned } from "@/functions/zone";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { cn } from "@/lib/utils";
+
+// Forward (dir 1) pushes the day out left and the next in from the right; dir 0 swaps instantly.
+const slide = { duration: duration.slow, ease: ease.out };
+const page = {
+  enter: (dir: number) => ({ x: `${dir * 100}%`, transition: dir ? slide : { duration: 0 } }),
+  center: (dir: number) => ({ x: "0%", transition: dir ? slide : { duration: 0 } }),
+  exit: (dir: number) => ({ x: `${-dir * 100}%`, transition: dir ? slide : { duration: 0 } }),
+} satisfies Variants;
 
 /**
  * O mês em grade (props → markup): passado apagado, hoje em `brand-text`, o escolhido num círculo
@@ -40,7 +50,8 @@ export function MonthGrid({
   selected: Date;
   weekStart: WeekStart;
   marked: (day: Date) => boolean;
-  onPick: (day: Date) => void;
+  /** `keyboard`: a click with no pointer, which swaps the day without the slide. */
+  onPick: (day: Date, keyboard: boolean) => void;
 }): JSX.Element {
   const days = eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) });
   const lead = (days[0].getDay() - weekStart + 7) % 7;
@@ -75,7 +86,7 @@ export function MonthGrid({
             aria-pressed={on}
             aria-current={isToday(day) ? "date" : undefined}
             aria-label={has ? fill(copy.day.withTasks, { day: label }) : label}
-            onClick={() => onPick(day)}
+            onClick={(e) => onPick(day, e.detail === 0)}
             className="group/day flex h-13 cursor-pointer flex-col items-center gap-1 pt-0.5"
           >
             <span
@@ -125,6 +136,16 @@ export function MonthCalendar({
     void loadMonthOf(zoned(monthKey));
   }, [monthKey]);
 
+  // The day lands after goToDay loads its months, so the input that picked it is kept until then.
+  const [keyboard, setKeyboard] = useState(false);
+  const dayKey = startOfDay(selectedDay).getTime();
+  const [shown, setShown] = useState(dayKey);
+  const [dir, setDir] = useState(0);
+  if (dayKey !== shown) {
+    setShown(dayKey);
+    setDir(keyboard ? 0 : Math.sign(dayKey - shown));
+  }
+
   const pick = (day: Date) => void goToDay(day);
   const marked = (day: Date) => (tasks ? getTasksForDay(tasks, day).length > 0 : false);
   const title = format(month, "MMMM", { locale: ptBR });
@@ -138,8 +159,9 @@ export function MonthCalendar({
         </Button>
         <Button
           variant="ghost"
-          onClick={() => {
+          onClick={(e) => {
             setMonth(startOfMonth(zoned()));
+            setKeyboard(e.detail === 0);
             pick(startOfDay(zoned()));
           }}
         >
@@ -177,8 +199,9 @@ export function MonthCalendar({
         selected={selectedDay}
         weekStart={weekStart}
         marked={marked}
-        onPick={(day) => {
+        onPick={(day, keyboard) => {
           if (!isSameMonth(day, month)) setMonth(startOfMonth(day));
+          setKeyboard(keyboard);
           pick(day);
         }}
       />
@@ -186,7 +209,21 @@ export function MonthCalendar({
       <hr className="mx-5 mt-3 border-separator" />
 
       <div className="flex flex-col gap-3 px-4 pt-7">
-        <DaySection calendar day={startOfDay(selectedDay)} />
+        {/* A pager: popLayout lifts the leaving day out of the flow, so both slide at once. */}
+        <div className="relative overflow-x-clip">
+          <AnimatePresence initial={false} mode="popLayout" custom={dir}>
+            <motion.div
+              key={dayKey}
+              custom={dir}
+              variants={page}
+              initial="enter"
+              animate="center"
+              exit="exit"
+            >
+              <DaySection calendar day={startOfDay(selectedDay)} />
+            </motion.div>
+          </AnimatePresence>
+        </div>
         <Button variant="secondary" className="w-full" onClick={() => onCreateOn(selectedDay)}>
           <PlusIcon aria-hidden="true" />
           {fill(copy.day.createOn, { day: format(selectedDay, "EEE, d MMM", { locale: ptBR }) })}
