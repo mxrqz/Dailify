@@ -42,7 +42,9 @@ diff the output and re-apply them. App widgets live in `components/` or `kit/`, 
   only, never `bg-*`, `border-*` or `overflow-hidden` (it clips the glass top edge; scroll a child).
 - Keep `data-slot` on every part; tests and selectors use it.
 - Enter/exit uses `tailwindcss-animate` (`animate-in`, `fade-in-0`, `slide-in-from-*`), timed with
-  the motion tokens (`duration-base|slow`, `ease-out|exit`).
+  the motion tokens (`duration-base|slow`, `ease-out|exit`). Each animated part also carries
+  `motion-reduce:animate-none!`: `MotionConfig` doesn't reach CSS keyframes, and the `!` beats the
+  `data-[state=*]:` selectors; with no animation Radix's Presence unmounts on close at once.
 - cva only for exported variant functions (`buttonVariants`, `badgeVariants`). App code renders
   `<Button>`, or calls `buttonVariants()` on a non-button, and never copies its class string.
 - Focus: `focus-ring` (button, dialog close). `input.tsx` keeps the spelled-out
