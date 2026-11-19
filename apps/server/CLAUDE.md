@@ -170,7 +170,7 @@ dois passos — aditiva + deploy primeiro, destrutiva depois que o novo estiver 
 
 ## Tests
 
-`bun run test` (or `bun --filter @dailify/server test`) — `@cloudflare/vitest-pool-workers` runs
+`bun run test` (or `bun --filter @dailify/server test`) — `@cloudflare/vitest-plugin` runs
 against a real D1 (migrations applied in `beforeAll` via `applyD1Migrations`). Stripe/OpenAI/e-mail
 are `vi.mock`ed. Teste de rota troca a sessão por `test/session.ts`
 (`vi.mock("../src/auth", () => import("./session"))` + `mockSession(() => ({ id, plan }))`;

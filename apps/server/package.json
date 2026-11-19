@@ -23,7 +23,7 @@
     "stripe": "^22.4.0"
   },
   "devDependencies": {
-    "@cloudflare/vitest-pool-workers": "^0.23.0",
+    "@cloudflare/vitest-plugin": "^1.8.5",
     "@cloudflare/workers-types": "^5.20260801.1",
     "@types/luxon": "^3.6.2",
     "typescript": "^7.0.2",
