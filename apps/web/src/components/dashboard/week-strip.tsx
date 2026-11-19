@@ -1,7 +1,9 @@
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useId, useState, type ReactNode } from "react";
+import { motion } from "motion/react";
 import { format, isSameDay, isToday } from "date-fns";
 
 import { useDailify } from "@/components/dailifyContext";
+import { duration, ease } from "@/consts/motion";
 import { copy } from "@/components/dashboard/copy";
 import { ScheduleDrop } from "@/components/dashboard/anytime-block";
 import { dayAnchorId } from "@/components/dashboard/day-section";
@@ -67,8 +69,8 @@ function useVisibleDay(days: Date[]): string | undefined {
 }
 
 /**
- * A semana em sete pílulas (props → markup). A escolhida é a pílula `ink`; o ponto de "tem tarefa"
- * fica FORA dela, embaixo, pra ler igual escolhida ou não.
+ * A semana em sete pílulas (props → markup). A escolhida é a pílula `ink`, que desliza até o dia
+ * novo; o ponto de "tem tarefa" fica FORA dela, embaixo, pra ler igual escolhida ou não.
  */
 export function WeekDays({
   days,
@@ -84,6 +86,9 @@ export function WeekDays({
   /** Envolve cada dia (o alvo de soltar do desktop). */
   wrap?: (day: Date, node: JSX.Element) => ReactNode;
 }): JSX.Element {
+  const pill = useId();
+  // Picked by keyboard (a click with no pointer): the pill jumps instead of sliding.
+  const [instant, setInstant] = useState(false);
   return (
     <div role="group" aria-label={copy.day.week} className="grid grid-cols-7 gap-1">
       {days.map((day) => {
@@ -96,19 +101,32 @@ export function WeekDays({
               day,
               <button
                 type="button"
-                onClick={() => onPick(day)}
+                onClick={(e) => {
+                  setInstant(e.detail === 0);
+                  onPick(day);
+                }}
                 aria-pressed={on}
                 aria-current={isToday(day) ? "date" : undefined}
                 aria-label={has ? fill(copy.day.withTasks, { day: label }) : label}
                 className={cn(
-                  "flex h-13 w-full cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md transition-colors duration-fast",
+                  "relative flex h-13 w-full cursor-pointer flex-col items-center justify-center gap-0.5 rounded-md transition-colors duration-fast",
                   "data-drop-over:outline-2 data-drop-over:-outline-offset-2 data-drop-over:outline-brand",
-                  on ? "bg-ink text-canvas" : "hover:bg-fill pointer-fine:active:bg-fill-pressed",
+                  on ? "text-canvas" : "hover:bg-fill pointer-fine:active:bg-fill-pressed",
                 )}
               >
+                {on && (
+                  <motion.span
+                    layoutId={pill}
+                    aria-hidden="true"
+                    className="absolute inset-0 rounded-md bg-ink"
+                    transition={
+                      instant ? { duration: 0 } : { duration: duration.slow, ease: ease.out }
+                    }
+                  />
+                )}
                 <small
                   className={cn(
-                    "text-xs font-medium",
+                    "relative text-xs font-medium",
                     on ? "text-ink-tertiary" : "text-ink-secondary",
                   )}
                 >
@@ -116,7 +134,7 @@ export function WeekDays({
                 </small>
                 <span
                   className={cn(
-                    "text-body font-semibold tabular-nums",
+                    "relative text-body font-semibold tabular-nums",
                     !on && isToday(day) && "text-brand-text",
                   )}
                 >
