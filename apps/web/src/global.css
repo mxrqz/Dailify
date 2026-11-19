@@ -62,8 +62,7 @@
     1
   );
 
-  /* Design System Mewki (tokens.json). Dark é o tema principal; os nomes shadcn abaixo, que só
-     components/ui/ usa, apontam pra cá. */
+  /* Design System Mewki (tokens.json). Dark é o tema principal. */
   --canvas: light-dark(oklch(97% 0.002 60), oklch(0% 0 0));
   /* Escuro "opção C" (QA do redesign mobile): grafite frio, um degrau perto do preto do canvas. */
   --surface: light-dark(oklch(100% 0 0), oklch(12% 0.006 265));
@@ -116,24 +115,6 @@
      um feMorphology refiltrava a mensagem inteira a cada quadro de qualquer animação dentro dela. */
   --shadow-line: 0 0 0 1px var(--separator);
 
-  /* shadcn bridge: only components/ui/ reads these names. */
-  --foreground: var(--ink);
-  --popover: var(--surface-popover); /* o shadcn lê daqui: todo popover cai no mesmo token */
-  --popover-foreground: var(--ink);
-  --primary: var(--brand);
-  --primary-foreground: var(--on-brand);
-  --muted: var(--fill);
-  --muted-foreground: var(--ink-secondary);
-  /* No shadcn, accent é o fundo de hover, não a marca (essa é --brand). */
-  --accent: var(--fill);
-  --accent-foreground: var(--ink);
-  /* DS: erro usa o vermelho da marca como texto; o que diferencia é a palavra. */
-  --destructive: var(--brand-text);
-  --destructive-foreground: var(--on-brand);
-  --border: var(--separator);
-  --input: var(--separator);
-  --ring: var(--brand-text);
-
   /* semantic status */
   --success: light-dark(oklch(52% 0.15 150), oklch(72% 0.17 150));
   /* Swipe-to-complete fill: success mixed solid into the canvas, not /opacity (bd k00).
@@ -148,11 +129,6 @@
   --priority-3: light-dark(oklch(63% 0.18 50), oklch(75% 0.17 55));
   --priority-4: light-dark(oklch(58.6% 0.222 17.6), oklch(70% 0.2 20));
 
-  /* Legacy surfaces left in components/ui/ (tooltip, popover, menus). */
-  --surface-panel: var(--surface-raised);
-  /* Fundo de TODO popover e menu (calendário, chips, dropdowns): um só. */
-  --surface-popover: var(--surface-raised);
-  --surface-line: var(--separator);
   /* Metadados por tipo: data azul, horário âmbar, recorrência roxo. Texto legível nos dois temas; fundo = mesmo tom a 16%. */
   --meta-date: light-dark(oklch(48% 0.19 255), oklch(76% 0.13 255));
   --meta-time: light-dark(oklch(50% 0.13 70), oklch(82% 0.15 80));
@@ -231,20 +207,6 @@
   --default-transition-duration: var(--motion-duration-fast);
   --default-transition-timing-function: var(--motion-ease-out);
 
-  --color-foreground: var(--foreground);
-  --color-popover: var(--popover);
-  --color-popover-foreground: var(--popover-foreground);
-  --color-primary: var(--primary);
-  --color-primary-foreground: var(--primary-foreground);
-  --color-muted: var(--muted);
-  --color-muted-foreground: var(--muted-foreground);
-  --color-accent: var(--accent);
-  --color-accent-foreground: var(--accent-foreground);
-  --color-destructive: var(--destructive);
-  --color-destructive-foreground: var(--destructive-foreground);
-  --color-border: var(--border);
-  --color-input: var(--input);
-  --color-ring: var(--ring);
   /* Raios do DS (concêntricos: o de dentro = o de fora − o padding entre eles). */
   --radius-xs: 0.375rem;
   --radius-sm: 0.625rem;
@@ -283,10 +245,7 @@
   --color-priority-3: var(--priority-3);
   --color-priority-4: var(--priority-4);
 
-  --color-surface-panel: var(--surface-panel);
-  --color-surface-popover: var(--surface-popover);
   --color-surface-raised: var(--surface-raised);
-  --color-surface-line: var(--surface-line);
   --color-meta-date: var(--meta-date);
   --color-meta-time: var(--meta-time);
   --color-meta-repeat: var(--meta-repeat);
@@ -517,12 +476,12 @@
   max-height: 94svh;
 }
 
-/* The app's only focus style: keyboard focus only, in --ring. Focus driven by a group
-   (`group-focus-visible:`) spells out the same `ring-3 ring-ring/50`. */
+/* The app's only focus style: keyboard focus only, in --brand-text. Focus driven by a group
+   (`group-focus-visible:`) spells out the same `ring-3 ring-brand-text/50`. */
 @utility focus-ring {
   outline: none;
   &:focus-visible {
-    @apply ring-3 ring-ring/50;
+    @apply ring-3 ring-brand-text/50;
   }
 }
 
@@ -658,7 +617,7 @@
 
 @layer base {
   * {
-    @apply border-border outline-ring/50;
+    @apply border-separator outline-brand-text/50;
   }
 
   /* `overscroll-behavior-x: contain` mata o voltar/avançar por arrasto horizontal do navegador:
@@ -670,7 +629,7 @@
   }
 
   body {
-    @apply bg-canvas text-foreground min-h-dvh;
+    @apply bg-canvas text-ink min-h-dvh;
   }
 
   /* App, não documento: tocar, arrastar ou dar duplo clique não seleciona nada; só o que se edita.

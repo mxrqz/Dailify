@@ -117,10 +117,9 @@ relative to the package they name (`apps/web/src`, `apps/server/src`, `packages/
 - All tokens live in `apps/web/src/global.css`; how to add a color, radius, z layer or duration is in
   `apps/web/src/CLAUDE.md`. A new custom utility name is also registered in `extendTailwindMerge`
   (`lib/utils.ts`) with a test, or `cn()` silently keeps two conflicting classes.
-- Outside `components/ui/`, use only the DS color names (`ink*`, `canvas`, `surface*`, `fill*`,
-  `separator`, `brand*`, `meta-*`, `priority-*`, ...). The legacy aliases (`surface-panel`,
-  `surface-popover`, `surface-line`) and the shadcn names (`foreground`,
-  `muted-foreground`, `accent`) resolve at `:root`, so they don't step up a tone inside `.glass`.
+- Use only the DS color names (`ink*`, `canvas`, `surface*`, `fill*`, `separator`, `brand*`,
+  `meta-*`, `priority-*`, ...), `components/ui/` included; shadcn's names (`foreground`, `muted`,
+  `accent`, `border`, `ring`, ...) don't exist here.
 - Define a color once with `light-dark()` in oklch. No hex, except vendor logos, SVG filter constants
   and native contexts that can't read CSS variables (PWA manifest, Android `themes.xml`), each
   naming its token in a comment. Prefer solid state colors to `/opacity` on interactive elements.

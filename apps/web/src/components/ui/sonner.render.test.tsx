@@ -32,6 +32,6 @@ describe("<Toaster>", () => {
     act(() => screen.getByRole("button", { name: "escuro" }).click());
 
     expect(toaster).toHaveAttribute("data-sonner-theme", "dark");
-    expect(screen.getByText("agora")).toHaveClass("text-muted-foreground!");
+    expect(screen.getByText("agora")).toHaveClass("text-ink-secondary!");
   });
 });

@@ -6,9 +6,9 @@ import { useMediaQuery } from "@/hooks/useMediaQuery";
 
 // Interseção com Record: CSSProperties sozinho não aceita custom properties.
 const toasterTokens: React.CSSProperties & Record<string, string> = {
-  "--normal-bg": "var(--popover)",
-  "--normal-text": "var(--popover-foreground)",
-  "--normal-border": "var(--border)",
+  "--normal-bg": "var(--surface-raised)",
+  "--normal-text": "var(--ink)",
+  "--normal-border": "var(--separator)",
 };
 
 /**
@@ -29,7 +29,7 @@ const Toaster = ({ ...props }: ToasterProps) => {
       className="toaster group font-sans!"
       style={toasterTokens}
       toastOptions={{
-        classNames: { toast: "rounded-md!", description: "text-muted-foreground!" },
+        classNames: { toast: "rounded-md!", description: "text-ink-secondary!" },
       }}
       {...props}
     />

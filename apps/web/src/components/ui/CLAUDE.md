@@ -25,18 +25,17 @@ diff the output and re-apply them. App widgets live in `components/` or `kit/`, 
   `transition-property` defaults to `all`, so without it the panel trails the finger.
 - `tooltip.tsx`: generator defects fixed (listed in its header); `delayDuration` 400 instead of 0;
   one `TooltipProvider` in `App.tsx`, because `skipDelayDuration` only spans one provider; surface
-  colors instead of shadcn's inverted `bg-foreground`. App code uses `<Tip>` (`components/tip.tsx`).
+  colors instead of shadcn's inverted page color. App code uses `<Tip>` (`components/tip.tsx`).
 - `sonner.tsx`: theme from `@/components/theme-provider`, not next-themes (no provider here, so
   toasts stayed on "system"). Top-center below 768px, bottom-right above. Overrides need `!`
   utilities or the inline `--normal-*` vars, because sonner's CSS is unlayered.
 - `progress.tsx`: `value` also goes on Root, which emits `aria-valuenow`.
-- `popover.tsx`, `dropdown-menu.tsx`, `command.tsx`: `bg-surface-popover border-surface-line`.
+- `popover.tsx`, `dropdown-menu.tsx`, `command.tsx`: `bg-surface-raised border-separator`.
+- Every file: DS color names instead of shadcn's (mapping in `apps/web/src/CLAUDE.md` "Colors");
+  shadcn's `accent` hover becomes `fill`, not the brand.
 
 ## Local invariants
 
-- shadcn color names (`foreground`, `muted*`, `accent*`, `primary`, `border`, `input`, `ring`,
-  `popover*`, `destructive`) are allowed only here. They alias DS tokens in `global.css`: `accent`
-  is the hover fill, not the brand; `ring` and `destructive` are `brand-text`.
 - A direct child of `DialogPortal` (the overlay) and any `asChild` target need `forwardRef` on
   React 18; without it Radix's Presence gets no ref and the exit animation is cut.
 - `DialogContent`/`SheetContent` own background, border and animation. Callers pass layout classes
@@ -47,7 +46,7 @@ diff the output and re-apply them. App widgets live in `components/` or `kit/`, 
 - cva only for exported variant functions (`buttonVariants`, `badgeVariants`). App code renders
   `<Button>`, or calls `buttonVariants()` on a non-button, and never copies its class string.
 - Focus: `focus-ring` (button, dialog close). `input.tsx` keeps the spelled-out
-  `focus-visible:ring-3 ring-ring/50` because callers cancel it with `focus-visible:ring-0`, which
+  `focus-visible:ring-3 ring-brand-text/50` because callers cancel it with `focus-visible:ring-0`, which
   twMerge can't match against a custom utility. The `aria-invalid` rings stay until bd
   `Dailify-k00`.
 
@@ -56,7 +55,8 @@ diff the output and re-apply them. App widgets live in `components/` or `kit/`, 
 1. Rewrite `import { cn } from "cn"` to `@/lib/utils`; the npm `cn` skips the twMerge extension.
 2. Import the single `@radix-ui/react-*` package, not the `radix-ui` meta-package (a second copy).
 3. The CLI emits React 19 function components: add `forwardRef` where a ref is needed (above).
-4. Convert arbitrary values to tokens or the scale; move any visible string to copy.
+4. Convert arbitrary values to tokens or the scale and shadcn color names to DS ones; move any
+   visible string to copy.
 5. Add the file to the list above with what diverges.
 
 ## Dead files
