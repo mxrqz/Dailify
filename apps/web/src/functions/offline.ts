@@ -200,6 +200,17 @@ export function enqueue(userId: string, mutation: Mutation): void {
   writeQueue(userId, flushing.has(userId) ? queue : collapseQueue(queue));
 }
 
+/** Takes back an entry not sent yet; `false` once a flush (here or in another tab) has it. */
+export function dequeue(userId: string, mutation: Mutation): boolean {
+  if (flushing.has(userId)) return false;
+  const queue = readQueue(userId);
+  const index = queue.findIndex((m) => JSON.stringify(m) === JSON.stringify(mutation));
+  if (index < 0) return false;
+  queue.splice(index, 1);
+  writeQueue(userId, queue);
+  return true;
+}
+
 type FlushResult = { sent: number; dropped: number; offline: boolean };
 
 // Duas subidas juntas reenviariam a mesma entrada; a segunda chamada espera a que já está no ar.

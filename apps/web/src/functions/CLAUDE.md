@@ -57,6 +57,7 @@ render test whose component now calls it (a factory mock throws on an export it 
 - `flushQueue` is single-flight per user (`flushing` map). The drain re-reads storage every step,
   stops at the first offline or 401 (kept for the next sign-in) and drops what the server refused.
   Entries are removed by value, not index: another tab may have sent the head meanwhile.
+- `dequeue` takes back a pending entry by value; `false` while a flush runs or once it's gone.
 - `enqueue` doesn't collapse during a flush: a delete folded into an in-flight create is lost.
 - `shouldQueue(error)` is the settle predicate (offline or 401), used by `drainQueue`, the write
   hooks and `edit-task.tsx` (`hooks/CLAUDE.md`).
