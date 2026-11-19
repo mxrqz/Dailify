@@ -142,7 +142,7 @@ object Reminders {
     }
     val time = DateFormat.getTimeFormat(ctx).format(Date(at))
     val notification = NotificationCompat.Builder(ctx, CHANNEL)
-      .setSmallIcon(ctx.applicationInfo.icon)
+      .setSmallIcon(R.drawable.ic_stat_reminder)
       .setContentTitle(title)
       .setContentText(ctx.getString(R.string.reminders_body, time))
       .setPriority(NotificationCompat.PRIORITY_HIGH)
