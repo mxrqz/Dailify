@@ -8,8 +8,8 @@ A thin native shell around the web app, for desktop and Android. Repo-wide rules
 - `src/lib.rs` only registers plugins (why: root `CLAUDE.md` › Gotchas).
 - `tauri.conf.json` is the base config; `tauri.android.conf.json` switches `devUrl` to http and
   makes the window transparent on Android.
-- `capabilities/`: `default.json` for every platform, `mobile.json` limited to Android/iOS by
-  `platforms`. `gen/schemas/` is gitignored build output; `gen/android/` is committed (below).
+- `capabilities/`: `default.json` for every platform, `mobile.json` limited to Android/iOS and
+  `android.json` to Android by `platforms`. `gen/schemas/` is gitignored build output; `gen/android/` is committed (below).
 
 ## Plugins
 
@@ -26,6 +26,12 @@ A thin native shell around the web app, for desktop and Android. Repo-wide rules
   system browser; `openExternal` covers code (RULES.md › Security and privacy).
 - `haptics`: mobile only (`cfg(mobile)`), permissions in `capabilities/mobile.json`.
 - `core:app:allow-exit`: `exit(0)` of the Android back button (`apps/web/src/lib/back-button.ts`).
+- `reminders` (local, Android only, `cfg(target_os = "android")`): task reminders as AlarmManager
+  alarms, kept in step with the server feed by WorkManager, no FCM (bd `Dailify-r2nz`). Code in
+  `plugins/reminders/`: the commands are Kotlin `@Command`s in `android/src/main/java/`, which Tauri
+  reaches because no Rust handler takes them; the Rust side only registers the class. A new command
+  goes in `build.rs` `COMMANDS` (its `allow-*` permission) and in `capabilities/android.json`.
+  Its manifest (permissions, receivers) merges into the app; the build writes `permissions/` there.
 
 Adding a plugin touches four places in one commit, and removing one touches the same four:
 

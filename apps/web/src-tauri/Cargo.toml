@@ -29,3 +29,6 @@ tauri-plugin-single-instance = { version = "2", features = ["deep-link"] }
 
 [target.'cfg(any(target_os = "android", target_os = "ios"))'.dependencies]
 tauri-plugin-haptics = "2"
+
+[target.'cfg(target_os = "android")'.dependencies]
+tauri-plugin-reminders = { path = "plugins/reminders" }

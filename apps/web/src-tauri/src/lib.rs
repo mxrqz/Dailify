@@ -12,6 +12,10 @@ pub fn run() {
     {
         builder = builder.plugin(tauri_plugin_haptics::init());
     }
+    #[cfg(target_os = "android")]
+    {
+        builder = builder.plugin(tauri_plugin_reminders::init());
+    }
 
     builder
         .plugin(tauri_plugin_deep_link::init())

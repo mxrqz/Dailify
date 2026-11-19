@@ -1,0 +1,15 @@
+{
+  "$schema": "../gen/schemas/mobile-schema.json",
+  "identifier": "android",
+  "description": "Reminders: the local plugin is only compiled into the Android build",
+  "windows": ["main"],
+  "platforms": ["android"],
+  "permissions": [
+    "reminders:allow-configure",
+    "reminders:allow-refresh",
+    "reminders:allow-clear",
+    "reminders:allow-status",
+    "reminders:allow-permit",
+    "reminders:allow-settings"
+  ]
+}

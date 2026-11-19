@@ -1,0 +1,13 @@
+[package]
+name = "tauri-plugin-reminders"
+version = "0.1.0"
+description = "Task reminders as local Android alarms, refreshed from the server feed"
+edition = "2021"
+# tauri-plugin's build step requires `links` to match the crate name.
+links = "tauri-plugin-reminders"
+
+[dependencies]
+tauri = "2.12"
+
+[build-dependencies]
+tauri-plugin = { version = "2", features = ["build"] }

@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="reminders_channel">Lembretes</string>
+    <string name="reminders_body">Sua tarefa é às %1$s</string>
+</resources>
