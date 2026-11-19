@@ -1,7 +1,7 @@
 # apps/server/test — server test suite
 
 Repo-wide rules: `/RULES.md` ("Testing", "Backend and API"). Route checklist: `src/routes/CLAUDE.md`.
-`@cloudflare/vitest-pool-workers` runs each file inside workerd against a real D1, with the
+`@cloudflare/vitest-plugin` runs each file inside workerd against a real D1, with the
 `wrangler.toml` bindings (`configPath`) plus the fakes in `vitest.config.ts`. `test/` is in the
 server's prettier, eslint and `tsc` gates. Its package-rename warning on every run is expected.
 
