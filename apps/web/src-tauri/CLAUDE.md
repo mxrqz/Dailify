@@ -92,5 +92,8 @@ Flow and keyring accounts: `apps/web/src/lib/CLAUDE.md`; contract:
   `res/values{,-night}/themes.xml`, whose `windowBackground` is the light/dark `--canvas` hex: the
   webview is transparent, so it is the boot background. Change them with `--canvas` in
   `apps/web/src/global.css`, along with `backgroundColor` (the dark one) in `tauri.conf.json`.
+- `mipmap-*/ic_launcher_foreground.png` (the adaptive icon) has the cat at 54% of the 108dp canvas,
+  inside the 66dp safe zone launchers mask to. `tauri icon` writes it edge to edge, which crops the
+  ears: after regenerating icons, shrink it again (ImageMagick `-resize` + `-extent`).
 - The manifest's deep-link intent filters (between the `DEEP LINK PLUGIN` markers) are regenerated
   from `tauri.conf.json` on build: edit the config, not the manifest.
