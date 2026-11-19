@@ -89,6 +89,7 @@ describe("<Sidebar>", () => {
       "12",
     );
     expect(screen.getByText("12 de 30 créditos de IA este mês")).toBeInTheDocument();
+    expect(screen.getByRole("meter").firstElementChild).toHaveClass("bg-ink");
   });
 
   it("créditos ilimitados ou carregando: sem medidor", () => {
@@ -110,7 +111,8 @@ describe("<Sidebar>", () => {
     });
     renderAt("/dashboard");
     const fill = screen.getByRole("meter", { name: copy.quota.names.ai }).firstElementChild;
-    expect(fill).toHaveStyle({ width: "100%" });
+    expect(fill).toHaveStyle({ "--fill": "1" });
+    expect(fill).toHaveClass("bg-brand-text");
   });
 });
 

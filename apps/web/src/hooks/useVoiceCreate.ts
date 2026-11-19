@@ -1,11 +1,12 @@
 import { useCallback, useEffect, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
+import { API_ERROR } from "@dailify/shared";
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { createTaskVoice } from "@/functions/api";
 import { fill } from "@/functions/functions";
 import { appTimeZone } from "@/functions/zone";
+import { setCreditsTray } from "@/hooks/useCreditsTray";
 import { useShowCreated } from "@/hooks/useCreateTask";
 import { useQuotas } from "@/hooks/useQuotas";
 
@@ -26,7 +27,6 @@ export function useVoiceCreate(onCreated?: () => void) {
   const { bumpUsage } = useDailify();
   const showCreated = useShowCreated();
   const quotas = useQuotas();
-  const navigate = useNavigate();
   const [state, setState] = useState<"idle" | "recording" | "sending">("idle");
   const recorder = useRef<MediaRecorder | null>(null);
   const cap = useRef<ReturnType<typeof setTimeout>>();
@@ -42,6 +42,10 @@ export function useVoiceCreate(onCreated?: () => void) {
       form.append("audio", audio);
       form.append("timezone", appTimeZone());
       const { tasks: created, response, error } = await createTaskVoice(form);
+      if (error?.code === API_ERROR.aiExhausted) {
+        setCreditsTray(true);
+        return;
+      }
       if (error) {
         toast.error(copy.voice.error, { description: error.message });
         return;
@@ -82,10 +86,7 @@ export function useVoiceCreate(onCreated?: () => void) {
   const start = async () => {
     if (starting.current || recorder.current) return;
     if (quotas.states.ai.exhausted) {
-      toast(copy.voice.limitReached, {
-        description: copy.voice.limitReachedHint,
-        action: { label: copy.form.upgrade, onClick: () => navigate("/premium") },
-      });
+      setCreditsTray(true);
       return;
     }
 

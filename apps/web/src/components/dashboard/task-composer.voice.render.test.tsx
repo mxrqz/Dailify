@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 
@@ -36,6 +36,8 @@ vi.mock("motion/react", async (original) => ({
   useReducedMotion: () => prefs.reduce,
 }));
 
+import { CreditsTray } from "@/components/credits-tray";
+import { setCreditsTray } from "@/hooks/useCreditsTray";
 import { TaskComposer } from "./task-composer";
 
 const track = { stop: vi.fn() };
@@ -65,12 +67,14 @@ const setup = () => {
   render(
     <MemoryRouter>
       <TaskComposer onSubmit={vi.fn().mockResolvedValue(true)} />
+      <CreditsTray />
     </MemoryRouter>,
   );
   return userEvent.setup();
 };
 
 beforeEach(() => {
+  setCreditsTray(false);
   ctx.aiUsed = 0;
   prefs.reduce = false;
   vi.stubGlobal("MediaRecorder", FakeRecorder);
@@ -100,6 +104,20 @@ describe("<TaskComposer> gravador", () => {
     expect(screen.queryByRole("img", { name: copy.voice.wave })).not.toBeInTheDocument();
   });
 
+  it("while the server transcribes, the stop button turns into a busy Entendendo…", async () => {
+    let reply: (value: { tasks: [] }) => void = () => {};
+    api.createTaskVoice.mockReturnValue(new Promise((resolve) => (reply = resolve)));
+    const user = setup();
+    await user.click(screen.getByRole("button", { name: copy.voice.record }));
+    await user.click(screen.getByRole("button", { name: copy.voice.stop }));
+
+    const wait = screen.getByRole("button", { name: copy.voice.understanding });
+    expect(wait).toBeDisabled();
+    expect(wait).toHaveAttribute("aria-busy", "true");
+    reply({ tasks: [] });
+    await waitFor(() => expect(toast.message).toHaveBeenCalled());
+  });
+
   it("cancelar solta o microfone e não envia", async () => {
     const user = setup();
     await user.click(screen.getByRole("button", { name: copy.voice.record }));
@@ -122,15 +140,13 @@ describe("<TaskComposer> gravador", () => {
     expect(screen.getByRole("button", { name: copy.voice.record })).toBeInTheDocument();
   });
 
-  it("sem créditos: oferece o upgrade e nem pede o microfone", async () => {
+  it("sem créditos: sobe a bandeja do upgrade e nem pede o microfone", async () => {
     ctx.aiUsed = 30;
     const user = setup();
     await user.click(screen.getByRole("button", { name: copy.voice.record }));
 
-    expect(toast).toHaveBeenCalledWith(
-      copy.voice.limitReached,
-      expect.objectContaining({ action: expect.objectContaining({ label: copy.form.upgrade }) }),
-    );
+    const tray = await screen.findByRole("alertdialog", { name: copy.quota.trayTitle });
+    expect(within(tray).getByRole("button", { name: copy.quota.trayUpgrade })).toBeInTheDocument();
     expect(getUserMedia).not.toHaveBeenCalled();
   });
 

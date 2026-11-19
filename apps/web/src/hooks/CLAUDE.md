@@ -76,7 +76,9 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 - `useQuotas` is cosmetic; the server enforces. While quotas load everything counts as unlimited,
   so nothing blocks. `bumpUsage` runs only after the server accepted.
 - Status codes: create 429; AI 403 = plan without AI (on `/mew/chat` also no consent), 429 =
-  exhausted. Offer `/premium` only on these.
+  exhausted. Offer `/premium` only on these. Out of AI credits, call `setCreditsTray(true)`
+  (`useCreditsTray.ts`), never a toast: `components/credits-tray.tsx` (mounted in AppLayout) is
+  the one upgrade prompt.
   `useMewParse` keeps a local `refused` flag because the 429 lands before quotas reload.
 - `useVoiceCreate`: the 60 s `MAX_RECORDING_MS` is a courtesy (the server 413s over 512 KB); the
   `starting` ref blocks a second mic mid-prompt. Re-check cancel after every await: `start` resets

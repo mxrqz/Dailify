@@ -32,14 +32,14 @@ export function Mine({ message }: { message: Extract<Message, { from: "me" }> })
   );
 }
 
-// Decorative: the header's live region already says "Pensando…".
-function Dots() {
+// Decorative: the caller's text or live region already says "Pensando…"; `className` tints them.
+export function Dots({ className = "bg-ink-tertiary" }: { className?: string }) {
   return (
     <span aria-hidden="true" className="inline-flex h-5 items-center gap-0.75">
       {[0, 1, 2].map((i) => (
         <i
           key={i}
-          className="size-1.5 animate-dot rounded-full bg-ink-tertiary motion-reduce:animate-none"
+          className={cn("size-1.5 animate-dot rounded-full motion-reduce:animate-none", className)}
           style={{ animationDelay: `${i * DOT_STAGGER_MS}ms` }}
         />
       ))}

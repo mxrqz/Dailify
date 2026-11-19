@@ -1,6 +1,7 @@
 import { Outlet, useMatch } from "react-router-dom";
 
 import { AppHeader } from "@/components/app-header";
+import { CreditsTray } from "@/components/credits-tray";
 import { Sidebar } from "@/components/nav";
 import { Duplicates } from "@/components/duplicates-sheet";
 import { cn } from "@/lib/utils";
@@ -27,6 +28,7 @@ export function AppLayout(): JSX.Element {
         </div>
       </div>
       <Duplicates />
+      <CreditsTray />
     </div>
   );
 }

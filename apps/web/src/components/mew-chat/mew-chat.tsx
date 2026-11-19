@@ -1,5 +1,4 @@
 import { useEffect, useReducer, useRef, useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
 import { API_ERROR, MEW_HISTORY_MAX, MEW_TEXT_MAX, type MewReply } from "@dailify/shared";
@@ -10,6 +9,7 @@ import { fade } from "@/consts/motion";
 import { getSettings, mewChat, saveSettings, setMewAction } from "@/functions/api";
 import { creditsLabel } from "@/functions/quota-label";
 import { appTimeZone, zoned } from "@/functions/zone";
+import { setCreditsTray } from "@/hooks/useCreditsTray";
 import { useOnline } from "@/hooks/useOnline";
 import { useQuotas } from "@/hooks/useQuotas";
 import { useSession } from "@/lib/auth";
@@ -47,7 +47,6 @@ export function MewChat({ onCompose, onVoice }: { onCompose: () => void; onVoice
   const ai = useQuotas().states.ai;
   const { bumpUsage, goToDay } = useDailify();
   const apply = useMewApply();
-  const navigate = useNavigate();
 
   // Once per finished turn (and per tap after it), not while a reply is in flight.
   useEffect(() => {
@@ -89,11 +88,7 @@ export function MewChat({ onCompose, onVoice }: { onCompose: () => void; onVoice
         return;
       }
       const out = error?.code === API_ERROR.aiExhausted;
-      if (out)
-        toast(copy.mew.exhausted, {
-          description: copy.voice.limitReachedHint,
-          action: { label: copy.mew.upgrade, onClick: () => navigate("/premium") },
-        });
+      if (out) setCreditsTray(true);
       const line = out
         ? copy.mew.exhausted
         : error?.code === API_ERROR.rateLimited

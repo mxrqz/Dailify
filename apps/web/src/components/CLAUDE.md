@@ -15,7 +15,7 @@ motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hoo
   Outlet, Duplicates; no gutter on /dashboard), `app-header`, `protected-route`, `splash`,
   `scroll-restoration`, `error-boundary`, `brand`. State: `dailifyContext`, `theme-provider`. Task
   UI: `edit-task`, `task-card` (legacy desktop row, rendered by `dashboard/day-task-row` when not
-  sheet-editing), `add-to-calendar`, `clock-check`, `duplicates-sheet`, `sync-badge`. Settings
+  sheet-editing), `add-to-calendar`, `clock-check`, `duplicates-sheet`, `sync-badge`, `credits-tray`. Settings
   widgets for `pages/`: `hour-format-select`, `week-start-select`, `time-zone-select`,
   `theme-select`, `push-toggle`, `delete-account`, `integrations`,
   `settings-list.tsx:accountPage/accountGroups`.

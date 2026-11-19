@@ -6,11 +6,14 @@ import {
   ShieldIcon,
   UserIcon,
 } from "lucide-react";
+import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
+import { useEffect, type CSSProperties } from "react";
 import type { QuotaState } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { PLAN_ID, planMap } from "@/consts/conts";
+import { duration, ease } from "@/consts/motion";
 import { fill } from "@/functions/functions";
 import { useQuotas } from "@/hooks/useQuotas";
 import { planOf, useSession } from "@/lib/auth";
@@ -28,15 +31,32 @@ const NAV_ITEMS = [
 
 type Credits = Pick<QuotaState, "used" | "limit" | "ratio">;
 
+/** Counts from the last shown value to `value`; the first render already shows it. */
+function Count({ value }: { value: number }): JSX.Element {
+  const reduce = useReducedMotion();
+  const count = useMotionValue(value);
+  const shown = useTransform(count, Math.round);
+  useEffect(() => {
+    const run = animate(
+      count,
+      value,
+      reduce ? { duration: 0 } : { duration: duration.open, ease: ease.out },
+    );
+    return () => run.stop();
+  }, [count, value, reduce]);
+  return <motion.span>{shown}</motion.span>;
+}
+
 /** "12 de 30 créditos de IA este mês": a barra lê o uso do mês que o servidor devolveu. */
 export function CreditsMeter({ used, limit, ratio }: Credits): JSX.Element {
   const name = copy.quota.names.ai;
+  const bar: CSSProperties & Record<"--fill", number> = { "--fill": ratio ?? 0 };
   return (
     <div className="mx-1 rounded-md bg-fill-pressed px-3 py-3.5">
       <div className="flex items-baseline justify-between text-subhead font-semibold">
         <span>{name}</span>
         <span className="font-medium text-ink-secondary tabular-nums">
-          {used}/{limit}
+          <Count value={used} />/{limit}
         </span>
       </div>
       <div
@@ -47,7 +67,15 @@ export function CreditsMeter({ used, limit, ratio }: Credits): JSX.Element {
         aria-valuenow={used}
         className="mt-2.5 h-1.5 overflow-hidden rounded-full bg-canvas"
       >
-        <div className="h-full rounded-full bg-ink" style={{ width: `${(ratio ?? 0) * 100}%` }} />
+        {/* Scale, not width: grows from 0 on mount (@starting-style) and eases to each new value. */}
+        <div
+          className={cn(
+            "h-full origin-left scale-x-(--fill) rounded-full transition-[scale] duration-open ease-out starting:scale-x-0 motion-reduce:transition-none",
+            // Under 20% left the bar takes the brand tone: a heads-up, not an alarm.
+            (ratio ?? 0) > 0.8 ? "bg-brand-text" : "bg-ink",
+          )}
+          style={bar}
+        />
       </div>
       <p className="mt-2 text-footnote text-ink-secondary">
         {fill(copy.profile.creditsSummary, { used, limit })}
