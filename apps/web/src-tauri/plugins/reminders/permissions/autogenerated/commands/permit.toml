@@ -1,0 +1,13 @@
+# Automatically generated - DO NOT EDIT!
+
+"$schema" = "../../schemas/schema.json"
+
+[[permission]]
+identifier = "allow-permit"
+description = "Enables the permit command without any pre-configured scope."
+commands.allow = ["permit"]
+
+[[permission]]
+identifier = "deny-permit"
+description = "Denies the permit command without any pre-configured scope."
+commands.deny = ["permit"]
