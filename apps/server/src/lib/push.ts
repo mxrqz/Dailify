@@ -177,7 +177,9 @@ export async function sendPush(
       Authorization: await vapidAuthorization(env, subscription.endpoint),
       "Content-Encoding": "aes128gcm",
       "Content-Type": "application/octet-stream",
-      TTL: "3600",
+      // High wakes a dozing phone; a reminder older than 10 min is noise, so it may drop.
+      Urgency: "high",
+      TTL: "600",
     },
     body,
     signal: AbortSignal.timeout(15_000),

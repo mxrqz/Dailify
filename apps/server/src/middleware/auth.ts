@@ -12,6 +12,7 @@ export const requireAuth: MiddlewareHandler<AppEnv> = async (c, next) => {
   const session = await auth.api.getSession({ headers: c.req.raw.headers });
   if (!session) return fail(c, 401, "Unauthorized");
   c.set("userId", session.user.id);
+  c.set("sessionId", session.session.id);
   c.set("plan", await planOf(c.env.DB, session.user.id));
   await next();
 };

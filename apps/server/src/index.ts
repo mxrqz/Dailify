@@ -10,6 +10,7 @@ import settings from "./routes/settings";
 import push from "./routes/push";
 import integrations from "./routes/integrations";
 import mew from "./routes/mew";
+import reminders from "./routes/reminders";
 import { dispatchAlerts } from "./alerts";
 import { syncOldest } from "./integrations/google-calendar/sync";
 import { fail } from "./lib/errors";
@@ -43,8 +44,11 @@ export interface Env {
   TOKEN_KEY_V1: string;
 }
 
-/** Every app and sub-app; `requireAuth` sets `userId` and `plan`. */
-export type AppEnv = { Bindings: Env; Variables: { userId: string; plan: Role } };
+/** Every app and sub-app; `requireAuth` sets `userId`, `sessionId` and `plan`. */
+export type AppEnv = {
+  Bindings: Env;
+  Variables: { userId: string; sessionId: string; plan: Role };
+};
 
 const app = new Hono<AppEnv>();
 app.use(
@@ -76,6 +80,7 @@ app.route("/", push);
 app.route("/", settings);
 app.route("/", integrations);
 app.route("/mew", mew);
+app.route("/reminders", reminders);
 
 app.notFound((c) => fail(c, 404, "Not found"));
 app.onError((err, c) => {

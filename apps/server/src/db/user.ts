@@ -55,6 +55,7 @@ export const USER_TABLES = [
   "integration_links",
   "oauth_states",
   "mew_actions",
+  "reminder_tokens",
 ] as const;
 
 /** Tudo que o usuário tem no D1 — chamado pelo `afterDelete` da conta (auth-options.ts). */

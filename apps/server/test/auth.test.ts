@@ -37,6 +37,7 @@ const AUTHENTICATED: [method: string, path: string][] = [
   ["POST", "/integrations/google-calendar/events/t1/meet"],
   ["POST", "/integrations/google-calendar/events/t1/sync"],
   ["POST", "/integrations/google-calendar/duplicates/t1"],
+  ["POST", "/reminders/token"],
 ];
 
 describe("requireAuth", () => {

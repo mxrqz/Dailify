@@ -25,6 +25,8 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   `ALLOWED_ORIGIN`. `returnBase` sends native callers to `${APP_URL}/app`, because Stripe can't
   reopen the app. `NATIVE_ORIGINS` is the only list of the app's webview origins: CORS
   (`isAllowedOrigin`) and Better Auth `trustedOrigins` add it to `ALLOWED_ORIGIN`.
+- `reminder-feed.ts`: `reminderFeed`, the next 14 days of alerts (max 100) for the Android
+  app's local alarms, skipping done occurrences; `routes/reminders.ts` serves it.
 - `occurrence-alert.ts` (series alert math; `monthsTouching` is the one "which month starts does
   this window touch" helper), `errors.ts` (`fail`), `task-input.ts` (body gate).
 

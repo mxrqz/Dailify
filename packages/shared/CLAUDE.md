@@ -54,6 +54,8 @@ are in [Shared model](../../RULES.md#shared-model); required zones are in
 - `parse-links.ts` (also `videoLink`/`meetLink`/`isCalendarEventLink`), `parse-task/`: the rule-based pt/en parser, see
   [`src/parse-task/CLAUDE.md`](src/parse-task/CLAUDE.md). Its golden corpus sits at the `src/`
   root: `parse-task.corpus.ts`, `parse-task.corpus/`, `parse-task.known-failures{,.gen}.ts`.
+- `reminders.ts`: `Reminder`/`ReminderFeed`/`ReminderToken`, the Android reminder feed wire
+  (the Kotlin plugin in `apps/web/src-tauri/plugins/reminders` reads the same JSON).
 - `app-url.ts`: `APP_HOST`/`APP_URL`. Domain change steps are in the root `CLAUDE.md`.
 
 ## Recurrence (bites if ignored)

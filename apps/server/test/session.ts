@@ -36,7 +36,9 @@ export const auth = {
     getSession: async () => {
       const user = who();
       if (user?.plan) await seedUser(env.DB, user.id, { plan: user.plan });
-      return user && { user: { id: user.id }, session: { userId: user.id } };
+      return (
+        user && { user: { id: user.id }, session: { id: `session-${user.id}`, userId: user.id } }
+      );
     },
   },
   handler: () => new Response(null, { status: 404 }),
