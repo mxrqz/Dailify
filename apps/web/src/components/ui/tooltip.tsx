@@ -13,7 +13,7 @@ import { cn } from "@/lib/utils";
  * mouse atravessa. O `skipDelayDuration` do Radix só zera o delay entre gatilhos que dividem o
  * MESMO provider — daí ele morar uma vez só, no `App`, e não dentro de cada tooltip.
  *
- * A cor também diverge: o shadcn inverte a página (`bg-foreground`), e aqui o tooltip é superfície
+ * A cor também diverge: o shadcn inverte a página (fundo na cor do texto), e aqui o tooltip é superfície
  * como qualquer flutuante do projeto — o `PopoverContent` ao lado já era assim. Quem separa do
  * fundo é a borda mais a sombra, não o contraste.
  *
@@ -55,13 +55,13 @@ function TooltipContent({
         data-slot="tooltip-content"
         sideOffset={sideOffset}
         className={cn(
-          "bg-surface-panel text-foreground border-surface-line shadow-elevation-1 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-overlayw-fit rounded-md border px-3 py-1.5 text-xs text-balance",
+          "bg-surface-raised text-ink border-separator shadow-elevation-1 data-[state=open]:animate-in data-[state=closed]:animate-out data-[state=closed]:fade-out-0 data-[state=open]:fade-in-0 data-[state=closed]:zoom-out-95 data-[state=open]:zoom-in-95 data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 z-overlayw-fit rounded-md border px-3 py-1.5 text-xs text-balance",
           className,
         )}
         {...props}
       >
         {children}
-        <TooltipPrimitive.Arrow className="bg-surface-panel fill-surface-panel border-surface-line z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-xs border-r border-b" />
+        <TooltipPrimitive.Arrow className="bg-surface-raised fill-surface-raised border-separator z-50 size-2.5 translate-y-[calc(-50%_-_2px)] rotate-45 rounded-xs border-r border-b" />
       </TooltipPrimitive.Content>
     </TooltipPrimitive.Portal>
   );

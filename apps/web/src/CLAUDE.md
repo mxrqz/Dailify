@@ -7,7 +7,7 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
 
 - Header: `@import "tailwindcss"`, `@plugin "tailwindcss-animate"` (the v3 plugin behind the
   `data-[state]:animate-in/fade-in-0/zoom-in-95` classes in `ui/`), `@custom-variant dark`.
-- `:root`: every raw value (`--motion-*`, DS palette, shadows, the shadcn bridge, widths, `--layer-*`).
+- `:root`: every raw value (`--motion-*`, DS palette, shadows, widths, `--layer-*`).
   `.dark`/`.light` only set `color-scheme`; `components/theme-provider.tsx` puts one on `<html>`.
 - `@theme inline`: var mappings that generate utilities (`--color-*`, `--radius-*`, `--shadow-*`,
   `--width-*`, `--max-width-*`, `--z-index-*`, `--transition-duration-*`, `--ease-*`) and the
@@ -39,15 +39,11 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
   `brand-text` (red text, errors, focus), `brand-soft(-pressed)`, `on-brand`,
   `material-bar(-solid)`, `scrim`, `meta-*(-subtle)`, `priority-0..4`, `success(-soft|-soft-strong)`,
   `control-mark`.
-- The shadcn bridge (`foreground`, `muted(-foreground)`, `accent(-foreground)`, `popover*`,
-  `primary*`, `destructive*`, `border`, `input`, `ring`) and `surface-panel|popover|line` exist only
-  for `ui/`; app code has none left. Mapping when touching `ui/`: `foreground` → `ink`;
-  `muted-foreground` → `ink-secondary`; `surface-line`, `border` → `separator`; `accent`, `muted` →
-  `fill`; `surface-panel`, `surface-popover` → `surface-raised`; `primary` → `brand`; `destructive`
-  → `brand-text`. `ui/` menus keep `bg-surface-popover`. Drop a bridge var once `ui/` stops using
-  it.
-- An alias like `--muted: var(--fill)` is computed on `:root` and inherited as a value, so
-  `glass`'s override reaches only `bg-surface`, `bg-fill`, `bg-fill-pressed` and `card`.
+- There is no shadcn color bridge: a primitive from the CLI gets DS names (`foreground` → `ink`,
+  `muted-foreground` → `ink-secondary`, `border`/`input` → `separator`, `accent`/`muted` → `fill`,
+  `popover`/`card` → `surface-raised`, `primary` → `brand`, `destructive`/`ring` → `brand-text`).
+- An alias like `--x: var(--fill)` is computed on `:root` and inherited as a value, so `glass`'s
+  override reaches only `bg-surface`, `bg-fill`, `bg-fill-pressed` and `card`.
 - `light-dark()` in a custom property resolves where a real property uses it, so `.light`/`.dark`
   on any element flips its subtree; `.light` re-sets `color`, which arrives already resolved. No
   subtree uses it today. Radix portals mount in `body` and take the `<html>` theme.
@@ -70,7 +66,7 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
   `scroll-mt-bar`. `px-gutter`/`pr-gutter` pad in percent of the containing block, so `pr-gutter`
   doesn't subtract the sidebar. Also `min-w-duration` (6ch), `min-h-2lh`, `fade-top`,
   `max-h-sheet` (bottom sheets), `h-below-bar` with `top-(--bar-desktop)` (desktop sticky columns).
-- `focus-ring` is the only focus style (`ring-3 ring-ring/50` on `focus-visible`); group-driven
+- `focus-ring` is the only focus style (`ring-3 ring-brand-text/50` on `focus-visible`); group-driven
   focus spells out the same values. `caps` is the mono uppercase label.
 - `word-in` reads `--i`, `delay-words(-lag)` reads `--words`, set through the typed `cssVar()` in
   `components/mew-chat/bubbles.tsx`.
