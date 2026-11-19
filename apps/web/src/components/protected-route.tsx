@@ -20,6 +20,7 @@ import { Splash, SPLASH_MIN_MS } from "@/components/splash";
 import { toast } from "sonner";
 import { zoned, zonedAt } from "@/functions/zone";
 import { useSession } from "@/lib/auth";
+import { refreshReminders } from "@/lib/reminders";
 
 /** Piso entre revalidações: alternar de aba não pode virar rajada de fetch. */
 const REVALIDATE_AFTER_MS = 30_000;
@@ -137,7 +138,10 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   useEffect(() => {
     const flush = () => pendingCache.current?.();
     const onHidden = () => {
-      if (document.visibilityState === "hidden") flush();
+      if (document.visibilityState !== "hidden") return;
+      flush();
+      // Leaving the app is when its alarms must match the server: the worker runs only hourly.
+      refreshReminders();
     };
     window.addEventListener("pagehide", flush);
     document.addEventListener("visibilitychange", onHidden);

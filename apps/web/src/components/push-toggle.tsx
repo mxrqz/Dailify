@@ -5,6 +5,7 @@ import { copy } from "@/components/dashboard/copy";
 import { ListRow } from "@/components/kit/list";
 import { Switch } from "@/components/kit/switch";
 import { disablePush, enablePush, pushState, type PushState } from "@/functions/push";
+import { nativeReminders, openExactAlarmSettings, reminderStatus } from "@/lib/reminders";
 
 /**
  * A linha "Lembretes neste aparelho" de /settings. O estado real mora no navegador (permissão +
@@ -14,9 +15,19 @@ import { disablePush, enablePush, pushState, type PushState } from "@/functions/
 export function PushToggle(): JSX.Element {
   const [state, setState] = useState<PushState | null>(null);
   const [busy, setBusy] = useState(false);
+  // Android only: "Alarms & reminders" is a system setting, so it is re-read on every return.
+  const [exact, setExact] = useState(true);
 
   useEffect(() => {
     void pushState().then(setState);
+    if (!nativeReminders()) return;
+    const read = () => {
+      if (document.visibilityState === "visible")
+        void reminderStatus().then((s) => setExact(s.exact));
+    };
+    read();
+    document.addEventListener("visibilitychange", read);
+    return () => document.removeEventListener("visibilitychange", read);
   }, []);
 
   const toggle = async () => {
@@ -37,27 +48,39 @@ export function PushToggle(): JSX.Element {
   const blocked = state === "unsupported" || state === "denied";
 
   return (
-    <ListRow
-      label={copy.profile.pushTitle}
-      sublabel={
-        state === "unsupported"
-          ? copy.form.notificationsUnsupported
-          : state === "denied"
-            ? copy.form.notificationsDenied
-            : undefined
-      }
-      trailing={
-        state === null ? (
-          <Loader2Icon className="size-5 animate-spin text-ink-secondary" aria-hidden="true" />
-        ) : blocked ? undefined : (
-          <Switch
-            aria-label={copy.profile.pushTitle}
-            checked={state === "on"}
-            disabled={busy}
-            onCheckedChange={() => void toggle()}
-          />
-        )
-      }
-    />
+    <>
+      <ListRow
+        label={copy.profile.pushTitle}
+        sublabel={
+          state === "unsupported"
+            ? copy.form.notificationsUnsupported
+            : state === "denied"
+              ? nativeReminders()
+                ? copy.form.notificationsDeniedApp
+                : copy.form.notificationsDenied
+              : undefined
+        }
+        trailing={
+          state === null ? (
+            <Loader2Icon className="size-5 animate-spin text-ink-secondary" aria-hidden="true" />
+          ) : blocked ? undefined : (
+            <Switch
+              aria-label={copy.profile.pushTitle}
+              checked={state === "on"}
+              disabled={busy}
+              onCheckedChange={() => void toggle()}
+            />
+          )
+        }
+      />
+      {state === "on" && !exact && (
+        <ListRow
+          label={copy.form.exactAlarmTitle}
+          sublabel={copy.form.exactAlarmHint}
+          accessory="external"
+          onClick={() => void openExactAlarmSettings()}
+        />
+      )}
+    </>
   );
 }

@@ -22,6 +22,8 @@ The Worker's SQL, hand-written over the raw `D1Database` binding (no ORM). Repo-
 - `limits.ts`: quota policy. `aiQuota` answers `{ status, error, code }` or null (the route maps
   it with `fail`); `debitAi` spends one credit.
 - `mew.ts`: the `mew_actions` log, task ids only, never titles.
+- `reminders.ts`: `reminder_tokens` (one per Better Auth session, `ON DELETE CASCADE`) and
+  `listAlertTasks`, the feed's candidate rows.
 
 ## Conventions
 

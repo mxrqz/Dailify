@@ -52,7 +52,7 @@ It owns the task boot. Other code only re-triggers loads (`pages/integration-cal
 - Session gate: a network/5xx get-session error falls back to `readLastUser()` and paints the cache;
   only a 401 or an empty session redirects to /login.
 - Hydrates tasks and undated from the cache; writes the cache debounced (1s), flushed on `pagehide`
-  and when the page goes hidden.
+  and when the page goes hidden, which also refreshes the Android local alarms (`lib/reminders.ts`).
 - `getTasks`: `flushQueue` first, then undated + settings, and `reloadMonths` for the loaded months,
   today, next month and `selectedDay`. After boot, a `selectedDay` in another month loads only it.
 - Revalidates on `visibilitychange` at most every 30s and at once on `online`; both refetch quotas,

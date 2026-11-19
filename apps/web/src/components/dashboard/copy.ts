@@ -188,6 +188,10 @@ export const copy = {
     notificationsDenied:
       "As notificações estão bloqueadas para a Mewki. Libere nas permissões do navegador.",
     notificationsError: "Não foi possível ativar as notificações",
+    notificationsDeniedApp:
+      "As notificações estão bloqueadas para a Mewki. Libere nas configurações do Android.",
+    exactAlarmTitle: "Avisar na hora certa",
+    exactAlarmHint: "Permita “Alarmes e lembretes” para o lembrete não chegar atrasado.",
   },
 
   profile: {

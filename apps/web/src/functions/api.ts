@@ -15,6 +15,7 @@ import type {
   IntegrationLink,
   IntegrationStatus,
   ProviderId,
+  ReminderToken,
 } from "@dailify/shared";
 import { apiURL } from "@/consts/conts";
 import { authClient, authHeaders } from "@/lib/auth";
@@ -273,6 +274,12 @@ export async function savePushSubscription(subscription: {
     body: JSON.stringify(subscription),
   });
   return !error;
+}
+
+/** A read-only token for the Android app's background reminder sync. */
+export async function createReminderToken(): Promise<string | null> {
+  const { data } = await request<ReminderToken>("/reminders/token", { method: "POST" });
+  return data?.token ?? null;
 }
 
 export async function removePushSubscription(endpoint: string): Promise<void> {

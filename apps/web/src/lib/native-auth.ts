@@ -8,6 +8,7 @@ import { apiURL } from "@/consts/conts";
 import { forgetUser } from "@/functions/offline";
 import { authClient, setBearer } from "@/lib/auth";
 import { internalPath, isTauri, signedOutPath } from "@/lib/platform";
+import { clearReminders } from "@/lib/reminders";
 const SESSION_ACCOUNT = "mewki.session";
 const VERIFIER_ACCOUNT = "mewki.magic-link-verifier";
 // Token do magic link do Better Auth: 32 letras; a folga cobre mudança de tamanho sem abrir a porta.
@@ -156,6 +157,8 @@ async function signOutNative(): Promise<void> {
 /** Todo "sair" passa aqui: no app também apaga o bearer e o cofre. */
 export async function signOut(): Promise<void> {
   forgetUser();
+  // The next account on this device must not get the previous one's alarms.
+  await clearReminders();
   if (isTauri()) return signOutNative();
   await authClient.signOut();
 }

@@ -8,13 +8,22 @@ import { copy } from "@/components/dashboard/copy";
 const push = vi.hoisted(() => ({ pushState: vi.fn(), enablePush: vi.fn(), disablePush: vi.fn() }));
 const toast = vi.hoisted(() => ({ error: vi.fn() }));
 vi.mock("@/functions/push", () => push);
+const native = vi.hoisted(() => ({
+  nativeReminders: vi.fn(() => false),
+  reminderStatus: vi.fn(),
+  openExactAlarmSettings: vi.fn(),
+}));
 vi.mock("sonner", () => ({ toast }));
+vi.mock("@/lib/reminders", () => native);
 
 import { PushToggle } from "./push-toggle";
 
 const toggle = () => screen.findByRole("switch", { name: copy.profile.pushTitle });
 
-beforeEach(() => vi.resetAllMocks());
+beforeEach(() => {
+  vi.resetAllMocks();
+  native.nativeReminders.mockReturnValue(false);
+});
 
 describe("<PushToggle>", () => {
   it("shows no switch while the device state loads", () => {
@@ -52,5 +61,32 @@ describe("<PushToggle>", () => {
     await userEvent.click(await toggle());
     expect(push.enablePush).toHaveBeenCalled();
     expect(toast.error).toHaveBeenCalledWith(copy.form.notificationsError);
+  });
+
+  it("Android without exact alarms: offers the system setting under the switch", async () => {
+    native.nativeReminders.mockReturnValue(true);
+    native.reminderStatus.mockResolvedValue({
+      configured: true,
+      notifications: "granted",
+      exact: false,
+    });
+    push.pushState.mockResolvedValue("on");
+    render(<PushToggle />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: new RegExp(copy.form.exactAlarmTitle) }),
+    );
+    expect(native.openExactAlarmSettings).toHaveBeenCalled();
+  });
+
+  it("Android with notifications blocked: points to the Android settings", async () => {
+    native.nativeReminders.mockReturnValue(true);
+    native.reminderStatus.mockResolvedValue({
+      configured: false,
+      notifications: "denied",
+      exact: true,
+    });
+    push.pushState.mockResolvedValue("denied");
+    render(<PushToggle />);
+    expect(await screen.findByText(copy.form.notificationsDeniedApp)).toBeInTheDocument();
   });
 });

@@ -1,4 +1,18 @@
-import { getPushKey, removePushSubscription, savePushSubscription } from "./api";
+import { apiURL } from "@/consts/conts";
+import {
+  clearReminders,
+  configureReminders,
+  nativeReminders,
+  permitReminders,
+  reminderStatus,
+  type ReminderStatus,
+} from "@/lib/reminders";
+import {
+  createReminderToken,
+  getPushKey,
+  removePushSubscription,
+  savePushSubscription,
+} from "./api";
 import { appTimeZone } from "./zone";
 
 // Em dev o vite-plugin-pwa serve o SW em outra URL; `/sw.js` cai no index.html e o registro falha.
@@ -36,7 +50,25 @@ async function currentSubscription(): Promise<PushSubscription | null> {
   return registration ? registration.pushManager.getSubscription() : null;
 }
 
+// The Android app: local alarms fed by the server (`lib/reminders.ts`) instead of Web Push.
+const nativeState = (s: ReminderStatus): PushState =>
+  s.notifications === "denied"
+    ? "denied"
+    : s.configured && s.notifications === "granted"
+      ? "on"
+      : "off";
+
+async function enableNative(): Promise<PushState> {
+  const status = await permitReminders();
+  if (status.notifications !== "granted") return nativeState(status);
+  const token = await createReminderToken();
+  if (!token) return "off";
+  await configureReminders(apiURL, token);
+  return "on";
+}
+
 export async function pushState(): Promise<PushState> {
+  if (nativeReminders()) return nativeState(await reminderStatus());
   if (!pushSupported()) return "unsupported";
   if (Notification.permission === "denied") return "denied";
   return (await currentSubscription()) ? "on" : "off";
@@ -47,6 +79,7 @@ export async function pushState(): Promise<PushState> {
  * não liga no desktop, e é por isso que o servidor guarda uma linha por endpoint.
  */
 export async function enablePush(): Promise<PushState> {
+  if (nativeReminders()) return enableNative();
   if (!pushSupported()) return "unsupported";
   if ((await Notification.requestPermission()) !== "granted") {
     return Notification.permission === "denied" ? "denied" : "off";
@@ -78,6 +111,10 @@ export async function enablePush(): Promise<PushState> {
 }
 
 export async function disablePush(): Promise<PushState> {
+  if (nativeReminders()) {
+    await clearReminders();
+    return "off";
+  }
   const subscription = await currentSubscription();
   if (!subscription) return "off";
 
