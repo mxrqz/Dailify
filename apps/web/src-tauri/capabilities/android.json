@@ -10,6 +10,7 @@
     "reminders:allow-clear",
     "reminders:allow-status",
     "reminders:allow-permit",
-    "reminders:allow-settings"
+    "reminders:allow-settings",
+    "reminders:allow-battery"
   ]
 }

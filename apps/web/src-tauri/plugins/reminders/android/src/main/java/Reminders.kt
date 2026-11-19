@@ -10,6 +10,7 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.os.Build
+import android.os.PowerManager
 import android.text.format.DateFormat
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
@@ -110,6 +111,14 @@ object Reminders {
     }
   }
 
+  // OEMs that kill background work of apps left battery-optimized (dontkillmyapp.com).
+  private val aggressive = setOf("xiaomi", "redmi", "poco", "samsung", "huawei", "honor", "oneplus", "oppo", "realme", "vivo")
+
+  // True when nothing is likely to hold the alarms back.
+  fun batteryOk(ctx: Context) =
+    Build.MANUFACTURER.lowercase() !in aggressive ||
+      ctx.getSystemService(PowerManager::class.java).isIgnoringBatteryOptimizations(ctx.packageName)
+
   fun canExact(ctx: Context) =
     Build.VERSION.SDK_INT < Build.VERSION_CODES.S ||
       ctx.getSystemService(AlarmManager::class.java).canScheduleExactAlarms()
@@ -136,10 +145,11 @@ object Reminders {
         NotificationChannel(CHANNEL, ctx.getString(R.string.reminders_channel), NotificationManager.IMPORTANCE_HIGH)
       )
     }
-    val launch = ctx.packageManager.getLaunchIntentForPackage(ctx.packageName)
-    val tap = launch?.let {
-      PendingIntent.getActivity(ctx, 0, it, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
-    }
+    // The deep-link plugin routes it (`parseOpenLink`): the agenda opens on the task's day.
+    val open = Intent(Intent.ACTION_VIEW, Uri.parse("mewki://open/dashboard?at=$at")).setPackage(ctx.packageName)
+    val tap = PendingIntent.getActivity(
+      ctx, id.hashCode(), open, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE
+    )
     val time = DateFormat.getTimeFormat(ctx).format(Date(at))
     val notification = NotificationCompat.Builder(ctx, CHANNEL)
       .setSmallIcon(R.drawable.ic_stat_reminder)

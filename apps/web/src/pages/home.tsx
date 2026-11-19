@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 
@@ -15,6 +15,8 @@ import { ProgressRing } from "@/components/kit/progress-ring";
 import { weekdayDate } from "@/functions/date-label";
 import { fill, getCompletionDate, getTasksForDay } from "@/functions/functions";
 import { useCreateTask } from "@/hooks/useCreateTask";
+import { useEffectEvent } from "@/hooks/useEffectEvent";
+import { zoned } from "@/functions/zone";
 import { useNow } from "@/hooks/useNow";
 import { cn } from "@/lib/utils";
 
@@ -50,7 +52,7 @@ export function TodayHeader({
 /** O dashboard: a Hoje (título, semana, lista), o calendário do mês e, no desktop, a coluna lateral. */
 export default function Home() {
   const { create, submitting } = useCreateTask();
-  const { tasks } = useDailify();
+  const { tasks, goToDay } = useDailify();
   const today = useNow("day");
   const todays = tasks ? getTasksForDay(tasks, today) : [];
   const done = todays.filter((task) => getCompletionDate(task, today) === true).length;
@@ -61,6 +63,21 @@ export default function Home() {
   const navigate = useNavigate();
   const location = useLocation();
   const calendarOpen = params.get("view") === CALENDAR_VIEW;
+  // A reminder notification opens `/dashboard?at=<epoch-ms>` (Android): land on that day, once.
+  const at = Number(params.get("at"));
+  const landOn = useEffectEvent((ms: number) => {
+    void goToDay(zoned(ms));
+    setParams(
+      (prev) => {
+        prev.delete("at");
+        return prev;
+      },
+      { replace: true },
+    );
+  });
+  useEffect(() => {
+    if (Number.isFinite(at) && at > 0) landOn(at);
+  }, [at]);
   // Entrou direto pelo link: não há o que voltar no histórico, então tira o parâmetro.
   const closeCalendar = () =>
     location.key === "default" ? setParams({}, { replace: true }) : navigate(-1);

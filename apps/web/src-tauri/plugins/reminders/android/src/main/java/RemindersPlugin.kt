@@ -77,6 +77,12 @@ class RemindersPlugin(private val activity: Activity) : Plugin(activity) {
     invoke.resolve()
   }
 
+  @Command
+  fun battery(invoke: Invoke) {
+    activity.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS))
+    invoke.resolve()
+  }
+
   private fun state(): JSObject {
     val permission = getPermissionState(NOTIFICATIONS)
     val notifications = when {
@@ -90,5 +96,6 @@ class RemindersPlugin(private val activity: Activity) : Plugin(activity) {
       .put("configured", Reminders.configured(activity))
       .put("notifications", notifications)
       .put("exact", Reminders.canExact(activity))
+      .put("battery", Reminders.batteryOk(activity))
   }
 }

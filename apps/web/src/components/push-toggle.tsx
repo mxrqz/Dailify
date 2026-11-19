@@ -5,7 +5,13 @@ import { copy } from "@/components/dashboard/copy";
 import { ListRow } from "@/components/kit/list";
 import { Switch } from "@/components/kit/switch";
 import { disablePush, enablePush, pushState, type PushState } from "@/functions/push";
-import { nativeReminders, openExactAlarmSettings, reminderStatus } from "@/lib/reminders";
+import {
+  nativeReminders,
+  openBatterySettings,
+  openExactAlarmSettings,
+  reminderStatus,
+  type ReminderStatus,
+} from "@/lib/reminders";
 
 /**
  * A linha "Lembretes neste aparelho" de /settings. O estado real mora no navegador (permissão +
@@ -15,15 +21,14 @@ import { nativeReminders, openExactAlarmSettings, reminderStatus } from "@/lib/r
 export function PushToggle(): JSX.Element {
   const [state, setState] = useState<PushState | null>(null);
   const [busy, setBusy] = useState(false);
-  // Android only: "Alarms & reminders" is a system setting, so it is re-read on every return.
-  const [exact, setExact] = useState(true);
+  // Android only: these are system settings, so they are re-read on every return to the app.
+  const [native, setNative] = useState<ReminderStatus | null>(null);
 
   useEffect(() => {
     void pushState().then(setState);
     if (!nativeReminders()) return;
     const read = () => {
-      if (document.visibilityState === "visible")
-        void reminderStatus().then((s) => setExact(s.exact));
+      if (document.visibilityState === "visible") void reminderStatus().then(setNative);
     };
     read();
     document.addEventListener("visibilitychange", read);
@@ -73,12 +78,20 @@ export function PushToggle(): JSX.Element {
           )
         }
       />
-      {state === "on" && !exact && (
+      {state === "on" && native && !native.exact && (
         <ListRow
           label={copy.form.exactAlarmTitle}
           sublabel={copy.form.exactAlarmHint}
           accessory="external"
           onClick={() => void openExactAlarmSettings()}
+        />
+      )}
+      {state === "on" && native && !native.battery && (
+        <ListRow
+          label={copy.form.batteryTitle}
+          sublabel={copy.form.batteryHint}
+          accessory="external"
+          onClick={() => void openBatterySettings()}
         />
       )}
     </>

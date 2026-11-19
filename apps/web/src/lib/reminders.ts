@@ -6,6 +6,8 @@ export interface ReminderStatus {
   notifications: "granted" | "denied" | "prompt";
   /** "Alarms & reminders" granted: without it a reminder may fire up to an hour late. */
   exact: boolean;
+  /** False on OEMs that kill battery-optimized apps' alarms (Xiaomi, Samsung, ...) until exempted. */
+  battery: boolean;
 }
 
 /** Local alarms replace Web Push only in the Android app: its WebView can't receive push. */
@@ -22,6 +24,7 @@ export const permitReminders = () => call<ReminderStatus>("permit");
 export const configureReminders = (apiUrl: string, token: string) =>
   call<void>("configure", { apiUrl, token });
 export const openExactAlarmSettings = () => call<void>("settings");
+export const openBatterySettings = () => call<void>("battery");
 
 /** Fire-and-forget: re-reads the feed in the background (a no-op when not configured). */
 export function refreshReminders(): void {

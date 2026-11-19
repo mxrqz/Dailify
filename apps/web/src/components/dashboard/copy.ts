@@ -192,6 +192,9 @@ export const copy = {
       "As notificações estão bloqueadas para a Mewki. Libere nas configurações do Android.",
     exactAlarmTitle: "Avisar na hora certa",
     exactAlarmHint: "Permita “Alarmes e lembretes” para o lembrete não chegar atrasado.",
+    batteryTitle: "Não pausar os lembretes",
+    batteryHint:
+      "Neste celular a economia de bateria pode segurar os lembretes. Tire a Mewki dela.",
   },
 
   profile: {

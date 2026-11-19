@@ -10,6 +10,32 @@
 <tr>
 <td>
 
+`reminders:allow-battery`
+
+</td>
+<td>
+
+Enables the battery command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`reminders:deny-battery`
+
+</td>
+<td>
+
+Denies the battery command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `reminders:allow-clear`
 
 </td>

@@ -12,6 +12,7 @@ const native = vi.hoisted(() => ({
   nativeReminders: vi.fn(() => false),
   reminderStatus: vi.fn(),
   openExactAlarmSettings: vi.fn(),
+  openBatterySettings: vi.fn(),
 }));
 vi.mock("sonner", () => ({ toast }));
 vi.mock("@/lib/reminders", () => native);
@@ -69,6 +70,7 @@ describe("<PushToggle>", () => {
       configured: true,
       notifications: "granted",
       exact: false,
+      battery: true,
     });
     push.pushState.mockResolvedValue("on");
     render(<PushToggle />);
@@ -84,9 +86,27 @@ describe("<PushToggle>", () => {
       configured: false,
       notifications: "denied",
       exact: true,
+      battery: true,
     });
     push.pushState.mockResolvedValue("denied");
     render(<PushToggle />);
     expect(await screen.findByText(copy.form.notificationsDeniedApp)).toBeInTheDocument();
+  });
+
+  it("Android on an OEM that pauses background work: offers the battery setting", async () => {
+    native.nativeReminders.mockReturnValue(true);
+    native.reminderStatus.mockResolvedValue({
+      configured: true,
+      notifications: "granted",
+      exact: true,
+      battery: false,
+    });
+    push.pushState.mockResolvedValue("on");
+    render(<PushToggle />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: new RegExp(copy.form.batteryTitle) }),
+    );
+    expect(native.openBatterySettings).toHaveBeenCalled();
+    expect(screen.queryByText(copy.form.exactAlarmTitle)).toBeNull();
   });
 });
