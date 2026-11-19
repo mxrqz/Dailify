@@ -14,6 +14,11 @@ import { useQuotas } from "@/hooks/useQuotas";
 import { zoned } from "@/functions/zone";
 import { useSession } from "@/lib/auth";
 
+// The optimistic object itself: the server's reply (or the queued copy) replaces it, which ends it.
+const saving = new WeakSet<Task>();
+/** Shown but not confirmed yet: the row reads "Salvando…". */
+export const isSaving = (task: Task): boolean => saving.has(task);
+
 const queueable = (error: ApiError | undefined, userId: string | undefined): userId is string =>
   shouldQueue(error) && !!userId;
 
@@ -110,6 +115,7 @@ export function useCreateTask() {
     };
     const undated = input.undated === true;
     const optimistic = { ...input, repeatEvery: input.repeatEvery ?? undefined, completed: [] };
+    saving.add(optimistic);
     const apply = (task: Task) =>
       undated
         ? setUndatedTasks((cur) => upsertUndated(cur ?? [], task))
@@ -123,6 +129,8 @@ export function useCreateTask() {
 
       if (queueable(error, userId)) {
         enqueue(userId, { op: "create", taskId: input.id, input, at });
+        // A fresh object drops "Salvando…": the queue owns it now, and the toast says so.
+        apply({ ...optimistic });
         toast.message(undated ? copy.form.createdUndated : copy.form.created, {
           description: copy.task.queued,
         });

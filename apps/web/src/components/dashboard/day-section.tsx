@@ -1,17 +1,20 @@
+import { useEffect, useRef } from "react";
 import { duration, ease } from "@/consts/motion";
 import { format, isToday, isTomorrow } from "date-fns";
-import { motion, useReducedMotion, type Variants } from "motion/react";
+import { AnimatePresence, motion, useReducedMotion, type Variants } from "motion/react";
 import { durationMinutes } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { AnytimeBlock, ScheduleDrop } from "@/components/dashboard/anytime-block";
 import { copy } from "@/components/dashboard/copy";
+import { dayRows, isDayZeroed, type Row } from "@/components/dashboard/day-rows";
 import { DayTaskRow, NowLine } from "@/components/dashboard/day-task-row";
 import { SHEET_EDITING } from "@/consts/media";
 import { TaskCard } from "@/components/task-card";
 import { countLabel } from "@/functions/count-label";
 import { clockAt, dayLabel, weekdayDate } from "@/functions/date-label";
-import { getTasksForDay, getTime, groupTasksByHour, timeToMinutes } from "@/functions/functions";
+import { getCompletionDate, getTasksForDay, getTime, timeToMinutes } from "@/functions/functions";
+import { isSaving } from "@/hooks/useCreateTask";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNow } from "@/hooks/useNow";
 import type { Task } from "@dailify/shared";
@@ -42,7 +45,25 @@ export function TaskSkeletons(): JSX.Element {
 const itemCount = (count: number): string =>
   countLabel(count, copy.day.oneItem, copy.day.manyItems);
 
-type Row = { at: number; task: Task; hour?: string } | { at: number; now: true };
+// A done task settling at the end, and neighbours making room for a row that comes or goes.
+const settle = { layout: { duration: duration.slow, ease: ease.out } };
+// Slides out left fading (45%), then gives its height back: 340ms in all, as approved (bd dgb.4).
+const SLIDE = 0.153;
+const COLLAPSE = { delay: SLIDE, duration: 0.187, ease: ease.exit };
+const exit = {
+  x: "-40%",
+  opacity: 0,
+  height: 0,
+  // Takes the list's gap-2 along, so the rows below land flush.
+  marginBottom: -8,
+  transition: {
+    x: { duration: SLIDE, ease: ease.exit },
+    opacity: { duration: SLIDE, ease: ease.exit },
+    height: COLLAPSE,
+    marginBottom: COLLAPSE,
+  },
+};
+const instantExit = { opacity: 0, transition: { duration: 0 } };
 
 /**
  * Um dia: cabeçalho (rótulo + contagem) e as linhas embaixo — tarefas e, hoje, o fio do agora. É o bloco que a `DayList` empilha; o scroll é da página, não daqui.
@@ -65,32 +86,46 @@ export function DaySection({
   const nowAt = now.getHours() * 60 + now.getMinutes();
   // Tarefas e o fio do agora numa ordem só. O fio fica antes do que começa agora (-0.5): o que já
   // começou fica acima dele.
-  const rows: Row[] = groupTasksByHour(dayTasks).flatMap((group) =>
-    group.tasks.map((task, index) => ({
-      at: timeToMinutes(getTime(task.date, "HH:MM")),
-      task,
-      hour: index === 0 ? group.time : undefined,
-    })),
-  );
-  if (isCurrentDay && rows.length) rows.push({ at: nowAt - 0.5, now: true });
-  rows.sort((a, b) => a.at - b.at);
+  const timed: Row[] = dayTasks.map((task) => ({
+    at: timeToMinutes(getTime(task.date, "HH:MM")),
+    task,
+  }));
+  if (isCurrentDay && timed.length) timed.push({ at: nowAt - 0.5, now: true });
+  const done = (task: Task) => getCompletionDate(task, day) === true;
+  const rows = dayRows(timed, done);
+  const zeroed = isDayZeroed(dayTasks, done);
   const live = (row: { at: number; task: Task }) =>
     isCurrentDay && row.at <= nowAt && nowAt < row.at + durationMinutes(row.task.duration);
   const count = dayTasks.length;
   const sub =
     isTomorrow(day) && !calendar ? weekdayDate(day, "EEEE, d MMM") : count > 0 && itemCount(count);
 
+  // One pulse when the last task gets done, never when a zeroed day mounts.
+  const heading = useRef<HTMLHeadingElement>(null);
+  const wasZeroed = useRef(zeroed);
+  useEffect(() => {
+    const became = zeroed && !wasZeroed.current;
+    wasZeroed.current = zeroed;
+    if (!became || reduce) return;
+    heading.current?.animate([{ scale: "1" }, { scale: "1.06" }, { scale: "1" }], {
+      duration: duration.open * 1000,
+      easing: `cubic-bezier(${ease.out.join()})`,
+    });
+  }, [zeroed, reduce]);
+
   const listVariants: Variants = {
     hidden: {},
-    visible: { transition: { staggerChildren: reduce ? 0 : 0.06 } },
+    visible: { transition: { staggerChildren: reduce ? 0 : 0.05 } },
   };
   const rowVariants: Variants = {
     hidden: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 8 },
-    visible: {
+    enter: { opacity: reduce ? 1 : 0, y: reduce ? 0 : 6 },
+    // `fresh` (custom): a row the composer just created enters quicker than the day's stagger.
+    visible: (fresh: boolean) => ({
       opacity: 1,
       y: 0,
-      transition: { duration: reduce ? 0 : duration.slow, ease: ease.out },
-    },
+      transition: { duration: reduce ? 0 : fresh ? duration.base : duration.slow, ease: ease.out },
+    }),
   };
 
   return (
@@ -103,10 +138,16 @@ export function DaySection({
         className="flex scroll-mt-bar max-md:[contain-intrinsic-size:auto_20rem] max-md:[content-visibility:auto] flex-col gap-2 rounded-lg outline-offset-4 data-drop-over:outline-2 data-drop-over:outline-dashed data-drop-over:outline-brand"
       >
         <header className="flex items-baseline justify-between gap-3 px-1 pb-1">
-          <h2 className="text-title-3 font-semibold">
+          <h2 ref={heading} className="origin-left text-title-3 font-semibold">
             {calendar ? weekdayDate(day, "EEEE, d") : dayLabel(day, now, weekStart)}
           </h2>
-          {sub && <span className="text-footnote text-ink-secondary">{sub}</span>}
+          {zeroed ? (
+            <span className="text-footnote font-semibold text-success transition-opacity duration-base starting:opacity-0">
+              {copy.day.zeroed}
+            </span>
+          ) : (
+            sub && <span className="text-footnote text-ink-secondary">{sub}</span>
+          )}
         </header>
 
         {isCurrentDay && !calendar && <AnytimeBlock />}
@@ -124,23 +165,35 @@ export function DaySection({
             initial={reduce || (!isCurrentDay && !calendar) ? false : "hidden"}
             animate="visible"
           >
-            {rows.map((row) =>
-              "task" in row ? (
-                <motion.li key={row.task.id} variants={rowVariants}>
-                  <DayTaskRow
-                    task={row.task}
-                    day={day}
-                    hour={row.hour}
-                    live={live(row)}
-                    sheetEditing={sheetEditing}
-                  />
-                </motion.li>
-              ) : (
-                <li key="now">
-                  <NowLine time={clockAt(now, hour12)} />
-                </li>
-              ),
-            )}
+            {/* No `initial={false}`: it would block the ul's stagger on mount. */}
+            <AnimatePresence>
+              {rows.map((row) =>
+                "task" in row ? (
+                  <motion.li
+                    key={row.task.id}
+                    layout="position"
+                    variants={rowVariants}
+                    custom={isSaving(row.task)}
+                    // Just created: a subtle entry at its slot instead of the day's stagger.
+                    initial={isSaving(row.task) ? "enter" : undefined}
+                    exit={reduce ? instantExit : exit}
+                    transition={settle}
+                  >
+                    <DayTaskRow
+                      task={row.task}
+                      day={day}
+                      hour={row.hour}
+                      live={live(row)}
+                      sheetEditing={sheetEditing}
+                    />
+                  </motion.li>
+                ) : (
+                  <motion.li key="now" layout="position" transition={settle}>
+                    <NowLine time={clockAt(now, hour12)} />
+                  </motion.li>
+                ),
+              )}
+            </AnimatePresence>
           </motion.ul>
         )}
       </section>

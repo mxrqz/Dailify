@@ -53,6 +53,7 @@ export const copy = {
     expandMonth: "Mostrar o mês",
     collapseMonth: "Mostrar só a semana",
     emptyDay: "Nada neste dia",
+    zeroed: "Dia zerado",
     listEmpty: "Nada agendado pela frente.",
     listFirstRun: "Sua agenda começa aqui.",
     listFirstRunHint: "Escreva a tarefa do jeito que você falaria. O campo abaixo entende a data.",
@@ -476,6 +477,7 @@ export const copy = {
     undo: "Desfazer",
     undoError: "Não foi possível restaurar a tarefa",
     restored: "Tarefa restaurada",
+    saving: "Salvando…",
     queued: "Sem conexão — guardado pra sincronizar depois",
   },
 

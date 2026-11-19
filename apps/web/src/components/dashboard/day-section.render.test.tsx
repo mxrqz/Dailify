@@ -73,3 +73,26 @@ describe("<DaySection> now line", () => {
     expect(order).toEqual(["At nine", "now", "At ten"]);
   });
 });
+
+describe("<DaySection> done tasks", () => {
+  const done = (t: Task) => ({ ...t, completed: [t.date] });
+
+  it("settles a done task after the open ones and the now line", () => {
+    renderAt(WEDNESDAY, new Date(2026, 10, 18), [
+      done(task("At eight", new Date(2026, 10, 18, 8, 0))),
+      task("At nine", new Date(2026, 10, 18, 9, 0)),
+    ]);
+    const order = screen
+      .getAllByRole("listitem")
+      .map((li) => (li.querySelector("[role=separator]") ? "now" : li.textContent));
+    expect(order).toEqual(["At nine", "now", "At eight"]);
+    expect(screen.queryByText(copy.day.zeroed)).toBeNull();
+  });
+
+  it("says the day is zeroed once every task is done", () => {
+    renderAt(WEDNESDAY, new Date(2026, 10, 19), [
+      done(task("At eight", new Date(2026, 10, 19, 8, 0))),
+    ]);
+    expect(screen.getByText(copy.day.zeroed)).toBeInTheDocument();
+  });
+});

@@ -1,5 +1,4 @@
 import type { ReactNode } from "react";
-import { CheckIcon } from "lucide-react";
 
 import { copy } from "@/components/dashboard/copy";
 import { cn } from "@/lib/utils";
@@ -29,18 +28,34 @@ export function CheckCircle({
           checked ? "border-brand bg-brand" : "border-ink-secondary",
         )}
       >
-        <CheckIcon
-          aria-hidden="true"
-          strokeWidth={3}
-          className={cn(
-            "size-3.5 transition-[opacity,scale] duration-base ease-out",
-            checked ? "opacity-100" : "scale-60 opacity-0",
-          )}
-        />
+        {/* Drawn, not faded in: pathLength 1 makes the dash offset a 0..1 progress. */}
+        <svg aria-hidden="true" viewBox="0 0 24 24" className="size-3.5 overflow-visible">
+          <path
+            d="M4 12.5l5 5L20 6.5"
+            pathLength={1}
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={3}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            strokeDasharray={1}
+            strokeDashoffset={checked ? 0 : 1}
+            className="transition-[stroke-dashoffset] duration-fast ease-out motion-reduce:transition-none"
+          />
+        </svg>
       </span>
     </button>
   );
 }
+
+/** The done strike draws left to right (scaleX); under reduced motion it is a plain line-through. */
+export const strike = (done: boolean | undefined) =>
+  cn(
+    "relative w-fit max-w-full transition-colors duration-base after:absolute after:inset-x-0 after:top-1/2 after:h-px after:origin-left after:bg-ink-tertiary after:transition-transform after:duration-base after:ease-out motion-reduce:after:hidden",
+    done
+      ? "text-ink-secondary after:scale-x-100 motion-reduce:line-through motion-reduce:decoration-ink-tertiary"
+      : "after:scale-x-0",
+  );
 
 /**
  * A linha da agenda (props → markup): horário e duração à esquerda, título e meta no meio, e à
@@ -94,7 +109,7 @@ export function TaskRow({
           className={cn(
             "truncate text-body",
             muted ? "font-medium text-ink-secondary" : "font-semibold",
-            done && "text-ink-secondary line-through decoration-ink-tertiary",
+            strike(done),
           )}
         >
           {title}

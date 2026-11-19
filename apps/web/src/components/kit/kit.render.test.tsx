@@ -114,7 +114,11 @@ describe("TaskRow", () => {
     expect(screen.getByText(copy.day.now)).toBeInTheDocument();
     rerender(<TaskRow time="10:00" title="Proposta" done />);
     expect(screen.queryByText(copy.day.now)).toBeNull();
-    expect(screen.getByText("Proposta").className).toContain("line-through");
+    // The drawn strike, with the plain line-through kept for reduced motion.
+    expect(screen.getByText("Proposta")).toHaveClass(
+      "after:scale-x-100",
+      "motion-reduce:line-through",
+    );
   });
 
   it("CheckCircle is a checkbox that asks for the opposite state", async () => {
@@ -123,6 +127,8 @@ describe("TaskRow", () => {
     render(<CheckCircle checked={false} onCheckedChange={onCheckedChange} />);
     await user.click(screen.getByRole("checkbox", { name: copy.task.complete }));
     expect(onCheckedChange).toHaveBeenCalledWith(true);
+    // Unchecked, the check is fully undrawn (dash offset = its whole pathLength).
+    expect(document.querySelector("path")).toHaveAttribute("stroke-dashoffset", "1");
   });
 });
 

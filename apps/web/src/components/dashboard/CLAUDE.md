@@ -106,6 +106,10 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
 - `NowLine` sorts at `nowAt - 0.5`, so a task starting this minute sits below it. Only today uses
   `useNow(60_000)`. The row stagger runs only for today and the calendar day, so months loaded
   mid-scroll don't animate.
+- Row order is `dayRows` (`day-rows.ts`): clock order, done tasks after the open ones and the now
+  line. Rows are `layout="position"` inside `AnimatePresence`: a done task glides to the end, a new
+  (`isSaving`) one enters at its slot (`enter` variant), a removed one slides left then collapses.
+  `isDayZeroed` swaps the count for "Dia zerado" and pulses the heading once (WAAPI).
 - New widget: a props-only View plus a container in the same file that reads `useDailify`, per-day
   tasks via `getTasksForDay` (never a hand filter), time via `useNow`, and writes through a `hooks/`
   action; a co-located render test.

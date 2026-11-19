@@ -28,7 +28,8 @@ Repo-wide rules: [/RULES.md](../../../../../RULES.md). This file adds only what 
   by `label`, so labels must be unique. `primary` = bold `brand-text`, `destructive` = `brand-text`.
 - `TaskRow({ time, duration?, title, meta?, done?, live?, muted?, onOpen?, trailing? })` +
   `CheckCircle({ checked, onCheckedChange, label? })` (`task-row.tsx`): the agenda row and its
-  complete circle, shared by `dashboard/day-task-row` and `mew-chat`.
+  complete circle, shared by `dashboard/day-task-row` and `mew-chat`. The check draws its path
+  (`pathLength` 1); `strike(done)` is the left-to-right title strike, also used by the undated row.
 - `Refraction({ strength = 24, edge = 10 })`: the SVG `<filter id="refract">`, plus
   `<html class="refract">` on Chromium only.
 

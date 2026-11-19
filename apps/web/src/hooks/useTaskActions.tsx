@@ -127,28 +127,46 @@ export function useTaskActions(
   };
 
   /**
-   * Exclui só a ocorrência deste dia: a série continua inteira e a data entra no `exdates` dela.
-   * Sem "Desfazer" — reverter seria tirar a data do `exdates`, e não há rota pra isso; recriar a
-   * tarefa (o que o `restore` faz) devolveria uma cópia solta no lugar da ocorrência.
+   * Excludes only this day's occurrence: the date joins the series' `exdates`. No route removes an
+   * exdate, so the request waits for the toast to close and Undo just puts the row back.
    */
-  const removeOccurrence = async () => {
+  const removeOccurrence = () => {
     const at = Date.now();
     const previous = tasks ?? [];
-    setTasks((cur) => (cur ?? []).filter((t) => !(t.id === task.id && t.date === task.date)));
-
-    const mutation: Mutation = {
-      op: "delete-occurrence",
-      taskId: task.id,
-      occurrence: task.date,
-      at,
-    };
-    const { series, error } = await deleteTask(task.id, task.date);
-    if (!settle(error, previous, mutation, copy.task.deleteError)) return;
-    // Reexpandir a série com o `exdates` novo é mais fiel que o filtro otimista acima: é o servidor
-    // dizendo quais dias sobraram.
-    if (series) setTasks((cur) => upsertTaskWithRecurrence(cur ?? [], series, loadedMonths));
+    const isThis = (t: Task) => t.id === task.id && t.date === task.date;
+    setTasks((cur) => (cur ?? []).filter((t) => !isThis(t)));
     onDeleted?.();
-    toast.success(copy.task.occurrenceDeleted, { description: task.title });
+
+    // ponytail: closing the app inside the 6 s drops the delete (the row returns on reload);
+    // enqueueing it at once and dequeueing on Undo would make it survive.
+    let decided = false;
+    const commit = async () => {
+      if (decided) return;
+      decided = true;
+      const mutation: Mutation = {
+        op: "delete-occurrence",
+        taskId: task.id,
+        occurrence: task.date,
+        at,
+      };
+      const { series, error } = await deleteTask(task.id, task.date);
+      if (!settle(error, previous, mutation, copy.task.deleteError)) return;
+      // Reexpandir a série com o `exdates` novo é mais fiel que o filtro otimista acima: é o servidor
+      // dizendo quais dias sobraram.
+      if (series) setTasks((cur) => upsertTaskWithRecurrence(cur ?? [], series, loadedMonths));
+    };
+    const undo = () => {
+      if (decided) return;
+      decided = true;
+      setTasks((cur = []) => (cur.some(isThis) ? cur : [...cur, task]));
+    };
+    toast.success(copy.task.occurrenceDeleted, {
+      description: task.title,
+      duration: 6000,
+      action: { label: copy.task.undo, onClick: undo },
+      onAutoClose: () => void commit(),
+      onDismiss: () => void commit(),
+    });
   };
 
   /** Recorrente pergunta o escopo antes; ligada à Agenda confirma; o resto apaga direto. */
@@ -169,7 +187,7 @@ export function useTaskActions(
         destructive
         onOccurrence={() => {
           setScopeOpen(false);
-          void removeOccurrence();
+          removeOccurrence();
         }}
         onSeries={() => {
           setScopeOpen(false);

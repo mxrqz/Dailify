@@ -7,7 +7,6 @@ import {
   getTime,
   fill,
   formatClock,
-  groupTasksByHour,
   taskToCardData,
   upsertTaskWithRecurrence,
   mergeMonth,
@@ -166,33 +165,6 @@ describe("índice por dia e faixas numéricas ≡ comparação por TZDate", () =
 describe("small date helpers", () => {
   test("getTime formats HH:MM zero-padded", () => {
     expect(getTime(new Date(2026, 7, 1, 9, 5).getTime(), "HH:MM")).toBe("09:05");
-  });
-});
-
-describe("groupTasksByHour", () => {
-  const at = (id: string, h: number, m: number) =>
-    makeTask({ id, date: new Date(2026, 7, 10, h, m).getTime() });
-
-  test("junta as tarefas da mesma hora cheia, ordenadas pelo minuto", () => {
-    const groups = groupTasksByHour([at("b", 9, 45), at("a", 9, 5)]);
-    expect(groups).toHaveLength(1);
-    expect(groups[0].time).toBe("09:00");
-    expect(groups[0].tasks.map((t) => t.id)).toEqual(["a", "b"]);
-  });
-
-  test("ordena as horas independente da ordem de entrada", () => {
-    const groups = groupTasksByHour([at("late", 14, 30), at("early", 9, 5), at("mid", 11, 0)]);
-    expect(groups.map((g) => g.time)).toEqual(["09:00", "11:00", "14:00"]);
-  });
-
-  test("lista vazia vira lista vazia", () => {
-    expect(groupTasksByHour([])).toEqual([]);
-  });
-
-  test("não muta a entrada", () => {
-    const input = [at("a", 14, 0), at("b", 8, 0)];
-    groupTasksByHour(input);
-    expect(input.map((t) => t.id)).toEqual(["a", "b"]);
   });
 });
 
