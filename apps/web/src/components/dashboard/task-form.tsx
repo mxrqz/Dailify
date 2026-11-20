@@ -46,6 +46,7 @@ import { Input } from "@/components/ui/input";
 import { Separator } from "@/components/ui/separator";
 import { priorityText } from "@/consts/conts";
 import { clockAt, dayComma } from "@/functions/date-label";
+import { rebaseLinks } from "@/functions/edit-input";
 import { fill } from "@/functions/functions";
 import { linkHost, linkLabel } from "@/functions/link-label";
 import { REPEAT_MODES, everyLabel, everyOptions, repeatLabel } from "@/functions/repeat-label";
@@ -315,6 +316,13 @@ export function TaskForm({
   const [opened] = useState(values);
   // Os links à parte: o Meet novo já foi salvo no servidor, e não pode acender o "Salvar".
   const [savedLinks, setSavedLinks] = useState(task?.links);
+  // The sheet's Calendar actions change links on the server; without this, saving sends the old list.
+  const [serverLinks, setServerLinks] = useState(task?.links);
+  if (task?.links !== serverLinks) {
+    setServerLinks(task?.links);
+    setLinks(rebaseLinks(links, savedLinks, task?.links));
+    setSavedLinks(task?.links);
+  }
   const dirty = values !== opened || JSON.stringify(links) !== JSON.stringify(savedLinks);
   useEffect(() => onDirtyChange?.(dirty), [dirty, onDirtyChange]);
 

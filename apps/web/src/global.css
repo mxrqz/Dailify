@@ -208,6 +208,8 @@
   --default-transition-timing-function: var(--motion-ease-out);
 
   /* Raios do DS (concêntricos: o de dentro = o de fora − o padding entre eles). */
+  /* Check-history squares are 6px wide: xs would turn them into dots. */
+  --radius-2xs: 0.125rem;
   --radius-xs: 0.375rem;
   --radius-sm: 0.625rem;
   --radius-md: 0.875rem;

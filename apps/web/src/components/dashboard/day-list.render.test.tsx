@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { render } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { addMonths, startOfMonth } from "date-fns";
 
 import { copy } from "./copy";
@@ -75,6 +76,15 @@ describe("<DayList>", () => {
 
     fire?.();
     expect(loadMonth).toHaveBeenCalledWith(startOfMonth(addMonths(now, 2)));
+  });
+
+  it("first run: tapping the example hands its text to the composer", async () => {
+    setup();
+    const onTry = vi.fn();
+    render(<DayList onTry={onTry} />);
+
+    await userEvent.click(screen.getByRole("button", { name: copy.day.listFirstRunExample }));
+    expect(onTry).toHaveBeenCalledWith(copy.day.listFirstRunExample);
   });
 
   it("skeleton só no boot, antes de haver tarefas", () => {

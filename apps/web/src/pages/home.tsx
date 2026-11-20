@@ -59,6 +59,7 @@ export default function Home() {
 
   const [sideOpen, setSideOpen] = useSideOpen();
   const [createOn, setCreateOn] = useState<Date | null>(null);
+  const [example, setExample] = useState<string | null>(null);
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
   const location = useLocation();
@@ -104,7 +105,7 @@ export default function Home() {
           </div>
 
           <div className="mt-5">
-            <DayList />
+            <DayList onTry={setExample} />
           </div>
         </div>
 
@@ -112,7 +113,11 @@ export default function Home() {
 
         <CreateFab
           day={createOn}
-          onDayDone={() => setCreateOn(null)}
+          text={example}
+          onDayDone={() => {
+            setCreateOn(null);
+            setExample(null);
+          }}
           submitting={submitting}
           onSubmit={({ parsed, calendar }) => create(parsed, { calendar })}
         />

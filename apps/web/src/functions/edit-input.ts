@@ -55,3 +55,19 @@ export function buildEdit(task: Task, values: TaskFormValues, now: TZDate) {
     (!values.undated || task.alert === alert);
   return { input, taskData, unchanged };
 }
+
+/**
+ * The form's link edits replayed over the links the server holds now: adding to the Calendar from
+ * the sheet appends the event (and maybe a Meet) while the form still has the old list.
+ */
+export function rebaseLinks(
+  form: string[] | undefined,
+  saved: string[] | undefined,
+  server: string[] | undefined,
+): string[] | undefined {
+  if (JSON.stringify(form) === JSON.stringify(saved)) return server;
+  const mine = form ?? [];
+  const before = saved ?? [];
+  const kept = (server ?? []).filter((url) => mine.includes(url) || !before.includes(url));
+  return [...kept, ...mine.filter((url) => !kept.includes(url))];
+}

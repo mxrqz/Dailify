@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { Task } from "@dailify/shared";
 
 import type { TaskFormValues } from "@/components/dashboard/task-form";
-import { buildEdit, editTaskInput } from "./edit-input";
+import { buildEdit, editTaskInput, rebaseLinks } from "./edit-input";
 import { zonedAt } from "./zone";
 
 const now = zonedAt(2026, 9, 21, 14, 0); // qua 21/out 14:00
@@ -71,5 +71,20 @@ describe("buildEdit", () => {
     const undated = { ...task, undated: true };
     const { taskData } = buildEdit(undated, values, now);
     expect(taskData).toMatchObject({ date: values.date.getTime(), alert: values.date.getTime() });
+  });
+});
+
+describe("rebaseLinks", () => {
+  const own = "https://example.com/a";
+  const event = "https://www.google.com/calendar/event?eid=x";
+
+  it("untouched form takes the server's links, Calendar event included", () => {
+    expect(rebaseLinks([own], [own], [own, event])).toEqual([own, event]);
+    expect(rebaseLinks(undefined, undefined, [event])).toEqual([event]);
+  });
+
+  it("keeps the user's link edits on top of a link the server added", () => {
+    const next = "https://example.com/b";
+    expect(rebaseLinks([next], [own], [own, event])).toEqual([event, next]);
   });
 });

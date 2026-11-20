@@ -75,6 +75,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
   doesn't light "Salvar".
 - `links` also carries the Google Calendar event URL (`isCalendarEventLink`). Editors touch only the
   task's own links and must re-append `calendarLinks`, or the task is unlinked from the calendar.
+  When `task.links` changes under an open form (Add to Calendar), `rebaseLinks`
+  (`functions/edit-input.ts`) replays the form's link edits over it.
 - Undated: `date` only orders the list; the reminder is a day fired at `DEFAULT_HOUR` (09:00), shown
   through `undatedReminder`. Toggling undated carries the chosen day across.
 - `locked` (a Calendar invite you don't organize) disables title, date, time, duration, the undated

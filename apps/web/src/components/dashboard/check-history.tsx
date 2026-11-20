@@ -67,12 +67,11 @@ export function CheckHistory({
 
   return (
     <span role="img" aria-label={label} className="ml-1 flex items-center gap-0.75">
-      {/* ponytail: quadrado reto; o spec pede raio de 2px, que não tem token (--radius-2xs). */}
       {filled.map((full, i) => (
         <i
           key={starts[i]}
           data-filled={full}
-          className={cn("size-1.5", full ? "bg-ink-secondary" : "bg-fill-pressed")}
+          className={cn("size-1.5 rounded-2xs", full ? "bg-ink-secondary" : "bg-fill-pressed")}
         />
       ))}
     </span>
