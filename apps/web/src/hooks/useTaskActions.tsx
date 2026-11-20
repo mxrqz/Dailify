@@ -12,7 +12,7 @@ import { completeTask, createTask, deleteTask, uncompleteTask, updateTask } from
 import type { ApiError } from "@/functions/api";
 import { fill, upsertTaskWithRecurrence } from "@/functions/functions";
 import { revertTask } from "@/functions/revert-task";
-import { enqueue, shouldQueue, type Mutation } from "@/functions/offline";
+import { dequeue, enqueue, shouldQueue, type Mutation } from "@/functions/offline";
 import { isCalendarEventLink, seriesOf, type TaskInput } from "@dailify/shared";
 import type { Task } from "@dailify/shared";
 import { zoned } from "@/functions/zone";
@@ -128,7 +128,8 @@ export function useTaskActions(
 
   /**
    * Excludes only this day's occurrence: the date joins the series' `exdates`. No route removes an
-   * exdate, so the request waits for the toast to close and Undo just puts the row back.
+   * exdate, so the delete is queued at once (it survives closing the app) and sent when the toast
+   * closes; Undo takes it back out of the queue.
    */
   const removeOccurrence = () => {
     const at = Date.now();
@@ -137,18 +138,20 @@ export function useTaskActions(
     setTasks((cur) => (cur ?? []).filter((t) => !isThis(t)));
     onDeleted?.();
 
-    // ponytail: closing the app inside the 6 s drops the delete (the row returns on reload);
-    // enqueueing it at once and dequeueing on Undo would make it survive.
+    const mutation: Mutation = {
+      op: "delete-occurrence",
+      taskId: task.id,
+      occurrence: task.date,
+      at,
+    };
+    if (userId) enqueue(userId, mutation);
+    // `false` = a flush already has it, so the server gets it either way.
+    const take = () => !userId || dequeue(userId, mutation);
     let decided = false;
     const commit = async () => {
       if (decided) return;
       decided = true;
-      const mutation: Mutation = {
-        op: "delete-occurrence",
-        taskId: task.id,
-        occurrence: task.date,
-        at,
-      };
+      if (!take()) return;
       const { series, error } = await deleteTask(task.id, task.date);
       if (!settle(error, previous, mutation, copy.task.deleteError)) return;
       // Reexpandir a série com o `exdates` novo é mais fiel que o filtro otimista acima: é o servidor
@@ -158,6 +161,10 @@ export function useTaskActions(
     const undo = () => {
       if (decided) return;
       decided = true;
+      if (!take()) {
+        toast.error(copy.task.undoError);
+        return;
+      }
       setTasks((cur = []) => (cur.some(isThis) ? cur : [...cur, task]));
     };
     toast.success(copy.task.occurrenceDeleted, {

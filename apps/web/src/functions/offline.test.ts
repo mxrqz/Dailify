@@ -17,6 +17,7 @@ import {
   cacheUndated,
   clearLocal,
   collapseQueue,
+  dequeue,
   enqueue,
   flushQueue,
   readQueue,
@@ -185,6 +186,21 @@ describe("flushQueue", () => {
     expect(api.uncompleteTaskRange).toHaveBeenCalledWith("a", 100, 200);
     expect(api.uncompleteTask).not.toHaveBeenCalled();
     expect(readQueue("u")).toEqual([]);
+  });
+
+  test("dequeue takes back a pending entry, but not once a flush has it", async () => {
+    api.deleteTask.mockResolvedValue({});
+    const mutation: Mutation = { op: "delete-occurrence", taskId: "a", occurrence: 1, at: 1 };
+    enqueue("u", mutation);
+    expect(dequeue("u", mutation)).toBe(true);
+    expect(readQueue("u")).toEqual([]);
+
+    enqueue("u", mutation);
+    const flush = flushQueue("u");
+    expect(dequeue("u", mutation)).toBe(false);
+    await flush;
+    expect(api.deleteTask).toHaveBeenCalledWith("a", 1);
+    expect(dequeue("u", mutation)).toBe(false);
   });
 
   test("duas chamadas juntas sobem a fila uma vez só", async () => {

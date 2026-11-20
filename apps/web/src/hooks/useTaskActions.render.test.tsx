@@ -101,7 +101,7 @@ describe("useTaskActions", () => {
     expect(store).toHaveLength(31);
   });
 
-  it("an occurrence delete waits for its toast: Undo puts the row back and sends nothing", async () => {
+  it("an occurrence delete is queued at once and Undo takes it back without sending it", async () => {
     if (!day18) throw new Error("no day 18");
     store = series;
     api.deleteTask.mockResolvedValue({});
@@ -113,9 +113,11 @@ describe("useTaskActions", () => {
       (await screen.findByRole("button", { name: copy.form.scopeOccurrence })).click(),
     );
     expect(store).toHaveLength(30);
+    expect(readQueue("u1")).toMatchObject([{ op: "delete-occurrence", occurrence: day18.date }]);
     await act(async () => (await screen.findByRole("button", { name: copy.task.undo })).click());
 
     expect(store).toHaveLength(31);
+    expect(readQueue("u1")).toEqual([]);
     expect(api.deleteTask).not.toHaveBeenCalled();
   });
 
@@ -135,6 +137,7 @@ describe("useTaskActions", () => {
 
     await vi.waitFor(() => expect(api.deleteTask).toHaveBeenCalledWith("r", day18.date));
     expect(store).toHaveLength(30);
+    expect(readQueue("u1")).toEqual([]);
   });
 
   it("undo of a delete keeps a write to another task that landed meanwhile", async () => {
