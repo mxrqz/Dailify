@@ -84,17 +84,16 @@ describe("useShowCreated", () => {
 });
 
 describe("useCreateTask", () => {
-  it("offers the upgrade only on the quota response", async () => {
+  it("rolls back a refused create and shows the server's message", async () => {
     const { result } = renderHook(() => useCreateTask(), { wrapper });
-    const parsed = parseTaskText("x", zoned());
+    api.createTask.mockResolvedValueOnce({ error: { message: "slow down", status: 429 } });
 
-    api.createTask.mockResolvedValueOnce({ error: { message: "bad", status: 400 } });
-    await act(() => result.current.create(parsed));
-    api.createTask.mockResolvedValueOnce({ error: { message: "quota", status: 429 } });
-    await act(() => result.current.create(parsed));
+    let ok = true;
+    await act(async () => void (ok = await result.current.create(parseTaskText("x", zoned()))));
 
-    expect(toast.error.mock.calls[0][1].action).toBeUndefined();
-    expect(toast.error.mock.calls[1][1].action.label).toBe(copy.form.upgrade);
+    expect(ok).toBe(false);
+    expect([...tasks, ...undated]).toEqual([]);
+    expect(toast.error).toHaveBeenCalledWith(copy.form.createError, { description: "slow down" });
   });
 
   it("marks the optimistic task as saving until the server's copy replaces it", async () => {

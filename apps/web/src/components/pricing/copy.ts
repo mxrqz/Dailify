@@ -26,12 +26,12 @@ export const copy = {
 
   /** Uma frase por quota, em duas versões. Quota sem frase não compila. */
   features: {
+    /** Not a quota: every plan has it, so it leads every card. */
+    tasks: "Tarefas ilimitadas",
     finite: {
-      tasks: "{n} tarefas/mês",
       ai: "{n} créditos de IA/mês",
     } satisfies Record<QuotaKey, string>,
     unlimited: {
-      tasks: "Tarefas ilimitadas",
       ai: "Créditos de IA ilimitados",
     } satisfies Record<QuotaKey, string>,
   },
@@ -81,7 +81,6 @@ export const copy = {
     remaining: "Restam {n}. Renovam em 1º de {month}.",
     /** O valor da linha de quota sem teto; o gênero segue o nome da quota. */
     unlimited: {
-      tasks: "Ilimitadas",
       ai: "Ilimitados",
     } satisfies Record<QuotaKey, string>,
     billingTitle: "Cobrança",

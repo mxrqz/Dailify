@@ -61,8 +61,9 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
 
 ## Cron
 
-`scheduled` runs `dispatchAlerts` (`alerts.ts` + `lib/occurrence-alert.ts`) and `syncOldest` (the
-25 oldest Calendar connections, one at a time because of the subrequest ceiling). `syncIfDue`
+`scheduled` runs `dispatchAlerts` (`alerts.ts` + `lib/occurrence-alert.ts`), `syncOldest` (the
+25 oldest Calendar connections, one at a time because of the subrequest ceiling) and
+`sweepMagicLinks` (`db/user.ts`), each in its own `waitUntil`. `syncIfDue`
 isolates each user; `dispatchAlerts` isolates each send, and `sendPush` answers 410 for keys that
 can't encrypt, so the subscription is deleted.
 

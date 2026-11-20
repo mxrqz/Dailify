@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import { composeTaskInput, type ParsedTask, type Task } from "@dailify/shared";
 
@@ -10,7 +9,6 @@ import { fill, upsertTaskWithRecurrence } from "@/functions/functions";
 import { enqueue, newTaskId, shouldQueue } from "@/functions/offline";
 import { upsertUndated } from "@/functions/undated";
 import { useCalendarPush, type CalendarPick } from "@/hooks/useCalendarPush";
-import { useQuotas } from "@/hooks/useQuotas";
 import { zoned } from "@/functions/zone";
 import { useSession } from "@/lib/auth";
 
@@ -28,7 +26,7 @@ const queueable = (error: ApiError | undefined, userId: string | undefined): use
  */
 export function useShowCreated() {
   const userId = useSession().data?.user.id;
-  const { setTasks, setUndatedTasks, loadedMonths, bumpUsage } = useDailify();
+  const { setTasks, setUndatedTasks, loadedMonths } = useDailify();
 
   // Functional: the reply lands seconds after the tap, so it reads the lists of that moment.
   const put = (list: Task[]) => {
@@ -66,7 +64,6 @@ export function useShowCreated() {
 
   return (created: Task[], message: string) => {
     put(created);
-    created.forEach(() => bumpUsage("tasks"));
     toast.success(message, {
       description: created.map((t) => t.title).join(" · "),
       action: { label: copy.task.undo, onClick: () => void undo(created) },
@@ -80,27 +77,15 @@ export function useShowCreated() {
  */
 export function useCreateTask() {
   const userId = useSession().data?.user.id;
-  const { setTasks, setUndatedTasks, bumpUsage, loadedMonths } = useDailify();
-  const quotas = useQuotas();
-  const navigate = useNavigate();
+  const { setTasks, setUndatedTasks, loadedMonths } = useDailify();
   const [submitting, setSubmitting] = useState(false);
   const showCreated = useShowCreated();
   const pushCalendar = useCalendarPush();
-
-  const upgrade = { label: copy.form.upgrade, onClick: () => navigate("/premium") };
-
-  const limited = () => {
-    if (!quotas.states.tasks.exhausted) return false;
-    toast(copy.form.limitReached, { description: copy.form.limitReachedHint, action: upgrade });
-    return true;
-  };
 
   const create = async (
     parsed: ParsedTask,
     { undatedOnly, calendar }: { undatedOnly?: boolean; calendar?: CalendarPick } = {},
   ): Promise<boolean> => {
-    if (limited()) return false;
-
     setSubmitting(true);
 
     // `finally`: qualquer exceção no meio (o parser, a rede) deixava o botão girando
@@ -139,16 +124,11 @@ export function useCreateTask() {
 
       if (error || !task) {
         restore();
-        // Only the 429 is the quota; upgrading fixes nothing else.
-        toast.error(copy.form.createError, {
-          description: error?.message,
-          action: error?.status === 429 ? upgrade : undefined,
-        });
+        toast.error(copy.form.createError, { description: error?.message });
         return false;
       }
 
       apply(task);
-      bumpUsage("tasks");
       // Com a etiqueta, o toast de criado vem depois, junto do resultado do Google.
       if (calendar) void pushCalendar([{ id: task.id, ...calendar }]);
       else
@@ -170,7 +150,6 @@ export function useCreateTask() {
     list: ParsedTask[],
     calendar: (CalendarPick | undefined)[] = [],
   ): Promise<boolean> => {
-    if (limited()) return false;
     setSubmitting(true);
     try {
       const created: Task[] = [];
@@ -179,10 +158,7 @@ export function useCreateTask() {
         const input = { ...composeTaskInput(parsed, zoned(at)), id: newTaskId(), updatedAt: at };
         const { task, error } = await createTask(input);
         if (!task) {
-          toast.error(copy.form.createError, {
-            description: error?.message,
-            action: error?.status === 429 ? upgrade : undefined,
-          });
+          toast.error(copy.form.createError, { description: error?.message });
           break;
         }
         created.push(task);

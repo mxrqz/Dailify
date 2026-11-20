@@ -3,7 +3,6 @@ import { QUOTAS, QUOTA_KEYS, limitsFor, quotaState, computeQuotas } from "./quot
 
 describe("QUOTAS", () => {
   it("declara as quotas com os limites da tabela", () => {
-    expect(QUOTAS.tasks.limits).toEqual({ free: -1, pro: -1, max: -1, admin: -1 });
     expect(QUOTAS.ai.limits).toEqual({ free: 30, pro: 300, max: 1000, admin: -1 });
   });
 
@@ -12,7 +11,6 @@ describe("QUOTAS", () => {
   });
 
   it("declara o escopo de cada quota", () => {
-    expect(QUOTAS.tasks.scope).toBe("month");
     expect(QUOTAS.ai.scope).toBe("month");
   });
 
@@ -23,16 +21,16 @@ describe("QUOTAS", () => {
 
 describe("limitsFor", () => {
   it("free", () => {
-    expect(limitsFor("free")).toEqual({ tasks: -1, ai: 30 });
+    expect(limitsFor("free")).toEqual({ ai: 30 });
   });
   it("pro", () => {
-    expect(limitsFor("pro")).toEqual({ tasks: -1, ai: 300 });
+    expect(limitsFor("pro")).toEqual({ ai: 300 });
   });
   it("max", () => {
-    expect(limitsFor("max")).toEqual({ tasks: -1, ai: 1000 });
+    expect(limitsFor("max")).toEqual({ ai: 1000 });
   });
   it("admin é ilimitado em tudo", () => {
-    expect(limitsFor("admin")).toEqual({ tasks: -1, ai: -1 });
+    expect(limitsFor("admin")).toEqual({ ai: -1 });
   });
 });
 
@@ -90,9 +88,8 @@ describe("quotaState", () => {
 
 describe("computeQuotas", () => {
   it("combina limites e uso por chave", () => {
-    const q = computeQuotas({ tasks: 30, ai: 3 }, { tasks: 12, ai: 1 });
+    const q = computeQuotas({ ai: 3 }, { ai: 1 });
     expect(q.loading).toBe(false);
-    expect(q.states.tasks.remaining).toBe(18);
     expect(q.states.ai.remaining).toBe(2);
     expect(q.states.ai.used).toBe(1);
   });
@@ -107,6 +104,6 @@ describe("computeQuotas", () => {
   });
 
   it("limites sem uso ainda é carregando", () => {
-    expect(computeQuotas({ tasks: 30, ai: 3 }, undefined).loading).toBe(true);
+    expect(computeQuotas({ ai: 3 }, undefined).loading).toBe(true);
   });
 });

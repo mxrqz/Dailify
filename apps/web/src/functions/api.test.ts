@@ -65,4 +65,10 @@ describe("request", () => {
     await deleteTask("a/b");
     expect(String(fetchMock.mock.calls[0][0])).toMatch(/\/tasks\/a%2Fb$/);
   });
+
+  it("sends a queued delete's stamp", async () => {
+    respond(200, "{}");
+    await deleteTask("a", undefined, 5);
+    expect(String(fetchMock.mock.calls[0][0])).toMatch(/\/tasks\/a\?updatedAt=5$/);
+  });
 });

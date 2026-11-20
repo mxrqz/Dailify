@@ -18,7 +18,7 @@ import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { AnimatePresence } from "motion/react";
 import { Splash, SPLASH_MIN_MS } from "@/components/splash";
 import { toast } from "sonner";
-import { zoned, zonedAt } from "@/functions/zone";
+import { zoned } from "@/functions/zone";
 import { useSession } from "@/lib/auth";
 import { refreshReminders } from "@/lib/reminders";
 
@@ -77,12 +77,10 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     }
   };
 
-  // Efeito próprio porque quota de escopo mensal vira com o mês de HOJE (não o do dia olhado: a
-  // cota que bloqueia a criação é a do mês corrente); os outros dados, não.
+  // Its own effect because the AI credits reset with TODAY's month; the other data doesn't.
   // `quotas` fica undefined se a API falhou — `computeQuotas` trata isso como "ainda carregando",
   // que é o comportamento seguro: a UI se esconde e a criação não é bloqueada.
-  // Relê também no `quotaNonce`, que a revalidação lá embaixo incrementa: `bumpUsage` só sobe,
-  // então sem uma releitura quem cria 30 tarefas e apaga 20 fica travado no 30 a sessão inteira.
+  // Also rereads on `quotaNonce`, which the revalidation below bumps: `bumpUsage` only counts up.
   const now = useNow("day");
   const quotaYear = now.getFullYear();
   const quotaMonth = now.getMonth();
@@ -91,7 +89,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     if (!isLoaded || !userId) return;
     // Virada de mês ou releitura com fetch em voo: a resposta anterior não vale mais.
     let current = true;
-    void getQuotas(zonedAt(quotaYear, quotaMonth)).then(({ quotas }) => {
+    void getQuotas().then(({ quotas }) => {
       if (current && quotas) setQuotas(quotas);
     });
     return () => {

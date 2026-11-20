@@ -13,7 +13,6 @@ import {
   detachOccurrence,
   excludeOccurrence,
 } from "../db/tasks";
-import { enforceCreate } from "../db/limits";
 import { isRecord, type OccurrenceEdit, type Task } from "@dailify/shared";
 import {
   isEpochMs,
@@ -65,8 +64,6 @@ tasks.post("/", async (c) => {
   const clientId = parseClientId(body);
   if (clientId === "invalid") return fail(c, 400, "invalid id");
   const task: Task = { ...parsed.task, id: clientId ?? newTaskId() };
-  const err = await enforceCreate(c.env.DB, userId, c.get("plan"), task);
-  if (err) return fail(c, 429, err);
   // Devolve o que ficou GRAVADO: numa reentrada da fila o upsert pode ter recusado a escrita por
   // ser mais velha que a linha, e o cliente precisa reconciliar com a versão do servidor.
   const stored = await insertTask(c.env.DB, userId, task);
@@ -155,8 +152,13 @@ tasks.delete("/:id", async (c) => {
     return c.json({ series } satisfies OccurrenceEdit);
   }
 
-  await deleteTask(c.env.DB, userId, id);
-  if (linked) c.executionCtx.waitUntil(propagate(c.env, userId, linked.links, linked.before, null));
+  const updatedAt = parseOccurrence(c.req.query("updatedAt"));
+  if (updatedAt === "invalid") return fail(c, 400, "invalid updatedAt");
+  // 204 either way: a stale delete that lost to a newer edit is done, and the task comes back on
+  // the next read.
+  const deleted = await deleteTask(c.env.DB, userId, id, updatedAt);
+  if (linked && deleted)
+    c.executionCtx.waitUntil(propagate(c.env, userId, linked.links, linked.before, null));
   return c.body(null, 204);
 });
 

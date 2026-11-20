@@ -6,13 +6,6 @@ let userId = "vu1";
 vi.mock("openai", () => import("./openai"));
 import { openaiMock } from "./openai";
 
-// Every plan has unlimited tasks today, so a quota stop mid-batch can only be staged.
-vi.mock("../src/db/limits", async (importOriginal) => {
-  const actual = await importOriginal<typeof import("../src/db/limits")>();
-  return { ...actual, enforceCreate: vi.fn(actual.enforceCreate) };
-});
-import { enforceCreate } from "../src/db/limits";
-
 vi.mock("../src/auth", () => import("./session"));
 import { mockSession } from "./session";
 mockSession(() => ({ id: userId, plan: role }));
@@ -82,36 +75,6 @@ describe("POST /tasks/voice", () => {
 
     const saved = await getTask(env.DB, "vu1", meeting.id);
     expect(saved).toMatchObject({ title: "Reunião com o time", date: meeting.date });
-  });
-
-  it("returns the tasks already created when the task quota stops a later draft", async () => {
-    role = "max";
-    userId = "vu-partial";
-    await saveSettings(env.DB, userId, { timeZone: "UTC" });
-    vi.mocked(enforceCreate)
-      .mockResolvedValueOnce(null)
-      .mockResolvedValueOnce("Monthly Tasks Limit Reached");
-    openaiMock.audio.transcriptions.create.mockResolvedValue({ text: "duas coisas talvez" });
-    openaiMock.responses.create.mockResolvedValue({
-      output_text: JSON.stringify({
-        intent: "create",
-        reply: "Anotei!",
-        tasks: ["Primeira", "Segunda"].map((title) => ({
-          title,
-          duration: "",
-          repeat: "Off",
-          date: "2026-08-03T14:00:00",
-          links: [],
-        })),
-      }),
-    });
-
-    const res = await audioRequest();
-    expect(res.status).toBe(200);
-    const body = await res.json<{ tasks: Task[] }>();
-    expect(body.tasks.map((t) => t.title)).toEqual(["Primeira"]);
-    expect(await getTask(env.DB, userId, body.tasks[0].id)).toMatchObject({ title: "Primeira" });
-    userId = "vu1";
   });
 
   it("transcribes with the successor of gpt-4o-mini-transcribe", async () => {

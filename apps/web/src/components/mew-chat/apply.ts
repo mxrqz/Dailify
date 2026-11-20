@@ -25,7 +25,7 @@ export function writes(out: Task[], into: Task[]) {
  * Optimistic; any refused write rolls the screen back and returns `false`.
  */
 export function useMewApply() {
-  const { setTasks, setUndatedTasks, loadedMonths, bumpUsage } = useDailify();
+  const { setTasks, setUndatedTasks, loadedMonths } = useDailify();
   const pushCalendar = useCalendarPush();
 
   // Functional: the writes take a round-trip, and whatever landed meanwhile must survive.
@@ -57,7 +57,6 @@ export function useMewApply() {
       return false;
     }
 
-    plan.create.forEach(() => bumpUsage("tasks"));
     void setMewAction(block.id, way === "do" ? "done" : "undone");
     const calendar = block.targets?.find((x) => x.provider === "google-calendar");
     if (way === "do" && calendar)

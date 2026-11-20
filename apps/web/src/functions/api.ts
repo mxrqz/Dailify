@@ -211,8 +211,13 @@ export async function deleteTask(
   /** Epoch-ms da ocorrência quando a exclusão vale só pra ela: sai da série via `exdates`, e a
    *  série volta em `series` para o cliente reexpandir o mês sem aquele dia. */
   occurrence?: number,
+  /** When the delete was made: a queued one loses to an edit the server stored after it. */
+  updatedAt?: number,
 ): Promise<{ series?: Task; error?: ApiError }> {
-  const query = occurrence === undefined ? "" : `?occurrence=${occurrence}`;
+  const params = new URLSearchParams();
+  if (occurrence !== undefined) params.set("occurrence", String(occurrence));
+  if (updatedAt !== undefined) params.set("updatedAt", String(updatedAt));
+  const query = params.size ? `?${params}` : "";
   const { data, error } = await request<OccurrenceEdit>(
     `/tasks/${encodeURIComponent(id)}${query}`,
     {
@@ -289,10 +294,8 @@ export async function removePushSubscription(endpoint: string): Promise<void> {
 // dailifyContext imports it from here.
 export type { QuotaSnapshot };
 
-export async function getQuotas(
-  month: Date,
-): Promise<{ quotas?: QuotaSnapshot; error?: ApiError }> {
-  const { data, error } = await request<QuotaSnapshot>(`/permissions?month=${monthKey(month)}`);
+export async function getQuotas(): Promise<{ quotas?: QuotaSnapshot; error?: ApiError }> {
+  const { data, error } = await request<QuotaSnapshot>("/permissions");
   return { quotas: data, error };
 }
 

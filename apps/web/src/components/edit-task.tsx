@@ -196,14 +196,7 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
       }
       updated = { ...seriesOf(taskData), date: patch.date, alert: seriesAlert };
     } else if (error || !updated) {
-      // Only a quota refusal is fixed by a plan; any other failure gets no Upgrade button.
-      toast(copy.form.createError, {
-        description: error?.message,
-        action:
-          error?.status === 429
-            ? { label: copy.form.upgrade, onClick: () => navigate("/premium") }
-            : undefined,
-      });
+      toast(copy.form.createError, { description: error?.message });
       setLoading(false);
       return;
     } else {

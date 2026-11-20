@@ -20,7 +20,7 @@ import {
 } from "./db/user";
 
 const LINK_TTL_S = 600;
-const EMAIL_COOLDOWN_MS = 60_000;
+export const EMAIL_COOLDOWN_MS = 60_000;
 const VERIFY = "/magic-link/verify";
 
 /** `next` do link web: só path+search, e só se o callbackURL for da própria WEB_URL. */

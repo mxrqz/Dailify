@@ -16,7 +16,7 @@ import {
   stripeClient,
 } from "../lib/stripe";
 import { fail } from "../lib/errors";
-import { parseMonth, readJson } from "../lib/task-input";
+import { readJson } from "../lib/task-input";
 import { returnBase } from "../lib/origin";
 
 const billing = new Hono<AppEnv>();
@@ -25,12 +25,9 @@ billing.use("/billing/*", requireAuth, rateLimit("API_LIMITER"));
 billing.use("/permissions", requireAuth, rateLimit("API_LIMITER"));
 
 billing.get("/permissions", async (c) => {
-  const userId = c.get("userId");
-  // The client sends the month it is viewing: a monthly quota is counted against that month.
-  const at = parseMonth(c.req.query("month")) ?? new Date();
   return c.json({
     limits: limitsFor(c.get("plan")),
-    usage: await readAllUsage(c.env.DB, userId, at),
+    usage: await readAllUsage(c.env.DB, c.get("userId")),
   } satisfies QuotaSnapshot);
 });
 

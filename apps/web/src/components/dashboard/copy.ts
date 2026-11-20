@@ -33,7 +33,6 @@ export const copy = {
 
   quota: {
     names: {
-      tasks: "Tarefas",
       ai: "Créditos de IA",
     } satisfies Record<QuotaKey, string>,
     summary: "{used} de {limit} {name}",
@@ -174,9 +173,6 @@ export const copy = {
     noChanges: "Nenhuma alteração para salvar",
     createError: "Não foi possível salvar a tarefa",
     authError: "Sua sessão expirou. Entre novamente.",
-    limitReached: "Limite de tarefas atingido",
-    limitReachedHint: "Você atingiu o limite do seu plano neste mês.",
-    upgrade: "Assinar",
     scopeTitle: "Esta tarefa se repete",
     scopeDescription: "O que você quer alterar?",
     scopeOccurrence: "Só esta ocorrência",
