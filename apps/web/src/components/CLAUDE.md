@@ -57,7 +57,8 @@ It owns the task boot. Other code only re-triggers loads (`pages/integration-cal
   today, next month and `selectedDay`. After boot, a `selectedDay` in another month loads only it.
 - Revalidates on `visibilitychange` at most every 30s and at once on `online`; both refetch quotas,
   which are keyed by today's month (`useNow("day")`).
-- The splash holds for `SPLASH_MIN_MS` only when the route mounted while loading.
+- The splash holds for `SPLASH_MIN_MS` only when the route mounted while loading. On exit its Mew
+  flies to `[data-slot="create-dock"] .mew` (the mobile dock); no dock or reduced motion, it fades.
 - `protected-route.render.test.tsx` pins loads-once, queue-before-undated, the deferred cache, the
   splash and the session fallback; extend it when the boot changes.
 
