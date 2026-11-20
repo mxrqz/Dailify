@@ -75,8 +75,8 @@ export function DayList(): JSX.Element {
     ) - 1;
   const canLoadMore = emptyMonths < MAX_EMPTY_MONTHS;
 
-  // Hoje entra também quando há tarefa sem data: o bloco "A qualquer hora" mora nele.
-  const keepStart = start.getTime() === today.getTime() && !!undatedTasks?.length;
+  // Today also stays with undated tasks, even from a past start: "A qualquer hora" lives only there.
+  const keepToday = !!undatedTasks?.length;
   const startKey = start.getTime();
   const days = useMemo(
     () =>
@@ -84,10 +84,9 @@ export function DayList(): JSX.Element {
         start: zoned(startKey),
         end: endOfMonth(addMonths(zoned(nextKey), -1)),
         tasks: tasks ?? [],
-        extra: targetDay ? [targetDay] : [],
-        keepStart,
+        extra: [...(targetDay ? [targetDay] : []), ...(keepToday ? [today] : [])],
       }),
-    [startKey, nextKey, tasks, targetDay, keepStart],
+    [startKey, nextKey, tasks, targetDay, keepToday, today],
   );
 
   const loadMonthOf = useEffectEvent(loadMonth);

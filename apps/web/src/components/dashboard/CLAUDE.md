@@ -94,7 +94,7 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
 
 - `DayList` spans today (or an earlier `selectedDay`) to the end of the contiguous `loadedMonths`
   (`nextMonthToLoad`): one `DaySection` per day with tasks, plus `targetDay`. Today stays when
-  undated tasks exist, because `AnytimeBlock` lives in today's section.
+  undated tasks exist (also from an earlier `selectedDay`), because `AnytimeBlock` lives in today's section.
 - The sentinel uses `rootMargin: "0px 0px 200% 0px"` and gives up after `MAX_EMPTY_MONTHS` (12)
   months without a task. The skeleton shows only at boot (`isLoading && !tasks`).
 - `dayAnchorId(day)` = `day-yyyy-MM-dd`, absent in calendar mode. `DayList` scrolls to it when

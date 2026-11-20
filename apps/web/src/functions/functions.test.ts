@@ -297,13 +297,12 @@ describe("listDays", () => {
     expect(days).toEqual([new Date(2026, 7, 12), new Date(2026, 8, 5)]);
   });
 
-  test("o início entra sem tarefa quando pedido; dias extras também, sem duplicar", () => {
+  test("dias extras entram sem tarefa, sem duplicar", () => {
     const days = listDays({
       start,
       end,
       tasks: [at(7, 20)],
-      keepStart: true,
-      extra: [new Date(2026, 7, 15, 13), new Date(2026, 7, 20)],
+      extra: [start, new Date(2026, 7, 15, 13), new Date(2026, 7, 20)],
     });
     expect(days).toEqual([new Date(2026, 7, 10), new Date(2026, 7, 15), new Date(2026, 7, 20)]);
   });

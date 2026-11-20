@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { render } from "@testing-library/react";
 import { addMonths, startOfMonth } from "date-fns";
 
+import { copy } from "./copy";
 import { DayList } from "./day-list";
 
 const dailify = vi.hoisted((): { current: Record<string, unknown> } => ({ current: {} }));
@@ -10,7 +11,7 @@ vi.mock("@/components/dailifyContext", () => ({ useDailify: () => dailify.curren
 // A Mew do primeiro uso observa a própria visibilidade: sairia no lugar da sentinela.
 vi.mock("@/components/mew/mew", () => ({ Mew: () => null }));
 vi.mock("@/components/dashboard/day-section", () => ({
-  DaySection: () => <section />,
+  DaySection: ({ day }: { day: Date }) => <section aria-label={day.toDateString()} />,
   TaskSkeletons: () => <div data-testid="skeleton" />,
 }));
 
@@ -94,5 +95,22 @@ describe("<DayList>", () => {
     });
     rerender(<DayList />);
     expect(fire).toBeUndefined();
+  });
+
+  it("a non-current month with only undated tasks shows listEmpty", () => {
+    const past = new Date(2026, 7, 10);
+    setup({ selectedDay: past, undatedTasks: [{ id: "u" }], loadedMonths: [startOfMonth(past)] });
+    const { getByText } = render(<DayList />);
+    expect(getByText(copy.day.listEmpty)).toBeInTheDocument();
+  });
+
+  it("from a past day, today stays in the list when undated tasks exist", () => {
+    const { now } = setup({
+      selectedDay: new Date(2026, 8, 10),
+      undatedTasks: [{ id: "u" }],
+      loadedMonths: [new Date(2026, 8, 1), startOfMonth(now0())],
+    });
+    const { getByRole } = render(<DayList />);
+    expect(getByRole("region", { name: now.toDateString() })).toBeInTheDocument();
   });
 });
