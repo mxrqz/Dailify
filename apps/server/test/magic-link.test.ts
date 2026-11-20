@@ -10,6 +10,7 @@ vi.mock("../src/lib/email", () => ({ sendEmail }));
 import { env } from "cloudflare:test";
 import { auth } from "../src/auth";
 import { sha256b64url as challengeOf } from "../src/lib/encoding";
+import { sweepMagicLinks } from "../src/db/user";
 
 const web = env.ALLOWED_ORIGIN.split(",")[0];
 
@@ -96,5 +97,31 @@ describe("magic link", () => {
         .catch((e: unknown) => e);
       expect(err).toMatchObject({ statusCode: 400 });
     });
+  });
+});
+
+describe("sweepMagicLinks", () => {
+  it("drops expired challenges and sends past the cooldown, keeping live ones", async () => {
+    const now = 1_000_000;
+    await env.DB.batch([
+      env.DB.prepare(
+        `INSERT INTO magic_link_challenge (token_hash, challenge, expires_at) VALUES
+         ('sw-old', 'c', ?), ('sw-live', 'c', ?)`,
+      ).bind(now - 1, now + 1),
+      env.DB.prepare(
+        `INSERT INTO magic_link_sent (email, sent_at) VALUES ('sw-old@x', ?), ('sw-live@x', ?)`,
+      ).bind(now - 60_000, now - 59_999),
+    ]);
+
+    await sweepMagicLinks(env.DB, now, 60_000);
+
+    const challenges = await env.DB.prepare(
+      `SELECT token_hash FROM magic_link_challenge WHERE token_hash LIKE 'sw-%'`,
+    ).all<{ token_hash: string }>();
+    const sent = await env.DB.prepare(
+      `SELECT email FROM magic_link_sent WHERE email LIKE 'sw-%'`,
+    ).all<{ email: string }>();
+    expect(challenges.results.map((r) => r.token_hash)).toEqual(["sw-live"]);
+    expect(sent.results.map((r) => r.email)).toEqual(["sw-live@x"]);
   });
 });

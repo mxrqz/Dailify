@@ -12,6 +12,8 @@ import integrations from "./routes/integrations";
 import mew from "./routes/mew";
 import reminders from "./routes/reminders";
 import { dispatchAlerts } from "./alerts";
+import { EMAIL_COOLDOWN_MS } from "./auth-options";
+import { sweepMagicLinks } from "./db/user";
 import { syncOldest } from "./integrations/google-calendar/sync";
 import { fail } from "./lib/errors";
 import { isAllowedOrigin } from "./lib/origin";
@@ -94,5 +96,7 @@ export default Object.assign(app, {
   scheduled: async (_controller: ScheduledController, env: Env, ctx: ExecutionContext) => {
     ctx.waitUntil(dispatchAlerts(env));
     ctx.waitUntil(syncOldest(env));
+    // Its own waitUntil: a failed sweep never holds back alerts or sync.
+    ctx.waitUntil(sweepMagicLinks(env.DB, Date.now(), EMAIL_COOLDOWN_MS));
   },
 });

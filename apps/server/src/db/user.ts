@@ -116,6 +116,18 @@ export async function saveMagicLinkChallenge(
   ]);
 }
 
+/** Cron: expired challenges and sends past their cooldown, of every address at once. */
+export async function sweepMagicLinks(
+  db: D1Database,
+  now: number,
+  cooldownMs: number,
+): Promise<void> {
+  await db.batch([
+    db.prepare(`DELETE FROM magic_link_challenge WHERE expires_at<?`).bind(now),
+    db.prepare(`DELETE FROM magic_link_sent WHERE sent_at<=?`).bind(now - cooldownMs),
+  ]);
+}
+
 export async function getMagicLinkChallenge(
   db: D1Database,
   tokenHash: string,
