@@ -29,6 +29,8 @@ const buttonVariants = cva(
           "h-11 rounded-sm px-4 text-subhead has-[>svg]:px-3.5 [&_svg:not([class*='size-'])]:size-4.5",
         lg: "h-13 rounded-md px-5 text-body [&_svg:not([class*='size-'])]:size-5",
         icon: "size-11 rounded-sm [&_svg:not([class*='size-'])]:size-5",
+        // Desktop toolbars and panel headers, where the pointer is fine.
+        "icon-sm": "size-8 rounded-sm [&_svg:not([class*='size-'])]:size-4.5",
         // The round icon buttons of a mobile top bar.
         bar: "size-11 rounded-full [&_svg:not([class*='size-'])]:size-5.5",
       },

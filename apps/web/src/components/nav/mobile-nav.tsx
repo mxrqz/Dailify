@@ -42,7 +42,7 @@ export function MobileNav(): JSX.Element {
           aria-label={copy.profile.navLabel}
           className="flex min-h-0 flex-1 flex-col overflow-y-auto pb-5"
         >
-          <NavItems upgrade />
+          <NavItems />
         </nav>
       </SheetContent>
     </Sheet>

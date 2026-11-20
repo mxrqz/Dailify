@@ -9,7 +9,8 @@ diff the output and re-apply them. App widgets live in `components/` or `kit/`, 
 ## Hand-edited files (keep this list complete)
 
 - `button.tsx`: variants `default` (brand), `secondary` (fill), `ghost`, `soft-danger`, `link`,
-  plus legacy `outline`. Sizes `sm` 32px, `default` 44px, `lg` 52px, `icon` 44px; the radius grows
+  plus legacy `outline`. Sizes `sm` 32px, `default` 44px, `lg` 52px, `icon` 44px, `icon-sm` 32px
+  (desktop toolbar and side panel); the radius grows
   with height (`rounded-sm` up to 44px, `rounded-md` at 52px). `bar` is the 44px round icon button
   of a mobile top bar (`variant="ghost"`). `loading` (non-`asChild`) shows a
   spinner, keeps the label as an sr-only name, and sets `disabled` + `aria-busy`; use it instead of

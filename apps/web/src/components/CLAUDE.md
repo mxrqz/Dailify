@@ -79,16 +79,22 @@ It owns the task boot. Other code only re-triggers loads (`pages/integration-cal
 ## nav/
 
 - App-shell nav: `Sidebar` is mounted by `components/app-layout.tsx` (md+), `MobileNav` by
-  `components/app-header.tsx` (below md, the glass drawer `Sheet side="left"`).
-- `NavMenu` is props-only and shared by both (items are the `NAV_ITEMS` list); `NavItems` wires
-  session and quotas, and the meter draws `QuotaState.ratio`. `/premium` shares
-  the layout without `ProtectedRoute`, so account, credits and sign-out appear only when logged in.
+  `components/app-header.tsx` (below md, the glass drawer `Sheet side="left"`). On md+ there is no
+  top bar: `AppHeader` is `md:hidden`, and each page's top is `Toolbar` (`app-header.tsx`, sticky,
+  52px, SyncBadge first); `AppLayout` mounts an empty one, `/dashboard` its own with actions.
+- Desktop: `SidebarMenu` (props) / `Sidebar` (wired): brand and history, Hoje (today's open count),
+  Calendário (`?view=calendar`), "Conversar com a Mew" (`openPanel({ kind: "mew" })`), the "Conta"
+  pages, then credits, "Assinar Pro" (Free) and the account `DropdownMenu` (Perfil, Segurança,
+  Sair); signed out, "Entrar". Mobile: `NavMenu` (props, the `NAV_ITEMS` list) / `NavItems`. The
+  meter (`CreditsMeter`) draws `QuotaState.ratio`. `/premium` shares the layout without
+  `ProtectedRoute`, so account, credits and sign-out appear only when logged in.
+- `SidebarItem` lights on path plus search (`to` may carry `?view=calendar`); an item with
+  `onClick` is an action and never lights.
 - The active item is neutral on purpose (brand would compete with the primary action), and nothing
   stays lit on mobile. `alsoActive="/premium"` lights "Planos" though it links to `/billing`.
 - `MobileNav` closes only on a location change, adjusted during render (a link, even to the current
-  route, and the device back); tapping the account or the meter leaves it open. Only the drawer
-  shows Free users the "Assinar" upsell (`NavItems upgrade`); on desktop it lives in `AppHeader`.
-  The credits meter hides while quotas load or when AI is unlimited. Tests assert
+  route, and the device back); tapping the account or the meter leaves it open. Free users get the
+  upsell in both (drawer "Assinar", sidebar "Assinar Pro"). The credits meter hides while quotas load or when AI is unlimited. Tests assert
   `aria-current="page"`.
 
 ## pricing/
