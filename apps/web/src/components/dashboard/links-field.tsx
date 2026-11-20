@@ -5,6 +5,7 @@ import { TASK_LIMITS, meetLink } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { ListGroup, ListRow } from "@/components/kit/list";
+import { Tip } from "@/components/tip";
 import { Input } from "@/components/ui/input";
 import { normalizeUrl } from "@/functions/link-label";
 import { cn } from "@/lib/utils";
@@ -16,7 +17,7 @@ const { urlMax: MAX_URL_LEN } = TASK_LIMITS;
 const iconButtonClass =
   "flex size-8 shrink-0 items-center justify-center rounded-md text-ink-secondary transition-colors duration-fast hover:bg-fill hover:text-ink";
 
-// The error shows on the border (and title), not on a line below, so the panel never grows.
+// The error shows on the border (and a tip), not on a line below, so the panel never grows.
 function UrlInput({
   invalid,
   error,
@@ -24,18 +25,19 @@ function UrlInput({
   ...props
 }: ComponentProps<typeof Input> & { invalid: boolean; error: string }) {
   return (
-    <Input
-      autoFocus
-      maxLength={MAX_URL_LEN}
-      aria-invalid={invalid}
-      title={invalid ? error : undefined}
-      className={cn(
-        "h-10 min-w-0 flex-1 truncate border-separator focus-visible:border-brand-text focus-visible:ring-0",
-        invalid && "border-brand-text",
-        className,
-      )}
-      {...props}
-    />
+    <Tip content={invalid ? error : undefined}>
+      <Input
+        autoFocus
+        maxLength={MAX_URL_LEN}
+        aria-invalid={invalid}
+        className={cn(
+          "h-10 min-w-0 flex-1 truncate border-separator focus-visible:border-brand-text focus-visible:ring-0",
+          invalid && "border-brand-text",
+          className,
+        )}
+        {...props}
+      />
+    </Tip>
   );
 }
 

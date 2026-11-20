@@ -5,9 +5,27 @@ import {
   canResend,
   classifyAuthError,
   initialAuthState,
+  carriedEmail,
   redirectTarget,
   RESEND_COOLDOWN_MS,
+  withEmail,
 } from "./auth-state";
+
+describe("withEmail / carriedEmail", () => {
+  it("adds the trimmed e-mail to the state and keeps the deep link", () => {
+    const from = { pathname: "/billing", search: "" };
+    const state = withEmail({ from }, " ana@x.com ");
+    expect(state).toEqual({ from, email: "ana@x.com" });
+    expect(carriedEmail(state)).toBe("ana@x.com");
+    expect(redirectTarget(state)).toBe("/billing");
+  });
+
+  it("reads nothing from a missing or malformed state", () => {
+    expect(carriedEmail(null)).toBe("");
+    expect(carriedEmail({ email: 42 })).toBe("");
+    expect(withEmail(null, "")).toEqual({ email: "" });
+  });
+});
 
 describe("authReducer", () => {
   it("submit sai de idle pra sending", () => {

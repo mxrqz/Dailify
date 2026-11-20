@@ -2,6 +2,7 @@ import { useRef, useState } from "react";
 
 import { Mew } from "@/components/mew/mew";
 import { MewStatic } from "@/components/mew/mew-static";
+import { ease } from "@/consts/motion";
 import { cn } from "@/lib/utils";
 
 import { copy } from "./copy";
@@ -25,7 +26,11 @@ export function RemindArt() {
     setRing(false);
     await wait(2200);
     setRing(true);
-    note.current?.animate(JIGGLE, { duration: 500, delay: 500, easing: "ease-in-out" });
+    note.current?.animate(JIGGLE, {
+      duration: 500,
+      delay: 500,
+      easing: `cubic-bezier(${ease.standard.join()})`,
+    });
     await wait(2800);
     setRing(false);
     await wait(800);

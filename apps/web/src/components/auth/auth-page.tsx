@@ -1,7 +1,8 @@
+import { useState } from "react";
 import { Helmet } from "react-helmet-async";
-import { Navigate, useSearchParams } from "react-router-dom";
+import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 
-import type { AuthFailure, AuthMode } from "@/components/auth/auth-state";
+import { carriedEmail, type AuthFailure, type AuthMode } from "@/components/auth/auth-state";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { CheckInbox } from "@/components/auth/check-inbox";
 import { copy } from "@/components/auth/copy";
@@ -21,6 +22,8 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
   // O Google que falha volta pra cá via `errorCallbackURL` com `?error=<código>`; a exclusão de
   // conta, com `?error=SESSION_EXPIRED`.
   const oauthError = useSearchParams()[0].get("error");
+  const carried = carriedEmail(useLocation().state);
+  const [email, setEmail] = useState(carried);
   const text = mode === "signUp" ? copy.signUp : copy.signIn;
 
   // O reenvio volta pra `sending` antes de virar `awaitingLink` de novo. Sem o `resendOf`, esse
@@ -62,6 +65,7 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
             crossLinkPrefix: text.crossLinkPrefix,
             crossLinkAction: text.crossLinkAction,
             crossLinkTo: mode === "signUp" ? "/login" : "/signup",
+            crossLinkEmail: email,
           })}
     >
       <Helmet>
@@ -82,7 +86,8 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
             disabled={state.status === "sending"}
             submitLabel={text.submit}
             failure={failure}
-            defaultEmail={state.status === "error" ? state.email : undefined}
+            defaultEmail={(state.status === "error" ? state.email : undefined) ?? carried}
+            onEmailChange={setEmail}
           />
           {/* Google no app é a bd rzz.8: o redirect da webview não volta com a sessão. */}
           {!isTauri() && (

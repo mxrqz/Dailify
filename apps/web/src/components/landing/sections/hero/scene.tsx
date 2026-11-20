@@ -18,7 +18,7 @@ import { Bubble } from "@/components/mew/bubble";
 import { Tail } from "@/components/mew/tail";
 import { Mew } from "@/components/mew/mew";
 import { damp } from "@/components/mew/spring";
-import { duration } from "@/consts/motion";
+import { duration, ease } from "@/consts/motion";
 import { cn } from "@/lib/utils";
 
 import { type RowKind, copy } from "./copy";
@@ -59,6 +59,8 @@ const ICONS: Record<RowKind, { Icon: LucideIcon; tone: string }> = {
   bell: { Icon: Bell, tone: "text-ink-secondary" },
 };
 
+const STANDARD = `cubic-bezier(${ease.standard.join()})`;
+
 const reduced = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
 // loops decorativos sem keyframes no CSS: ref callback estável (módulo) dispara um WAAPI infinito
 const loop =
@@ -75,7 +77,7 @@ const DOTS = [0, 150, 300].map((delay) =>
       { opacity: 0.35, translate: "0 0", offset: 0.6 },
       { opacity: 0.35, translate: "0 0" },
     ],
-    { duration: 1200, delay, easing: "ease-in-out" },
+    { duration: 1200, delay, easing: STANDARD },
   ),
 );
 const SCRIBBLE = loop(
@@ -85,7 +87,7 @@ const SCRIBBLE = loop(
     { rotate: "8deg", translate: "1px 0", offset: 0.75 },
     { rotate: "0deg", translate: "0 0" },
   ],
-  { duration: 900, easing: "ease-in-out" },
+  { duration: 900, easing: STANDARD },
 );
 const SHINE = loop([{ backgroundPosition: "0 0" }, { backgroundPosition: "-200% 0" }], {
   duration: 1600,
@@ -94,7 +96,7 @@ const SHINE = loop([{ backgroundPosition: "0 0" }, { backgroundPosition: "-200% 
 // a mola do DS (`--motion-ease-spring`) pro WAAPI, que não lê `var()`
 const spring = () =>
   getComputedStyle(document.documentElement).getPropertyValue("--motion-ease-spring").trim() ||
-  "ease-out";
+  `cubic-bezier(${ease.out.join()})`;
 
 // a casca do balão voa em arco até o ícone da agenda: X sai rápido, Y cai no fim, vira o ícone
 function fly(wrap: HTMLElement, target: HTMLElement) {
@@ -240,7 +242,10 @@ export function HeroScene() {
         // pouso: a agenda dá um "bump" e já mostra o dia novo
         setView((s) => ({ ...s, calDay: sc.cal }));
         cal.current
-          ?.animate([{ scale: 1 }, { scale: 0.8 }], { duration: 90, easing: "ease-in" })
+          ?.animate([{ scale: 1 }, { scale: 0.8 }], {
+            duration: 90,
+            easing: `cubic-bezier(${ease.exit.join()})`,
+          })
           .finished.then(() =>
             cal.current?.animate([{ scale: 0.8 }, { scale: 1 }], {
               duration: 700,

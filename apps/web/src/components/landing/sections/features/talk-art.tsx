@@ -4,6 +4,7 @@ import { useRef, useState } from "react";
 
 import { MessageBox } from "@/components/mew/message-box";
 import { MewStatic } from "@/components/mew/mew-static";
+import { ease } from "@/consts/motion";
 import { cn } from "@/lib/utils";
 
 import { copy } from "./copy";
@@ -115,7 +116,7 @@ export function TalkArt() {
               className="absolute -inset-1.5 rounded-full border-2 border-brand"
               initial={{ opacity: 0.8, scale: 0.85 }}
               animate={{ opacity: 0, scale: 1.35 }}
-              transition={{ duration: 1.1, repeat: Infinity, ease: "easeOut" }}
+              transition={{ duration: 1.1, repeat: Infinity, ease: ease.out }}
             />
           )}
           <Mic

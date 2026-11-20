@@ -35,7 +35,8 @@ The `/login` and `/signup` screens, plus the shell the hand-off pages reuse. Rep
 - Better Auth calls are read as `{ data, error }`. A throw maps to `classifyAuthError(null)`.
 - Every send and every `reset` bumps the `runId` ref, so a slow send that resolves after "Usar outro
   e-mail" is a no-op. That is also why the back button stays enabled while a resend is in flight.
-- `from` = `redirectTarget(location.state)`. The AuthShell cross-link forwards `location.state`, and
+- `from` = `redirectTarget(location.state)`. The AuthShell cross-link forwards `location.state` plus the typed
+  e-mail (`withEmail`/`carriedEmail`, router state only, never the URL), and
   on the web `from` becomes the `callbackURL`. In Tauri, `startNativeMagicLink`
   (`lib/native-auth.ts`) sends a device-bound link with no callback.
 - Google is hidden in Tauri (bd `Dailify-rzz.8`: the webview redirect doesn't come back with the
@@ -70,6 +71,6 @@ The `/login` and `/signup` screens, plus the shell the hand-off pages reuse. Rep
 ## Tests
 
 - `bun run test src/components/auth` from `apps/web` runs `auth-state.test.ts` and `copy.test.ts`.
-- `AuthPage` and `CheckInbox` have no render test yet
+- `auth-page.render.test.tsx` covers the cross-link; `CheckInbox` has no render test yet
   ([RULES.md, Testing](../../../../../RULES.md#testing)). The hand-off pages have theirs in
   `pages/`.
