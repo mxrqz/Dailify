@@ -13,7 +13,6 @@ import {
   detachOccurrence,
   excludeOccurrence,
 } from "../db/tasks";
-import { enforceCreate } from "../db/limits";
 import { isRecord, type OccurrenceEdit, type Task } from "@dailify/shared";
 import {
   isEpochMs,
@@ -65,8 +64,6 @@ tasks.post("/", async (c) => {
   const clientId = parseClientId(body);
   if (clientId === "invalid") return fail(c, 400, "invalid id");
   const task: Task = { ...parsed.task, id: clientId ?? newTaskId() };
-  const err = await enforceCreate(c.env.DB, userId, c.get("plan"), task);
-  if (err) return fail(c, 429, err);
   // Devolve o que ficou GRAVADO: numa reentrada da fila o upsert pode ter recusado a escrita por
   // ser mais velha que a linha, e o cliente precisa reconciliar com a versão do servidor.
   const stored = await insertTask(c.env.DB, userId, task);

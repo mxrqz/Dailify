@@ -12,7 +12,6 @@ export type QuotaScope = "month";
  * cada mês-calendário.
  */
 export const QUOTAS = {
-  tasks: { scope: "month", limits: { free: -1, pro: -1, max: -1, admin: -1 } },
   ai: { scope: "month", limits: { free: 30, pro: 300, max: 1000, admin: -1 } },
 } as const satisfies Record<string, { scope: QuotaScope; limits: Record<Role, number> }>;
 
@@ -35,7 +34,6 @@ export interface QuotaSnapshot {
 
 /** The `error` of an exhausted quota's 403/429; older app builds compare it, new ones read the `code`. */
 export const QUOTA_ERRORS: Record<QuotaKey, string> = {
-  tasks: "Monthly Tasks Limit Reached",
   ai: "AI Credits Limit Reached",
 };
 

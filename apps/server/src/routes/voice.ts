@@ -7,7 +7,7 @@ import { rateLimit } from "../middleware/rate-limit";
 import { getSettings } from "../db/settings";
 import { draftToTask, interpretText, transcribe } from "../lib/openai";
 import { insertTask } from "../db/tasks";
-import { aiQuota, debitAi, enforceCreate } from "../db/limits";
+import { aiQuota, debitAi } from "../db/limits";
 import { aiTargets } from "../db/integrations";
 import { fail } from "../lib/errors";
 import { readJson, validZone } from "../lib/task-input";
@@ -94,11 +94,6 @@ voice.post("/voice", requireAuth, rateLimit("AI_LIMITER"), async (c) => {
   const tasks: Task[] = [];
   for (const draft of ai.drafts) {
     const task = draftToTask(draft, timezone, now);
-    const err = await enforceCreate(c.env.DB, userId, c.get("plan"), task);
-    // The credit is spent: once a draft is stored, a quota stop answers with what was created.
-    if (err && !tasks.length) return fail(c, 429, err);
-    if (err) break;
-
     const stored = await insertTask(c.env.DB, userId, task);
     if (stored) tasks.push(stored);
   }

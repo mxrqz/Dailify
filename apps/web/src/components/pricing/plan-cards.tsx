@@ -23,11 +23,14 @@ import { copy } from "./copy";
  */
 export function planFeatures(role: PlanRole): string[] {
   const limits = limitsFor(role);
-  return QUOTA_KEYS.filter((key) => limits[key] !== 0).map((key) =>
-    limits[key] < 0
-      ? copy.features.unlimited[key]
-      : fill(copy.features.finite[key], { n: limits[key].toLocaleString("pt-BR") }),
-  );
+  return [
+    copy.features.tasks,
+    ...QUOTA_KEYS.filter((key) => limits[key] !== 0).map((key) =>
+      limits[key] < 0
+        ? copy.features.unlimited[key]
+        : fill(copy.features.finite[key], { n: limits[key].toLocaleString("pt-BR") }),
+    ),
+  ];
 }
 
 export type Cycle = "monthly" | "yearly";

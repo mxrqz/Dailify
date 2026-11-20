@@ -8,9 +8,7 @@ import {
   type QuotaLimits,
   type QuotaUsage,
   type Role,
-  type Task,
 } from "@dailify/shared";
-import { countMonthlyTasks } from "./tasks";
 import { bumpStoredUsage, periodFor, readStoredUsage } from "./usage";
 
 /** Barra antes de qualquer chamada à OpenAI. Bloqueado (limite 0) e esgotado: sem crédito, 403/429. */
@@ -20,7 +18,7 @@ export async function aiQuota(
   plan: Role,
 ): Promise<{ status: 403 | 429; error: string; code: ApiErrorCode } | null> {
   const limits = limitsFor(plan);
-  const error = await enforce(db, userId, limits, "ai", new Date());
+  const error = await enforce(db, userId, limits, "ai");
   if (!error) return null;
   return limits.ai === 0
     ? { status: 403, error, code: API_ERROR.aiBlocked }
@@ -31,14 +29,11 @@ export async function aiQuota(
 export const debitAi = (db: D1Database, userId: string) =>
   bumpStoredUsage(db, userId, "ai", periodFor(new Date()));
 
-type Counter = (db: D1Database, userId: string, at: Date) => Promise<number>;
+type Counter = (db: D1Database, userId: string) => Promise<number>;
 
 /** Uma entrada por quota do registro — quota nova sem contador não compila. */
 const COUNTERS: Record<QuotaKey, Counter> = {
-  tasks: (db, userId, at) => countMonthlyTasks(db, userId, at),
-  // `at` é a âncora do que se CONTA: pra `tasks` é a data da tarefa, que varia de propósito. Crédito
-  // de IA é ancorado em AGORA — "o mês em que o pedido foi feito" —, então ignora o `at` e lê o mês
-  // do servidor; senão o cliente navegando pro mês que vem via o medidor de créditos zerar sozinho.
+  // Credit is anchored to NOW (the month the request was made), never to a month the client views.
   ai: (db, userId) => readStoredUsage(db, userId, "ai", periodFor(new Date())),
 };
 
@@ -47,30 +42,20 @@ export async function enforce(
   userId: string,
   limits: QuotaLimits,
   key: QuotaKey,
-  at: Date,
 ): Promise<string | null> {
   const limit = limits[key];
   if (limit < 0) return null; // ilimitado: nem vale a query
-  const used = await COUNTERS[key](db, userId, at);
+  const used = await COUNTERS[key](db, userId);
   return used >= limit ? QUOTA_ERRORS[key] : null;
 }
 
-export async function readAllUsage(db: D1Database, userId: string, at: Date): Promise<QuotaUsage> {
+export async function readAllUsage(db: D1Database, userId: string): Promise<QuotaUsage> {
   const entries = await Promise.all(
-    QUOTA_KEYS.map(async (key) => [key, await COUNTERS[key](db, userId, at)] as const),
+    QUOTA_KEYS.map(async (key) => [key, await COUNTERS[key](db, userId)] as const),
   );
   // Literal com todas as chaves, não Record<string, number>: sem "as", uma quota nova sem entrada
   // aqui não compila — o mesmo raciocínio do COUNTERS acima.
-  const usage: QuotaUsage = { tasks: 0, ai: 0 };
+  const usage: QuotaUsage = { ai: 0 };
   for (const [key, used] of entries) usage[key] = used;
   return usage;
-}
-
-export async function enforceCreate(
-  db: D1Database,
-  userId: string,
-  role: Role,
-  task: Task,
-): Promise<string | null> {
-  return enforce(db, userId, limitsFor(role), "tasks", new Date(task.date));
 }

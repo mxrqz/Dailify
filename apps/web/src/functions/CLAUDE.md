@@ -22,7 +22,7 @@ Each has a colocated `<module>.test.ts`, except `push.ts`.
   `revert-task`.
 - Imports: shared, date libs, `@/consts`, `@/lib`, siblings, `components/*/copy.ts`, `import type`
   from components.
-- A `month: Date` parameter (`getTasksForMonth`, `getQuotas`, `mergeMonth`, the `months` of
+- A `month: Date` parameter (`getTasksForMonth`, `mergeMonth`, the `months` of
   `upsertTaskWithRecurrence`) must be a zoned month: its year and month are read in its own zone.
 
 ## api.ts contract

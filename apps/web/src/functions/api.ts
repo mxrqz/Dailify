@@ -289,10 +289,8 @@ export async function removePushSubscription(endpoint: string): Promise<void> {
 // dailifyContext imports it from here.
 export type { QuotaSnapshot };
 
-export async function getQuotas(
-  month: Date,
-): Promise<{ quotas?: QuotaSnapshot; error?: ApiError }> {
-  const { data, error } = await request<QuotaSnapshot>(`/permissions?month=${monthKey(month)}`);
+export async function getQuotas(): Promise<{ quotas?: QuotaSnapshot; error?: ApiError }> {
+  const { data, error } = await request<QuotaSnapshot>("/permissions");
   return { quotas: data, error };
 }
 

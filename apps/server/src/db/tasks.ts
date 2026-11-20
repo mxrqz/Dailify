@@ -189,18 +189,6 @@ export async function getUndatedTasks(db: D1Database, userId: string): Promise<T
   return results.map(rowToTask);
 }
 
-export async function countMonthlyTasks(
-  db: D1Database,
-  userId: string,
-  month: Date,
-): Promise<number> {
-  const row = await db
-    .prepare(`SELECT COUNT(*) as n FROM tasks WHERE user_id=? AND date>=? AND date<=?`)
-    .bind(userId, startOfMonthMs(month), endOfMonthMs(month))
-    .first<{ n: number }>();
-  return row?.n ?? 0;
-}
-
 export async function getTask(db: D1Database, userId: string, id: string): Promise<Task | null> {
   const r = await db
     .prepare(`SELECT * FROM tasks WHERE user_id=? AND id=?`)

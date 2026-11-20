@@ -33,7 +33,7 @@ import { copy as pricingCopy } from "@/components/pricing/copy";
 const session = (user: { plan?: string }) =>
   useSession.mockReturnValue({ data: { user: { id: "u1", ...user } }, refetch: vi.fn() });
 
-const NO_USAGE: QuotaUsage = { tasks: 0, ai: 0 };
+const NO_USAGE: QuotaUsage = { ai: 0 };
 
 const FREE = { limits: limitsFor("free"), usage: NO_USAGE };
 const MAX = { limits: limitsFor("max"), usage: NO_USAGE };
@@ -96,10 +96,7 @@ describe("<BillingPage>", () => {
     renderPage();
 
     const card = within(currentPlanCard());
-    expect(card.getByText(copy.quota.names.tasks)).toBeInTheDocument();
     expect(card.getByText(`0 de ${limitsFor("free").ai}`)).toBeInTheDocument();
-    // só tarefas é ilimitada no Free
-    expect(card.getByText(pricingCopy.account.unlimited.tasks)).toBeInTheDocument();
     expect(card.queryByText(pricingCopy.account.unlimited.ai)).not.toBeInTheDocument();
   });
 
@@ -118,8 +115,7 @@ describe("<BillingPage>", () => {
 
     const card = within(currentPlanCard());
     expect(screen.getByText(pricingCopy.account.title)).toBeInTheDocument();
-    expect(card.queryByText(copy.quota.names.tasks)).not.toBeInTheDocument();
-    expect(card.queryByText(pricingCopy.account.unlimited.tasks)).not.toBeInTheDocument();
+    expect(card.queryByText(copy.quota.names.ai)).not.toBeInTheDocument();
   });
 
   it("assinante vê o plano, a próxima cobrança e o botão de gerenciar", () => {
@@ -142,8 +138,7 @@ describe("<BillingPage>", () => {
     expect(screen.getByText(pricingCopy.account.nextCharge)).toBeInTheDocument();
 
     const card = within(currentPlanCard());
-    // tarefas são ilimitadas no Max; os créditos de IA TÊM teto mesmo no plano de cima.
-    expect(card.getByText(pricingCopy.account.unlimited.tasks)).toBeInTheDocument();
+    // AI credits have a ceiling even on the top plan.
     expect(card.getByText(`0 de ${limitsFor("max").ai}`)).toBeInTheDocument();
   });
 
@@ -201,8 +196,8 @@ describe("<BillingPage>", () => {
       // Limites fixos: o teste é do ARIA, não da tabela de planos.
       context({
         quotas: {
-          limits: { tasks: 30, ai: 5 },
-          usage: { ...NO_USAGE, tasks: 15 },
+          limits: { ai: 30 },
+          usage: { ai: 15 },
         },
       }),
     );
@@ -210,7 +205,7 @@ describe("<BillingPage>", () => {
 
     const bars = within(currentPlanCard()).getAllByRole("progressbar");
 
-    // 15 de 30 tarefas = 50%
+    // 15 of 30 credits = 50%
     expect(bars[0]).toHaveAttribute("aria-valuenow", "50");
     expect(bars[0]).toHaveAttribute("aria-valuemax", "100");
     expect(bars[0]).toHaveAttribute("data-state", "loading");
