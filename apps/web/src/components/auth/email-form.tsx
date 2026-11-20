@@ -10,8 +10,10 @@ export function EmailForm({
   submitLabel,
   failure,
   defaultEmail,
+  onEmailChange,
 }: {
   onSubmit: (email: string) => void;
+  onEmailChange?: (email: string) => void;
   disabled: boolean;
   submitLabel: string;
   failure?: AuthFailure;
@@ -41,6 +43,7 @@ export function EmailForm({
           required
           autoComplete="email"
           defaultValue={defaultEmail}
+          onChange={(e) => onEmailChange?.(e.target.value)}
           placeholder={copy.shell.emailPlaceholder}
           className="h-13 rounded-md border-0 bg-fill px-4 text-body shadow-none placeholder:text-ink-tertiary md:text-body"
           aria-invalid={invalidValue}

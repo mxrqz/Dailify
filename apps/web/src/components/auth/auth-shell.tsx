@@ -2,6 +2,7 @@ import { ChevronLeftIcon } from "lucide-react";
 import type { ReactNode } from "react";
 import { Link, useLocation } from "react-router-dom";
 
+import { withEmail } from "@/components/auth/auth-state";
 import { copy } from "@/components/auth/copy";
 import { Mew, type MewMood } from "@/components/mew/mew";
 import { isTauri } from "@/lib/platform";
@@ -53,6 +54,7 @@ export function AuthShell({
   crossLinkPrefix,
   crossLinkAction,
   crossLinkTo,
+  crossLinkEmail = "",
   onBack,
   children,
 }: {
@@ -68,6 +70,8 @@ export function AuthShell({
   crossLinkPrefix?: string;
   crossLinkAction?: string;
   crossLinkTo?: string;
+  /** What the user typed so far, so switching login <-> signup doesn't make them retype it. */
+  crossLinkEmail?: string;
   /** O voltar vira botão (a caixa de entrada volta pro formulário); sem isso, vai pra landing. */
   onBack?: () => void;
   children: ReactNode;
@@ -114,7 +118,7 @@ export function AuthShell({
             {crossLinkPrefix}{" "}
             <Link
               to={crossLinkTo}
-              state={location.state}
+              state={withEmail(location.state, crossLinkEmail)}
               className="inline-flex min-h-11 items-center font-semibold text-ink hover:underline"
             >
               {crossLinkAction}

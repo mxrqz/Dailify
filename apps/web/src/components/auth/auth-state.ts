@@ -93,6 +93,16 @@ export function redirectTarget(state: unknown): string {
   return internalPath(pathname + search);
 }
 
+// The login <-> signup cross-link carries the typed e-mail in router state, never in the URL.
+export function withEmail(state: unknown, email: string): object {
+  return { ...(typeof state === "object" && state !== null ? state : {}), email: email.trim() };
+}
+
+export function carriedEmail(state: unknown): string {
+  if (state === null || typeof state !== "object" || !("email" in state)) return "";
+  return typeof state.email === "string" ? state.email : "";
+}
+
 export function canResend(sentAt: number, now: number): boolean {
   return now - sentAt >= RESEND_COOLDOWN_MS;
 }
