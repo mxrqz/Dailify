@@ -40,6 +40,9 @@ interface CreateFabProps {
   submitting?: boolean;
   /** Dia vindo do calendário: abre a criação já nele. */
   day?: Date | null;
+  /** Text handed in (the first-run example): opens the composer already holding it. */
+  text?: string | null;
+  /** The sheet closed or created: `day` and `text` were consumed. */
   onDayDone?: () => void;
 }
 
@@ -49,7 +52,13 @@ interface CreateFabProps {
  * que abre a folha, ou o campo sempre aberto no rodapé do painel. Sem portal de propósito: lá a folha se ancora no próprio botão, que mora no
  * painel da agenda e desliza com ele.
  */
-export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabProps): JSX.Element {
+export function CreateFab({
+  onSubmit,
+  submitting,
+  day,
+  text,
+  onDayDone,
+}: CreateFabProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const desktop = useMediaQuery(DESKTOP);
   const [pinned, setDocked] = useStoredFlag(DOCKED_KEY);
@@ -105,6 +114,17 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
     const frame = requestAnimationFrame(() => document.getElementById(COMPOSER_TEXT_ID)?.focus());
     return () => cancelAnimationFrame(frame);
   }, [day]);
+
+  const openWith = useEffectEvent((value: string) => {
+    setRetry(value);
+    if (!docked) setOpen(true);
+  });
+  useEffect(() => {
+    if (!text) return;
+    openWith(text);
+    const frame = requestAnimationFrame(() => document.getElementById(COMPOSER_TEXT_ID)?.focus());
+    return () => cancelAnimationFrame(frame);
+  }, [text]);
 
   const pin = () => {
     setDocked(true);
@@ -198,7 +218,10 @@ export function CreateFab({ onSubmit, submitting, day, onDayDone }: CreateFabPro
             className="relative border border-separator bg-surface-raised p-1 shadow-raised"
           >
             <motion.div {...content}>
+              {/* Remounts on `retry` so the docked field takes the text handed in. */}
               <TaskComposer
+                key={retry}
+                initialText={retry}
                 day={day}
                 onCreated={onDayDone}
                 submitting={submitting}

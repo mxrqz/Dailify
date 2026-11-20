@@ -94,6 +94,12 @@ describe("<CreateFab> mobile", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it("text opens the sheet already holding it", () => {
+    render(<CreateFab onSubmit={vi.fn()} text="dentista amanhã" />);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("textbox")).toHaveValue("dentista amanhã");
+  });
+
   it("o mic do dock abre a folha já gravando; sem voz, ele nem aparece", async () => {
     env.voice = true;
     const { user } = setup();
@@ -126,6 +132,13 @@ describe("<CreateFab> desktop", () => {
     setup();
     expect(screen.getByRole("textbox")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: copy.composer.open })).not.toBeInTheDocument();
+  });
+
+  it("docked: text fills the open field", () => {
+    localStorage.setItem("dailify:composer-docked", "1");
+    render(<CreateFab onSubmit={vi.fn()} text="dentista amanhã" />);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByRole("textbox")).toHaveValue("dentista amanhã");
   });
 
   it("aberto: n foca o campo", async () => {

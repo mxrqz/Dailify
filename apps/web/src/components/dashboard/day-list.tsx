@@ -22,7 +22,7 @@ import { zoned } from "@/functions/zone";
 const MAX_EMPTY_MONTHS = 12;
 
 /** Primeiro uso: a Mew dormindo e o empurrão pro composer, que mora embaixo (o dock). */
-export function FirstRun(): JSX.Element {
+export function FirstRun({ onTry }: { onTry?: (text: string) => void }): JSX.Element {
   return (
     <section
       aria-label={copy.day.listFirstRun}
@@ -35,11 +35,14 @@ export function FirstRun(): JSX.Element {
       </p>
       <div className="mt-6 flex flex-col items-center gap-2">
         <small className="text-footnote text-ink-secondary">{copy.day.listFirstRunTry}</small>
-        {/* ponytail: só o exemplo, sem tocar pra preencher — o campo é do composer. */}
-        <span className="card inline-flex h-11 items-center gap-2 rounded-sm px-4 text-subhead font-medium">
+        <button
+          type="button"
+          onClick={() => onTry?.(copy.day.listFirstRunExample)}
+          className="card inline-flex h-11 cursor-pointer items-center gap-2 rounded-sm px-4 text-subhead font-medium"
+        >
           <PencilIcon aria-hidden="true" className="size-4 text-ink-secondary" />
           {copy.day.listFirstRunExample}
-        </span>
+        </button>
       </div>
       <ArrowDownIcon aria-hidden="true" className="mt-5 size-5 text-ink-secondary" />
     </section>
@@ -51,7 +54,7 @@ export function FirstRun(): JSX.Element {
  * passado escolhido) até o fim do trecho contíguo de meses carregados. A sentinela no fim pede o
  * mês seguinte com ~2 telas de folga, então ele já está lá quando a rolagem chega.
  */
-export function DayList(): JSX.Element {
+export function DayList({ onTry }: { onTry?: (text: string) => void }): JSX.Element {
   const { selectedDay, tasks, undatedTasks, isLoading, loadedMonths, loadMonth, targetDay } =
     useDailify();
   const sentinel = useRef<HTMLDivElement>(null);
@@ -139,7 +142,7 @@ export function DayList(): JSX.Element {
 
     return (
       <>
-        <FirstRun />
+        <FirstRun onTry={onTry} />
         {sentinelEl}
       </>
     );
