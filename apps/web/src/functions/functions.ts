@@ -86,22 +86,18 @@ export function listDays({
   end,
   tasks,
   extra = [],
-  keepStart = false,
 }: {
   start: Date;
   end: Date;
   tasks: Task[];
   extra?: Date[];
-  keepStart?: boolean;
 }): Date[] {
   // Uma passada nas tarefas, não uma por dia: com meses carregados o filtro virava O(dias × tarefas).
   const zone = appTimeZone();
   const keep = new Set(
     [...tasks.map((t) => t.date), ...extra.map(Number)].map((ms) => dayKey(ms, zone)),
   );
-  return eachDayOfInterval({ start, end }).filter(
-    (day, i) => (keepStart && i === 0) || keep.has(dayKey(+day, zone)),
-  );
+  return eachDayOfInterval({ start, end }).filter((day) => keep.has(dayKey(+day, zone)));
 }
 
 /** Primeiro mês sem carga a partir do de `start`: a lista termina logo antes dele. */

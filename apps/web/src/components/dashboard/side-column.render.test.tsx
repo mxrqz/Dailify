@@ -3,16 +3,16 @@ import { afterEach, describe, expect, it } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
 import { copy } from "./copy";
-import { UndatedColumn, useUndatedOpen } from "./undated-column";
+import { SideColumn, useSideOpen } from "./side-column";
 
 function Harness(): JSX.Element {
-  const [open, setOpen] = useUndatedOpen();
-  return <UndatedColumn open={open} onOpenChange={setOpen} />;
+  const [open, setOpen] = useSideOpen();
+  return <SideColumn open={open} onOpenChange={setOpen} />;
 }
 
 afterEach(() => localStorage.clear());
 
-describe("<UndatedColumn>", () => {
+describe("<SideColumn>", () => {
   it("fechada mostra só o puxador, sem contagem; clicar abre e lembra", () => {
     render(<Harness />);
 

@@ -74,7 +74,7 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
 ## cn(), offenders, z layers
 
 - twMerge knows the custom `text-*`, `rounded-*`, `shadow-*`, `ease-*`, `duration-*`, `z-*`,
-  `w-sheet|undated`, `max-w-bubble`, `max-h-sheet`, `h-bar|below-bar`, `pb-*`, `pt-safe`,
+  `w-sheet|side`, `max-w-bubble`, `max-h-sheet`, `h-bar|below-bar`, `pb-*`, `pt-safe`,
   `top-safe`, `px-gutter`, `pr-gutter`, `scroll-mt-bar`, `min-w-duration`, and `caps` as a font
   size (so it replaces a Button's `text-subhead`).
 - Don't use: `ring-[3px]` focus recipes (use `focus-ring`), `tracking-[0.04em]` caps labels (use
@@ -91,7 +91,7 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
   via `getComputedStyle`. `ease-out` overrides Tailwind's default curve; a `transition-*` with no
   duration gets `duration-fast` and `ease-out`.
 - Exceptions to transform/opacity: the `grid-template-rows` reveal (`starting:grid-rows-[0fr]`, the
-  Reveal in `mew-chat/bubbles.tsx`), the side column's width and margin (`dashboard/undated-column.tsx`),
+  Reveal in `mew-chat/bubbles.tsx`), the side column's width and margin (`dashboard/side-column.tsx`),
   the check's `stroke-dashoffset` (a 14px path, `kit/task-row.tsx`) and an exiting agenda row's
   `height`/`margin` collapse after it has faded (motion `exit`, `dashboard/day-section.tsx`).
 - Motion corrects a radius during a layout morph only when it comes through `style`, so a morphing

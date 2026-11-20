@@ -4,10 +4,11 @@ import { copy } from "@/components/dashboard/copy";
 import { useStoredFlag } from "@/hooks/useStoredFlag";
 import { cn } from "@/lib/utils";
 
+// Persisted name from when the column held the undated list: renaming it would drop saved state.
 const OPEN_KEY = "dailify:undated-open";
 
 /** Aberta ou fechada, lembrado por device. */
-export const useUndatedOpen = () => useStoredFlag(OPEN_KEY);
+export const useSideOpen = () => useStoredFlag(OPEN_KEY);
 
 const motion = "duration-base ease-out-expo motion-reduce:transition-none";
 
@@ -16,7 +17,7 @@ const motion = "duration-base ease-out-expo motion-reduce:transition-none";
  * drawer: anima a largura (e o gap, via margem) pra a agenda ao lado encolher. Vazia por enquanto:
  * a Sem data virou o bloco "A qualquer hora" de hoje.
  */
-export function UndatedColumn({
+export function SideColumn({
   open,
   onOpenChange,
 }: {
@@ -26,25 +27,25 @@ export function UndatedColumn({
   return (
     <>
       <div
-        id="undated-column"
+        id="side-column"
         aria-hidden={!open}
         className={cn(
           "sticky top-(--bar-desktop) hidden h-below-bar shrink-0 self-start overflow-hidden rounded-field bg-surface transition-[width,margin-left,visibility] md:block",
           motion,
-          open ? "ml-1 w-undated" : "invisible ml-0 w-0",
+          open ? "ml-1 w-side" : "invisible ml-0 w-0",
         )}
       />
 
       <button
         type="button"
         aria-expanded={open}
-        aria-controls="undated-column"
+        aria-controls="side-column"
         aria-label={open ? copy.column.close : copy.column.open}
         onClick={() => onOpenChange(!open)}
         className={cn(
           "fixed top-1/2 right-0 z-float hidden size-9 -translate-y-1/2 cursor-pointer place-items-center rounded-lg border border-separator bg-surface-raised text-ink-secondary transition-[translate,background-color] hover:bg-fill md:grid",
           motion,
-          open ? "translate-x-(--undated-handle-x)" : "translate-x-1/2",
+          open ? "translate-x-(--side-handle-x)" : "translate-x-1/2",
         )}
       >
         <ChevronLeft

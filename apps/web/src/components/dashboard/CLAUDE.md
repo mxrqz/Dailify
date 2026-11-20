@@ -8,7 +8,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
 - Agenda: `day-list.tsx` → `day-section.tsx` (`dayAnchorId`) → `day-task-row.tsx`
   (`DayTaskRow` container, `NowLine`), over kit `TaskRow`/`CheckCircle`.
 - Undated: `anytime-block.tsx` (today's card, `ScheduleDrop`), `check-history.tsx`;
-  `undated-column.tsx` is a reserved, empty desktop column (bd `Dailify-1td`).
+- Layout: `side-column.tsx` is a reserved, empty desktop column; its open flag keeps the persisted
+  key `dailify:undated-open`.
 - Navigation: `week-strip.tsx` (`WeekDays`/`WeekStrip`), `month-calendar.tsx` (`MonthGrid`/
   `MonthCalendar`, the `?view=calendar` overlay of `pages/home.tsx`). Gesture: `swipe-actions.tsx`.
 - Creation: `create-fab.tsx`, `task-composer.tsx` (container), `composer-views.tsx` (views),
@@ -94,7 +95,7 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
 
 - `DayList` spans today (or an earlier `selectedDay`) to the end of the contiguous `loadedMonths`
   (`nextMonthToLoad`): one `DaySection` per day with tasks, plus `targetDay`. Today stays when
-  undated tasks exist, because `AnytimeBlock` lives in today's section.
+  undated tasks exist (also from an earlier `selectedDay`), because `AnytimeBlock` lives in today's section.
 - The sentinel uses `rootMargin: "0px 0px 200% 0px"` and gives up after `MAX_EMPTY_MONTHS` (12)
   months without a task. The skeleton shows only at boot (`isLoading && !tasks`).
 - `dayAnchorId(day)` = `day-yyyy-MM-dd`, absent in calendar mode. `DayList` scrolls to it when

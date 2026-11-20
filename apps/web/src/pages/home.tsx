@@ -5,7 +5,7 @@ import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
 import { useDailify } from "@/components/dailifyContext";
 import { DayList } from "@/components/dashboard/day-list";
 import { MonthCalendar } from "@/components/dashboard/month-calendar";
-import { UndatedColumn, useUndatedOpen } from "@/components/dashboard/undated-column";
+import { SideColumn, useSideOpen } from "@/components/dashboard/side-column";
 import { WeekStrip } from "@/components/dashboard/week-strip";
 import { CreateFab } from "@/components/dashboard/create-fab";
 import { copy } from "@/components/dashboard/copy";
@@ -57,7 +57,7 @@ export default function Home() {
   const todays = tasks ? getTasksForDay(tasks, today) : [];
   const done = todays.filter((task) => getCompletionDate(task, today) === true).length;
 
-  const [undatedOpen, setUndatedOpen] = useUndatedOpen();
+  const [sideOpen, setSideOpen] = useSideOpen();
   const [createOn, setCreateOn] = useState<Date | null>(null);
   const [params, setParams] = useSearchParams();
   const navigate = useNavigate();
@@ -118,7 +118,7 @@ export default function Home() {
         />
       </div>
 
-      <UndatedColumn open={undatedOpen} onOpenChange={setUndatedOpen} />
+      <SideColumn open={sideOpen} onOpenChange={setSideOpen} />
     </div>
   );
 }
