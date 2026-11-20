@@ -118,6 +118,33 @@ describe("MewChat", () => {
     expect(await within(chat).findByText(t.box.undone)).toBeInTheDocument();
   });
 
+  it("editing one draft in the task sheet writes nothing until the box is confirmed", async () => {
+    api.mewChat.mockResolvedValue({ reply: proposal });
+    const { chat } = mount();
+    say("comprar pão");
+
+    fireEvent.click(
+      await within(chat).findByRole("button", { name: new RegExp(`^Editar ${bread.title}`) }),
+    );
+    const sheet = await screen.findByRole("dialog", { name: copy.form.editTitle });
+    fireEvent.change(within(sheet).getByRole("combobox", { name: copy.form.priority }), {
+      target: { value: "2" },
+    });
+    fireEvent.click(within(sheet).getByRole("button", { name: copy.form.save }));
+    await waitFor(() =>
+      expect(screen.queryByRole("dialog", { name: copy.form.editTitle })).toBeNull(),
+    );
+    expect(api.createTask).not.toHaveBeenCalled();
+    expect(chat).toBeInTheDocument();
+
+    fireEvent.click(within(chat).getByRole("button", { name: "Criar 1" }));
+    await waitFor(() =>
+      expect(api.createTask).toHaveBeenCalledWith(
+        expect.objectContaining({ id: "srv-1", title: bread.title, priority: 2 }),
+      ),
+    );
+  });
+
   it("a refused write puts the box back to draft", async () => {
     api.mewChat.mockResolvedValue({ reply: proposal });
     api.createTask.mockResolvedValue({ error: { message: "nope", offline: false, status: 500 } });

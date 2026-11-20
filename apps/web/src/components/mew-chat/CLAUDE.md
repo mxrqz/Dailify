@@ -42,6 +42,9 @@ applied to the agenda.
 - The drawer is a non-modal bottom `Sheet` so the dock stays usable; the scrim is rendered by
   mew-chat.tsx. The dock is the input (`CreateDock chat={<ChatInput/>}`, from
   `dock.tsx`), so `onInteractOutside` ignores `[data-slot="create-dock"]` and the credits tray (`[role="alertdialog"]`).
+- A create draft opens `DraftSheet` (`confirm-box.tsx`), the agenda's `TaskForm` over the draft;
+  saving dispatches `edit` with the whole task and writes nothing. It renders inside the drawer's
+  React tree, so Radix doesn't count touches in it as outside the drawer.
 - One `ResizeObserver` is the only writer of `scrollTop` (pinned within 48px of the bottom; a new
   message re-pins). Only messages absent when the drawer opened animate (the `initial` set).
 - Enter animations are CSS tokens, not motion: `word-in` + `--i`, `delay-words`/`delay-words-lag` +

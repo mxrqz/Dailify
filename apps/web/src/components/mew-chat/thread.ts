@@ -1,4 +1,4 @@
-import type { MewBlock, MewIntent, MewReply } from "@dailify/shared";
+import type { MewBlock, MewIntent, MewReply, Task } from "@dailify/shared";
 
 import { chatKey } from "@/functions/offline";
 
@@ -25,7 +25,8 @@ export type ChatAction =
   | { type: "reply"; to: string; reply: MewReply }
   /** Takes back a send the server refused before answering (no consent). */
   | { type: "drop"; id: string }
-  | { type: "edit"; block: string; task: string; title: string }
+  /** Replaces the draft with the same id: its inline title or the whole task from the editor. */
+  | { type: "edit"; block: string; task: Task }
   | { type: "toggle"; block: string; task: string }
   | { type: "confirm" | "cancel" | "undo"; block: string }
   /** Rollback when the writes behind a confirm or undo failed. */
@@ -82,7 +83,7 @@ export function chatReducer(messages: Message[], action: ChatAction): Message[] 
     case "edit":
       return mapConfirm(messages, action.block, (b) => ({
         ...b,
-        after: b.after.map((x) => (x.id === action.task ? { ...x, title: action.title } : x)),
+        after: b.after.map((x) => (x.id === action.task.id ? action.task : x)),
       }));
     case "toggle":
       return mapConfirm(messages, action.block, (b) => ({

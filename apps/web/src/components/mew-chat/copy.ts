@@ -61,5 +61,8 @@ export const copy = {
     undone: "Desfeito. Voltou como estava.",
     editTitle: "Título da tarefa",
     include: "Incluir {title}",
+    // The visible text (`when`) stays in the name, so voice control finds the button.
+    editDraft: "Editar {title}, {when}",
+    editDraftDescription: "Ajuste e salve. A tarefa só é criada quando você confirmar.",
   },
 } as const;

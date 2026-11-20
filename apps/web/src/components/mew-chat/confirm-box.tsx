@@ -1,15 +1,25 @@
-import type { ReactNode } from "react";
+import { useId, useState, type ReactNode } from "react";
 import { addDays, format, isSameDay } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { ArrowRightIcon, CheckIcon } from "lucide-react";
+import { ArrowRightIcon, CheckIcon, ChevronLeftIcon, PencilIcon } from "lucide-react";
 import { isCalendarEventLink, type Task } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
+import { FORM_VIEWS, TaskForm, type FormView } from "@/components/dashboard/task-form";
 import { CheckCircle, TaskRow } from "@/components/kit/task-row";
 import { CalendarBadge } from "@/components/logos";
 import { Button } from "@/components/ui/button";
+import {
+  Sheet,
+  SheetContent,
+  SheetDescription,
+  SheetFooter,
+  SheetHeader,
+  SheetTitle,
+} from "@/components/ui/sheet";
 import { clockAt } from "@/functions/date-label";
+import { buildEdit } from "@/functions/edit-input";
 import { fill, getCompletionDate } from "@/functions/functions";
 import { fromDateInput, zoned } from "@/functions/zone";
 import { cn } from "@/lib/utils";
@@ -63,6 +73,11 @@ export function ConfirmBody({
   dispatch: (action: ChatAction) => void;
 }) {
   const { hour12 } = useDailify();
+  // The id outlives the close, so the sheet keeps its draft through the exit animation.
+  const [editing, setEditing] = useState<string>();
+  const [open, setOpen] = useState(false);
+  const [opens, setOpens] = useState(0);
+  const draft = block.after.find((x) => x.id === editing);
   const b = t.box;
   const { action, step } = block;
   const picked = block.after.filter((x) => !block.off.includes(x.id));
@@ -153,8 +168,7 @@ export function ConfirmBody({
                         dispatch({
                           type: "edit",
                           block: block.id,
-                          task: task.id,
-                          title: event.target.value,
+                          task: { ...task, title: event.target.value },
                         })
                       }
                       className="min-w-0 bg-transparent text-body font-semibold outline-none"
@@ -163,9 +177,22 @@ export function ConfirmBody({
                     <span className="text-subhead font-medium">{task.title}</span>
                   )}
                   {action === "create" && (
-                    <span className="text-footnote text-ink-secondary tabular-nums">
+                    <button
+                      type="button"
+                      aria-label={fill(b.editDraft, {
+                        title: task.title,
+                        when: whenOf(task, hour12),
+                      })}
+                      onClick={() => {
+                        setEditing(task.id);
+                        setOpen(true);
+                        setOpens((n) => n + 1);
+                      }}
+                      className="relative flex items-center gap-1 self-start rounded-xs text-footnote text-ink-secondary tabular-nums hit-target focus-ring"
+                    >
                       {whenOf(task, hour12)}
-                    </span>
+                      <PencilIcon aria-hidden="true" className="size-3" />
+                    </button>
                   )}
                 </span>
               </li>
@@ -216,6 +243,79 @@ export function ConfirmBody({
           {fill(cta, values)}
         </Button>
       </div>
+      {draft && (
+        <DraftSheet
+          // A reopen starts from the draft, not from a closed sheet's unsaved edits.
+          key={opens}
+          task={draft}
+          open={open}
+          onClose={() => setOpen(false)}
+          onSave={(task) => dispatch({ type: "edit", block: block.id, task })}
+        />
+      )}
     </>
+  );
+}
+
+/**
+ * The task sheet's form over a draft: saving only replaces it in the box, the confirm still writes.
+ * Rendered inside the chat drawer's React tree, so touching it doesn't dismiss the drawer.
+ */
+function DraftSheet({
+  task,
+  open,
+  onClose,
+  onSave,
+}: {
+  task: Task;
+  open: boolean;
+  onClose: () => void;
+  onSave: (task: Task) => void;
+}) {
+  const { hour12 } = useDailify();
+  const formId = useId();
+  const [view, setView] = useState<FormView>("root");
+  return (
+    <Sheet open={open} onOpenChange={(next) => !next && onClose()}>
+      <SheetContent side="bottom" className="mx-auto max-h-sheet w-full max-w-lg">
+        <SheetTitle className="sr-only">{copy.form.editTitle}</SheetTitle>
+        <SheetDescription className="sr-only">{t.box.editDraftDescription}</SheetDescription>
+        {view !== "root" && (
+          <SheetHeader className="pb-2">
+            <div className="flex h-9 items-center gap-1">
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={copy.form.back}
+                onClick={() => setView("root")}
+                className="relative -ml-2 size-9 hit-target text-ink-secondary hover:text-ink"
+              >
+                <ChevronLeftIcon className="size-5" />
+              </Button>
+              <span className="text-body font-semibold">{FORM_VIEWS[view].title}</span>
+            </div>
+          </SheetHeader>
+        )}
+        <TaskForm
+          id={formId}
+          task={task}
+          view={view}
+          onView={setView}
+          hour12={hour12}
+          className="min-h-0 flex-1 scrollbar-floating"
+          onSubmit={(values) => {
+            onSave(buildEdit(task, values, zoned()).taskData);
+            onClose();
+          }}
+        />
+        {view === "root" && (
+          <SheetFooter className="pb-4">
+            <Button type="submit" form={formId} size="lg">
+              {copy.form.save}
+            </Button>
+          </SheetFooter>
+        )}
+      </SheetContent>
+    </Sheet>
   );
 }
