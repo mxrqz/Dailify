@@ -11,9 +11,14 @@ vi.mock("@/lib/auth", async (importOriginal) => ({
 const { useDailify } = vi.hoisted(() => ({ useDailify: vi.fn() }));
 vi.mock("@/components/dailifyContext", () => ({ useDailify }));
 
+import userEvent from "@testing-library/user-event";
+
 import { Sidebar } from "./index";
 import { MobileNav } from "./mobile-nav";
 import { copy } from "@/components/dashboard/copy";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { setAppTimeZone, zonedAt } from "@/functions/zone";
+import { closePanel, usePanel } from "@/hooks/usePanel";
 
 beforeEach(() => {
   useSession.mockReturnValue({
@@ -22,12 +27,20 @@ beforeEach(() => {
   useDailify.mockReturnValue({
     quotas: { limits: { tasks: -1, ai: 30 }, usage: { tasks: 0, ai: 12 } },
   });
+  closePanel();
 });
+
+function PanelKind(): JSX.Element {
+  return <output>{usePanel()?.kind ?? "none"}</output>;
+}
 
 const renderAt = (path: string) =>
   render(
     <MemoryRouter initialEntries={[path]}>
-      <Sidebar />
+      <TooltipProvider>
+        <Sidebar />
+        <PanelKind />
+      </TooltipProvider>
     </MemoryRouter>,
   );
 
@@ -36,16 +49,17 @@ const current = () => screen.queryByRole("link", { current: "page" });
 
 describe("<Sidebar>", () => {
   it("acende só o item da rota atual", () => {
-    renderAt("/security");
+    renderAt("/settings");
 
-    expect(current()).toHaveTextContent(copy.profile.navSecurity);
+    expect(current()).toHaveTextContent(copy.profile.navSettings);
     expect(screen.getAllByRole("link", { current: "page" })).toHaveLength(1);
   });
 
   it("cada rota acende o seu", () => {
     const rotas: [string, string][] = [
       ["/dashboard", copy.profile.navDashboard],
-      ["/profile", copy.profile.navPersonal],
+      ["/dashboard?view=calendar", copy.profile.navCalendar],
+      ["/integrations", copy.profile.navIntegrations],
       ["/settings", copy.profile.navSettings],
       ["/billing", copy.profile.navPremium],
     ];
@@ -70,20 +84,70 @@ describe("<Sidebar>", () => {
     expect(current()).toBeNull();
   });
 
-  it("'Sair' só aparece logado", () => {
-    const { unmount } = renderAt("/dashboard");
-    expect(screen.getByText(copy.profile.signOut)).toBeInTheDocument();
-    unmount(); // o cleanup automático só roda entre testes, não entre renders do mesmo teste
+  it("keeps Perfil, Segurança and Sair in the account menu", async () => {
+    const user = userEvent.setup();
+    renderAt("/dashboard");
+    expect(screen.queryByRole("link", { name: copy.profile.navPersonal })).not.toBeInTheDocument();
 
+    await user.click(screen.getByRole("button", { name: /Conta de Seu/ }));
+
+    expect(screen.getByRole("menuitem", { name: copy.profile.navPersonal })).toHaveAttribute(
+      "href",
+      "/profile",
+    );
+    expect(screen.getByRole("menuitem", { name: copy.profile.navSecurity })).toHaveAttribute(
+      "href",
+      "/security",
+    );
+    expect(screen.getByRole("menuitem", { name: copy.profile.signOut })).toBeInTheDocument();
+  });
+
+  it("signed out (/premium): no account menu, an Entrar link instead", () => {
     useSession.mockReturnValue({ data: null });
     renderAt("/premium");
-    expect(screen.queryByText(copy.profile.signOut)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Conta de/ })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: copy.header.signIn })).toHaveAttribute(
+      "href",
+      "/login",
+    );
+  });
+
+  it("opens the Mew panel from 'Conversar com a Mew' without lighting it", async () => {
+    const user = userEvent.setup();
+    renderAt("/settings");
+    const mew = screen.getByRole("link", { name: copy.profile.navMew });
+
+    await user.click(mew);
+
+    expect(screen.getByRole("status")).toHaveTextContent("mew");
+    expect(mew).not.toHaveAttribute("aria-current");
+  });
+
+  it("counts today's open tasks beside Hoje", () => {
+    setAppTimeZone("America/Sao_Paulo");
+    const at = (h: number) => +zonedAt(2026, 10, 20, h);
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(at(10));
+    useDailify.mockReturnValue({
+      quotas: undefined,
+      tasks: [
+        { id: "a", title: "A", date: at(9), completed: [] },
+        { id: "b", title: "B", date: at(11), completed: [] },
+        { id: "c", title: "C", date: at(12), completed: [at(12)] },
+      ],
+    });
+    renderAt("/dashboard");
+    expect(
+      screen.getByRole("link", { name: `${copy.profile.navDashboard} 2` }),
+    ).toBeInTheDocument();
+    vi.useRealTimers();
+    setAppTimeZone(null);
   });
 
   it("logado: inicial, plano Free e o medidor de créditos do mês", () => {
     renderAt("/dashboard");
     expect(screen.getByText("S")).toBeInTheDocument();
-    expect(screen.getByText("Free")).toBeInTheDocument();
+    expect(screen.getByText("Plano Free")).toBeInTheDocument();
     expect(screen.getByRole("meter", { name: copy.quota.names.ai })).toHaveAttribute(
       "aria-valuenow",
       "12",
@@ -156,8 +220,19 @@ describe("<MobileNav>", () => {
 });
 
 describe("<Sidebar> upgrade", () => {
-  it("leaves the upgrade to the desktop header", () => {
+  it("offers Free users 'Assinar Pro' to /premium", () => {
     renderAt("/dashboard");
-    expect(screen.queryByRole("link", { name: copy.header.upgrade })).not.toBeInTheDocument();
+    expect(screen.getByRole("link", { name: copy.profile.upgradePro })).toHaveAttribute(
+      "href",
+      "/premium",
+    );
+  });
+
+  it("hides it from paying users", () => {
+    useSession.mockReturnValue({
+      data: { user: { id: "u1", name: "Seu", email: "seu@mewki.app", image: null, plan: "pro" } },
+    });
+    renderAt("/dashboard");
+    expect(screen.queryByRole("link", { name: copy.profile.upgradePro })).not.toBeInTheDocument();
   });
 });

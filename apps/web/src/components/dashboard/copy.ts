@@ -203,7 +203,15 @@ export const copy = {
     navSecurity: "Segurança",
     navPremium: "Planos",
     navSettings: "Configurações",
+    navCalendar: "Calendário",
+    navMew: "Conversar com a Mew",
+    navIntegrations: "Integrações",
+    navAccount: "Conta",
+    // The desktop sidebar's account button; the menu holds Perfil, Segurança and Sair.
+    accountMenu: "Conta de {name}: perfil, segurança e sair",
+    upgradePro: "Assinar Pro",
     planLabel: "Plano",
+    planName: "Plano {plan}",
     creditsSummary: "{used} de {limit} créditos de IA este mês",
     editTitle: "Editar perfil",
     editDescription: "Atualize suas informações e salve quando terminar.",
@@ -383,10 +391,12 @@ export const copy = {
     alertAt: "{day} {time}",
   },
 
-  // Puxador da coluna lateral do desktop, vazia desde que a Sem data foi para o topo de hoje.
-  column: {
-    open: "Abrir coluna lateral",
-    close: "Fechar coluna lateral",
+  // The desktop side panel (an open task, the Mew or a calendar day) and its toolbar toggle.
+  panel: {
+    open: "Abrir painel",
+    close: "Fechar painel",
+    task: "Tarefa",
+    mew: "Mew",
   },
 
   // Tarefas sem data: o bloco "A qualquer hora" no topo de hoje.

@@ -1,22 +1,40 @@
 import {
+  CalendarIcon,
+  ChevronLeftIcon,
+  ChevronRightIcon,
+  ChevronsUpDownIcon,
   CrownIcon,
   LayoutListIcon,
   LogOutIcon,
+  MessageCircleIcon,
+  PlugIcon,
   SettingsIcon,
   ShieldIcon,
   UserIcon,
 } from "lucide-react";
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { useEffect, type CSSProperties } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import type { QuotaState } from "@dailify/shared";
 
+import { Brand } from "@/components/brand";
+import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
+import { Tip } from "@/components/tip";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
-import { PLAN_ID, planMap } from "@/consts/conts";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { CALENDAR_VIEW, PLAN_ID, planMap } from "@/consts/conts";
 import { duration, ease } from "@/consts/motion";
-import { fill } from "@/functions/functions";
+import { fill, getCompletionDate, getTasksForDay } from "@/functions/functions";
+import { useNow } from "@/hooks/useNow";
+import { openPanel } from "@/hooks/usePanel";
 import { useQuotas } from "@/hooks/useQuotas";
 import { planOf, useSession } from "@/lib/auth";
 import { signOutAndReload } from "@/lib/native-auth";
@@ -87,7 +105,7 @@ export function CreditsMeter({ used, limit, ratio }: Credits): JSX.Element {
 }
 
 /**
- * O conteúdo da navegação, só props: a coluna do desktop e a gaveta do mobile montam o mesmo.
+ * The mobile drawer's content, props only; the desktop column is `SidebarMenu`.
  * Conta, créditos e "Sair" só existem logado — `/premium` divide este layout sem `ProtectedRoute`.
  */
 export function NavMenu({
@@ -99,7 +117,7 @@ export function NavMenu({
   account?: { name: string; imageUrl?: string; plan: string };
   /** Sem teto (ou carregando) não há barra a mostrar. */
   credits?: Credits;
-  /** The "Assinar" upsell: the desktop has it in the header, so only the drawer asks for it. */
+  /** The "Assinar" upsell, shown to Free users. */
   upgrade?: boolean;
   onSignOut?: () => void;
 }): JSX.Element {
@@ -154,7 +172,7 @@ export function NavMenu({
 }
 
 /** O `NavMenu` ligado à sessão e às quotas. */
-export function NavItems({ upgrade = false }: { upgrade?: boolean }): JSX.Element {
+export function NavItems(): JSX.Element {
   const user = useSession().data?.user;
   const { loading, states } = useQuotas();
   const ai = states.ai;
@@ -168,20 +186,188 @@ export function NavItems({ upgrade = false }: { upgrade?: boolean }): JSX.Elemen
           : undefined
       }
       credits={loading || ai.unlimited ? undefined : ai}
-      upgrade={upgrade && planOf(user) === PLAN_ID.free}
+      upgrade={planOf(user) === PLAN_ID.free}
       onSignOut={() => signOutAndReload()}
     />
   );
 }
 
-/** A coluna do desktop. No mobile quem serve os mesmos itens é o `MobileNav`, no header. */
+const ACCOUNT_ITEMS = [
+  { icon: PlugIcon, label: copy.profile.navIntegrations, to: "/integrations" },
+  { icon: CrownIcon, label: copy.profile.navPremium, to: "/billing", alsoActive: "/premium" },
+  { icon: SettingsIcon, label: copy.profile.navSettings, to: "/settings" },
+];
+
+/**
+ * The desktop column, props only: brand and history on top, the app, then the account pages; at
+ * the bottom credits, the Free upsell and the account menu (Perfil, Segurança, Sair).
+ */
+export function SidebarMenu({
+  account,
+  credits,
+  upgrade,
+  pending,
+  onSignOut,
+}: {
+  account?: { name: string; imageUrl?: string; plan: string };
+  credits?: Credits;
+  upgrade?: boolean;
+  /** Today's open tasks, beside "Hoje". */
+  pending?: number;
+  onSignOut?: () => void;
+}): JSX.Element {
+  const navigate = useNavigate();
+
+  return (
+    <>
+      <div className="mb-3 flex h-11 items-center justify-between pl-2">
+        <Brand to="/dashboard" />
+        <div className="flex gap-0.5">
+          <Tip content={copy.header.back}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={copy.header.back}
+              onClick={() => navigate(-1)}
+              className="text-ink-secondary"
+            >
+              <ChevronLeftIcon aria-hidden="true" />
+            </Button>
+          </Tip>
+          <Tip content={copy.header.forward}>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={copy.header.forward}
+              onClick={() => navigate(1)}
+              className="text-ink-secondary"
+            >
+              <ChevronRightIcon aria-hidden="true" />
+            </Button>
+          </Tip>
+        </div>
+      </div>
+
+      <div className="flex flex-col gap-0.5">
+        <SidebarItem
+          icon={LayoutListIcon}
+          label={copy.profile.navDashboard}
+          to="/dashboard"
+          count={pending}
+        />
+        <SidebarItem
+          icon={CalendarIcon}
+          label={copy.profile.navCalendar}
+          to={`/dashboard?view=${CALENDAR_VIEW}`}
+        />
+        <SidebarItem
+          icon={MessageCircleIcon}
+          label={copy.profile.navMew}
+          to="/dashboard"
+          onClick={() => openPanel({ kind: "mew" })}
+        />
+      </div>
+
+      <p className="px-3 pt-5 pb-1.5 text-footnote font-medium text-ink-secondary">
+        {copy.profile.navAccount}
+      </p>
+      <div className="flex flex-col gap-0.5">
+        {ACCOUNT_ITEMS.map((item) => (
+          <SidebarItem key={item.to} {...item} />
+        ))}
+      </div>
+
+      <div className="mt-auto flex flex-col gap-2 pt-4">
+        {account && credits && <CreditsMeter {...credits} />}
+        {account && upgrade && (
+          <Button asChild variant="secondary" className="mx-1">
+            <Link to="/premium">
+              <CrownIcon aria-hidden="true" className="text-brand-text" />
+              {copy.profile.upgradePro}
+            </Link>
+          </Button>
+        )}
+        {account ? (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <button
+                type="button"
+                aria-label={fill(copy.profile.accountMenu, { name: account.name })}
+                className="flex h-13 w-full cursor-pointer items-center gap-2.5 rounded-md px-2 text-left transition-colors hover:bg-fill focus-ring"
+              >
+                <Avatar className="size-8 rounded-full">
+                  <AvatarImage src={account.imageUrl} alt="" />
+                  <AvatarFallback className="rounded-full bg-fill-pressed text-footnote font-semibold text-ink">
+                    {account.name.charAt(0).toUpperCase()}
+                  </AvatarFallback>
+                </Avatar>
+                <span className="flex min-w-0 flex-1 flex-col">
+                  <span className="truncate text-body font-semibold">{account.name}</span>
+                  <span className="truncate text-footnote text-ink-secondary">
+                    {fill(copy.profile.planName, { plan: account.plan })}
+                  </span>
+                </span>
+                <ChevronsUpDownIcon aria-hidden="true" className="size-4 text-ink-secondary" />
+              </button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent side="top" align="start" className="w-56">
+              <DropdownMenuItem asChild>
+                <Link to="/profile">
+                  <UserIcon aria-hidden="true" />
+                  {copy.profile.navPersonal}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuItem asChild>
+                <Link to="/security">
+                  <ShieldIcon aria-hidden="true" />
+                  {copy.profile.navSecurity}
+                </Link>
+              </DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem onSelect={onSignOut}>
+                <LogOutIcon aria-hidden="true" />
+                {copy.profile.signOut}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        ) : (
+          <Button asChild variant="secondary" className="mx-1">
+            <Link to="/login">{copy.header.signIn}</Link>
+          </Button>
+        )}
+      </div>
+    </>
+  );
+}
+
+/** A coluna de vidro do desktop. No mobile quem serve a navegação é o `MobileNav`, no header. */
 export function Sidebar(): JSX.Element {
+  const user = useSession().data?.user;
+  const { tasks } = useDailify();
+  const { loading, states } = useQuotas();
+  const today = useNow("day");
+  const ai = states.ai;
+  const plan = planMap[planOf(user)] ?? planMap[PLAN_ID.free];
+  const pending = tasks
+    ? getTasksForDay(tasks, today).filter((task) => getCompletionDate(task, today) !== true).length
+    : undefined;
+
   return (
     <nav
       aria-label={copy.profile.navLabel}
-      className="sticky top-(--bar-desktop) hidden h-below-bar w-64 shrink-0 flex-col border-r border-separator px-3 pt-4 pb-5 md:flex"
+      className="glass sticky top-0 hidden h-dvh w-62 shrink-0 flex-col overflow-y-auto border-r border-separator px-3 pt-2.5 pb-4 md:flex"
     >
-      <NavItems />
+      <SidebarMenu
+        account={
+          user
+            ? { name: user.name || user.email, imageUrl: user.image ?? undefined, plan }
+            : undefined
+        }
+        credits={loading || ai.unlimited ? undefined : ai}
+        upgrade={planOf(user) === PLAN_ID.free}
+        pending={pending}
+        onSignOut={() => signOutAndReload()}
+      />
     </nav>
   );
 }

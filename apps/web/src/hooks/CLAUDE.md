@@ -11,7 +11,7 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 - `useMewParse` and `useVoiceCreate` serve only the dashboard composer and FAB; they predate the
   placement rule. One-feature hooks sit beside their component: `useCalendarChip`
   (`dashboard/calendar-chip.tsx`), `useWeek` (`dashboard/week-strip.tsx`), `useMewApply`
-  (`mew-chat/apply.ts`), `useSideOpen` (`dashboard/side-column.tsx`).
+  (`mew-chat/apply.ts`).
 
 ## Write contract details
 
@@ -67,6 +67,8 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 - `useIntegrations`: `undefined` until read; fetches only when nothing is cached or in flight and
   online (`useOnline`, so reconnecting retries), a failure retries on the next mount. Writers: `setIntegrations`/`patchIntegration`. One provider:
   `useIntegration(id)`; `isActive(status)` = connected and `status === "active"`.
+- `usePanel` + `openPanel`/`closePanel`/`togglePanel`: what the desktop side panel shows
+  (`components/dashboard/CLAUDE.md`, "Side panel").
 - `useOnline` lies upward (connected, no internet): use it to warn; `error.offline` decides.
 - `useEffectEvent` polyfills React 19.2's hook; the lint knows the name, so call it only in effects.
 - `useMediaQuery`: pass a named constant from `consts/media.ts` (`DESKTOP`, `MOBILE`,

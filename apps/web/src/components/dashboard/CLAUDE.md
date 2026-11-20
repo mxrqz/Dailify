@@ -8,8 +8,7 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
 - Agenda: `day-list.tsx` → `day-section.tsx` (`dayAnchorId`) → `day-task-row.tsx`
   (`DayTaskRow` container, `NowLine`), over kit `TaskRow`/`CheckCircle`.
 - Undated: `anytime-block.tsx` (today's card, `ScheduleDrop`), `check-history.tsx`;
-- Layout: `side-column.tsx` is a reserved, empty desktop column; its open flag keeps the persisted
-  key `dailify:undated-open`.
+- Layout: `side-panel.tsx` is the desktop side panel (below, "Side panel").
 - Navigation: `week-strip.tsx` (`WeekDays`/`WeekStrip`), `month-calendar.tsx` (`MonthGrid`/
   `MonthCalendar`, the `?view=calendar` overlay of `pages/home.tsx`). Gesture: `swipe-actions.tsx`.
 - Creation: `create-fab.tsx`, `task-composer.tsx` (container), `composer-views.tsx` (views),
@@ -19,6 +18,20 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
   `ActionSheet`).
 - `copy.ts` is the dictionary of the whole authenticated app (see `components/CLAUDE.md`).
 - `styles.ts` holds only `calendarPanel`, shared by `task-meta-menus` and `anytime-block`.
+
+## Side panel (desktop, `side-panel.tsx` + `hooks/usePanel.ts`)
+
+- State is a module store: `usePanel(): PanelState | null`, where `PanelState` is
+  `{ kind: "task"; id; day? } | { kind: "mew" } | { kind: "day"; day }` (`day` = epoch-ms). Write
+  it from anywhere with `openPanel(state)`, `closePanel()`, `togglePanel()` (opens `mew`). It is
+  not in the URL and survives route changes: the sidebar's "Conversar com a Mew" opens it, then
+  links to `/dashboard`.
+- `PanelHost` (mounted by `pages/home.tsx` only when `DESKTOP` matches) closes on Esc unless a
+  dialog or menu is open, and maps each `kind` to a `SidePanel`. Fill a kind there: pass `title`,
+  `actions` (`Button size="icon-sm"`), `children` (the scrolling body, `gap-5`) and `footer`.
+- `SidePanel` is the props-only glass View, `w-side` (400px), id `SIDE_PANEL_ID` (the toolbar
+  toggle's `aria-controls`). From `xl` it is a sticky column that pushes the agenda; below it is
+  `fixed` over the right edge with `shadow-raised`.
 
 ## Two editing modes, never both
 

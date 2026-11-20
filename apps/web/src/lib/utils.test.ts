@@ -22,7 +22,6 @@ describe("cn", () => {
     ["text-subhead", "caps"],
     ["pt-safe", "pt-0"],
     ["h-bar", "h-11"],
-    ["h-below-bar", "h-full"],
     ["px-gutter", "px-4"],
     ["pr-gutter", "pr-0"],
     ["top-safe", "top-0"],

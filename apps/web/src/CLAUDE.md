@@ -65,7 +65,8 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
   `pb-dock`, `pb-dock-clear`, `h-bar` (height and padding-top), `pt-safe`, `top-safe`,
   `scroll-mt-bar`. `px-gutter`/`pr-gutter` pad in percent of the containing block, so `pr-gutter`
   doesn't subtract the sidebar. Also `min-w-duration` (6ch), `min-h-2lh`, `fade-top`,
-  `max-h-sheet` (bottom sheets), `h-below-bar` with `top-(--bar-desktop)` (desktop sticky columns).
+  `max-h-sheet` (bottom sheets). Desktop has no app bar: sticky columns (sidebar, side panel) are
+  `sticky top-0 h-dvh`, and sticky headers inside the agenda sit under the 52px `Toolbar` (`top-13`).
 - `focus-ring` is the only focus style (`ring-3 ring-brand-text/50` on `focus-visible`); group-driven
   focus spells out the same values. `caps` is the mono uppercase label.
 - `word-in` reads `--i`, `delay-words(-lag)` reads `--words`, set through the typed `cssVar()` in
@@ -74,12 +75,11 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
 ## cn(), offenders, z layers
 
 - twMerge knows the custom `text-*`, `rounded-*`, `shadow-*`, `ease-*`, `duration-*`, `z-*`,
-  `w-sheet|side`, `max-w-bubble`, `max-h-sheet`, `h-bar|below-bar`, `pb-*`, `pt-safe`,
+  `w-sheet|side`, `max-w-bubble`, `max-h-sheet`, `h-bar`, `pb-*`, `pt-safe`,
   `top-safe`, `px-gutter`, `pr-gutter`, `scroll-mt-bar`, `min-w-duration`, and `caps` as a font
   size (so it replaces a Button's `text-subhead`).
 - Don't use: `ring-[3px]` focus recipes (use `focus-ring`), `tracking-[0.04em]` caps labels (use
-  `caps`), `max-h-[94svh]` (use `max-h-sheet`), `h-[calc(100dvh-…)]` (use `h-below-bar`),
-  `rounded-xl` (Tailwind's 12px, off the DS scale; panels are `rounded-lg`). Scale forms:
+  `caps`), `max-h-[94svh]` (use `max-h-sheet`), `rounded-xl` (Tailwind's 12px, off the DS scale; panels are `rounded-lg`). Scale forms:
   `ring-3`, `min-w-32`, `max-h-75`, `top-1/2`, `-translate-1/2`.
 - Page layers: `z-bar` (20) < `z-float` (30) < `z-chat` (35) < `z-dock` (40) < `z-overlay` (50).
   Numeric z only for stacking inside one component.
@@ -91,8 +91,7 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
   via `getComputedStyle`. `ease-out` overrides Tailwind's default curve; a `transition-*` with no
   duration gets `duration-fast` and `ease-out`.
 - Exceptions to transform/opacity: the `grid-template-rows` reveal (`starting:grid-rows-[0fr]`, the
-  Reveal in `mew-chat/bubbles.tsx`), the side column's width and margin (`dashboard/side-column.tsx`),
-  the check's `stroke-dashoffset` (a 14px path, `kit/task-row.tsx`) and an exiting agenda row's
+  Reveal in `mew-chat/bubbles.tsx`), the check's `stroke-dashoffset` (a 14px path, `kit/task-row.tsx`) and an exiting agenda row's
   `height`/`margin` collapse after it has faded (motion `exit`, `dashboard/day-section.tsx`).
 - Motion corrects a radius during a layout morph only when it comes through `style`, so a morphing
   surface takes a px number equal to its token: `radius.panel` from `@/consts/motion` (tested).

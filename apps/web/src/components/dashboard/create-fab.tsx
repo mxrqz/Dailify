@@ -44,6 +44,8 @@ interface CreateFabProps {
   text?: string | null;
   /** The sheet closed or created: `day` and `text` were consumed. */
   onDayDone?: () => void;
+  /** Bumped by the desktop toolbar's "Nova tarefa": each new value opens (or focuses) the composer. */
+  openSignal?: number;
 }
 
 /**
@@ -58,6 +60,7 @@ export function CreateFab({
   day,
   text,
   onDayDone,
+  openSignal,
 }: CreateFabProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const desktop = useMediaQuery(DESKTOP);
@@ -114,6 +117,14 @@ export function CreateFab({
     const frame = requestAnimationFrame(() => document.getElementById(COMPOSER_TEXT_ID)?.focus());
     return () => cancelAnimationFrame(frame);
   }, [day]);
+
+  const openOnSignal = useEffectEvent(() => {
+    if (docked) document.getElementById(COMPOSER_TEXT_ID)?.focus();
+    else setOpen(true);
+  });
+  useEffect(() => {
+    if (openSignal) openOnSignal();
+  }, [openSignal]);
 
   const openWith = useEffectEvent((value: string) => {
     setRetry(value);

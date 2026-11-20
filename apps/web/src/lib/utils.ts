@@ -24,7 +24,7 @@ const twMerge = extendTailwindMerge({
       "max-h": [{ "max-h": ["sheet"] }],
       "min-w": [{ "min-w": ["duration"] }],
       "scroll-mt": [{ "scroll-mt": ["bar"] }],
-      h: [{ h: ["bar", "below-bar"] }],
+      h: [{ h: ["bar"] }],
       pb: [{ pb: ["safe", "dock", "dock-clear"] }],
       pt: [{ pt: ["safe"] }],
       top: [{ top: ["safe"] }],
