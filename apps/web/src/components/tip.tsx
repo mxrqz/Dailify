@@ -20,12 +20,13 @@ export function Tip({
   side,
   children,
 }: {
+  /** Empty keeps the tooltip closed without unwrapping the child, so a focused input never remounts. */
   content: ReactNode;
   side?: ComponentProps<typeof TooltipContent>["side"];
   children: ReactNode;
 }): JSX.Element {
   return (
-    <Tooltip>
+    <Tooltip open={content ? undefined : false}>
       <TooltipTrigger asChild>{children}</TooltipTrigger>
       <TooltipContent side={side}>{content}</TooltipContent>
     </Tooltip>

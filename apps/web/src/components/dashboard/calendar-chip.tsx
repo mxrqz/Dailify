@@ -7,6 +7,7 @@ import { Chip } from "@/components/kit/chip";
 import { CalendarBadge } from "@/components/logos";
 import { Switch } from "@/components/kit/switch";
 import { MewStatic } from "@/components/mew/mew-static";
+import { Tip } from "@/components/tip";
 import type { CalendarPick } from "@/hooks/useCalendarPush";
 import { useCalendarDefault } from "@/hooks/useCalendarDefault";
 import { useCalendarReady } from "@/hooks/useIntegrations";
@@ -91,14 +92,15 @@ export function CalendarToggle({
         <CalendarBadge className="size-5" />
         <span aria-hidden="true">{t.name}</span>
         {mew && <MewStatic className="size-4" />}
-        <Switch
-          checked={checked}
-          disabled={disabled}
-          onCheckedChange={onCheckedChange}
-          aria-label={t.chipLabel}
-          title={mew ? t.mewPicked : undefined}
-          className="ml-1"
-        />
+        <Tip content={mew ? t.mewPicked : undefined}>
+          <Switch
+            checked={checked}
+            disabled={disabled}
+            onCheckedChange={onCheckedChange}
+            aria-label={t.chipLabel}
+            className="ml-1"
+          />
+        </Tip>
       </span>
       {meet !== undefined && (
         <Chip
@@ -129,17 +131,20 @@ export function CalendarChip({
   const pick = state.pick(index);
 
   return (
-    <Chip
-      size="sm"
-      pressed={Boolean(pick)}
-      aria-label={t.chipLabel}
-      title={pick?.mew ? t.mewPicked : undefined}
-      onClick={() => state.set(index, pick ? undefined : { meet: false })}
-      icon={<CalendarBadge className={cn(!pick && "grayscale")} />}
-      className={cn(!pick && "bg-transparent text-ink-secondary ring-1 ring-separator ring-inset")}
-    >
-      {t.name}
-      {pick?.mew && <MewStatic className="size-3.5" />}
-    </Chip>
+    <Tip content={pick?.mew ? t.mewPicked : undefined}>
+      <Chip
+        size="sm"
+        pressed={Boolean(pick)}
+        aria-label={t.chipLabel}
+        onClick={() => state.set(index, pick ? undefined : { meet: false })}
+        icon={<CalendarBadge className={cn(!pick && "grayscale")} />}
+        className={cn(
+          !pick && "bg-transparent text-ink-secondary ring-1 ring-separator ring-inset",
+        )}
+      >
+        {t.name}
+        {pick?.mew && <MewStatic className="size-3.5" />}
+      </Chip>
+    </Tip>
   );
 }

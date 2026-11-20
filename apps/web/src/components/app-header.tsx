@@ -4,6 +4,7 @@ import { Link, useMatch, useNavigate } from "react-router-dom";
 import { Brand } from "@/components/brand";
 import { MobileNav } from "@/components/nav/mobile-nav";
 import { SyncBadge } from "@/components/sync-badge";
+import { Tip } from "@/components/tip";
 import { copy } from "@/components/dashboard/copy";
 import { Button } from "@/components/ui/button";
 import { CALENDAR_VIEW, PLAN_ID } from "@/consts/conts";
@@ -39,25 +40,29 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
       <Brand to="/dashboard" compact className="hidden md:inline-flex" />
 
       <div className="hidden items-center gap-0.5 md:flex">
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={copy.header.back}
-          onClick={() => navigate(-1)}
-          className="size-6 rounded-md text-ink-secondary hover:bg-fill hover:text-ink"
-        >
-          <ChevronLeftIcon className="size-4" />
-        </Button>
+        <Tip content={copy.header.back}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={copy.header.back}
+            onClick={() => navigate(-1)}
+            className="size-6 rounded-md text-ink-secondary hover:bg-fill hover:text-ink"
+          >
+            <ChevronLeftIcon className="size-4" />
+          </Button>
+        </Tip>
 
-        <Button
-          variant="ghost"
-          size="icon"
-          aria-label={copy.header.forward}
-          onClick={() => navigate(1)}
-          className="size-6 rounded-md text-ink-secondary hover:bg-fill hover:text-ink"
-        >
-          <ChevronRightIcon className="size-4" />
-        </Button>
+        <Tip content={copy.header.forward}>
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={copy.header.forward}
+            onClick={() => navigate(1)}
+            className="size-6 rounded-md text-ink-secondary hover:bg-fill hover:text-ink"
+          >
+            <ChevronRightIcon className="size-4" />
+          </Button>
+        </Tip>
       </div>
 
       <div className="ml-auto inline-flex items-center md:gap-2">
@@ -82,13 +87,15 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
         )}
 
         {dashboard && (
-          <Link
-            to={{ search: `?view=${CALENDAR_VIEW}` }}
-            aria-label={copy.day.openCalendar}
-            className={barButton}
-          >
-            <CalendarIcon aria-hidden="true" />
-          </Link>
+          <Tip content={copy.day.openCalendar}>
+            <Link
+              to={{ search: `?view=${CALENDAR_VIEW}` }}
+              aria-label={copy.day.openCalendar}
+              className={barButton}
+            >
+              <CalendarIcon aria-hidden="true" />
+            </Link>
+          </Tip>
         )}
 
         {dashboard && isSignedIn && (

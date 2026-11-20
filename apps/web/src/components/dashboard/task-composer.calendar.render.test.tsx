@@ -6,6 +6,7 @@ import { MemoryRouter } from "react-router-dom";
 import type { SetStateAction } from "react";
 import type { ParsedTaskWire, Task } from "@dailify/shared";
 
+import { TooltipProvider } from "@/components/ui/tooltip";
 import { zonedAt } from "@/functions/zone";
 import { CALENDAR_DEFAULT_KEY } from "@/hooks/useCalendarDefault";
 import { setIntegrations } from "@/hooks/useIntegrations";
@@ -69,7 +70,9 @@ function Harness(): JSX.Element {
 const setup = () => {
   render(
     <MemoryRouter>
-      <Harness />
+      <TooltipProvider delayDuration={0}>
+        <Harness />
+      </TooltipProvider>
     </MemoryRouter>,
   );
   return userEvent.setup();
@@ -310,7 +313,8 @@ describe("<TaskComposer> destino sugerido pela Mew", () => {
       "aria-checked",
       "true",
     );
-    expect(chip()).toHaveAttribute("title", t.mewPicked);
+    await user.hover(screen.getByRole("switch", { name: t.chipLabel }));
+    expect(await screen.findAllByText(t.mewPicked)).not.toHaveLength(0);
     expect(meet()).toHaveAttribute("aria-pressed", "true");
     expect(api.createCalendarEvent).not.toHaveBeenCalled();
 

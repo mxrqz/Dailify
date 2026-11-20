@@ -40,6 +40,21 @@ describe("<Tip>", () => {
     expect(await screen.findAllByText("Voltar")).not.toHaveLength(0);
   });
 
+  it("stays closed while the content is empty", async () => {
+    render(
+      <TooltipProvider delayDuration={0}>
+        <Tip content={undefined}>
+          <button type="button">ir</button>
+        </Tip>
+      </TooltipProvider>,
+    );
+
+    await userEvent.tab();
+
+    expect(screen.getByRole("button", { name: "ir" })).not.toHaveAttribute("aria-describedby");
+    expect(screen.queryByRole("tooltip")).not.toBeInTheDocument();
+  });
+
   /**
    * O arranjo do `task-card`: um gatilho de menu envolve, por `asChild`, um componente que espalha
    * as props recebidas no `<button>` — e o `Tip` fica no meio. Se alguém tirar o espalhamento e

@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from "vitest";
 import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import type { Task } from "@dailify/shared";
 
+import { TooltipProvider } from "@/components/ui/tooltip";
+
 import { copy } from "./copy";
 
 import { TaskForm } from "./task-form";
@@ -20,7 +22,9 @@ const task: Task = {
 
 const setup = (initial: Task, view: "root" | "links" = "root") => {
   const onSubmit = vi.fn();
-  render(<TaskForm id="f" task={initial} view={view} onView={vi.fn()} onSubmit={onSubmit} />);
+  render(<TaskForm id="f" task={initial} view={view} onView={vi.fn()} onSubmit={onSubmit} />, {
+    wrapper: TooltipProvider,
+  });
   const submit = () => {
     const form = document.getElementById("f");
     if (form) fireEvent.submit(form);
@@ -132,6 +136,7 @@ describe("<TaskForm> Meet da Agenda", () => {
         onSubmit={onSubmit}
         onNewMeet={onNewMeet}
       />,
+      { wrapper: TooltipProvider },
     );
     const submit = () => {
       const form = document.getElementById("f");
