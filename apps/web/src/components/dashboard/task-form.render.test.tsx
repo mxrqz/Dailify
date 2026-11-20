@@ -104,6 +104,21 @@ describe("<TaskForm> raiz", () => {
     fireEvent.change(field, { target: { value: "https://zoom.us/j/1" } });
     expect(submit()).toMatchObject({ links: ["https://zoom.us/j/1", event] });
   });
+
+  it("saving after adding to the Calendar keeps the event link the server added", () => {
+    const event = "https://www.google.com/calendar/event?eid=abc";
+    const own = "https://zoom.us/j/1";
+    const onSubmit = vi.fn();
+    const form = (links: string[]) => (
+      <TaskForm id="f" task={{ ...task, links }} view="root" onView={vi.fn()} onSubmit={onSubmit} />
+    );
+    const { rerender } = render(form([own]), { wrapper: TooltipProvider });
+    rerender(form([own, event]));
+
+    const el = document.getElementById("f");
+    if (el) fireEvent.submit(el);
+    expect(onSubmit).toHaveBeenCalledWith(expect.objectContaining({ links: [own, event] }));
+  });
 });
 
 describe("<TaskForm> convite (readonly)", () => {
