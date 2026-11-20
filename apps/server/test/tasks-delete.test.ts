@@ -6,7 +6,7 @@ mockSession(() => ({ id: "u5" }));
 
 import { env, createExecutionContext } from "cloudflare:test";
 import app from "../src/index";
-import { insertTask } from "../src/db/tasks";
+import { getTask, insertTask } from "../src/db/tasks";
 import type { Task } from "@dailify/shared";
 
 describe("DELETE /tasks/:id", () => {
@@ -31,6 +31,39 @@ describe("DELETE /tasks/:id", () => {
     const after = await app.request("/tasks?month=2026-08", {}, env, createExecutionContext());
     const afterBody = await after.json<{ tasks: Task[] }>();
     expect(afterBody.tasks.some((t) => t.id === "del1")).toBe(false);
+  });
+});
+
+describe("DELETE /tasks/:id?updatedAt — LWW", () => {
+  const edited = Date.UTC(2026, 7, 10, 12);
+  const seed = (id: string) =>
+    insertTask(env.DB, "u5", {
+      id,
+      title: "Edited elsewhere",
+      date: edited,
+      duration: "",
+      priority: 0,
+      repeat: "Off",
+      completed: [],
+      updatedAt: edited,
+    });
+  const remove = (id: string, at: number) =>
+    app.request(`/tasks/${id}?updatedAt=${at}`, { method: "DELETE" }, env);
+
+  it("a delete made before the stored edit loses, still answering 204", async () => {
+    await seed("lww-stale");
+    expect((await remove("lww-stale", edited - 1)).status).toBe(204);
+    expect(await getTask(env.DB, "u5", "lww-stale")).toMatchObject({ title: "Edited elsewhere" });
+  });
+
+  it("a delete made at or after the stored edit wins", async () => {
+    await seed("lww-fresh");
+    expect((await remove("lww-fresh", edited)).status).toBe(204);
+    expect(await getTask(env.DB, "u5", "lww-fresh")).toBeNull();
+  });
+
+  it("400 on a non-numeric updatedAt", async () => {
+    expect((await remove("lww-fresh", NaN)).status).toBe(400);
   });
 });
 

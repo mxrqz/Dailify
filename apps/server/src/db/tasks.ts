@@ -197,8 +197,19 @@ export async function getTask(db: D1Database, userId: string, id: string): Promi
   return r ? rowToTask(r) : null;
 }
 
-export async function deleteTask(db: D1Database, userId: string, id: string): Promise<void> {
-  await db.prepare(`DELETE FROM tasks WHERE user_id=? AND id=?`).bind(userId, id).run();
+/** `updatedAt` = when the client deleted it: an edit stored after that wins (LWW). Absent: always. */
+export async function deleteTask(
+  db: D1Database,
+  userId: string,
+  id: string,
+  updatedAt?: number,
+): Promise<boolean> {
+  const stamp = updatedAt === undefined ? Number.MAX_SAFE_INTEGER : stampUpdatedAt(updatedAt);
+  const { meta } = await db
+    .prepare(`DELETE FROM tasks WHERE user_id=? AND id=? AND updated_at<=?`)
+    .bind(userId, id, stamp)
+    .run();
+  return meta.changes > 0;
 }
 
 export async function appendCompletion(

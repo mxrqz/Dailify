@@ -152,8 +152,13 @@ tasks.delete("/:id", async (c) => {
     return c.json({ series } satisfies OccurrenceEdit);
   }
 
-  await deleteTask(c.env.DB, userId, id);
-  if (linked) c.executionCtx.waitUntil(propagate(c.env, userId, linked.links, linked.before, null));
+  const updatedAt = parseOccurrence(c.req.query("updatedAt"));
+  if (updatedAt === "invalid") return fail(c, 400, "invalid updatedAt");
+  // 204 either way: a stale delete that lost to a newer edit is done, and the task comes back on
+  // the next read.
+  const deleted = await deleteTask(c.env.DB, userId, id, updatedAt);
+  if (linked && deleted)
+    c.executionCtx.waitUntil(propagate(c.env, userId, linked.links, linked.before, null));
   return c.body(null, 204);
 });
 

@@ -217,7 +217,7 @@ describe("flushQueue", () => {
     enqueue("u", create("a"));
 
     await flushQueue("u");
-    expect(api.deleteTask).toHaveBeenCalledWith("a");
+    expect(api.deleteTask).toHaveBeenCalledWith("a", undefined, 5);
     expect(readQueue("u")).toEqual([]);
   });
 

@@ -76,8 +76,9 @@ things.use("*", rateLimit("API_LIMITER")); // only if every route shares it, els
 - Success: `c.json({ <noun>: ... })` (`{ task }`, `{ tasks }`, `{ series }`, `{ url }`) or
   `c.body(null, 204)`. Bare bodies (settings, integrations list, invoices, `AiParse`, `MewReply`)
   are legacy.
-- `DELETE /tasks/:id` is 204 even when the row is gone (the offline queue replays it); a `PATCH` of
-  a missing task is 404.
+- `DELETE /tasks/:id` is 204 even when the row is gone (the offline queue replays it) or when its
+  optional `?updatedAt=` is older than the stored edit (LWW: the row stays); a `PATCH` of a
+  missing task is 404.
 - The web (`request()` in `apps/web/src/functions/api.ts`) shows `error` as the toast description
   and branches on `status` + `code`; a non-JSON body degrades to "O servidor falhou (N).".
 - Expected `integrations/` failures are typed errors mapped at the edge: `withCalendar` maps

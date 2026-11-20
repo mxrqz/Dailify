@@ -281,7 +281,7 @@ async function send(mutation: Mutation): Promise<ApiError | undefined> {
         ? (await uncompleteTask(mutation.taskId, zoned(mutation.day))).error
         : (await uncompleteTaskRange(mutation.taskId, mutation.day, mutation.until)).error;
     case "delete":
-      return (await deleteTask(mutation.taskId)).error;
+      return (await deleteTask(mutation.taskId, undefined, mutation.at)).error;
     case "delete-occurrence":
       return (await deleteTask(mutation.taskId, mutation.occurrence)).error;
   }
