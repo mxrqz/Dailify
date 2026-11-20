@@ -8,10 +8,12 @@ import {
 } from "lucide-react";
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { useEffect, type CSSProperties } from "react";
+import { Link } from "react-router-dom";
 import type { QuotaState } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Button } from "@/components/ui/button";
 import { PLAN_ID, planMap } from "@/consts/conts";
 import { duration, ease } from "@/consts/motion";
 import { fill } from "@/functions/functions";
@@ -91,11 +93,14 @@ export function CreditsMeter({ used, limit, ratio }: Credits): JSX.Element {
 export function NavMenu({
   account,
   credits,
+  upgrade,
   onSignOut,
 }: {
   account?: { name: string; imageUrl?: string; plan: string };
   /** Sem teto (ou carregando) não há barra a mostrar. */
   credits?: Credits;
+  /** The "Assinar" upsell: the desktop has it in the header, so only the drawer asks for it. */
+  upgrade?: boolean;
   onSignOut?: () => void;
 }): JSX.Element {
   return (
@@ -129,6 +134,11 @@ export function NavMenu({
       {account && (
         <div className="mt-auto flex flex-col gap-2 pt-4">
           {credits && <CreditsMeter {...credits} />}
+          {upgrade && (
+            <Button asChild className="mx-1">
+              <Link to="/premium">{copy.header.upgrade}</Link>
+            </Button>
+          )}
           <button
             type="button"
             onClick={onSignOut}
@@ -144,7 +154,7 @@ export function NavMenu({
 }
 
 /** O `NavMenu` ligado à sessão e às quotas. */
-export function NavItems(): JSX.Element {
+export function NavItems({ upgrade = false }: { upgrade?: boolean }): JSX.Element {
   const user = useSession().data?.user;
   const { loading, states } = useQuotas();
   const ai = states.ai;
@@ -158,6 +168,7 @@ export function NavItems(): JSX.Element {
           : undefined
       }
       credits={loading || ai.unlimited ? undefined : ai}
+      upgrade={upgrade && planOf(user) === PLAN_ID.free}
       onSignOut={() => signOutAndReload()}
     />
   );
