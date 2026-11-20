@@ -48,7 +48,7 @@ describe("chatReducer", () => {
 
   it("confirm freezes only the checked, titled rows; undo and cancel follow the steps", () => {
     let s = chatReducer(asked(), { type: "toggle", block: "c", task: "b" });
-    s = chatReducer(s, { type: "edit", block: "c", task: "a", title: "Pão" });
+    s = chatReducer(s, { type: "edit", block: "c", task: task("a", { title: "Pão" }) });
     s = chatReducer(s, { type: "confirm", block: "c" });
     expect(box(s).step).toBe("done");
     expect(box(s).after.map((x) => x.title)).toEqual(["Pão"]);
@@ -56,6 +56,13 @@ describe("chatReducer", () => {
     expect(box(chatReducer(s, { type: "cancel", block: "c" })).step).toBe("done");
     expect(box(chatReducer(s, { type: "undo", block: "c" })).step).toBe("undone");
     expect(box(chatReducer(s, { type: "settle", block: "c", step: "draft" })).step).toBe("draft");
+  });
+
+  it("edit replaces only the draft with the same id, every field included", () => {
+    const edited = task("b", { title: "Feira", priority: 2, tags: ["casa"] });
+    const s = chatReducer(asked(), { type: "edit", block: "c", task: edited });
+    expect(box(s).after).toEqual([task("a"), edited]);
+    expect(box(chatReducer(s, { type: "confirm", block: "c" })).after).toEqual([task("a"), edited]);
   });
 
   it("drop takes back a refused send", () => {
