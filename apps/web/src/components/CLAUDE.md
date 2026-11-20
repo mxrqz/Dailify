@@ -85,7 +85,8 @@ It owns the task boot. Other code only re-triggers loads (`pages/integration-cal
 - The active item is neutral on purpose (brand would compete with the primary action), and nothing
   stays lit on mobile. `alsoActive="/premium"` lights "Planos" though it links to `/billing`.
 - `MobileNav` closes only on a location change, adjusted during render (a link, even to the current
-  route, and the device back); tapping the account or the meter leaves it open.
+  route, and the device back); tapping the account or the meter leaves it open. Only the drawer
+  shows Free users the "Assinar" upsell (`NavItems upgrade`); on desktop it lives in `AppHeader`.
   The credits meter hides while quotas load or when AI is unlimited. Tests assert
   `aria-current="page"`.
 

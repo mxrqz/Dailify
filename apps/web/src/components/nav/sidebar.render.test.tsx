@@ -137,4 +137,27 @@ describe("<MobileNav>", () => {
     fireEvent.click(screen.getByRole("link", { name: copy.profile.navDashboard }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
+
+  it("offers Free users the upgrade to /premium and closes on tap", () => {
+    open();
+    const upgrade = screen.getByRole("link", { name: copy.header.upgrade });
+    expect(upgrade).toHaveAttribute("href", "/premium");
+    fireEvent.click(upgrade);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+
+  it("hides the upgrade from paying users", () => {
+    useSession.mockReturnValue({
+      data: { user: { id: "u1", name: "Seu", email: "seu@mewki.app", image: null, plan: "pro" } },
+    });
+    open();
+    expect(screen.queryByRole("link", { name: copy.header.upgrade })).not.toBeInTheDocument();
+  });
+});
+
+describe("<Sidebar> upgrade", () => {
+  it("leaves the upgrade to the desktop header", () => {
+    renderAt("/dashboard");
+    expect(screen.queryByRole("link", { name: copy.header.upgrade })).not.toBeInTheDocument();
+  });
 });
