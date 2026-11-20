@@ -1,4 +1,5 @@
 import { useEffect, useId, useRef, type KeyboardEvent, type PointerEvent } from "react";
+import { useReducedMotion } from "motion/react";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
@@ -55,6 +56,7 @@ function Wheel({
     velocity: number;
   } | null>(null);
   const glide = useRef(0);
+  const reduce = useReducedMotion();
   const index = values.indexOf(value);
 
   // Direto no DOM, a cada quadro de rolagem: passar por estado re-renderizaria a coluna toda.
@@ -98,7 +100,7 @@ function Wheel({
   const step = (delta: number) => {
     const next = values[index + delta];
     if (next === undefined) return;
-    ref.current?.scrollTo({ top: (index + delta) * ROW_PX, behavior: "smooth" });
+    ref.current?.scrollTo({ top: (index + delta) * ROW_PX, behavior: reduce ? "auto" : "smooth" });
     onChange(next);
   };
 
