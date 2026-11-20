@@ -8,7 +8,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
 - Agenda: `day-list.tsx` → `day-section.tsx` (`dayAnchorId`) → `day-task-row.tsx`
   (`DayTaskRow` container, `NowLine`), over kit `TaskRow`/`CheckCircle`.
 - Undated: `anytime-block.tsx` (today's card, `ScheduleDrop`), `check-history.tsx`;
-  `undated-column.tsx` is a reserved, empty desktop column (bd `Dailify-1td`).
+- Layout: `side-column.tsx` is a reserved, empty desktop column; its open flag keeps the persisted
+  key `dailify:undated-open`.
 - Navigation: `week-strip.tsx` (`WeekDays`/`WeekStrip`), `month-calendar.tsx` (`MonthGrid`/
   `MonthCalendar`, the `?view=calendar` overlay of `pages/home.tsx`). Gesture: `swipe-actions.tsx`.
 - Creation: `create-fab.tsx`, `task-composer.tsx` (container), `composer-views.tsx` (views),

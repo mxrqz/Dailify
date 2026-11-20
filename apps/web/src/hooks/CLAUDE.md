@@ -11,7 +11,7 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 - `useMewParse` and `useVoiceCreate` serve only the dashboard composer and FAB; they predate the
   placement rule. One-feature hooks sit beside their component: `useCalendarChip`
   (`dashboard/calendar-chip.tsx`), `useWeek` (`dashboard/week-strip.tsx`), `useMewApply`
-  (`mew-chat/apply.ts`), `useUndatedOpen` (`dashboard/undated-column.tsx`).
+  (`mew-chat/apply.ts`), `useSideOpen` (`dashboard/side-column.tsx`).
 
 ## Write contract details
 

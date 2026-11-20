@@ -14,6 +14,7 @@ describe("cn", () => {
     ["ease-standard", "ease-out"],
     ["ease-out-soft", "ease-linear"],
     ["w-sheet", "w-full"],
+    ["w-side", "w-0"],
     ["max-w-bubble", "max-w-none"],
     ["max-h-sheet", "max-h-none"],
     ["min-w-duration", "min-w-0"],

@@ -19,7 +19,7 @@ const twMerge = extendTailwindMerge({
       "font-size": ["caps"],
       z: [{ z: ["bar", "float", "chat", "dock", "overlay"] }],
       duration: [{ duration: ["instant", "fast", "base", "slow", "open"] }],
-      w: [{ w: ["sheet", "undated"] }],
+      w: [{ w: ["sheet", "side"] }],
       "max-w": [{ "max-w": ["bubble"] }],
       "max-h": [{ "max-h": ["sheet"] }],
       "min-w": [{ "min-w": ["duration"] }],
