@@ -8,7 +8,7 @@ const twMerge = extendTailwindMerge({
   extend: {
     theme: {
       text: ["title-1", "title-3", "body", "subhead", "footnote"],
-      radius: ["sheet", "panel", "field"],
+      radius: ["2xs", "sheet", "panel", "field"],
       shadow: ["raised", "line", "elevation-1"],
       ease: ["standard", "exit", "spring", "out-expo", "out-quint", "out-soft"],
     },
