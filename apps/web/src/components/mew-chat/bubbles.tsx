@@ -5,9 +5,10 @@ import { MessageBox } from "@/components/mew/message-box";
 import { MewStatic } from "@/components/mew/mew-static";
 import { cn } from "@/lib/utils";
 
+import { PermissionBody, SendBody } from "./app-boxes";
 import { ConfirmBody, Row } from "./confirm-box";
 import { copy as t } from "./copy";
-import { isConfirm } from "./mood";
+import { isBox } from "./mood";
 import type { ChatAction, Message, Step } from "./thread";
 
 const DOT_STAGGER_MS = 150;
@@ -70,7 +71,7 @@ export function Reply({
   dispatch: (action: ChatAction) => void;
   onOpenTask: (task: Task) => void;
 }) {
-  const confirm = message.blocks.find(isConfirm);
+  const confirm = message.blocks.find(isBox);
   const key = message.typing
     ? "typing"
     : confirm && FINAL.includes(confirm.step)
@@ -111,8 +112,12 @@ export function Reply({
                       </li>
                     ))}
                   </ul>
-                ) : (
+                ) : block.kind === "confirm" ? (
                   <ConfirmBody block={block} dispatch={dispatch} />
+                ) : block.kind === "permission" ? (
+                  <PermissionBody block={block} dispatch={dispatch} />
+                ) : (
+                  <SendBody block={block} dispatch={dispatch} />
                 )}
               </Reveal>
             ))}

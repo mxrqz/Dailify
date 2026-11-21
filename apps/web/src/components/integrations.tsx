@@ -15,6 +15,7 @@ import { type IntegrationStatus, type ProviderId } from "@dailify/shared";
 import { copy } from "@/components/dashboard/copy";
 import { ListGroup, ListRow } from "@/components/kit/list";
 import { SegmentedControl } from "@/components/kit/segmented-control";
+import { Switch } from "@/components/kit/switch";
 import {
   GitHubLogo,
   GmailLogo,
@@ -33,7 +34,12 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog";
-import { connectIntegration, disconnectIntegration, getIntegrations } from "@/functions/api";
+import {
+  connectIntegration,
+  disconnectIntegration,
+  getIntegrations,
+  revokeReadGrant,
+} from "@/functions/api";
 import { fill } from "@/functions/functions";
 import { useCalendarDefault } from "@/hooks/useCalendarDefault";
 import {
@@ -211,6 +217,14 @@ export function Integrations(): JSX.Element {
     toast.success(named(t.disconnected));
   };
 
+  const revokeRead = async () => {
+    patchIntegration(GCAL, { readAlways: undefined });
+    const { error } = await revokeReadGrant(GCAL);
+    if (!error) return;
+    patchIntegration(GCAL, { readAlways: true });
+    toast.error(t.readAlwaysError, { description: error.message });
+  };
+
   const status = statuses?.find((s) => s.provider === GCAL);
   const connected = active(status);
   const disabled = !online || !status || busy;
@@ -297,6 +311,20 @@ export function Integrations(): JSX.Element {
           }
         >
           {connected && <CalendarDefaultRow />}
+          {connected && status?.readAlways && (
+            <ListRow
+              label={t.readAlways}
+              sublabel={t.readAlwaysHint}
+              trailing={
+                <Switch
+                  checked
+                  aria-label={t.readAlways}
+                  disabled={!online}
+                  onCheckedChange={() => void revokeRead()}
+                />
+              }
+            />
+          )}
         </IntegrationCard>
       </ListGroup>
       <UpcomingIntegrations />

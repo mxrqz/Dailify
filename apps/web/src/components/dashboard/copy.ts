@@ -310,6 +310,10 @@ export const copy = {
     missingScope: "Faltou permissão: marque a permissão da {name} na tela do Google",
     wrongUser: "Este pedido de conexão é de outra conta",
     failed: "Não deu pra concluir a conexão; tente de novo",
+    // "Sempre permitir" na caixa da Mew; desligar faz ela pedir de novo.
+    readAlways: "A Mew lê sem perguntar",
+    readAlwaysHint: "Desligue pra ela pedir antes de ler",
+    readAlwaysError: "Não foi possível desligar",
   },
 
   calendar: {

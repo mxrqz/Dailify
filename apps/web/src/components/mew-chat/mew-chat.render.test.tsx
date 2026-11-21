@@ -25,6 +25,7 @@ const api = vi.hoisted(() => ({
   getSettings: vi.fn(),
   saveSettings: vi.fn(),
   setMewAction: vi.fn(),
+  sendMewAction: vi.fn(),
   createTask: vi.fn(),
   updateTask: vi.fn(),
   deleteTask: vi.fn(),
@@ -64,6 +65,35 @@ const proposal: MewReply = {
   reply: "Achei 1 tarefa.",
   intent: "propose",
   blocks: [{ kind: "confirm", id: "act-1", action: "create", before: [], after: [bread] }],
+};
+
+const asksToRead: MewReply = {
+  reply: "Posso olhar o canal?",
+  intent: "answer",
+  blocks: [
+    {
+      kind: "permission",
+      id: "p1",
+      provider: "google-calendar",
+      capability: "read",
+      target: "C1",
+      label: "#geral",
+    },
+  ],
+};
+const drafted: MewReply = {
+  reply: "Rascunho:",
+  intent: "answer",
+  blocks: [
+    {
+      kind: "send",
+      id: "d1",
+      provider: "google-calendar",
+      target: "C1",
+      to: "#geral",
+      text: "Já vi!",
+    },
+  ],
 };
 
 const mount = () => {
@@ -189,6 +219,76 @@ describe("MewChat", () => {
     expect(await within(chat).findByText(/esgotados/)).toBeInTheDocument();
     expect(screen.getByRole("alertdialog", { name: copy.quota.trayTitle })).toBeInTheDocument();
     expect(ctx.bumpUsage).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [t.readBox.once, false],
+    [t.readBox.always, true],
+  ])("%s re-sends the same turn with the permission and shows her answer", async (name, always) => {
+    api.mewChat
+      .mockResolvedValueOnce({ reply: asksToRead })
+      // One word: the reply renders a span per word.
+      .mockResolvedValueOnce({ reply: { reply: "Respondeu.", intent: "answer", blocks: [] } });
+    const { chat } = mount();
+    say("o João respondeu?");
+    fireEvent.click(await within(chat).findByRole("button", { name }));
+
+    expect(await within(chat).findByText("Respondeu.")).toBeInTheDocument();
+    expect(api.mewChat).toHaveBeenLastCalledWith(
+      expect.objectContaining({
+        text: "o João respondeu?",
+        history: [],
+        permission: { id: "p1", always },
+      }),
+    );
+    expect(within(chat).getByText("Permitido: #geral")).toBeInTheDocument();
+    // One credit for the whole turn.
+    expect(ctx.bumpUsage).toHaveBeenCalledTimes(1);
+  });
+
+  it("Não permitir cancels without asking the server again", async () => {
+    api.mewChat.mockResolvedValue({ reply: asksToRead });
+    const { chat } = mount();
+    say("o João respondeu?");
+    fireEvent.click(await within(chat).findByRole("button", { name: t.readBox.deny }));
+    expect(await within(chat).findByText("Tudo bem, não vou ler #geral.")).toBeInTheDocument();
+    expect(api.setMewAction).toHaveBeenCalledWith("p1", "cancelled");
+    expect(api.mewChat).toHaveBeenCalledTimes(1);
+  });
+
+  it("a send box sends the draft, or the edited text, only on Enviar", async () => {
+    api.mewChat.mockResolvedValue({ reply: drafted });
+    api.sendMewAction.mockResolvedValue({});
+    const { chat } = mount();
+    say("responde o João");
+    fireEvent.click(await within(chat).findByRole("button", { name: t.sendBox.edit }));
+    fireEvent.change(within(chat).getByRole("textbox", { name: t.sendBox.text }), {
+      target: { value: "Revisado!" },
+    });
+    expect(api.sendMewAction).not.toHaveBeenCalled();
+    fireEvent.click(within(chat).getByRole("button", { name: t.sendBox.send }));
+    await waitFor(() => expect(api.sendMewAction).toHaveBeenCalledWith("d1", "Revisado!"));
+    expect(await within(chat).findByText("Enviado para #geral")).toBeInTheDocument();
+  });
+
+  it("a refused send puts the box back with its text", async () => {
+    api.mewChat.mockResolvedValue({ reply: drafted });
+    api.sendMewAction.mockResolvedValue({ error: { message: "x", offline: false, status: 502 } });
+    const { chat } = mount();
+    say("responde o João");
+    fireEvent.click(await within(chat).findByRole("button", { name: t.sendBox.send }));
+    await waitFor(() => expect(api.sendMewAction).toHaveBeenCalledWith("d1", "Já vi!"));
+    expect(await within(chat).findByRole("button", { name: t.sendBox.send })).toBeInTheDocument();
+  });
+
+  it("Cancelar on a send box sends nothing", async () => {
+    api.mewChat.mockResolvedValue({ reply: drafted });
+    const { chat } = mount();
+    say("responde o João");
+    fireEvent.click(await within(chat).findByRole("button", { name: t.sendBox.cancel }));
+    expect(await within(chat).findByText(t.sendBox.cancelled)).toBeInTheDocument();
+    expect(api.setMewAction).toHaveBeenCalledWith("d1", "cancelled");
+    expect(api.sendMewAction).not.toHaveBeenCalled();
   });
 
   it("the empty state's Nova tarefa opens the classic composer", () => {

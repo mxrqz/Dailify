@@ -65,4 +65,26 @@ export const copy = {
     editDraft: "Editar {title}, {when}",
     editDraftDescription: "Ajuste e salve. A tarefa só é criada quando você confirmar.",
   },
+  // Ler um app conectado: nada é lido sem um destes botões.
+  readBox: {
+    title: "Posso ler {label}?",
+    source: "{app} · só pra responder esta mensagem",
+    deny: "Não permitir",
+    once: "Permitir uma vez",
+    always: "Sempre permitir",
+    allowed: "Permitido: {label}",
+    denied: "Tudo bem, não vou ler {label}.",
+  },
+  // Mandar mensagem por um app: sempre confirma, nunca "sempre".
+  sendBox: {
+    title: "Enviar para {to}",
+    source: "{app} · confira antes de sair",
+    text: "Texto da mensagem",
+    send: "Enviar",
+    edit: "Editar",
+    cancel: "Cancelar",
+    sent: "Enviado para {to}",
+    cancelled: "Cancelado. Nada foi enviado.",
+    error: "Não foi possível enviar",
+  },
 } as const;

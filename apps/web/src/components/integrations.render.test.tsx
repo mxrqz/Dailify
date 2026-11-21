@@ -11,6 +11,7 @@ const { useOnline, api, toast } = vi.hoisted(() => ({
     getIntegrations: vi.fn(),
     connectIntegration: vi.fn(),
     disconnectIntegration: vi.fn(),
+    revokeReadGrant: vi.fn(),
   },
   toast: { error: vi.fn(), success: vi.fn() },
 }));
@@ -72,6 +73,14 @@ describe("<Integrations>", () => {
     await waitFor(() => expect(api.disconnectIntegration).toHaveBeenCalledWith("google-calendar"));
     expect(await screen.findByRole("button", { name: t.connect })).toBeInTheDocument();
     expect(toast.success).toHaveBeenCalledWith("Agenda desconectada");
+  });
+
+  it("an always-read grant shows a switch that revokes it", async () => {
+    api.revokeReadGrant.mockResolvedValue({});
+    renderWith({ connected: true, status: "active", readAlways: true });
+    await userEvent.click(await screen.findByRole("switch", { name: t.readAlways }));
+    expect(api.revokeReadGrant).toHaveBeenCalledWith("google-calendar");
+    await waitFor(() => expect(screen.queryByRole("switch", { name: t.readAlways })).toBeNull());
   });
 
   it("conectado: o que ficou só na Agenda vira recado no card", async () => {

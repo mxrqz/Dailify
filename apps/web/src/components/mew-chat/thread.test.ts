@@ -65,6 +65,47 @@ describe("chatReducer", () => {
     expect(box(chatReducer(s, { type: "confirm", block: "c" })).after).toEqual([task("a"), edited]);
   });
 
+  it("a permission box allows once into a new typing reply, a send box edits and delivers", () => {
+    const s = asked({
+      reply: "Posso ler?",
+      intent: "answer",
+      blocks: [
+        {
+          kind: "permission",
+          id: "p",
+          provider: "google-calendar",
+          capability: "read",
+          target: "C1",
+          label: "#geral",
+        },
+        {
+          kind: "send",
+          id: "d",
+          provider: "google-calendar",
+          target: "C1",
+          to: "#geral",
+          text: "Oi",
+        },
+      ],
+    });
+    const blocks = (m: Message[]) => m.flatMap((x) => (x.from === "mew" ? x.blocks : []));
+    expect(blocks(s).map((b) => b.kind !== "tasks" && b.step)).toEqual(["draft", "draft"]);
+
+    let t = chatReducer(s, { type: "allow", block: "p", always: false });
+    t = chatReducer(t, { type: "wait", id: "r" });
+    expect(t.at(-1)).toMatchObject({ id: mewId("r"), from: "mew", typing: true });
+    t = chatReducer(t, { type: "draft", block: "d", text: "Oi, João" });
+    t = chatReducer(t, { type: "deliver", block: "d" });
+    expect(blocks(t)).toMatchObject([
+      { kind: "permission", step: "done" },
+      { kind: "send", step: "done", text: "Oi, João" },
+    ]);
+    // Denying after allowing does nothing.
+    expect(blocks(chatReducer(t, { type: "cancel", block: "p" }))[0]).toMatchObject({
+      step: "done",
+    });
+  });
+
   it("drop takes back a refused send", () => {
     expect(
       chatReducer(chatReducer([], { type: "send", id: "s", text: "oi" }), {
