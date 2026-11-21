@@ -16,7 +16,7 @@ Each has a colocated `<module>.test.ts`, except `push.ts`.
 - One concept each: `repeat-label` (+ `REPEAT_MODES`), `link-label` (+ `linkHost`,
   `normalizeUrl`), `quota-label` (+ `creditsLabel`), `count-label`, `date-label` (day and clock
   labels), `task-options` (editor choice lists), `task-lists` (`swapTasks`/`swapUndated`),
-  `undated`, `user-agent`,
+  `undated`, `user-agent`, `span` (the days a task crossing midnight covers, "dia k de n"),
   `compose-input` (composer chip state: `onDay`, `markSegments`, `withEdits`; `fromWire` and
   `composeTaskInput` are shared's), `edit-input` (edit form to `TaskInput`, `buildEdit`), `billing-sections`,
   `revert-task`.
@@ -72,7 +72,10 @@ render test whose component now calls it (a factory mock throws on an export it 
   `seriesOf(task)`, so an instance is safe; a series date change must arrive as a shifted anchor.
 - `revertTask(current, previous, id)`: a rollback that resets only `id` to its `previous` entries.
 - `getTasksForDay` memoizes per tasks array and zone in a `WeakMap` and returns shared buckets:
-  never mutate them or the tasks array; `setTasks` always gets a new array.
+  never mutate them or the tasks array; `setTasks` always gets a new array. A task whose
+  `date + duration` crosses midnight lands in every day it covers (`spanDayKeys`), and so does
+  `listDays`; `mergeMonth` dedupes by `id-date` because the server also sends those that start
+  in the month before.
 
 ## Copy and tests
 

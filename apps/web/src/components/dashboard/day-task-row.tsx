@@ -22,10 +22,11 @@ import { useDailify } from "@/components/dailifyContext";
 import { clockAt } from "@/functions/date-label";
 import { fill, formatClock, taskToCardData } from "@/functions/functions";
 import { repeatLabel } from "@/functions/repeat-label";
+import { spanOf } from "@/functions/span";
 import { isSaving } from "@/hooks/useCreateTask";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import type { Task } from "@dailify/shared";
-import { zoned } from "@/functions/zone";
+import { appTimeZone, zoned } from "@/functions/zone";
 
 /** 15 → "15 min", 60 → "1h", 90 → "1h30": a duração embaixo do horário. */
 export function durationText(minutes: number): string {
@@ -182,13 +183,21 @@ export function DayTaskRow({
         calendar: <AddToCalendar task={task} variant="toolbar" />,
       };
 
-  const time = hour ? formatClock(hour, hour12) : "";
+  const span = spanOf(task, +day, appTimeZone());
+  const spanLabel = span && fill(copy.day.spanDay, span);
+  const time = hour && !span ? formatClock(hour, hour12) : "";
   // ponytail: o desktop segue no TaskCard (edição nos chips, por hover); portar pra TaskRow pede
   // levar os popovers de horário/duração/repetição pra dentro da meta.
   const card = sheetEditing ? (
     <TaskRow
-      time={formatClock(data.time, hour12)}
-      duration={task.duration ? durationText(durationMinutes(task.duration)) : undefined}
+      time={
+        spanLabel ? (
+          <span className="text-right text-xs leading-tight">{spanLabel}</span>
+        ) : (
+          formatClock(data.time, hour12)
+        )
+      }
+      duration={task.duration && !span ? durationText(durationMinutes(task.duration)) : undefined}
       title={task.title}
       meta={
         isSaving(task) ? (
@@ -206,11 +215,11 @@ export function DayTaskRow({
     <TaskCard
       {...data}
       time={time}
-      at={formatClock(data.time, hour12)}
+      at={spanLabel || formatClock(data.time, hour12)}
       selected={open}
       check={
         <ClockCheck
-          time={data.time}
+          time={span ? undefined : data.time}
           checked={data.completed}
           onCheckedChange={(next) => void (next ? onComplete() : onUncomplete())}
           label={data.completed ? copy.task.uncomplete : copy.task.complete}

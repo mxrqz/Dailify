@@ -16,6 +16,8 @@ import { clockAt, dayLabel, weekdayDate } from "@/functions/date-label";
 import { getCompletionDate, getTasksForDay, getTime, timeToMinutes } from "@/functions/functions";
 import { isSaving } from "@/hooks/useCreateTask";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { spanOf } from "@/functions/span";
+import { appTimeZone } from "@/functions/zone";
 import { useNow } from "@/hooks/useNow";
 import type { Task } from "@dailify/shared";
 
@@ -86,8 +88,10 @@ export function DaySection({
   const nowAt = now.getHours() * 60 + now.getMinutes();
   // Tarefas e o fio do agora numa ordem só. O fio fica antes do que começa agora (-0.5): o que já
   // começou fica acima dele.
+  const spanOn = (task: Task) => spanOf(task, +day, appTimeZone());
+  // A day after a spanning task's first one opens the list.
   const timed: Row[] = dayTasks.map((task) => ({
-    at: timeToMinutes(getTime(task.date, "HH:MM")),
+    at: (spanOn(task)?.k ?? 1) > 1 ? 0 : timeToMinutes(getTime(task.date, "HH:MM")),
     task,
   }));
   if (isCurrentDay && timed.length) timed.push({ at: nowAt - 0.5, now: true });
@@ -95,7 +99,10 @@ export function DaySection({
   const rows = dayRows(timed, done);
   const zeroed = isDayZeroed(dayTasks, done);
   const live = (row: { at: number; task: Task }) =>
-    isCurrentDay && row.at <= nowAt && nowAt < row.at + durationMinutes(row.task.duration);
+    isCurrentDay &&
+    !spanOn(row.task) &&
+    row.at <= nowAt &&
+    nowAt < row.at + durationMinutes(row.task.duration);
   const count = dayTasks.length;
   const sub =
     isTomorrow(day) && !calendar ? weekdayDate(day, "EEEE, d MMM") : count > 0 && itemCount(count);

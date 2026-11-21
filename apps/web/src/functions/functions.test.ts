@@ -139,13 +139,17 @@ describe("índice por dia e faixas numéricas ≡ comparação por TZDate", () =
     // é, no date-fns 4, `+startOfDay(zoned(t.date)) === +startOfDay(zoned(day))` (o 2º argumento
     // vira TZDate no fuso do 1º), então o lado da tarefa sai uma vez por fuso e o do dia, uma por dia.
     const taskDay = new Map(tasks.map((t) => [t, +startOfDay(zoned(t.date))]));
+    // The default 10 min of a task just before midnight also lands it on the next day.
+    const endDay = new Map(tasks.map((t) => [t, +startOfDay(zoned(t.date + 10 * 60_000 - 1))]));
     const doneKeys = new Map(
       tasks.map((t) => [t, new Set(t.completed.map((c) => format(zoned(c), "P")))]),
     );
     for (let i = 0; i < 95; i += 3) {
       for (const day of [addDays(zonedAt(2026, 9, 1), i), new Date(2026, 9, 1 + i)]) {
         const dayStart = +startOfDay(zoned(day));
-        const before = tasks.filter((t) => taskDay.get(t) === dayStart);
+        const before = tasks.filter(
+          (t) => taskDay.get(t) === dayStart || endDay.get(t) === dayStart,
+        );
         expect(getTasksForDay(tasks, day)).toEqual(before);
         const key = format(day, "P");
         for (const t of before.concat(tasks.slice(i, i + 3))) {
@@ -280,6 +284,11 @@ describe("mergeMonth", () => {
     const sepInstance = { ...daily, date: new Date(2026, 8, 1, 9).getTime() };
     const merged = mergeMonth([daily, sepInstance], aug, [{ ...daily, title: "novo" }]);
     expect(merged).toEqual([sepInstance, { ...daily, title: "novo" }]);
+  });
+
+  test("keeps one copy of a task that starts the month before and runs into it", () => {
+    const trip = makeTask({ id: "t", date: new Date(2026, 6, 30).getTime(), duration: "96h" });
+    expect(mergeMonth([trip, inSep], aug, [trip])).toEqual([inSep, trip]);
   });
 
   test("mês vazio no servidor esvazia só aquele mês", () => {

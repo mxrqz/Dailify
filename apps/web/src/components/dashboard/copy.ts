@@ -74,6 +74,8 @@ export const copy = {
     now: "Agora",
     nowAt: "Agora, {time}",
     until: "até {time}",
+    // In place of the clock on each day of a task that crosses midnight.
+    spanDay: "dia {k} de {n}",
     minutes: "{n} min",
     hours: "{h}h{m}",
     reminderOnTime: "Lembrete na hora",
