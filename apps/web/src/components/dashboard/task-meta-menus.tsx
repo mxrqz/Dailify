@@ -1,5 +1,4 @@
 import { useId, useState, type ReactNode } from "react";
-import { FlagIcon } from "lucide-react";
 import { normalizeRepeat, weekDays, type Repeat } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
@@ -17,14 +16,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
-import { priorityText, priorityTextColor } from "@/consts/conts";
-import { cn } from "@/lib/utils";
 import { REPEAT_MODES, everyLabel, everyOptions } from "@/functions/repeat-label";
 import { durationOptions } from "@/functions/task-options";
 import { zoned } from "@/functions/zone";
 
 /**
- * Os editores dos chips do cartão. Cada um recebe o chip como `children` e o usa de gatilho — o
+ * Os editores dos chips do composer e da linha do desktop. Cada um recebe o chip como `children` e o usa de gatilho — o
  * Radix já escolhe sozinho o lado com espaço (flip/shift), então não há nada a posicionar aqui.
  *
  * Menu de rádio em vez de `<Select>`: o chip JÁ é o gatilho, então um select aninhado só somaria
@@ -32,35 +29,6 @@ import { zoned } from "@/functions/zone";
  */
 
 const menuClass = "min-w-44";
-
-export function PriorityMenu({
-  value,
-  onChange,
-  children,
-}: {
-  value: number;
-  onChange: (priority: number) => void;
-  children: ReactNode;
-}): JSX.Element {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
-      <DropdownMenuContent align="end" className={menuClass}>
-        <DropdownMenuRadioGroup
-          value={String(value)}
-          onValueChange={(next) => onChange(Number(next))}
-        >
-          {priorityText.map((label, index) => (
-            <DropdownMenuRadioItem key={label} value={String(index)}>
-              <FlagIcon className={cn("size-3.5", priorityTextColor[index])} aria-hidden="true" />
-              {label}
-            </DropdownMenuRadioItem>
-          ))}
-        </DropdownMenuRadioGroup>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
 
 export function DurationMenu({
   value,

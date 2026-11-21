@@ -69,7 +69,9 @@ export function TaskRow({
   done,
   live,
   muted,
+  selected,
   onOpen,
+  actions,
   trailing,
   className,
   ...props
@@ -83,7 +85,11 @@ export function TaskRow({
   live?: boolean;
   /** Evento de fora: texto apagado, título sem peso. */
   muted?: boolean;
+  /** The task open in the desktop side panel. */
+  selected?: boolean;
   onOpen?: () => void;
+  /** Desktop quick actions before `trailing`, shown on hover or focus (and while one is open). */
+  actions?: ReactNode;
   trailing?: ReactNode;
   className?: string;
   role?: string;
@@ -132,8 +138,13 @@ export function TaskRow({
     <div
       {...props}
       className={cn(
-        "flex min-h-16 items-center gap-2 rounded-md py-1.5 pr-1.5 pl-3",
-        live ? "bg-brand-soft" : "card",
+        "group/row flex min-h-16 items-center gap-2 rounded-md py-1.5 pr-1.5 pl-3",
+        live
+          ? "bg-brand-soft"
+          : selected
+            ? "bg-fill-pressed outline-1 -outline-offset-1 outline-ink-tertiary"
+            : "card",
+        actions && !live && !selected && "transition-colors duration-fast hover:bg-fill",
         className,
       )}
     >
@@ -141,12 +152,18 @@ export function TaskRow({
         <button
           type="button"
           onClick={onOpen}
+          aria-current={selected || undefined}
           className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 self-stretch rounded-sm text-left outline-none focus-visible:outline-2 focus-visible:outline-brand-text"
         >
           {body}
         </button>
       ) : (
         <span className="flex min-w-0 flex-1 items-center gap-2">{body}</span>
+      )}
+      {actions && (
+        <span className="flex flex-none items-center gap-1 opacity-0 transition-opacity duration-fast group-focus-within/row:opacity-100 group-hover/row:opacity-100 has-data-[state=open]:opacity-100">
+          {actions}
+        </span>
       )}
       {trailing}
     </div>

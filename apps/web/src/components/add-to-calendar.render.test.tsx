@@ -68,7 +68,7 @@ beforeEach(() => {
 const renderWith = (over: Partial<Task> = {}) =>
   render(
     <MemoryRouter>
-      <AddToCalendar task={{ ...task, ...over }} variant="sheet" />
+      <AddToCalendar task={{ ...task, ...over }} />
     </MemoryRouter>,
   );
 

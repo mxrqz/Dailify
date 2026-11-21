@@ -1,7 +1,16 @@
 /** @vitest-environment jsdom */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
+import type { Task } from "@dailify/shared";
+
+const { dailify } = vi.hoisted(() => ({ dailify: vi.fn() }));
+vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
+vi.mock("@/lib/auth", () => ({
+  useSession: () => ({ data: { user: { id: "u1" } }, isPending: false }),
+}));
+vi.mock("@/functions/api", () => ({}));
 
 import { copy } from "./copy";
 import { MEW_PANEL_SLOT, PanelHost } from "./side-panel";
@@ -23,9 +32,6 @@ describe("<PanelHost>", () => {
     setAppTimeZone("America/Sao_Paulo");
     render(<PanelHost />);
 
-    act(() => openPanel({ kind: "task", id: "t1" }));
-    expect(panel()).toHaveAccessibleName(copy.panel.task);
-
     // MewChat portals its own panel into this slot (mew-chat.render.test).
     act(() => openPanel({ kind: "mew" }));
     expect(document.getElementById(MEW_PANEL_SLOT)).not.toBeNull();
@@ -46,12 +52,45 @@ describe("<PanelHost>", () => {
     const user = userEvent.setup();
     render(<PanelHost />);
 
-    act(() => openPanel({ kind: "task", id: "t1" }));
+    act(() => openPanel({ kind: "day", day: 0 }));
     await user.keyboard("{Escape}");
     expect(panel()).toBeNull();
 
-    act(() => openPanel({ kind: "task", id: "t1" }));
+    act(() => openPanel({ kind: "day", day: 0 }));
     await user.click(screen.getByRole("button", { name: copy.panel.close }));
+    expect(panel()).toBeNull();
+  });
+
+  it("edits the open occurrence of a series, and closes once it is gone", () => {
+    const day = +zonedAt(2026, 10, 16, 9);
+    const series: Task = {
+      id: "t1",
+      title: "Academia",
+      date: day - 86_400_000,
+      duration: "",
+      priority: 0,
+      repeat: "Daily",
+      completed: [],
+    };
+    const context = (tasks: Task[]) =>
+      dailify.mockReturnValue({ tasks, undatedTasks: [], setTasks: vi.fn(), loadedMonths: [] });
+    context([series, { ...series, date: day }]);
+    const { rerender } = render(
+      <MemoryRouter>
+        <PanelHost />
+      </MemoryRouter>,
+    );
+
+    act(() => openPanel({ kind: "task", id: "t1", day }));
+    expect(panel()).toHaveAccessibleName(copy.panel.task);
+    expect(within(panel() ?? document.body).getByDisplayValue("2026-11-16")).toBeInTheDocument();
+
+    context([series]);
+    rerender(
+      <MemoryRouter>
+        <PanelHost />
+      </MemoryRouter>,
+    );
     expect(panel()).toBeNull();
   });
 
@@ -63,7 +102,7 @@ describe("<PanelHost>", () => {
         <div role="dialog" data-state="open" />
       </>,
     );
-    act(() => openPanel({ kind: "task", id: "t1" }));
+    act(() => openPanel({ kind: "day", day: 0 }));
     await user.keyboard("{Escape}");
     expect(panel()).not.toBeNull();
   });

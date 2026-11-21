@@ -29,6 +29,9 @@ import { DayList } from "./day-list";
 import { DaySection, dayAnchorId } from "./day-section";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
 import { readQueue } from "@/functions/offline";
+import { PanelHost } from "./side-panel";
+import { MOBILE } from "@/consts/media";
+import { closePanel } from "@/hooks/usePanel";
 
 // Sexta, 23/out/2026 12:00 local; semana começa na segunda (19/out 06:00).
 const FRIDAY = new Date(2026, 9, 23, 12).getTime();
@@ -88,11 +91,25 @@ const renderList = (undatedTasks: Task[] | undefined) => {
   );
 };
 
+// The sheet edits only below `md`; the setup's matchMedia answers false (desktop).
+const mobile = () =>
+  vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
+    matches: query.includes(MOBILE),
+    media: query,
+    onchange: null,
+    addEventListener: () => {},
+    removeEventListener: () => {},
+    addListener: () => {},
+    removeListener: () => {},
+    dispatchEvent: () => false,
+  }));
+
 beforeEach(() => {
   vi.useFakeTimers({ toFake: ["Date"] });
   vi.setSystemTime(FRIDAY);
 });
 afterEach(() => {
+  closePanel();
   vi.useRealTimers();
   toast.dismiss();
   localStorage.clear();
@@ -162,7 +179,25 @@ describe("<AnytimeBlock>", () => {
     expect(screen.getByText(/qui 09:00 AM/)).toBeInTheDocument();
   });
 
+  it("on desktop, clicking a row opens it in the side panel and marks it selected", async () => {
+    context([task({ id: "a", title: "Pagar" })]);
+    api.deleteTask.mockResolvedValue({});
+    render(
+      <MemoryRouter>
+        <AnytimeBlock />
+        <PanelHost />
+      </MemoryRouter>,
+    );
+    act(() => screen.getByRole("button", { name: /Pagar/ }).click());
+    const panel = within(screen.getByRole("complementary", { name: copy.panel.task }));
+    expect(panel.getByRole("switch", { name: copy.form.undated })).toBeChecked();
+    expect(screen.getByRole("button", { name: /Pagar/, current: true })).toBeInTheDocument();
+    await act(async () => panel.getByRole("button", { name: copy.task.delete }).click());
+    expect(screen.queryByRole("complementary")).toBeNull();
+  });
+
   it("tocar na linha abre a edição com Sem horário ligado e o dia do lembrete", () => {
+    mobile();
     renderList([task({ id: "a", title: "Pagar", alert: new Date(2026, 9, 29, 9).getTime() })]);
     act(() => screen.getByRole("button", { name: /Pagar/ }).click());
     expect(screen.getByRole("switch", { name: copy.form.undated })).toBeChecked();
@@ -172,6 +207,7 @@ describe("<AnytimeBlock>", () => {
 
   it("limpar o lembrete salva com alert: null (não é 'sem alterações')", async () => {
     const at = new Date(2026, 9, 29, 9).getTime();
+    mobile();
     renderList([task({ id: "a", title: "Pagar", date: at, alert: at, tags: [] })]);
     api.updateTask.mockResolvedValue({ task: task({ id: "a", title: "Pagar" }) });
     act(() => screen.getByRole("button", { name: /Pagar/ }).click());
@@ -188,6 +224,7 @@ describe("<AnytimeBlock>", () => {
 
   // Ruling 8: o que a folha mostra é o que o salvar grava (09:00 de segunda já passou na sexta).
   const openEdit = (patch: Partial<Task>) => {
+    mobile();
     renderList([task({ id: "a", title: "Pagar", alert: MONDAY_9H, tags: [], ...patch })]);
     api.updateTask.mockResolvedValue({ task: task({ id: "a", title: "Pagar" }) });
     act(() => screen.getByRole("button", { name: /Pagar/ }).click());

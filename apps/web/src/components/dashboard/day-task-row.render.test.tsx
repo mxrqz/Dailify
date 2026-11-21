@@ -1,6 +1,7 @@
 /** @vitest-environment jsdom */
 import { describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, renderHook, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import type { Task } from "@dailify/shared";
 
 const { dailify, api } = vi.hoisted(() => ({
@@ -20,6 +21,8 @@ vi.mock("@/components/edit-task", () => ({
 import { DayTaskRow, durationText } from "./day-task-row";
 import { copy } from "./copy";
 import { useTaskActions } from "@/hooks/useTaskActions";
+import { closePanel, usePanel } from "@/hooks/usePanel";
+import { fill } from "@/functions/functions";
 
 const day = new Date(2026, 9, 23);
 const task: Task = {
@@ -75,6 +78,31 @@ describe("DayTaskRow", () => {
     });
     fireEvent.click(screen.getByRole("button", { name: copy.calendar.deleteConfirm }));
     await waitFor(() => expect(api.deleteTask).toHaveBeenCalledWith("t"));
+  });
+
+  it("on desktop, opens the occurrence in the side panel and offers time, day and more chips", async () => {
+    const series = { ...task, repeat: "Daily" as const };
+    dailify.mockReturnValue({ tasks: [series], setTasks: vi.fn(), loadedMonths: [day] });
+    const user = userEvent.setup();
+    render(<DayTaskRow task={series} day={day} sheetEditing={false} />);
+
+    const title = { title: task.title };
+    expect(screen.getByRole("button", { name: fill(copy.task.editTime, title) })).toBeVisible();
+    expect(screen.getByRole("button", { name: fill(copy.task.editDay, title) })).toBeVisible();
+    await user.click(screen.getByRole("button", { name: /^14:30/ }));
+    expect(screen.queryByText("folha aberta")).toBeNull();
+    expect(renderHook(() => usePanel()).result.current).toEqual({
+      kind: "task",
+      id: "t",
+      day: series.date,
+    });
+    expect(screen.getByRole("button", { name: /^14:30/, current: true })).toBeInTheDocument();
+
+    await user.click(screen.getByRole("button", { name: fill(copy.task.more, title) }));
+    await user.click(await screen.findByRole("menuitem", { name: copy.task.delete }));
+    // A series asks the scope first.
+    expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
+    act(() => closePanel());
   });
 
   it("duração: minutos, horas e horas com minutos", () => {
