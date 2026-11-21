@@ -18,7 +18,8 @@ export default function IntegrationCallback(): JSX.Element {
   const [params] = useSearchParams();
   const navigate = useNavigate();
   const { reloadMonths, loadedMonths } = useDailify();
-  const name = isProviderId(provider) ? copy.calendar.name : "";
+  const app = isProviderId(provider) ? t.apps[provider] : undefined;
+  const name = app?.name ?? "";
   // O state é de uso único: o segundo efeito do StrictMode mandaria um POST que volta 400.
   const started = useRef(false);
 
@@ -30,17 +31,18 @@ export default function IntegrationCallback(): JSX.Element {
       navigate("/integrations", { replace: true });
     };
 
-    if (params.get("error") === "access_denied") return fail(t.denied);
-    if (!isProviderId(provider) || !code || !state) return fail(t.failed);
+    if (!app || !isProviderId(provider)) return fail(t.failed);
+    if (params.get("error") === "access_denied") return fail(app.denied);
+    if (!code || !state) return fail(t.failed);
 
     const { error } = await completeIntegration(provider, code, state);
-    if (error?.code === API_ERROR.missingScope) return fail(t.missingScope);
+    if (error?.code === API_ERROR.missingScope) return fail(app.missingScope);
     if (error?.status === 403) return fail(t.wrongUser);
     if (error) return fail(t.failed);
 
     // O servidor já importou os eventos da Agenda: a lista relê os meses pra eles aparecerem.
     void reloadMonths(loadedMonths);
-    toast.success(fill(t.connected, { name }));
+    toast.success(app.connected);
     navigate("/integrations", { replace: true });
   });
 

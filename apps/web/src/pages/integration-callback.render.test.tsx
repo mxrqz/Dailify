@@ -62,7 +62,7 @@ describe("<IntegrationCallback>", () => {
     renderAt("code=c&state=s");
 
     await waitFor(() =>
-      expect(toast.error).toHaveBeenCalledWith(t.missingScope.replace("{name}", "Agenda")),
+      expect(toast.error).toHaveBeenCalledWith(t.apps["google-calendar"].missingScope),
     );
     expect(screen.getByText("integrations")).toBeInTheDocument();
   });
