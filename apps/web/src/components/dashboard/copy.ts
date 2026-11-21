@@ -1,4 +1,4 @@
-import type { QuotaKey, UnsureCode } from "@dailify/shared";
+import type { ProviderId, QuotaKey, UnsureCode } from "@dailify/shared";
 
 /**
  * Dicionário de copy pt-BR do dashboard.
@@ -278,14 +278,46 @@ export const copy = {
     groupConnected: "Conectado",
     groupAvailable: "Disponível",
     connectedState: "Conectado",
-    does: ["Cria eventos das tarefas que você mandar", "Atualiza o evento se a tarefa mudar"],
+    // Por provedor: artigo e gênero mudam ("Agenda conectada", "Slack conectado").
+    apps: {
+      "google-calendar": {
+        name: "Agenda",
+        does: ["Cria eventos das tarefas que você mandar", "Atualiza o evento se a tarefa mudar"],
+        connected: "Agenda conectada",
+        disconnected: "Agenda desconectada",
+        denied: "Conexão com a Agenda cancelada",
+        missingScope: "Faltou permissão: marque a permissão da Agenda na tela do Google",
+        disconnectDescription:
+          "Suas tarefas continuam na Mewki, só param de sincronizar com a Agenda. Você pode conectar de novo quando quiser.",
+      },
+      slack: {
+        name: "Slack",
+        does: ["A Mew lê conversas quando você pedir", "Manda as mensagens que você confirmar"],
+        connected: "Slack conectado",
+        disconnected: "Slack desconectado",
+        denied: "Conexão com o Slack cancelada",
+        missingScope: "Faltou permissão: aceite todos os acessos na tela do Slack",
+        disconnectDescription:
+          "A Mew deixa de ler e mandar mensagens no Slack. Você pode conectar de novo quando quiser.",
+      },
+    } satisfies Record<
+      ProviderId,
+      {
+        name: string;
+        does: string[];
+        connected: string;
+        disconnected: string;
+        denied: string;
+        missingScope: string;
+        disconnectDescription: string;
+      }
+    >,
     calendarDefault: "Novas tarefas na Agenda",
     calendarDefaultHint: "Padrão da etiqueta Agenda ao criar",
     always: "Sempre",
     never: "Nunca",
     upcoming: {
       gmail: { name: "Gmail", hint: "Envia e-mails que você confirmar" },
-      slack: { name: "Slack", hint: "Lê conversas quando você pedir" },
       notion: { name: "Notion", hint: "Lembra prazos das suas páginas" },
       github: { name: "GitHub", hint: "Reviews e issues viram tarefas" },
     },
@@ -298,16 +330,9 @@ export const copy = {
     revokedHint: "O acesso foi revogado. Reconecte para voltar a usar.",
     offlineHint: "Sem conexão",
     disconnectTitle: "Desconectar {name}?",
-    disconnectDescription:
-      "Suas tarefas continuam na Mewki, só param de sincronizar com a {name}. Você pode conectar de novo quando quiser.",
     connecting: "Conectando {name}…",
-    // ponytail: artigo e gênero de "a Agenda", o único provedor; um segundo (o Gmail) pede a frase por provedor.
-    connected: "{name} conectada",
-    disconnected: "{name} desconectada",
     connectError: "Não foi possível conectar {name}",
     disconnectError: "Não foi possível desconectar {name}",
-    denied: "Conexão com a {name} cancelada",
-    missingScope: "Faltou permissão: marque a permissão da {name} na tela do Google",
     wrongUser: "Este pedido de conexão é de outra conta",
     failed: "Não deu pra concluir a conexão; tente de novo",
     // "Sempre permitir" na caixa da Mew; desligar faz ela pedir de novo.

@@ -1,6 +1,7 @@
 import { Hono } from "hono";
 import {
   API_ERROR,
+  INTEGRATIONS,
   isRecord,
   MEW_CONSENT_REQUIRED,
   MEW_HISTORY_MAX,
@@ -18,7 +19,7 @@ import { rateLimit } from "../middleware/rate-limit";
 import { getSettings } from "../db/settings";
 import { getUndatedTasks, readMonth } from "../db/tasks";
 import { aiQuota, debitAi } from "../db/limits";
-import { aiTargets } from "../db/integrations";
+import { activeIntegrations } from "../db/integrations";
 import { claimAction, hasGrant, logProposals, saveGrant, setActionStatus } from "../db/mew";
 import { PROVIDERS } from "../integrations/registry";
 import { WINDOW_DAYS, agendaOf, askMew, type MewApp } from "../lib/mew";
@@ -101,11 +102,12 @@ mew.post("/chat", rateLimit("AI_LIMITER"), async (c) => {
 
   const db = c.env.DB;
   const now = Date.now();
-  const [agenda, allowed] = await Promise.all([
+  const [agenda, active] = await Promise.all([
     readAgenda(db, userId, req.timezone, now),
-    aiTargets(db, userId, c.get("plan")),
+    activeIntegrations(db, userId, c.get("plan")),
   ]);
-  const apps = appsOf(allowed);
+  const allowed = active.filter((id) => INTEGRATIONS[id].tasks);
+  const apps = appsOf(active);
 
   const answer = req.permission;
   const claimed = answer && (await claimAction(db, userId, answer.id, "read"));
@@ -151,8 +153,8 @@ mew.post("/actions/:id/send", rateLimit("API_LIMITER"), async (c) => {
   const id = c.req.param("id");
   const claimed = await claimAction(db, userId, id, "send");
   if (!claimed) return fail(c, 404, "Action not found");
-  const allowed = await aiTargets(db, userId, c.get("plan"));
-  const send = allowed.includes(claimed.provider) ? PROVIDERS[claimed.provider].send : undefined;
+  const active = await activeIntegrations(db, userId, c.get("plan"));
+  const send = active.includes(claimed.provider) ? PROVIDERS[claimed.provider].send : undefined;
   if (!send) {
     await setActionStatus(db, userId, id, "proposed");
     return fail(c, 409, "Reconnect the app", { code: API_ERROR.reconnect });

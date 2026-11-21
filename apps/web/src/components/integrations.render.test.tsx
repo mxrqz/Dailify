@@ -121,8 +121,10 @@ describe("<Integrations>", () => {
     useOnline.mockReturnValue(false);
     vi.spyOn(navigator, "onLine", "get").mockReturnValue(false);
     renderWith();
-    expect(screen.getByRole("button", { name: t.connect })).toBeDisabled();
-    expect(screen.getByText(t.offlineHint)).toBeInTheDocument();
+    // Nothing read yet: every provider's card shows, all disabled.
+    for (const button of screen.getAllByRole("button", { name: t.connect }))
+      expect(button).toBeDisabled();
+    expect(screen.getAllByText(t.offlineHint)).toHaveLength(2);
     expect(api.getIntegrations).not.toHaveBeenCalled();
   });
 
@@ -141,6 +143,52 @@ describe("<Integrations>", () => {
     await screen.findByRole("button", { name: t.disconnect });
     act(() => patchIntegration("google-calendar", { status: "revoked" }));
     expect(await screen.findByRole("button", { name: t.reconnect })).toBeInTheDocument();
+  });
+
+  it("a connected Slack card sits above the available calendar and disconnects Slack", async () => {
+    api.disconnectIntegration.mockResolvedValue({});
+    api.getIntegrations.mockResolvedValue({
+      integrations: [
+        GCAL,
+        {
+          ...GCAL,
+          provider: "slack",
+          connected: true,
+          status: "active",
+          account: "acme.slack.com",
+        },
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <Integrations />
+      </MemoryRouter>,
+    );
+    const connected = (await screen.findByRole("heading", { name: t.groupConnected }))
+      .parentElement;
+    if (!connected) throw new Error("no connected group");
+    expect(within(connected).getByText("acme.slack.com")).toBeInTheDocument();
+    expect(within(connected).queryByRole("radiogroup")).not.toBeInTheDocument();
+
+    await userEvent.click(within(connected).getByRole("button", { name: t.disconnect }));
+    const dialog = await screen.findByRole("dialog");
+    expect(within(dialog).getByText(t.apps.slack.disconnectDescription)).toBeInTheDocument();
+    await userEvent.click(within(dialog).getByRole("button", { name: t.disconnect }));
+    await waitFor(() => expect(api.disconnectIntegration).toHaveBeenCalledWith("slack"));
+    expect(toast.success).toHaveBeenCalledWith("Slack desconectado");
+  });
+
+  it("a Free plan locks Slack behind Pro while the calendar connects", async () => {
+    api.getIntegrations.mockResolvedValue({
+      integrations: [GCAL, { ...GCAL, provider: "slack", allowed: false }],
+    });
+    render(
+      <MemoryRouter>
+        <Integrations />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole("link", { name: t.pro })).toHaveAttribute("href", "/premium");
+    expect(screen.getAllByRole("button", { name: t.connect })).toHaveLength(1);
   });
 
   it("desconectado não mostra os ajustes da agenda", async () => {

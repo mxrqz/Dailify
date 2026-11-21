@@ -6,17 +6,22 @@ import { videoLink, isCalendarEventLink } from "./parse-links";
 import { dayMap, seriesEvery, seriesOf } from "./recurrence";
 import { civilDay, zonedParts, type ZonedParts } from "./timezone";
 
-export type ProviderId = "google-calendar";
+export type ProviderId = "google-calendar" | "slack";
 
 /** An integration the AI may put a task in; `meet` asks for a Meet room. */
 export type CalendarTarget = { provider: ProviderId; meet?: boolean };
 
-/** Catálogo das integrações e quem pode usar cada uma. O gate é por plano, não por quota. */
-export const INTEGRATIONS: Record<ProviderId, { name: string; roles: Role[] }> = {
+/**
+ * Catálogo das integrações e quem pode usar cada uma. O gate é por plano, não por quota.
+ * `tasks` = takes tasks: an AI `targets` destination (a calendar), not just a Mew app.
+ */
+export const INTEGRATIONS: Record<ProviderId, { name: string; roles: Role[]; tasks: boolean }> = {
   "google-calendar": {
     name: sharedCopy.providers["google-calendar"],
     roles: ["free", "pro", "max"],
+    tasks: true,
   },
+  slack: { name: sharedCopy.providers.slack, roles: ["pro", "max"], tasks: false },
 };
 
 export function isProviderId(value: unknown): value is ProviderId {

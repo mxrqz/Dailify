@@ -1,8 +1,8 @@
 # apps/server/src/integrations — provider integrations
 
-OAuth providers whose objects mirror tasks (today only `google-calendar`): connecting, sealing the
-tokens, and pushing task edits out. Repo-wide rules: `/RULES.md` ("Backend and API"). Google's
-event mapping and sync: `google-calendar/CLAUDE.md`.
+OAuth providers: connecting, sealing the tokens, pushing task edits out (`google-calendar`, whose
+objects mirror tasks) and the Mew's on-demand reads and sends (`slack`). Repo-wide rules:
+`/RULES.md` ("Backend and API"). Google's event mapping and sync: `google-calendar/CLAUDE.md`.
 
 ## Layout
 
@@ -15,8 +15,9 @@ event mapping and sync: `google-calendar/CLAUDE.md`.
 
 ## Adding a provider
 
-1. Id and `roles` in `INTEGRATIONS` (`packages/shared/src/integrations.ts`). That is the plan gate
-   (`canUseIntegration`), not `QUOTAS`.
+1. Id, `roles` and `tasks` in `INTEGRATIONS` (`packages/shared/src/integrations.ts`). `roles` is
+   the plan gate (`canUseIntegration`), not `QUOTAS`. `tasks: true` makes it an AI `targets`
+   destination (`aiTargets`); the Mew's apps come from every active one (`activeIntegrations`).
 2. `integrations/<id>/index.ts` exports a `Provider`: `oauth` (endpoints, `scopes`, `required`,
    `credentials(env)`), `identify`, optional `onTaskChanged` and `sync`. Expected action failures
    throw `ActionError(status, msg, extra)`, which the route maps to `fail`.
@@ -64,6 +65,27 @@ those routed through `PROVIDERS[id]` first.
   `returnBase`: `${APP_URL}/app/integrations/<id>/callback`, which `pages/app-return.tsx` hands to
   `mewki://open`, so the code reaches the app's session. That URI must be authorized on the Google
   OAuth client too.
+
+## Slack (`slack/index.ts`, bd `Dailify-mbp`)
+
+- User token only (acts as the person, sees what they see): `oauth.userToken` sends the scopes
+  comma-joined in `user_scope`, reads the token from `authed_user`, and skips PKCE, because turning
+  PKCE on makes the Slack app a public client for good. Token rotation stays off in the app
+  settings, so there is no refresh token and `makeCtx` never refreshes. Scopes:
+  `{channels,groups,im,mpim}:{read,history}`, `users:read`, `chat:write`; `required` =
+  `channels:history`, `im:history`, `chat:write`. Revoke is `auth.revoke` with the token.
+- Slack answers HTTP 200 with `ok: false`; `token_revoked`/`invalid_auth`/`account_inactive` mark
+  the connection revoked. A 429 or an unknown target comes back from `read` as a plain note for
+  the Mew (`Notice`), never a 502; `send` throws.
+- `target`: `#canal`, `@pessoa` (an existing DM, matched on display, real or handle name), a raw
+  `C…/D…/G…` id, or a message permalink (its thread: `thread_ts` from the query, else the `p…` ts).
+  Names resolve with one `conversations.list` and one `users.list` page of 200 (the `ponytail:`).
+- Unlisted (non-Marketplace) apps get `conversations.history`/`replies` at 1 call a minute and 15
+  messages (Slack, May 2025), so a read is one of them with `limit=15`; a long thread shows its
+  first 15. Marketplace approval lifts it. Message text is never stored: it goes straight into the
+  Mew's turn.
+- Redirect URLs on the Slack app: `${web origin}/integrations/slack/callback` and
+  `${APP_URL}/app/integrations/slack/callback` (the Tauri app). Tests: `test/integrations-slack.test.ts`.
 
 ## Propagation and sync
 

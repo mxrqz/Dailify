@@ -44,6 +44,8 @@ export interface Env {
   STRIPE_PRICE_MAX_YEAR: string;
   GOOGLE_CLIENT_ID: string;
   GOOGLE_CLIENT_SECRET: string;
+  SLACK_CLIENT_ID: string;
+  SLACK_CLIENT_SECRET: string;
   // Cifra os tokens de integração em repouso (integrations/crypto.ts): base64 de 32 bytes.
   TOKEN_KEY_V1: string;
 }

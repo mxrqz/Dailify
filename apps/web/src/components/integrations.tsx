@@ -10,7 +10,7 @@ import {
 } from "lucide-react";
 import { Link } from "react-router-dom";
 import { toast } from "sonner";
-import { type IntegrationStatus, type ProviderId } from "@dailify/shared";
+import { PROVIDER_IDS, type IntegrationStatus, type ProviderId } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { ListGroup, ListRow } from "@/components/kit/list";
@@ -53,10 +53,8 @@ import { isTauri } from "@/lib/platform";
 import { openExternal } from "@/lib/open-external";
 
 const t = copy.integrations;
-// ponytail: um provedor só no catálogo; com o segundo, o card vira um por `PROVIDER_IDS`.
 const GCAL: ProviderId = "google-calendar";
 const NAME = copy.calendar.name;
-const named = (text: string) => fill(text, { name: NAME });
 const tag =
   "rounded-full bg-fill px-2.5 py-0.5 text-footnote font-medium whitespace-nowrap text-ink-secondary";
 
@@ -111,7 +109,7 @@ export function IntegrationCard({
 }): JSX.Element {
   const icons = [PlusIcon, Repeat2Icon];
   return (
-    <div className="py-4">
+    <div className="py-4 not-first:border-t not-first:border-separator">
       <div className="flex items-center gap-3 px-4">
         <span className="grid size-11 flex-none place-items-center rounded-sm bg-fill [&_svg]:size-7">
           {logo}
@@ -147,7 +145,6 @@ export function IntegrationCard({
 
 const UPCOMING = [
   { ...t.upcoming.gmail, Logo: GmailLogo },
-  { ...t.upcoming.slack, Logo: SlackLogo },
   { ...t.upcoming.notion, Logo: NotionLogo },
   // O do GitHub é uma silhueta: vai na cor do texto pra não sumir no escuro.
   { ...t.upcoming.github, Logo: GitHubLogo, fill: "currentColor" },
@@ -170,30 +167,31 @@ export function UpcomingIntegrations(): JSX.Element {
   );
 }
 
-/** O corpo de /integrations: o card do Google Agenda (conectar, ajustes, desconectar) e o Em breve. */
-export function Integrations(): JSX.Element {
+const LOGOS = { "google-calendar": GoogleCalendarLogo, slack: SlackLogo } satisfies Record<
+  ProviderId,
+  unknown
+>;
+
+/** O card de um provedor com conectar, desconectar e o "lê sem perguntar"; a Agenda leva os ajustes dela. */
+function ProviderCard({
+  id,
+  statuses,
+}: {
+  id: ProviderId;
+  /** undefined = loading; null = couldn't read (network or server). */
+  statuses: IntegrationStatus[] | null | undefined;
+}): JSX.Element {
   const online = useOnline();
-  const stored = useIntegrations();
-  // The store has no failure state: a failed read with nothing stored shows the offline hint.
-  const [failed, setFailed] = useState(false);
-  // undefined = loading; null = couldn't read (network or server).
-  const statuses = stored ?? (failed ? null : undefined);
+  const app = t.apps[id];
+  const named = (text: string) => fill(text, { name: app.name });
+  const Logo = LOGOS[id];
   // `configured` do GET já diz; o 503 do connect cobre o servidor que perdeu a credencial depois.
   const [soon, setSoon] = useState(false);
   const [busy, setBusy] = useState(false);
 
-  useEffect(() => {
-    if (!online) return;
-    void (async () => {
-      const { integrations } = await getIntegrations();
-      setFailed(!integrations);
-      if (integrations) setIntegrations(integrations);
-    })();
-  }, [online]);
-
   const connect = async () => {
     setBusy(true);
-    const { url, error } = await connectIntegration(GCAL);
+    const { url, error } = await connectIntegration(id);
     // Na web, sem `setBusy(false)`: a página vai embora pro consentimento do provedor.
     if (url) {
       await openExternal(url);
@@ -207,25 +205,26 @@ export function Integrations(): JSX.Element {
 
   const disconnect = async () => {
     setBusy(true);
-    const { error } = await disconnectIntegration(GCAL);
+    const { error } = await disconnectIntegration(id);
     setBusy(false);
     if (error) {
       toast.error(named(t.disconnectError), { description: error?.message });
       return;
     }
-    patchIntegration(GCAL, { connected: false, status: undefined });
-    toast.success(named(t.disconnected));
+    patchIntegration(id, { connected: false, status: undefined });
+    toast.success(app.disconnected);
   };
 
   const revokeRead = async () => {
-    patchIntegration(GCAL, { readAlways: undefined });
-    const { error } = await revokeReadGrant(GCAL);
+    patchIntegration(id, { readAlways: undefined });
+    const { error } = await revokeReadGrant(id);
     if (!error) return;
-    patchIntegration(GCAL, { readAlways: true });
+    patchIntegration(id, { readAlways: true });
     toast.error(t.readAlwaysError, { description: error.message });
   };
 
-  const status = statuses?.find((s) => s.provider === GCAL);
+  const status = statuses?.find((s) => s.provider === id);
+  const calendar = id === GCAL;
   const connected = active(status);
   const disabled = !online || !status || busy;
 
@@ -251,7 +250,7 @@ export function Integrations(): JSX.Element {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>{named(t.disconnectTitle)}</DialogTitle>
-            <DialogDescription>{named(t.disconnectDescription)}</DialogDescription>
+            <DialogDescription>{app.disconnectDescription}</DialogDescription>
           </DialogHeader>
           <DialogFooter className="gap-2">
             <DialogClose asChild>
@@ -293,40 +292,79 @@ export function Integrations(): JSX.Element {
   }
 
   return (
-    <div className="flex flex-col gap-7">
-      <ListGroup title={connected ? t.groupConnected : t.groupAvailable}>
-        <IntegrationCard
-          logo={<GoogleCalendarLogo aria-hidden="true" />}
-          name={NAME}
-          account={account}
-          connected={connected}
-          does={t.does}
-          action={action}
-          note={
-            connected && skipped > 0
-              ? skipped === 1
-                ? copy.calendar.skippedOne
-                : fill(copy.calendar.skippedMany, { n: skipped })
-              : undefined
-          }
-        >
-          {connected && <CalendarDefaultRow />}
-          {connected && status?.readAlways && (
-            <ListRow
-              label={t.readAlways}
-              sublabel={t.readAlwaysHint}
-              trailing={
-                <Switch
-                  checked
-                  aria-label={t.readAlways}
-                  disabled={!online}
-                  onCheckedChange={() => void revokeRead()}
-                />
-              }
+    <IntegrationCard
+      logo={<Logo aria-hidden="true" />}
+      name={app.name}
+      account={account}
+      connected={connected}
+      does={app.does}
+      action={action}
+      note={
+        calendar && connected && skipped > 0
+          ? skipped === 1
+            ? copy.calendar.skippedOne
+            : fill(copy.calendar.skippedMany, { n: skipped })
+          : undefined
+      }
+    >
+      {calendar && connected && <CalendarDefaultRow />}
+      {connected && status?.readAlways && (
+        <ListRow
+          label={t.readAlways}
+          sublabel={t.readAlwaysHint}
+          trailing={
+            <Switch
+              checked
+              aria-label={t.readAlways}
+              disabled={!online}
+              onCheckedChange={() => void revokeRead()}
             />
-          )}
-        </IntegrationCard>
-      </ListGroup>
+          }
+        />
+      )}
+    </IntegrationCard>
+  );
+}
+
+/** O corpo de /integrations: um card por provedor, os conectados primeiro, e o Em breve. */
+export function Integrations(): JSX.Element {
+  const online = useOnline();
+  const stored = useIntegrations();
+  // The store has no failure state: a failed read with nothing stored shows the offline hint.
+  const [failed, setFailed] = useState(false);
+  const statuses = stored ?? (failed ? null : undefined);
+
+  useEffect(() => {
+    if (!online) return;
+    void (async () => {
+      const { integrations } = await getIntegrations();
+      setFailed(!integrations);
+      if (integrations) setIntegrations(integrations);
+    })();
+  }, [online]);
+
+  // Until the list arrives every provider shows; after, only the ones the server knows.
+  const ids = statuses
+    ? PROVIDER_IDS.filter((id) => statuses.some((s) => s.provider === id))
+    : PROVIDER_IDS;
+  const on = (id: ProviderId) => active(statuses?.find((s) => s.provider === id));
+  const groups = [
+    { title: t.groupConnected, list: ids.filter(on) },
+    { title: t.groupAvailable, list: ids.filter((id) => !on(id)) },
+  ];
+
+  return (
+    <div className="flex flex-col gap-7">
+      {groups.map(
+        ({ title, list }) =>
+          list.length > 0 && (
+            <ListGroup key={title} title={title}>
+              {list.map((id) => (
+                <ProviderCard key={id} id={id} statuses={statuses} />
+              ))}
+            </ListGroup>
+          ),
+      )}
       <UpcomingIntegrations />
     </div>
   );

@@ -11,6 +11,11 @@ export interface OAuthConfig {
   /** O que tem que vir concedido: a tela de consentimento deixa a pessoa desmarcar scope. */
   required: string[];
   extraParams?: Record<string, string>;
+  /**
+   * Slack's user token: scopes go comma-joined in `user_scope`, the token comes back in
+   * `authed_user`, and no PKCE (turning it on makes the Slack app a public client for good).
+   */
+  userToken?: true;
 }
 
 export interface Tokens {

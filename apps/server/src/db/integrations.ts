@@ -1,5 +1,6 @@
 import {
   canUseIntegration,
+  INTEGRATIONS,
   isProviderId,
   PROVIDER_IDS,
   TASK_LIMITS,
@@ -31,8 +32,12 @@ export async function listConnections(db: D1Database, userId: string): Promise<C
   return results;
 }
 
-/** Active connections the plan unlocks: the only `targets` the AI may suggest. */
-export async function aiTargets(db: D1Database, userId: string, role: Role): Promise<ProviderId[]> {
+/** Active connections the plan unlocks: the apps the Mew may read from or send to. */
+export async function activeIntegrations(
+  db: D1Database,
+  userId: string,
+  role: Role,
+): Promise<ProviderId[]> {
   const connections = await listConnections(db, userId);
   return PROVIDER_IDS.filter(
     (id) =>
@@ -40,6 +45,10 @@ export async function aiTargets(db: D1Database, userId: string, role: Role): Pro
       connections.some((r) => r.provider === id && r.status === "active"),
   );
 }
+
+/** The ones that take tasks: the only `targets` the AI may suggest. */
+export const aiTargets = async (db: D1Database, userId: string, role: Role) =>
+  (await activeIntegrations(db, userId, role)).filter((id) => INTEGRATIONS[id].tasks);
 
 export async function getConnection(
   db: D1Database,
