@@ -4,7 +4,7 @@ import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 import { copy } from "./copy";
-import { PanelHost } from "./side-panel";
+import { MEW_PANEL_SLOT, PanelHost } from "./side-panel";
 import { setAppTimeZone, zonedAt } from "@/functions/zone";
 import { closePanel, openPanel, togglePanel } from "@/hooks/usePanel";
 
@@ -26,8 +26,9 @@ describe("<PanelHost>", () => {
     act(() => openPanel({ kind: "task", id: "t1" }));
     expect(panel()).toHaveAccessibleName(copy.panel.task);
 
+    // MewChat portals its own panel into this slot (mew-chat.render.test).
     act(() => openPanel({ kind: "mew" }));
-    expect(panel()).toHaveAccessibleName(copy.panel.mew);
+    expect(document.getElementById(MEW_PANEL_SLOT)).not.toBeNull();
 
     act(() => openPanel({ kind: "day", day: +zonedAt(2026, 10, 16) }));
     expect(panel()).toHaveAccessibleName("Segunda, 16 de novembro");
@@ -36,20 +37,20 @@ describe("<PanelHost>", () => {
   it("toggles open on the Mew, then closed", () => {
     render(<PanelHost />);
     act(() => togglePanel());
-    expect(panel()).toHaveAccessibleName(copy.panel.mew);
+    expect(document.getElementById(MEW_PANEL_SLOT)).not.toBeNull();
     act(() => togglePanel());
-    expect(panel()).toBeNull();
+    expect(document.getElementById(MEW_PANEL_SLOT)).toBeNull();
   });
 
   it("closes on Esc and on its close button", async () => {
     const user = userEvent.setup();
     render(<PanelHost />);
 
-    act(() => openPanel({ kind: "mew" }));
+    act(() => openPanel({ kind: "task", id: "t1" }));
     await user.keyboard("{Escape}");
     expect(panel()).toBeNull();
 
-    act(() => openPanel({ kind: "mew" }));
+    act(() => openPanel({ kind: "task", id: "t1" }));
     await user.click(screen.getByRole("button", { name: copy.panel.close }));
     expect(panel()).toBeNull();
   });
@@ -62,7 +63,7 @@ describe("<PanelHost>", () => {
         <div role="dialog" data-state="open" />
       </>,
     );
-    act(() => openPanel({ kind: "mew" }));
+    act(() => openPanel({ kind: "task", id: "t1" }));
     await user.keyboard("{Escape}");
     expect(panel()).not.toBeNull();
   });

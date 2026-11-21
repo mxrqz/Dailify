@@ -28,7 +28,9 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
   links to `/dashboard`.
 - `PanelHost` (mounted by `pages/home.tsx` only when `DESKTOP` matches) closes on Esc unless a
   dialog or menu is open, and maps each `kind` to a `SidePanel`. Fill a kind there: pass `title`,
-  `actions` (`Button size="icon-sm"`), `children` (the scrolling body, `gap-5`) and `footer`.
+  `actions` (`Button size="icon-sm"`), `children` (the scrolling body, `gap-5`) and `footer`. The
+  `mew` kind renders only the `MEW_PANEL_SLOT` div: `MewChat` portals its `SidePanel` into it,
+  because the thread state lives in the always-mounted chat, not in the panel.
 - `SidePanel` is the props-only glass View, `w-side` (400px), id `SIDE_PANEL_ID` (the toolbar
   toggle's `aria-controls`). From `xl` it is a sticky column that pushes the agenda; below it is
   `fixed` over the right edge with `shadow-raised`.
@@ -45,12 +47,10 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
 
 ## Composer
 
-- `TaskComposer` mounts only inside `CreateFab` (`pages/home.tsx`). Mobile: `MewChat` owns the dock;
-  the mic opens the bottom `Sheet` already recording (`listen`). Desktop: the "+" morphs into a
-  Radix Dialog, or a docked panel (`useStoredFlag("dailify:composer-docked")`).
-- The desktop modes share `layoutId="composer-surface"`; its radii follow the morph rule in
-  `apps/web/src/CLAUDE.md` › Motion: `RADIUS_PANEL` = `--radius-panel` (22), `RADIUS_FAB` =
-  `--radius-md` (14).
+- `TaskComposer` mounts only inside `CreateFab` (`pages/home.tsx`), which also mounts `MewChat` (the
+  dock). The dock's mic opens the composer already recording (`listen`). Mobile: a bottom `Sheet`.
+  Desktop: a centered glass `Dialog`, opened by the toolbar's "Nova tarefa" (`openSignal`), `n`, a
+  calendar day (`day`) or the first-run example (`text`); `/` focuses the Mew input (`INPUT_ID`).
 - Submit contract: the composer never writes a single task. `onSubmit(values, again)` returns
   `Promise<boolean>`; the sheet closes at once (optimistic) and reopens with the `retry` text on
   `false`; Shift+Enter (`again`) keeps it open. Multi-draft Mew creates go through `createMany`
@@ -64,8 +64,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
 - Chip slots stay mounted in a fixed order (repeat or day, time, duration, reminder, first link), so
   the strip doesn't reflow per keystroke. `MetaChip` without `onRemove` only edits (`ghost` = the
   empty "+ x" look); without `editor` it only displays (the reminder).
-- The textarea id is `COMPOSER_TEXT_ID` (`task-composer.tsx`), which `create-fab.tsx` reads (`n`
-  and `/` focus, focus after a calendar day pick, the pointer-leave "has text" guard).
+- The textarea id is `COMPOSER_TEXT_ID` (`task-composer.tsx`), which `create-fab.tsx` focuses on
+  open and after a calendar day pick.
 
 ## Chip editors (`task-meta-menus.tsx`)
 

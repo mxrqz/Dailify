@@ -82,10 +82,8 @@ describe("<CreateFab> mobile", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
-  it("⏎ cria e fecha; o modo fixo do desktop não vale aqui", async () => {
-    localStorage.setItem("dailify:composer-docked", "1");
+  it("⏎ cria e fecha", async () => {
     const { user, onSubmit } = setup();
-    expect(screen.queryByRole("region", { name: copy.composer.open })).not.toBeInTheDocument();
 
     await user.click(screen.getByRole("button", { name: copy.composer.open }));
     await user.keyboard("Comprar pão{Enter}");
@@ -116,84 +114,32 @@ describe("<CreateFab> mobile", () => {
 });
 
 describe("<CreateFab> desktop", () => {
-  it("Manter aberto fixa o campo, e o modo sobrevive a remontar", async () => {
-    const { user } = setup();
-
-    await user.click(screen.getByRole("button", { name: copy.composer.open }));
-    await user.click(screen.getByRole("button", { name: copy.composer.pin }));
-
+  it("the toolbar signal opens the titled dialog; Cancelar closes it", async () => {
+    const user = userEvent.setup({ pointerEventsCheck: 0 });
+    const { rerender } = render(<CreateFab onSubmit={vi.fn()} openSignal={0} />);
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByRole("region", { name: copy.composer.open })).toContainElement(
-      screen.getByRole("textbox"),
-    );
-    expect(localStorage.getItem("dailify:composer-docked")).toBe("1");
 
-    cleanup();
-    setup();
-    expect(screen.getByRole("textbox")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: copy.composer.open })).not.toBeInTheDocument();
-  });
+    rerender(<CreateFab onSubmit={vi.fn()} openSignal={1} />);
+    expect(screen.getByRole("dialog", { name: copy.composer.open })).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: copy.composer.open })).toBeVisible();
 
-  it("docked: text fills the open field", () => {
-    localStorage.setItem("dailify:composer-docked", "1");
-    render(<CreateFab onSubmit={vi.fn()} text="dentista amanhã" />);
+    await user.click(screen.getByRole("button", { name: kitCopy.cancel }));
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByRole("textbox")).toHaveValue("dentista amanhã");
   });
 
-  it("aberto: n foca o campo", async () => {
-    localStorage.setItem("dailify:composer-docked", "1");
-    const { user } = setup();
-
-    await user.keyboard("n");
-    expect(screen.getByRole("textbox")).toHaveFocus();
-    expect(screen.getByRole("textbox")).toHaveValue("");
-  });
-
-  it("Minimizar desfixa mas deixa a folha aberta; sair com o mouse fecha", async () => {
-    localStorage.setItem("dailify:composer-docked", "1");
-    const { user } = setup();
-
-    await user.click(screen.getByRole("button", { name: copy.composer.minimize }));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(localStorage.getItem("dailify:composer-docked")).toBe("0");
-
-    await user.hover(screen.getByRole("dialog"));
-    await user.unhover(screen.getByRole("dialog"));
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-    expect(screen.getByRole("button", { name: copy.composer.open })).toBeInTheDocument();
-  });
-
-  it("desfixada com texto pela metade, sair com o mouse não fecha", async () => {
-    localStorage.setItem("dailify:composer-docked", "1");
-    const { user } = setup();
-
-    await user.click(screen.getByRole("button", { name: copy.composer.minimize }));
-    await user.type(screen.getByRole("textbox"), "comprar");
-    await user.hover(screen.getByRole("dialog"));
-    await user.unhover(screen.getByRole("dialog"));
-
+  it("a calendar day opens the dialog on that day", () => {
+    render(<CreateFab onSubmit={vi.fn()} day={new Date(2026, 10, 20)} />);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 
-  it("aberta pelo +, sair com o mouse não fecha", async () => {
+  it("/ focuses the Mew input instead of opening the composer", async () => {
     const { user } = setup();
+    render(<input id="mew-input" aria-label="mew" />);
 
-    await user.click(screen.getByRole("button", { name: copy.composer.open }));
-    await user.hover(screen.getByRole("dialog"));
-    await user.unhover(screen.getByRole("dialog"));
+    await user.keyboard("/");
 
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-  });
-
-  it("aberto: enviar não some com o campo", async () => {
-    localStorage.setItem("dailify:composer-docked", "1");
-    const { onSubmit, user } = setup();
-
-    await user.type(screen.getByRole("textbox"), "comprar pão{Enter}");
-
-    expect(onSubmit).toHaveBeenCalledTimes(1);
-    expect(screen.getByRole("textbox")).toHaveValue("");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("mew")).toHaveFocus();
   });
 
   it("clicar abre a folha com o campo focado", async () => {

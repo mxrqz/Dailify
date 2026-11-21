@@ -4,6 +4,8 @@ import { motion } from "motion/react";
 import { toast } from "sonner";
 import { MEW_IMAGE_MAX, MEW_TEXT_MAX } from "@dailify/shared";
 
+import { copy } from "@/components/dashboard/copy";
+import { MewStatic } from "@/components/mew/mew-static";
 import { Button } from "@/components/ui/button";
 import { spring } from "@/consts/motion";
 import { cn } from "@/lib/utils";
@@ -16,7 +18,8 @@ export const INPUT_ID = "mew-input";
 
 /**
  * The dock's pill while the chat is open (`CreateDock chat={…}`): attach, field and one round
- * button that is the mic when empty (opens the voice composer) and send with text.
+ * button that is the mic when empty (opens the voice composer) and send with text. `dock`: the
+ * desktop agenda dock, where the cat leads instead of attach and `/` is the shortcut.
  */
 export function ChatInput({
   busy,
@@ -24,12 +27,14 @@ export function ChatInput({
   onSend,
   onVoice,
   file,
+  dock,
 }: {
   busy: boolean;
   offline: boolean;
   onSend: (text: string, image?: Photo) => void;
   onVoice?: () => void;
   file: RefObject<HTMLInputElement>;
+  dock?: boolean;
 }) {
   const [text, setText] = useState("");
   const [image, setImage] = useState<Photo>();
@@ -89,27 +94,40 @@ export function ChatInput({
           if (picked) void pick(picked);
         }}
       />
-      <Button
-        variant="ghost"
-        size="icon"
-        aria-label={t.attach}
-        onClick={() => file.current?.click()}
-        className="rounded-full text-ink-secondary hover:text-ink"
-      >
-        <ImagePlusIcon aria-hidden="true" />
-      </Button>
+      {dock ? (
+        <MewStatic className="ml-2 w-7 flex-none" />
+      ) : (
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={t.attach}
+          onClick={() => file.current?.click()}
+          className="rounded-full text-ink-secondary hover:text-ink"
+        >
+          <ImagePlusIcon aria-hidden="true" />
+        </Button>
+      )}
       {/* text-body: below 16px iOS zooms the page on focus. */}
       <input
         id={INPUT_ID}
         value={text}
         onChange={(event) => setText(event.target.value)}
-        placeholder={offline ? t.offline : t.placeholder}
-        aria-label={t.placeholder}
+        placeholder={offline ? t.offline : dock ? copy.composer.dock : t.placeholder}
+        aria-label={dock ? t.open : t.placeholder}
+        aria-keyshortcuts={dock ? "/" : undefined}
         maxLength={MEW_TEXT_MAX}
         enterKeyHint="send"
         autoComplete="off"
         className="h-full min-w-0 flex-1 bg-transparent text-body text-ink outline-none placeholder:text-ink-secondary"
       />
+      {dock && !filled && (
+        <kbd
+          aria-hidden="true"
+          className="grid h-5 min-w-5 place-items-center rounded-xs bg-fill-pressed px-1 text-xs font-medium text-ink-secondary"
+        >
+          /
+        </kbd>
+      )}
       <DockButton
         type={mic ? "button" : "submit"}
         aria-label={mic ? t.mic : t.send}

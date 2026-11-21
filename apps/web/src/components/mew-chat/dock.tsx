@@ -8,6 +8,10 @@ import { cn } from "@/lib/utils";
 
 import { copy as mewChatCopy } from "./copy";
 
+/** The dock's pill; also the Mew panel's input on desktop. */
+export const DOCK_PILL =
+  "pointer-events-auto relative flex h-13 items-center gap-2.5 rounded-full bg-surface-raised pr-1 pl-2.5 shadow-raised outline-1 -outline-offset-1 outline-card-edge dark:bg-fill dark:outline-fill-pressed";
+
 /** The dock's round ink button: the mic, and the chat's send. */
 export function DockButton({
   className,
@@ -31,18 +35,56 @@ export function DockButton({
  * (abre já gravando). Um espaçador do mesmo tamanho no fluxo deixa a última tarefa rolar acima dele.
  * Mora num portal no `body`, na camada `z-dock`: acima do chat da Mew, abaixo das folhas e da gaveta.
  * Com `chat`, a mesma pílula vira a caixa de mensagem do chat aberto por baixo dela.
+ * `inline` (desktop): no portal, a material-bar strip at the foot of the agenda column.
  */
 export function CreateDock({
   onOpen,
   onVoice,
   chat,
+  inline,
   className,
 }: {
   onOpen: () => void;
   onVoice?: () => void;
   chat?: ReactNode;
+  inline?: boolean;
   className?: string;
 }): JSX.Element {
+  const pill = (
+    <div data-slot="create-dock" className={cn(DOCK_PILL, chat && "pl-1")}>
+      {chat || (
+        <>
+          <button
+            type="button"
+            aria-label={mewChatCopy.open}
+            onClick={onOpen}
+            className="flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left outline-none"
+          >
+            <MewStatic className="ml-0.5 w-7 flex-none" />
+            <span className="truncate text-body text-ink-secondary">{copy.composer.dock}</span>
+          </button>
+          {onVoice && (
+            <DockButton aria-label={copy.composer.dockVoice} onClick={onVoice}>
+              <MicIcon aria-hidden="true" className="size-5" />
+            </DockButton>
+          )}
+        </>
+      )}
+    </div>
+  );
+
+  if (inline)
+    return (
+      <div
+        className={cn(
+          "sticky bottom-0 z-dock mt-auto bg-material-bar px-8 pt-3 pb-5 backdrop-blur-xl backdrop-saturate-180",
+          className,
+        )}
+      >
+        <div className="mx-auto max-w-164">{pill}</div>
+      </div>
+    );
+
   return (
     <>
       <div aria-hidden="true" className="pb-dock">
@@ -57,34 +99,7 @@ export function CreateDock({
             className,
           )}
         >
-          <div
-            data-slot="create-dock"
-            className={cn(
-              "pointer-events-auto relative flex h-13 items-center gap-2.5 rounded-full bg-surface-raised pr-1 pl-2.5 shadow-raised outline-1 -outline-offset-1 outline-card-edge dark:bg-fill dark:outline-fill-pressed",
-              chat && "pl-1",
-            )}
-          >
-            {chat || (
-              <>
-                <button
-                  type="button"
-                  aria-label={mewChatCopy.open}
-                  onClick={onOpen}
-                  className="flex h-full min-w-0 flex-1 cursor-pointer items-center gap-2.5 text-left outline-none"
-                >
-                  <MewStatic className="ml-0.5 w-7 flex-none" />
-                  <span className="truncate text-body text-ink-secondary">
-                    {copy.composer.dock}
-                  </span>
-                </button>
-                {onVoice && (
-                  <DockButton aria-label={copy.composer.dockVoice} onClick={onVoice}>
-                    <MicIcon aria-hidden="true" className="size-5" />
-                  </DockButton>
-                )}
-              </>
-            )}
-          </div>
+          {pill}
         </div>,
         document.body,
       )}

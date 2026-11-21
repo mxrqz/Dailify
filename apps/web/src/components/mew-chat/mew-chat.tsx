@@ -1,10 +1,20 @@
-import { useEffect, useReducer, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useReducer, useRef, useState } from "react";
+import { createPortal } from "react-dom";
+import { SquarePenIcon } from "lucide-react";
 import { AnimatePresence, motion } from "motion/react";
 import { toast } from "sonner";
-import { API_ERROR, MEW_HISTORY_MAX, MEW_TEXT_MAX, type MewReply } from "@dailify/shared";
+import {
+  API_ERROR,
+  MEW_HISTORY_MAX,
+  MEW_TEXT_MAX,
+  type MewReply,
+  type Task,
+} from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
+import { MEW_PANEL_SLOT, SidePanel } from "@/components/dashboard/side-panel";
+import { Button } from "@/components/ui/button";
 import { fade } from "@/consts/motion";
 import { getSettings, mewChat, saveSettings, setMewAction } from "@/functions/api";
 import { creditsLabel } from "@/functions/quota-label";
@@ -12,13 +22,15 @@ import { appTimeZone, zoned } from "@/functions/zone";
 import { setCreditsTray } from "@/hooks/useCreditsTray";
 import { useOnline } from "@/hooks/useOnline";
 import { useQuotas } from "@/hooks/useQuotas";
+import { closePanel, openPanel, usePanel } from "@/hooks/usePanel";
 import { useSession } from "@/lib/auth";
+import { cn } from "@/lib/utils";
 
 import { useMewApply } from "./apply";
 import { copy as t } from "./copy";
-import { ChatDrawer } from "./chat-drawer";
-import { ChatInput } from "./chat-input";
-import { CreateDock } from "./dock";
+import { ChatDrawer, ChatLog } from "./chat-drawer";
+import { ChatInput, INPUT_ID } from "./chat-input";
+import { CreateDock, DOCK_PILL } from "./dock";
 import type { Photo } from "./photo";
 import {
   type ChatAction,
@@ -33,11 +45,31 @@ import {
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
 const failure = (reply: string): MewReply => ({ reply, intent: "unsupported", blocks: [] });
 
-/** The mobile dock and the Mew chat it opens: one `/mew/chat` call per turn, boxes applied to the agenda. */
-export function MewChat({ onCompose, onVoice }: { onCompose: () => void; onVoice?: () => void }) {
+/** The dock and the Mew chat it opens: one `/mew/chat` call per turn, boxes applied to the agenda. */
+export function MewChat({
+  onCompose,
+  onVoice,
+  panel,
+}: {
+  onCompose: () => void;
+  onVoice?: () => void;
+  /** Desktop: the dock sits at the agenda's foot and the thread lives in the side panel. */
+  panel?: boolean;
+}) {
   const userId = useSession().data?.user.id;
   const [messages, dispatch] = useReducer(chatReducer, userId, loadChat);
-  const [open, setOpen] = useState(false);
+  const [drawer, setDrawer] = useState(false);
+  const inPanel = usePanel()?.kind === "mew";
+  const open = panel ? inPanel : drawer;
+  // PanelHost renders the slot in the same commit; the panel goes there once it is in the DOM.
+  const [slot, setSlot] = useState<HTMLElement | null>(null);
+  useLayoutEffect(() => {
+    setSlot(panel && inPanel ? document.getElementById(MEW_PANEL_SLOT) : null);
+  }, [panel, inPanel]);
+  // One input at a time: opening the panel moves the typing from the dock to its footer.
+  useEffect(() => {
+    if (slot) document.getElementById(INPUT_ID)?.focus();
+  }, [slot]);
   const [busy, setBusy] = useState(false);
   const [consent, setConsent] = useState<boolean>();
   // The send the consent card interrupted; it goes out once accepted.
@@ -138,52 +170,90 @@ export function MewChat({ onCompose, onVoice }: { onCompose: () => void; onVoice
   const voice =
     onVoice &&
     (() => {
-      setOpen(false);
+      setDrawer(false);
       onVoice();
     });
+
+  const log = {
+    messages,
+    dispatch: act,
+    consent,
+    onConsent: () => void accept(),
+    onSend: (text: string) => void send(text),
+    onPhoto: () => photo.current?.click(),
+    onCompose: () => {
+      setDrawer(false);
+      onCompose();
+    },
+    // Desktop keeps the panel open beside the agenda it scrolls.
+    onOpenTask: (task: Task) => {
+      setDrawer(false);
+      void goToDay(task.undated ? zoned() : zoned(task.date));
+    },
+  };
+
+  const input = (dock?: boolean) => (
+    <ChatInput
+      dock={dock}
+      busy={busy}
+      offline={!online}
+      onSend={(text, image) => {
+        if (dock) openPanel({ kind: "mew" });
+        void send(text, image);
+      }}
+      onVoice={voice}
+      file={photo}
+    />
+  );
+
+  if (panel)
+    return (
+      <>
+        {!inPanel && (
+          <CreateDock inline onOpen={() => openPanel({ kind: "mew" })} chat={input(true)} />
+        )}
+        {inPanel &&
+          slot &&
+          createPortal(
+            <SidePanel
+              title={copy.panel.mew}
+              onClose={closePanel}
+              actions={
+                <>
+                  <p aria-live="polite" className="sr-only">
+                    {busy ? t.thinking : ""}
+                  </p>
+                  {credits !== null && (
+                    <span className="text-footnote text-ink-secondary tabular-nums">{credits}</span>
+                  )}
+                  <Button
+                    variant="ghost"
+                    size="icon-sm"
+                    aria-label={t.clear}
+                    onClick={() => dispatch({ type: "clear" })}
+                  >
+                    <SquarePenIcon aria-hidden="true" />
+                  </Button>
+                </>
+              }
+              footer={<div className={cn(DOCK_PILL, "flex-1 pl-1")}>{input()}</div>}
+            >
+              <ChatLog {...log} panel />
+            </SidePanel>,
+            slot,
+          )}
+      </>
+    );
 
   return (
     <>
       {/* Open, the dock is the chat's message box, above the drawer. */}
-      <CreateDock
-        onOpen={() => setOpen(true)}
-        onVoice={onVoice}
-        chat={
-          open && (
-            <ChatInput
-              busy={busy}
-              offline={!online}
-              onSend={(text, image) => void send(text, image)}
-              onVoice={voice}
-              file={photo}
-            />
-          )
-        }
-      />
+      <CreateDock onOpen={() => setDrawer(true)} onVoice={onVoice} chat={open && input()} />
       {/* The drawer is non-modal (the dock outside it must stay usable), so the scrim is ours. */}
       <AnimatePresence>
         {open && <motion.div {...fade} aria-hidden="true" className="fixed inset-0 z-chat scrim" />}
       </AnimatePresence>
-      <ChatDrawer
-        open={open}
-        onOpenChange={setOpen}
-        messages={messages}
-        dispatch={act}
-        busy={busy}
-        credits={credits}
-        consent={consent}
-        onConsent={() => void accept()}
-        onSend={(text) => void send(text)}
-        onPhoto={() => photo.current?.click()}
-        onCompose={() => {
-          setOpen(false);
-          onCompose();
-        }}
-        onOpenTask={(task) => {
-          setOpen(false);
-          void goToDay(task.undated ? zoned() : zoned(task.date));
-        }}
-      />
+      <ChatDrawer open={open} onOpenChange={setDrawer} busy={busy} credits={credits} {...log} />
     </>
   );
 }

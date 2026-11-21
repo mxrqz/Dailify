@@ -130,10 +130,10 @@ export default function Home() {
           </Tip>
         </Toolbar>
 
-        {/* pb-30: a lista termina acima do dock do composer (~92px com a área segura). */}
+        {/* pb-30: a lista termina acima do dock do composer (~92px com a área segura); no desktop o dock está no fluxo. */}
         <div
           className={cn(
-            "flex flex-col px-4 pb-30 md:mx-auto md:w-full md:max-w-180 md:px-8 md:pt-1",
+            "flex flex-col px-4 pb-30 md:mx-auto md:pb-6 md:w-full md:max-w-180 md:px-8 md:pt-1",
             calendarOpen && "md:hidden",
           )}
           id="main"

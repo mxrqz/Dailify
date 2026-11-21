@@ -357,9 +357,6 @@ export const copy = {
     textPlaceholder: "Reunião com o time hoje às 16:30",
     submit: "Criar tarefa",
     open: "Nova tarefa",
-    // Modo da criação, lembrado por device: só o "+" ou o campo sempre aberto.
-    pin: "Manter aberto",
-    minimize: "Minimizar",
     addDay: "+ dia",
     addTime: "+ horário",
     addDuration: "+ duração",
