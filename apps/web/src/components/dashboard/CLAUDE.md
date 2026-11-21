@@ -10,7 +10,9 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
 - Undated: `anytime-block.tsx` (today's card, `ScheduleDrop`), `check-history.tsx`;
 - Layout: `side-panel.tsx` is the desktop side panel (below, "Side panel").
 - Navigation: `week-strip.tsx` (`WeekDays`/`WeekStrip`), `month-calendar.tsx` (`MonthGrid`/
-  `MonthCalendar`, the `?view=calendar` overlay of `pages/home.tsx`). Gesture: `swipe-actions.tsx`.
+  `MonthCalendar`, the `?view=calendar` overlay of `pages/home.tsx`; on `DESKTOP` it renders the
+  full-height `MonthBoard`, whose cells open `{ kind: "day" }` in the side panel and light while
+  it is open). Gesture: `swipe-actions.tsx`.
 - Creation: `create-fab.tsx`, `task-composer.tsx` (container), `composer-views.tsx` (views),
   `calendar-chip.tsx` (`useCalendarChip`). The mobile dock is `mew-chat/dock.tsx`.
 - Editing: `task-form.tsx` (sheet: `components/edit-task.tsx`), `task-meta-menus.tsx`, pickers
@@ -29,6 +31,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
 - `PanelHost` (mounted by `pages/home.tsx` only when `DESKTOP` matches) closes on Esc unless a
   dialog or menu is open, and maps each `kind` to a `SidePanel`. Fill a kind there: pass `title`,
   `actions` (`Button size="icon-sm"`), `children` (the scrolling body, `gap-5`) and `footer`.
+  `day`: kit `TaskRow` + `CheckCircle` rows (`useTaskActions`), a row opens `{ kind: "task" }`; home
+  passes `onCreateOn` (`setCreateOn`) and `onOpenDay` (goToDay, leave the calendar, close).
 - `SidePanel` is the props-only glass View, `w-side` (400px), id `SIDE_PANEL_ID` (the toolbar
   toggle's `aria-controls`). From `xl` it is a sticky column that pushes the agenda; below it is
   `fixed` over the right edge with `shadow-raised`.
