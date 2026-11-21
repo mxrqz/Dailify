@@ -96,18 +96,38 @@ export async function startNativeMagicLink(email: string, captchaToken: string) 
   });
 }
 
+// True while an e-mailed link is being verified, so the login screen can show it is signing in.
+let signingIn = false;
+const listeners = new Set<() => void>();
+const setSigningIn = (next: boolean) => {
+  signingIn = next;
+  listeners.forEach((l) => l());
+};
+export const isSigningIn = (): boolean => signingIn;
+export const onSigningIn = (listener: () => void): (() => void) => {
+  listeners.add(listener);
+  return () => listeners.delete(listener);
+};
+
 async function verifyLink(token: string): Promise<void> {
-  const verifier = await vaultGet(VERIFIER_ACCOUNT);
-  if (!verifier) throw new Error("magic link opened without a request from this device");
-  const url = new URL(`${apiURL}/auth/magic-link/verify`, window.location.origin);
-  url.searchParams.set("token", token);
-  const res = await fetch(url, { headers: { "x-mewki-verifier": verifier } });
-  const session = res.headers.get("set-auth-token");
-  if (!res.ok || !session) throw new Error(`magic link verify failed (${res.status})`);
-  await vaultSet(SESSION_ACCOUNT, session);
-  setBearer(session);
-  await vaultDelete(VERIFIER_ACCOUNT);
-  authClient.$store.notify("$sessionSignal");
+  setSigningIn(true);
+  try {
+    const verifier = await vaultGet(VERIFIER_ACCOUNT);
+    if (!verifier) throw new Error("magic link opened without a request from this device");
+    const url = new URL(`${apiURL}/auth/magic-link/verify`, window.location.origin);
+    url.searchParams.set("token", token);
+    const res = await fetch(url, { headers: { "x-mewki-verifier": verifier } });
+    const session = res.headers.get("set-auth-token");
+    if (!res.ok || !session) throw new Error(`magic link verify failed (${res.status})`);
+    await vaultSet(SESSION_ACCOUNT, session);
+    setBearer(session);
+    await vaultDelete(VERIFIER_ACCOUNT);
+    authClient.$store.notify("$sessionSignal");
+  } catch (error) {
+    // On success it stays on until the session lands and the login screen navigates away.
+    setSigningIn(false);
+    throw error;
+  }
 }
 
 /**

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useSyncExternalStore } from "react";
 import { Helmet } from "react-helmet-async";
 import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 
@@ -9,7 +9,9 @@ import { copy } from "@/components/auth/copy";
 import { EmailForm } from "@/components/auth/email-form";
 import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import { useEmailLinkAuth } from "@/components/auth/use-email-link-auth";
+import { Splash } from "@/components/splash";
 import { useSession } from "@/lib/auth";
+import { isSigningIn, onSigningIn } from "@/lib/native-auth";
 import { isTauri } from "@/lib/platform";
 
 /**
@@ -18,6 +20,7 @@ import { isTauri } from "@/lib/platform";
  */
 export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
   const { data: session } = useSession();
+  const signingIn = useSyncExternalStore(onSigningIn, isSigningIn);
   const { state, from, captchaRef, submit, resend, reset, signInWithGoogle } = useEmailLinkAuth();
   // O Google que falha volta pra cá via `errorCallbackURL` com `?error=<código>`; a exclusão de
   // conta, com `?error=SESSION_EXPIRED`.
@@ -47,6 +50,7 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
   // Quem já está logado não tem o que fazer aqui — e vai pro mesmo destino que o fluxo de e-mail
   // usaria, senão o deep link que o ProtectedRoute guardou some só porque a sessão já existia.
   if (session) return <Navigate to={from} replace />;
+  if (signingIn) return <Splash />;
 
   return (
     <AuthShell

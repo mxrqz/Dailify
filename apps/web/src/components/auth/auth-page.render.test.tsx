@@ -1,5 +1,5 @@
 /** @vitest-environment jsdom */
-import { describe, it, expect, vi } from "vitest";
+import { afterEach, describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HelmetProvider } from "react-helmet-async";
@@ -8,6 +8,12 @@ import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 vi.mock("@/lib/auth", () => ({
   authClient: { signIn: { magicLink: vi.fn(), social: vi.fn() } },
   useSession: () => ({ data: null }),
+}));
+const native = vi.hoisted(() => ({ signingIn: false }));
+vi.mock("@/lib/native-auth", () => ({
+  startNativeMagicLink: vi.fn(),
+  isSigningIn: () => native.signingIn,
+  onSigningIn: () => () => {},
 }));
 vi.mock("@/components/auth/turnstile", () => ({
   useTurnstile: () => ({ ref: { current: null }, token: () => Promise.resolve("") }),
@@ -56,5 +62,24 @@ describe("<AuthPage> cross-link", () => {
     await user.click(screen.getByRole("link", { name: copy.signUp.crossLinkAction }));
 
     expect(await screen.findByLabelText(copy.shell.emailLabel)).toHaveValue("bia@x.com");
+  });
+});
+
+describe("<AuthPage> app sign-in link", () => {
+  afterEach(() => {
+    native.signingIn = false;
+  });
+
+  it("shows the loading splash instead of the form while the e-mailed link is verified", () => {
+    native.signingIn = true;
+    render(
+      <HelmetProvider>
+        <MemoryRouter initialEntries={["/login"]}>
+          <Login />
+        </MemoryRouter>
+      </HelmetProvider>,
+    );
+    expect(screen.getByRole("status")).toBeInTheDocument();
+    expect(screen.queryByLabelText(copy.shell.emailLabel)).toBeNull();
   });
 });
