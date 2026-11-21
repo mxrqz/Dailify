@@ -30,7 +30,11 @@ export function Splash({ slow: forceSlow = false }: { slow?: boolean }): JSX.Ele
   useEffect(() => {
     if (isPresent || !mew.current) return;
     // The route mounts in the same commit the splash starts leaving, so the dock is measurable.
-    const to = document.querySelector('[data-slot="create-dock"] .mew')?.getBoundingClientRect();
+    // The first-run intro covers the dock, so its welcome Mew is the landing spot then.
+    const to = (
+      document.querySelector('[data-slot="onboarding"] .mew') ??
+      document.querySelector('[data-slot="create-dock"] .mew')
+    )?.getBoundingClientRect();
     const from = mew.current.getBoundingClientRect();
     const fade = { duration: duration.slow, ease: ease.exit };
     const exit =

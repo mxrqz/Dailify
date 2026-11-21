@@ -82,5 +82,7 @@ One file per route. `src/App.tsx` declares the routes; each page owns its own I/
 
 ## Tests
 
-`billing`, `premium`, `security`, `verify`, `auth-app`, `app-return`, `integration-callback` and
+`home.tsx` also mounts the first-run intro (`components/onboarding/CLAUDE.md`).
+
+`billing`, `premium`, `settings`, `security`, `verify`, `auth-app`, `app-return`, `integration-callback` and
 `oauth-consent` have render tests. The older `it` names are legacy pt-BR; new ones are English.

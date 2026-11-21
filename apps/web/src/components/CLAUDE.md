@@ -10,7 +10,8 @@ motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hoo
 - `kit/`: DS presentational primitives, props to markup (`kit/CLAUDE.md`). No `useDailify`,
   `useSession`, api or router hooks.
 - Feature folders own their code and `copy.ts`: `dashboard/` (agenda, composer), `auth/`,
-  `landing/`, `mew/`, `mew-chat/`, and `nav/` and `pricing/` (covered below).
+  `landing/`, `mew/`, `mew-chat/`, `onboarding/` (the first-run intro), and `nav/` and `pricing/`
+  (covered below).
 - Root, for what no single feature owns. Shell: `app-layout` (AppHeader, `nav/`,
   Outlet, Duplicates; no gutter on /dashboard; on mobile, account pages get `back-bar` instead of
   AppHeader, the legal pages' back + title bar), `app-header`, `protected-route`, `splash`,
@@ -59,7 +60,8 @@ It owns the task boot. Other code only re-triggers loads (`pages/integration-cal
 - Revalidates on `visibilitychange` at most every 30s and at once on `online`; both refetch quotas,
   which are keyed by today's month (`useNow("day")`).
 - The splash holds for `SPLASH_MIN_MS` only when the route mounted while loading. On exit its Mew
-  flies to `[data-slot="create-dock"] .mew` (the mobile dock); no dock or reduced motion, it fades.
+  flies to `[data-slot="onboarding"] .mew` (the first-run intro) or else
+  `[data-slot="create-dock"] .mew` (the mobile dock); neither, or reduced motion, it fades.
 - `protected-route.render.test.tsx` pins loads-once, queue-before-undated, the deferred cache, the
   splash and the session fallback; extend it when the boot changes.
 
