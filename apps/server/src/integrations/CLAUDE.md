@@ -26,6 +26,12 @@ event mapping and sync: `google-calendar/CLAUDE.md`.
    `configured: false` and `connect` answers 503.
 5. The "contrato dos providers" block in `test/integrations.test.ts` then checks https endpoints,
    `required` within `scopes`, credentials and `identify`.
+6. Mew capabilities, optional: `read(env, userId, target)` returns text the Mew may read,
+   `send(env, userId, target, text)` delivers a confirmed draft, and `target` says what a target
+   is for the prompt ("channel id"). Only connected providers that implement one are offered to
+   the model (`appsOf`, `routes/mew.ts`). A read runs after a `permission` box or an "always"
+   grant (`mew_grants`, deleted on disconnect); a send only from `POST /mew/actions/:id/send`,
+   never automatic. Test with a fake on the mocked registry (`test/mew-apps.test.ts`).
 
 Gotcha: the registry is only half used. The generic `/:provider/callback` runs the optional
 `Provider.sync` (the first import), but the action routes are hardcoded to Google (`withCalendar`,

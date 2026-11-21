@@ -253,6 +253,15 @@ export async function setMewAction(id: string, status: MewActionStatus): Promise
   });
 }
 
+/** A confirmed send box; 404 = already sent or not yours, 409 `reconnect`, 502 = the app failed. */
+export async function sendMewAction(id: string, text: string): Promise<{ error?: ApiError }> {
+  const { error } = await request<never>(`/mew/actions/${encodeURIComponent(id)}/send`, {
+    method: "POST",
+    body: JSON.stringify({ text }),
+  });
+  return { error };
+}
+
 export async function createTaskVoice(
   formData: FormData,
 ): Promise<{ tasks: Task[]; response?: string; error?: ApiError }> {
@@ -362,6 +371,14 @@ export async function completeIntegration(
 
 export async function disconnectIntegration(provider: ProviderId): Promise<{ error?: ApiError }> {
   const { error } = await request<never>(`/integrations/${provider}`, { method: "DELETE" });
+  return { error };
+}
+
+/** Switches off "A Mew lê sem perguntar": she asks again next time. */
+export async function revokeReadGrant(provider: ProviderId): Promise<{ error?: ApiError }> {
+  const { error } = await request<never>(`/integrations/${provider}/grants/read`, {
+    method: "DELETE",
+  });
   return { error };
 }
 

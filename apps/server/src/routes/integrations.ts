@@ -31,6 +31,7 @@ import {
   upsertConnection,
   type ConnectionRow,
 } from "../db/integrations";
+import { deleteGrant, listGrants } from "../db/mew";
 import { PROVIDERS } from "../integrations/registry";
 import {
   authorizeUrl,
@@ -68,7 +69,7 @@ function statusOf(
   id: ProviderId,
   allowed: boolean,
   row?: ConnectionRow | null,
-  flags: Pick<IntegrationStatus, "stale" | "duplicates" | "readonly"> = {},
+  flags: Pick<IntegrationStatus, "stale" | "duplicates" | "readonly" | "readAlways"> = {},
 ): IntegrationStatus {
   const configured = Boolean(PROVIDERS[id].oauth.credentials(env).id);
   if (!row) return { provider: id, allowed, configured, connected: false };
@@ -82,6 +83,7 @@ function statusOf(
     ...(flags.stale?.length && { stale: flags.stale }),
     ...(flags.duplicates?.length && { duplicates: flags.duplicates }),
     ...(flags.readonly?.length && { readonly: flags.readonly }),
+    ...(flags.readAlways && { readAlways: true }),
     ...(row.skipped > 0 && { skipped: row.skipped }),
   };
 }
@@ -89,11 +91,12 @@ function statusOf(
 integrations.get("/integrations", async (c) => {
   const userId = c.get("userId");
   const role = c.get("plan");
-  const [rows, stale, duplicates, readonly] = await Promise.all([
+  const [rows, stale, duplicates, readonly, grants] = await Promise.all([
     listConnections(c.env.DB, userId),
     listStale(c.env.DB, userId),
     listDuplicates(c.env.DB, userId),
     listReadonly(c.env.DB, userId),
+    listGrants(c.env.DB, userId),
   ]);
   return c.json(
     PROVIDER_IDS.map((id) =>
@@ -108,6 +111,7 @@ integrations.get("/integrations", async (c) => {
             .filter((d) => d.provider === id)
             .map((d) => ({ taskId: d.duplicate_of, importedId: d.task_id })),
           readonly: readonly.filter((r) => r.provider === id).map((r) => r.task_id),
+          readAlways: grants.some((g) => g.provider === id && g.capability === "read"),
         },
       ),
     ),
@@ -269,6 +273,14 @@ integrations.post("/integrations/google-calendar/events/:taskId/sync", async (c)
     return fail(c, 502, "A Agenda não respondeu; tente de novo");
   }
   return c.json({ task: await getTask(c.env.DB, userId, taskId) });
+});
+
+// "A Mew lê sem perguntar" switched off: she asks again next time. No plan gate, like disconnect.
+integrations.delete("/integrations/:provider/grants/read", async (c) => {
+  const id = c.req.param("provider");
+  if (!isProviderId(id)) return fail(c, 404, "Integração desconhecida");
+  await deleteGrant(c.env.DB, c.get("userId"), id, "read");
+  return c.body(null, 204);
 });
 
 // Sem gate de plano: quem perdeu o plano ainda precisa conseguir desconectar. As tarefas ficam,

@@ -55,4 +55,10 @@ export interface Provider {
   ): Promise<"unlink" | void>;
   /** The import right after connecting; the callback answers its `imported` count. */
   sync?(env: Env, userId: string): Promise<{ imported: number }>;
+  /** What `target` names for `read`/`send`, for the Mew prompt ("channel id"). */
+  target?: string;
+  /** Text the Mew may read once the user allows it. Untrusted: it goes in as user-role data. */
+  read?(env: Env, userId: string, target: string): Promise<string>;
+  /** Runs only after the user confirmed the draft in a `send` box. */
+  send?(env: Env, userId: string, target: string, text: string): Promise<void>;
 }

@@ -21,7 +21,8 @@ The Worker's SQL, hand-written over the raw `D1Database` binding (no ORM). Repo-
   defaults when no row. `usage.ts`: the `usage` counter, keyed `(user_id, quota, period)`.
 - `limits.ts`: quota policy. `aiQuota` answers `{ status, error, code }` or null (the route maps
   it with `fail`); `debitAi` spends one credit.
-- `mew.ts`: the `mew_actions` log, task ids only, never titles.
+- `mew.ts`: the `mew_actions` log, task ids only, never titles; read/send rows keep `provider` and
+  `target`, and `claimAction` marks one done once. `mew_grants`: the "always read" grants.
 - `reminders.ts`: `reminder_tokens` (one per Better Auth session, `ON DELETE CASCADE`) and
   `listAlertTasks`, the feed's candidate rows.
 

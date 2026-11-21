@@ -15,7 +15,9 @@ foot whose input sends and opens the side panel `{ kind: "mew" }`; the thread re
 - `chat-drawer.tsx`: `ChatDrawer` (the mobile Sheet and its header) over `ChatLog` (log, empty state,
   consent card), which the desktop `SidePanel` also renders. `bubbles.tsx`: `Mine`,
   `Reply`, `Reveal`. `confirm-box.tsx`: `ConfirmBody` and the task `Row`, which read `hour12` from
-  `useDailify`, so they are not provider-free Views yet. `chat-input.tsx`: `ChatInput`.
+  `useDailify`, so they are not provider-free Views yet. `app-boxes.tsx`: `PermissionBody`
+  (Não permitir / Permitir uma vez / Sempre permitir) and `SendBody` (Cancelar / Editar /
+  Enviar), props-only. `chat-input.tsx`: `ChatInput`.
   `photo.ts`: thumbnail and upload scaling. `mood.ts`: `moodOf`.
 
 ## Invariants
@@ -28,6 +30,11 @@ foot whose input sends and opens the side panel `{ kind: "mew" }`; the thread re
 - Persisted per user at localStorage `mewki:mew:<userId>:v1`, last 50 (`KEEP`); a reply still
   typing is dropped on load. mew-chat.tsx saves only when no reply is in flight. The key is
   `chatKey` in `functions/offline.ts`, so `clearLocal` removes it.
+- Permission and send boxes use the same steps (`done` = allowed or sent). Allow re-sends the turn
+  through `ask()`: my message's text and stored thumb, the history before it, and
+  `permission: { id, always }`, into a new typing reply (`wait`); no `bumpUsage`, the first reply
+  was the credit. A failure settles the box back to `draft`. Deny is local copy plus
+  `setMewAction` cancelled. Send goes to `sendMewAction` with the edited text; never "always".
 - `writes(out, into)` diffs by id (same id = update); `swapTasks`/`swapUndated`
   (`functions/task-lists.ts`) mirror it into `tasks` and `undatedTasks`. An update sends only `title`, `date`, `alert`: widen that list if a box changes
   more.

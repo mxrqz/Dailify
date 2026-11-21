@@ -46,6 +46,8 @@ export interface IntegrationStatus {
   duplicates?: { taskId: string; importedId: string }[];
   /** Tarefas de convite que só o organizador muda: título, data e recorrência travados na UI. */
   readonly?: string[];
+  /** The Mew reads from this app without asking ("Sempre permitir"). */
+  readAlways?: boolean;
   /** Eventos que a Mewki não sabe representar (recorrência exótica, dia inteiro repetido). */
   skipped?: number;
 }

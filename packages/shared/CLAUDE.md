@@ -22,7 +22,8 @@ are in [Shared model](../../RULES.md#shared-model); required zones are in
   `ParsedTaskWire`, `AiIntent`/`AiParse`, Stripe `Invoice`/`PaymentDetails` (Unix seconds).
 - `errors.ts`: `API_ERROR`, the `code` registry of every error the web reacts to, and
   `isApiErrorCode`.
-- `mew.ts`: the Mew chat wire (`MewRequest`/`MewReply`/`MewBlock`) and the `MEW_*` caps, plus the
+- `mew.ts`: the Mew chat wire (`MewRequest`/`MewReply`/`MewBlock`, with the `permission` and `send`
+  boxes and `MEW_CAPABILITIES`, what a grant covers) and the `MEW_*` caps, plus the
   `MEW_CONSENT_REQUIRED` error text older app builds compare.
 - `integrations.ts`: `ProviderId`/`INTEGRATIONS`/`PROVIDER_IDS`, `CalendarTarget`,
   `IntegrationStatus`, `IntegrationLink`, `INTEGRATION_ERROR` (a slice of `API_ERROR`),

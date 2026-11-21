@@ -55,6 +55,7 @@ export const USER_TABLES = [
   "integration_links",
   "oauth_states",
   "mew_actions",
+  "mew_grants",
   "reminder_tokens",
 ] as const;
 

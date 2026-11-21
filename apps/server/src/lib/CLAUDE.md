@@ -61,6 +61,9 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   instance's ref is `id@yyyy-mm-dd`, and `toBlocks` resolves refs only through that map.
 - Agenda titles are untrusted (Google invites): `lines()` goes in as the first user-role input
   item, never into `instructions`. The client also sends `history`, assistant turns included.
+- Apps (`MewApp`): the schema gets nullable `read`/`send` only for connected providers that
+  implement them, and `toBlocks` drops any other provider. Read content (`MewRead`) is the last
+  user-role item, capped at `READ_MAX`; that second call never offers `read` again.
 
 ## Stripe
 

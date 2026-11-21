@@ -8,6 +8,7 @@ import {
   MEW_HISTORY_MAX,
   MEW_TEXT_MAX,
   type MewReply,
+  type MewRequest,
   type Task,
 } from "@dailify/shared";
 
@@ -16,7 +17,7 @@ import { copy } from "@/components/dashboard/copy";
 import { MEW_PANEL_SLOT, SidePanel } from "@/components/dashboard/side-panel";
 import { Button } from "@/components/ui/button";
 import { fade } from "@/consts/motion";
-import { getSettings, mewChat, saveSettings, setMewAction } from "@/functions/api";
+import { getSettings, mewChat, saveSettings, sendMewAction, setMewAction } from "@/functions/api";
 import { creditsLabel } from "@/functions/quota-label";
 import { appTimeZone, zoned } from "@/functions/zone";
 import { setCreditsTray } from "@/hooks/useCreditsTray";
@@ -33,8 +34,11 @@ import { ChatInput, INPUT_ID } from "./chat-input";
 import { CreateDock, DOCK_PILL } from "./dock";
 import type { Photo } from "./photo";
 import {
+  type BoxBlock,
   type ChatAction,
-  type ConfirmBlock,
+  type Message,
+  type PermissionBlock,
+  type SendBlock,
   chatReducer,
   frozen,
   loadChat,
@@ -43,6 +47,11 @@ import {
 } from "./thread";
 
 const newId = () => `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+const historyOf = (messages: Message[]) =>
+  messages
+    .filter((m) => m.text)
+    .slice(-MEW_HISTORY_MAX)
+    .map((m) => ({ from: m.from, text: m.text.slice(0, MEW_TEXT_MAX) }));
 const failure = (reply: string): MewReply => ({ reply, intent: "unsupported", blocks: [] });
 
 /** The dock and the Mew chat it opens: one `/mew/chat` call per turn, boxes applied to the agenda. */
@@ -92,32 +101,33 @@ export function MewChat({
     });
   }, [open, consent]);
 
-  const send = async (text: string, image?: Photo) => {
+  const send = (text: string, image?: Photo) => {
     const id = newId();
-    const history = messages
-      .filter((m) => m.text)
-      .slice(-MEW_HISTORY_MAX)
-      .map((m) => ({ from: m.from, text: m.text.slice(0, MEW_TEXT_MAX) }));
     dispatch({ type: "send", id, text, image: image?.thumb });
+    return ask(
+      id,
+      { text, timezone: appTimeZone(), image: image?.full, history: historyOf(messages) },
+      image,
+    );
+  };
+
+  /** One `/mew/chat` call into the typing reply `mewId(id)`; `false` = it failed. */
+  const ask = async (id: string, req: MewRequest, image?: Photo) => {
     setBusy(true);
     try {
-      const { reply, error } = await mewChat({
-        text,
-        timezone: appTimeZone(),
-        image: image?.full,
-        history,
-      });
+      const { reply, error } = await mewChat(req);
       if (reply) {
-        bumpUsage("ai");
+        // The re-sent half of a turn was paid with its first reply.
+        if (!req.permission) bumpUsage("ai");
         dispatch({ type: "reply", to: mewId(id), reply });
-        return;
+        return true;
       }
       // A 403 or 429 means different things depending on the server's code.
       if (error?.code === API_ERROR.mewConsentRequired) {
-        pending.current = { text, image };
+        pending.current = { text: req.text, image };
         dispatch({ type: "drop", id });
         setConsent(false);
-        return;
+        return false;
       }
       const out = error?.code === API_ERROR.aiExhausted;
       if (out) setCreditsTray(true);
@@ -129,9 +139,37 @@ export function MewChat({
             ? t.tooBig
             : t.failed;
       dispatch({ type: "reply", to: mewId(id), reply: failure(line) });
+      return false;
     } finally {
       setBusy(false);
     }
+  };
+
+  // "Permitir": the same turn again (my message, the history before it), now allowed to read.
+  const resume = (block: PermissionBlock, always: boolean) => {
+    let index = messages.findIndex(
+      (m) => m.from === "mew" && m.blocks.some((b) => b.kind !== "tasks" && b.id === block.id),
+    );
+    while (index > 0 && messages[index].from !== "me") index--;
+    const turn = messages[index];
+    if (turn?.from !== "me") return;
+    const id = newId();
+    dispatch({ type: "wait", id });
+    void ask(id, {
+      text: turn.text,
+      timezone: appTimeZone(),
+      // The stored thumb: the full photo isn't kept.
+      image: turn.image,
+      history: historyOf(messages.slice(0, index)),
+      permission: { id: block.id, always },
+    }).then((ok) => ok || dispatch({ type: "settle", block: block.id, step: "draft" }));
+  };
+
+  const deliver = async (block: SendBlock) => {
+    const { error } = await sendMewAction(block.id, block.text);
+    if (!error) return;
+    dispatch({ type: "settle", block: block.id, step: "draft" });
+    toast.error(t.sendBox.error, { description: error.message });
   };
 
   const accept = async () => {
@@ -146,20 +184,26 @@ export function MewChat({
     if (retry) void send(retry.text, retry.image);
   };
 
-  // The box buttons also write: confirm and undo through the agenda, cancel to the audit row.
+  // The box buttons also write: confirm and undo through the agenda, allow and send through the
+  // server, cancel to the audit row.
   const act = (action: ChatAction) => {
     dispatch(action);
-    if (action.type !== "confirm" && action.type !== "undo" && action.type !== "cancel") return;
+    if (!("block" in action)) return;
     const block = messages
       .flatMap((m) => (m.from === "mew" ? m.blocks : []))
-      .find((b): b is ConfirmBlock => b.kind === "confirm" && b.id === action.block);
-    if (action.type === "cancel" && block?.step === "draft")
-      void setMewAction(block.id, "cancelled");
-    if (action.type === "confirm" && block?.step === "draft")
+      .find((b): b is BoxBlock => b.kind !== "tasks" && b.id === action.block);
+    if (!block) return;
+    const draft = block.step === "draft";
+    if (action.type === "cancel" && draft) void setMewAction(block.id, "cancelled");
+    if (action.type === "allow" && draft && block.kind === "permission")
+      resume(block, action.always);
+    if (action.type === "deliver" && draft && block.kind === "send") void deliver(block);
+    if (block.kind !== "confirm") return;
+    if (action.type === "confirm" && draft)
       void apply(frozen(block), "do").then(
         (ok) => ok || dispatch({ type: "settle", block: block.id, step: "draft" }),
       );
-    if (action.type === "undo" && block?.step === "done")
+    if (action.type === "undo" && block.step === "done")
       void apply(block, "undo").then(
         (ok) => ok || dispatch({ type: "settle", block: block.id, step: "done" }),
       );
