@@ -130,6 +130,7 @@ export async function deleteConnection(
     db
       .prepare(`DELETE FROM integration_links WHERE user_id=? AND provider=?`)
       .bind(userId, provider),
+    db.prepare(`DELETE FROM mew_grants WHERE user_id=? AND provider=?`).bind(userId, provider),
   ]);
 }
 

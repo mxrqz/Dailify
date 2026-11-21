@@ -9,7 +9,9 @@ provider work in `lib/` and `integrations/`.
 - `tasks.ts` at `/tasks`: `GET /?month=YYYY-MM&tz=`, `GET /undated`, `POST /`, `PATCH|DELETE /:id`
   (`?occurrence=<epoch-ms>` = one instance), `POST|DELETE /:id/complete`.
 - `voice.ts`, also at `/tasks`: `POST /parse` (text), `POST /voice` (multipart audio).
-- `mew.ts` at `/mew`: `POST /chat`, `PATCH /actions/:id`.
+- `mew.ts` at `/mew`: `POST /chat` (`permission: { id, always }` = the re-sent turn after a
+  permission box: claims the pending read, no quota check and no debit, since its first reply was
+  the turn's credit), `PATCH /actions/:id`, `POST /actions/:id/send` (a confirmed send box).
 - `billing.ts` at `/`: `GET /permissions`, `/billing/{checkout,portal,payment-details,invoices}`,
   `POST /webhooks/stripe` (public, signature-checked, empty 200).
 - `push.ts` at `/`: `GET /push/key` (public), `GET|POST|DELETE /push/subscription`.
@@ -21,7 +23,8 @@ provider work in `lib/` and `integrations/`.
   `tasks.request(path, init, c.env, c.executionCtx)` with the same token (`requireTaskAuth`), so
   each write counts twice against `API_LIMITER`.
 - `integrations.ts` at `/`: `GET /integrations`, `POST /:provider/{connect,callback}`,
-  `DELETE /:provider`, `POST google-calendar/{events,events/:taskId/meet|sync,duplicates/:id}`.
+  `DELETE /:provider`, `DELETE /:provider/grants/read` (the Mew's "always read" switch),
+  `POST google-calendar/{events,events/:taskId/meet|sync,duplicates/:id}`.
 
 ## A new module
 
