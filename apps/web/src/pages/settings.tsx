@@ -1,18 +1,25 @@
+import { CircleHelpIcon, MicIcon } from "lucide-react";
 import { Helmet } from "react-helmet-async";
+import { useNavigate } from "react-router-dom";
 
 import { copy } from "@/components/dashboard/copy";
 import { IntegrationsSummary } from "@/components/integrations";
 import { HourFormatSelect } from "@/components/hour-format-select";
 import { ListGroup, ListRow } from "@/components/kit/list";
 import { PageHeader } from "@/components/kit/page-header";
+import { ONBOARDING_KEY } from "@/components/onboarding/onboarding";
 import { ThemeSelect } from "@/components/theme-select";
 import { PushToggle } from "@/components/push-toggle";
 import { accountGroups, accountPage } from "@/components/settings-list";
 import { TimeZoneSelect } from "@/components/time-zone-select";
 import { WeekStartSelect } from "@/components/week-start-select";
-import { nativeReminders } from "@/lib/reminders";
+import { useStoredFlag } from "@/hooks/useStoredFlag";
+import { nativeReminders, openAssistantSettings } from "@/lib/reminders";
 
 export default function SettingsPage(): JSX.Element {
+  const navigate = useNavigate();
+  const [, setIntroSeen] = useStoredFlag(ONBOARDING_KEY);
+
   return (
     <main className={accountPage}>
       <Helmet>
@@ -35,14 +42,30 @@ export default function SettingsPage(): JSX.Element {
           <PushToggle />
         </ListGroup>
 
-        {/* ponytail: text only; a button needs a native command opening ACTION_VOICE_INPUT_SETTINGS. */}
         {nativeReminders() && (
           <ListGroup title={copy.profile.groupAssistant} footer={copy.profile.assistantFooter}>
-            <ListRow label={copy.profile.assistantTitle} sublabel={copy.profile.assistantPath} />
+            <ListRow
+              icon={<MicIcon />}
+              label={copy.profile.assistantTitle}
+              accessory="chevron"
+              onClick={() => void openAssistantSettings().catch(() => undefined)}
+            />
           </ListGroup>
         )}
 
         <IntegrationsSummary />
+
+        <ListGroup title={copy.profile.groupHelp}>
+          <ListRow
+            icon={<CircleHelpIcon />}
+            label={copy.profile.replayIntro}
+            accessory="chevron"
+            onClick={() => {
+              setIntroSeen(false);
+              navigate("/dashboard");
+            }}
+          />
+        </ListGroup>
       </div>
     </main>
   );

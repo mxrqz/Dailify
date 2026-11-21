@@ -14,6 +14,8 @@ rules: [/RULES.md](../../../../RULES.md).
 - `reminders.ts`: the Android `reminders` plugin (`src-tauri/plugins/reminders`): local alarms fed
   by `GET /reminders/feed`, since the WebView gets no Web Push. `functions/push.ts` branches to it
   when `nativeReminders()`; `signOut` clears it; protected-route refreshes it when the app hides.
+  It also opens system screens: exact alarms, battery, and `openAssistantSettings` (the default
+  assistant picker, used by the intro and /settings).
 - `back-button.ts` (Android back), `haptics.ts` (`haptic(kind)`), `open-external.ts`
   (`openExternal`).
 - `form.ts`: `formString` reads `FormData` without `as string`. `utils.ts`: `cn()`.

@@ -25,6 +25,8 @@ export const configureReminders = (apiUrl: string, token: string) =>
   call<void>("configure", { apiUrl, token });
 export const openExactAlarmSettings = () => call<void>("settings");
 export const openBatterySettings = () => call<void>("battery");
+/** Android's default digital assistant picker, where the user chooses (or drops) Mewki. */
+export const openAssistantSettings = () => call<void>("assistant");
 
 /** Fire-and-forget: re-reads the feed in the background (a no-op when not configured). */
 export function refreshReminders(): void {

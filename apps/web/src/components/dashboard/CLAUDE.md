@@ -63,7 +63,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
   dock). The dock's mic and `voiceSignal` (home's `?mew=voice`, the Android assistant) open the
   composer already recording (`listen`). Mobile: a bottom `Sheet`.
   Desktop: a centered glass `Dialog`, opened by the toolbar's "Nova tarefa" (`openSignal`), `n`, a
-  calendar day (`day`) or the first-run example (`text`); `/` focuses the Mew input (`INPUT_ID`).
+  calendar day (`day`) or the first-run example or intro suggestion (`text`); `/` focuses the Mew
+  input (`INPUT_ID`).
 - Submit contract: the composer never writes a single task. `onSubmit(values, again)` returns
   `Promise<boolean>`; the sheet closes at once (optimistic) and reopens with the `retry` text on
   `false`; Shift+Enter (`again`) keeps it open. Multi-draft Mew creates go through `createMany`

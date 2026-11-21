@@ -12,6 +12,7 @@ import { WeekStrip } from "@/components/dashboard/week-strip";
 import { CreateFab } from "@/components/dashboard/create-fab";
 import { copy } from "@/components/dashboard/copy";
 import { PageHeader } from "@/components/kit/page-header";
+import { Onboarding } from "@/components/onboarding/onboarding";
 import { Tip } from "@/components/tip";
 import { Button } from "@/components/ui/button";
 import { CALENDAR_VIEW } from "@/consts/conts";
@@ -179,6 +180,8 @@ export default function Home() {
           openSignal={createSignal}
           voiceSignal={voiceSignal}
         />
+        {/* A reminder tap or the assistant gesture goes straight to its intent; the intro waits. */}
+        <Onboarding onTry={setExample} hold={mewVoice || (Number.isFinite(at) && at > 0)} />
       </div>
 
       {desktop && (

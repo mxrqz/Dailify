@@ -31,7 +31,11 @@ A thin native shell around the web app, for desktop and Android. Repo-wide rules
   `plugins/reminders/`: the commands are Kotlin `@Command`s in `android/src/main/java/`, which Tauri
   reaches because no Rust handler takes them; the Rust side only registers the class. A new command
   goes in `build.rs` `COMMANDS` (its `allow-*` permission) and in `capabilities/android.json`.
-  Its manifest (permissions, receivers) merges into the app; the build writes `permissions/` there.
+  Its manifest (permissions, receivers) merges into the app; the build writes `permissions/` there
+  (`cargo check --manifest-path plugins/reminders/Cargo.toml` regenerates it on desktop; delete
+  the `Cargo.lock` it leaves). Command names are one lowercase word, since they become ACL ids:
+  `assistant` opens the default-assistant picker (voice input settings, else Default apps, else
+  Settings).
 
 Adding a plugin touches four places in one commit, and removing one touches the same four:
 
