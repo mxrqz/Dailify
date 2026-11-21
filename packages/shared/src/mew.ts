@@ -1,4 +1,4 @@
-import type { CalendarTarget } from "./integrations";
+import type { CalendarTarget, ProviderId } from "./integrations";
 import type { Task } from "./types";
 
 /** `POST /mew/chat`. One call, one credit; the reply lands whole. */
@@ -9,11 +9,15 @@ export interface MewRequest {
   image?: string;
   /** The last turns, oldest first, at most `MEW_HISTORY_MAX`, each text at most `MEW_TEXT_MAX`. */
   history: { from: "me" | "mew"; text: string }[];
+  /** The answer to a `permission` block: the same turn re-sent, now allowed to read. */
+  permission?: { id: string; always: boolean };
 }
 
 export const MEW_TEXT_MAX = 500;
 export const MEW_HISTORY_MAX = 8;
 export const MEW_IMAGE_MAX = 1_400_000;
+/** A confirmed `send` draft, in chars. */
+export const MEW_SEND_MAX = 4000;
 
 /** The `error` of the 403 before consent; older app builds compare it, new ones the `code`. */
 export const MEW_CONSENT_REQUIRED = "Mew Consent Required";
@@ -37,7 +41,32 @@ export type MewBlock =
       targets?: CalendarTarget[];
       /** The parent task (steps) or the target day (move), for the box title. */
       label?: string;
+    }
+  | {
+      /** Mew asks to read `target` from a connected app; `id` is the `mew_actions` row. */
+      kind: "permission";
+      id: string;
+      provider: ProviderId;
+      capability: MewCapability;
+      target: string;
+      /** `target` as a person reads it ("#geral"). */
+      label: string;
+    }
+  | {
+      /** A message draft for a connected app: always confirmed, never "always allow". */
+      kind: "send";
+      id: string;
+      provider: ProviderId;
+      /** The provider's address; the server sends to its own stored copy, never this one. */
+      target: string;
+      /** The recipient as a person reads it. */
+      to: string;
+      text: string;
     };
+
+/** What an "always" grant covers, per user and provider. Sending never gets one. */
+export const MEW_CAPABILITIES = ["read"] as const;
+export type MewCapability = (typeof MEW_CAPABILITIES)[number];
 
 export interface MewReply {
   reply: string;
