@@ -21,6 +21,9 @@ export const TASK_LIMITS = {
   repeatEveryMax: 365,
   /** `Task.priority` is 0..this. */
   priorityMax: 4,
+  /** Days a task's `date + duration` may cover: the agenda and the month read look back this far. */
+  // ponytail: a longer span shows only its first 31 days; store an end date if trips get longer.
+  spanDaysMax: 31,
 } as const;
 
 /**
