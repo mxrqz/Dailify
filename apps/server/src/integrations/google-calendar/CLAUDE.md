@@ -56,8 +56,10 @@ tokens, `propagate`) is in `../CLAUDE.md`.
   and the Meet link; the alert shifts with the start;
   priority, tags and completions stay Mewki's.
 - All-day events become `undated` tasks anchored at 09:00 in the event zone (its valid
-  `start.timeZone`, else the settings zone, else UTC). Multi-day, recurring all-day and RRULEs
-  `fromRrule` can't express are skipped and counted in `skipped` (full sets it, incremental adds).
+  `start.timeZone`, else the settings zone, else UTC). A multi-day all-day event becomes a dated
+  task from its first midnight with the span as `duration` (the web shows it on every day). Spans
+  over `TASK_LIMITS.spanDaysMax`, recurring all-day and RRULEs `fromRrule` can't express are
+  skipped and counted in `skipped` (full sets it, incremental adds).
 - Ignored: non-`default` `eventType` (out of office, focus, Gmail), declined invites, and events
   that ended before the 30-day cutoff. A cancelled instance adds an EXDATE to its master; a
   cancelled Mewki event is unlinked; a cancelled foreign event deletes its tasks.

@@ -409,7 +409,7 @@ describe("syncCalendar", () => {
           end: { date: "2026-12-02" },
           recurrence: ["RRULE:FREQ=YEARLY"],
         }),
-        ev("ferias", { start: { date: "2026-12-01" }, end: { date: "2026-12-05" } }),
+        ev("eterno", { start: { date: "2026-12-01" }, end: { date: "2027-02-01" } }),
         ev("ausencia", { eventType: "outOfOffice" }),
         ev("recusado", { attendees: [{ self: true, responseStatus: "declined" }] }),
       ]);
@@ -438,6 +438,36 @@ describe("syncCalendar", () => {
       .bind(task?.id)
       .first<{ alert_sent: number | null }>();
     expect(row?.alert_sent).toBe(anchor);
+  });
+
+  it("multi-day all-day: a dated task from the first midnight, as long as the event", async () => {
+    const ymd = (days: number) => iso(AT + days * 24 * HOUR).slice(0, 10);
+    const first = Date.parse(`${ymd(0)}T00:00:00Z`);
+    respond = () => page([ev("ferias", { start: { date: ymd(0) }, end: { date: ymd(3) } })]);
+    expect(await sync()).toEqual({ imported: 1 });
+    const task = await taskOf("ferias");
+    expect(task).toMatchObject({ date: first, duration: "72h", repeat: "Off" });
+    expect(task?.undated).toBeFalsy();
+    expect(task?.alert).toBeUndefined();
+  });
+
+  it("a one-day all-day event stretched to several days leaves Sem data for the agenda", async () => {
+    const ymd = (days: number) => iso(AT + days * 24 * HOUR).slice(0, 10);
+    respond = () => page([ev("dia", { start: { date: ymd(0) }, end: { date: ymd(1) } })]);
+    await sync();
+    expect((await taskOf("dia"))?.undated).toBe(true);
+    respond = () =>
+      page([
+        ev("dia", {
+          start: { date: ymd(0) },
+          end: { date: ymd(2) },
+          updated: iso(NOW - 60_000),
+        }),
+      ]);
+    await sync();
+    const task = await taskOf("dia");
+    expect(task).toMatchObject({ date: Date.parse(`${ymd(0)}T00:00:00Z`), duration: "48h" });
+    expect(task?.undated).toBeFalsy();
   });
 
   it("duplicata: grava duplicate_of com a tarefa própria sem vínculo", async () => {
