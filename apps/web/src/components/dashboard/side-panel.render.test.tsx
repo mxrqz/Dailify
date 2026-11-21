@@ -4,6 +4,7 @@ import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import type { Task } from "@dailify/shared";
+import { TZDate } from "@date-fns/tz";
 
 const { dailify, api } = vi.hoisted(() => ({
   dailify: vi.fn(),
@@ -123,7 +124,8 @@ describe("<PanelHost>", () => {
 });
 
 describe("<PanelHost> day", () => {
-  const day = +zonedAt(2026, 10, 16);
+  // Built at collection, before beforeEach sets the app zone: name the zone explicitly.
+  const day = +new TZDate(2026, 10, 16, ZONE);
 
   it("says the day is empty", () => {
     render(host());
