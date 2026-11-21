@@ -84,7 +84,8 @@ export function BillingView({
 
   return (
     <main className={accountPage}>
-      <PageHeader title={copy.account.title} className="pt-2" />
+      {/* md:px-1: the groups drop their mx-4 there, so the title keeps the 4px inset. */}
+      <PageHeader title={copy.account.title} className="pt-2 md:px-1" />
 
       {/* O plano atual é um bloco, não uma lista: plano, preço e o uso do mês juntos. */}
       <section className="card mx-4 mt-5 rounded-lg p-5 md:mx-0">
