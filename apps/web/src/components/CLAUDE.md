@@ -12,7 +12,8 @@ motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hoo
 - Feature folders own their code and `copy.ts`: `dashboard/` (agenda, composer), `auth/`,
   `landing/`, `mew/`, `mew-chat/`, and `nav/` and `pricing/` (covered below).
 - Root, for what no single feature owns. Shell: `app-layout` (AppHeader, `nav/`,
-  Outlet, Duplicates; no gutter on /dashboard), `app-header`, `protected-route`, `splash`,
+  Outlet, Duplicates; no gutter on /dashboard; on mobile, account pages get `back-bar` instead of
+  AppHeader, the legal pages' back + title bar), `app-header`, `protected-route`, `splash`,
   `scroll-restoration`, `error-boundary`, `brand`. State: `dailifyContext`, `theme-provider`. Task
   UI: `edit-task`, `task-card` (legacy desktop row, rendered by `dashboard/day-task-row` when not
   sheet-editing), `add-to-calendar`, `clock-check`, `duplicates-sheet`, `sync-badge`, `credits-tray`. Settings

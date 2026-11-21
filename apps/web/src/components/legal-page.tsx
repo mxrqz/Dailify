@@ -3,8 +3,8 @@ import type { ReactNode } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link } from "react-router-dom";
 
+import { BackBar } from "@/components/back-bar";
 import { copy } from "@/components/dashboard/copy";
-import { Button } from "@/components/ui/button";
 
 /** Campo ainda por preencher no template (`[e-mail de contato]`): marcado pra não passar batido. */
 export function Placeholder({ children }: { children: ReactNode }): JSX.Element {
@@ -40,14 +40,7 @@ export function LegalPage({
         <title>{pageTitle}</title>
       </Helmet>
 
-      <nav className="sticky top-0 z-bar grid h-bar grid-cols-[2.75rem_1fr_2.75rem] items-center bg-material-bar-solid px-2">
-        <Button asChild variant="ghost" size="bar">
-          <Link to="/" aria-label={copy.legal.back}>
-            <ChevronLeftIcon aria-hidden="true" />
-          </Link>
-        </Button>
-        <span className="text-center text-subhead font-semibold">{bar}</span>
-      </nav>
+      <BackBar title={bar} fallback="/" />
 
       <main className="mx-auto w-full max-w-140 pb-10 text-body leading-6.5 text-ink">
         <header className="px-5 pt-1">
