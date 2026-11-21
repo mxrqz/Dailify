@@ -6,7 +6,7 @@ Repo-wide rules: [/RULES.md](../../../../RULES.md). Token and motion policy:
 ## Files
 
 - `conts.ts` + `conts.test.ts`: priority class tables, `planMap`, `CALENDAR_VIEW`, `apiURL`.
-  `media.ts`: the `useMediaQuery` queries (`DESKTOP`, `MOBILE`, `SHEET_EDITING`, `NO_DRAG`). The filename typo is
+  `media.ts`: the `useMediaQuery` queries (`DESKTOP`, `MOBILE`, `NO_DRAG`). The filename typo is
   real; import it as `@/consts/conts`.
 - `motion.ts` + `motion.test.ts`: `duration`, `ease`, `spring`, `fade`, `reveal` for `motion` and
   WAAPI, and `radius` (px) for surfaces that morph their corners.
@@ -27,7 +27,7 @@ Repo-wide rules: [/RULES.md](../../../../RULES.md). Token and motion policy:
 - `conts.test.ts` checks every table in its `scales` map: 5 entries, entry `i` names `priority-i`
   (an out-of-order table paints "Urgente" grey and breaks nothing else), no raw palette color, no
   `/opacity`. Add any new table to that map.
-- Tables: `priorityText` and `priorityTextColor` (task-card, task-meta-menus, task-form). Weekday
+- Tables: `priorityText` and `priorityTextColor` (task-meta-menus, task-form). Weekday
   names and order come from `weekDays`/`dayMap` in `@dailify/shared`.
 - `priorityText` is pt-BR copy outside a copy.ts (legacy); new labels go in copy.ts.
 

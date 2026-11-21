@@ -1,9 +1,7 @@
 import type { Task } from "@dailify/shared";
 import { addMonths, eachDayOfInterval, endOfMonth, isSameMonth, startOfMonth } from "date-fns";
-import type { TaskCardData } from "@/components/task-card";
 import { expandRecurringTask, seriesOf, zonedParts } from "@dailify/shared";
 
-import { repeatLabel } from "@/functions/repeat-label";
 import { appTimeZone, zoned, zonedAt } from "@/functions/zone";
 
 export const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
@@ -143,27 +141,6 @@ export function isTaskModified(task: Task, updated: Task): boolean {
 export function timeToMinutes(time: string): number {
   const [hours, minutes] = time.split(":").map(Number);
   return hours * 60 + minutes;
-}
-
-/**
- * Converte a tarefa do domínio (epoch-ms, priority numérico, completed[]) no formato de strings que
- * o `TaskCard` consome. `day` é o dia em que o cartão está sendo renderizado — é ele que decide se a
- * tarefa conta como concluída (uma recorrente é concluída por ocorrência, não de uma vez).
- */
-export function taskToCardData(
-  task: Task,
-  day: Date,
-): TaskCardData & { completed: boolean; priority: number; links: string[]; repeat: string } {
-  return {
-    time: getTime(task.date, "HH:MM"),
-    title: task.title,
-    duration: task.duration,
-    tags: task.tags ?? [],
-    priority: task.priority,
-    completed: getCompletionDate(task, day) === true,
-    links: task.links ?? [],
-    repeat: repeatLabel(task.repeat, task.repeatEvery),
-  };
 }
 
 /** "HH:MM" como a config pede: igual em 24h; em 12h "04:45 PM", com o zero à frente (largura fixa). */

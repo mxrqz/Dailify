@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { CalendarCheckIcon, CalendarPlusIcon, CalendarSyncIcon } from "lucide-react";
+import { CalendarSyncIcon } from "lucide-react";
 import { toast } from "sonner";
 import {
   calendarEventPreview,
@@ -13,7 +13,6 @@ import { copy } from "@/components/dashboard/copy";
 import { ListGroup, ListRow } from "@/components/kit/list";
 import { ConfirmAction } from "@/components/mew/confirm-action";
 import { CalendarBadge } from "@/components/logos";
-import { ToolbarButton } from "@/components/task-card";
 import { createCalendarEvent, syncCalendarEvent } from "@/functions/api";
 import { appTimeZone } from "@/functions/zone";
 import { calendarRevoked, useApplyTask } from "@/hooks/useCalendarPush";
@@ -29,13 +28,7 @@ const t = copy.calendar;
  * `htmlLink` está nos links) vira "Na Agenda", que abre o evento; se a última edição não
  * chegou lá (`stale`), ganha o "não sincronizado" e o reenviar.
  */
-export function AddToCalendar({
-  task,
-  variant,
-}: {
-  task: Task;
-  variant: "toolbar" | "sheet";
-}): JSX.Element | null {
+export function AddToCalendar({ task }: { task: Task }): JSX.Element | null {
   const ready = useCalendarReady();
   const staleIds = useIntegration("google-calendar")?.stale ?? [];
   const stale = staleIds.includes(task.id);
@@ -69,23 +62,9 @@ export function AddToCalendar({
   };
 
   if (linked && stale && online) {
-    return variant === "toolbar" ? (
-      <ToolbarButton label={t.retry} onClick={() => void retry()} disabled={pending}>
-        <CalendarSyncIcon className="size-4" aria-hidden="true" />
-      </ToolbarButton>
-    ) : (
-      <CalendarRows linked={linked} stale pending={pending} onRetry={() => void retry()} />
-    );
+    return <CalendarRows linked={linked} stale pending={pending} onRetry={() => void retry()} />;
   }
-  if (linked) {
-    return variant === "toolbar" ? (
-      <ToolbarButton label={t.linked} onClick={() => void openExternal(linked, true)}>
-        <CalendarCheckIcon className="size-4" aria-hidden="true" />
-      </ToolbarButton>
-    ) : (
-      <CalendarRows linked={linked} />
-    );
-  }
+  if (linked) return <CalendarRows linked={linked} />;
   if (!online) return null;
 
   const confirm = async () => {
@@ -121,13 +100,7 @@ export function AddToCalendar({
 
   return (
     <>
-      {variant === "toolbar" ? (
-        <ToolbarButton label={t.add} onClick={() => setOpen(true)} disabled={pending}>
-          <CalendarPlusIcon className="size-4" aria-hidden="true" />
-        </ToolbarButton>
-      ) : (
-        <CalendarRows pending={pending} onAdd={() => setOpen(true)} />
-      )}
+      <CalendarRows pending={pending} onAdd={() => setOpen(true)} />
       <ConfirmAction
         open={open}
         onOpenChange={setOpen}

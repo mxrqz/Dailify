@@ -12,7 +12,7 @@ import { SwipeActions } from "@/components/dashboard/swipe-actions";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverAnchor, PopoverContent } from "@/components/ui/popover";
-import { NO_DRAG, SHEET_EDITING } from "@/consts/media";
+import { MOBILE, NO_DRAG } from "@/consts/media";
 import { countLabel } from "@/functions/count-label";
 import { clockAt, dayDot } from "@/functions/date-label";
 import { fill } from "@/functions/functions";
@@ -20,6 +20,7 @@ import { repeatLabel } from "@/functions/repeat-label";
 import { pendingUndated, splitUndated } from "@/functions/undated";
 import { useCreateTask } from "@/hooks/useCreateTask";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { openPanel, usePanel } from "@/hooks/usePanel";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
 import { isSameDay } from "date-fns";
 import { cn } from "@/lib/utils";
@@ -39,6 +40,7 @@ export function AnytimeItem({
   done,
   meta,
   first,
+  selected,
   onToggle,
   onOpen,
   draggable,
@@ -48,6 +50,8 @@ export function AnytimeItem({
   done: boolean;
   meta: ReactNode;
   first?: boolean;
+  /** The task open in the desktop side panel. */
+  selected?: boolean;
   onToggle: () => void;
   onOpen?: () => void;
   draggable?: boolean;
@@ -57,12 +61,13 @@ export function AnytimeItem({
     <div
       draggable={draggable}
       onDragStart={onDragStart}
-      className="flex min-h-14 items-center gap-3 pr-4 pl-1.5"
+      className={cn("flex min-h-14 items-center gap-3 pr-4 pl-1.5", selected && "bg-fill-pressed")}
     >
       <CheckCircle checked={done} onCheckedChange={onToggle} />
       <button
         type="button"
         onClick={onOpen}
+        aria-current={selected || undefined}
         className={cn(
           "flex min-w-0 flex-1 cursor-pointer flex-col justify-center gap-0.5 self-stretch border-separator py-2.5 text-left outline-none pointer-fine:focus-visible:bg-fill",
           !first && "border-t",
@@ -118,6 +123,7 @@ function AnytimeRow({
   const { weekStart, hour12 } = useDailify();
   const { done, toggle, remove } = useUndatedActions(task);
   const [open, setOpen] = useState(false);
+  const panel = usePanel();
 
   const meta =
     task.repeat !== "Off" ? (
@@ -143,8 +149,9 @@ function AnytimeRow({
       done={done}
       meta={meta}
       first={first}
+      selected={!swipe && panel?.kind === "task" && panel.id === task.id}
       onToggle={() => void toggle()}
-      onOpen={() => setOpen(true)}
+      onOpen={swipe ? () => setOpen(true) : () => openPanel({ kind: "task", id: task.id })}
       draggable={drag}
       onDragStart={(e) => {
         e.dataTransfer.setData(DRAG_TYPE, task.id);
@@ -153,15 +160,12 @@ function AnytimeRow({
     />
   );
 
+  if (!swipe) return row;
   return (
     <EditTask open={open} onOpenChange={setOpen}>
-      {swipe ? (
-        <SwipeActions onComplete={() => void toggle()} onDelete={() => void remove()}>
-          {row}
-        </SwipeActions>
-      ) : (
-        row
-      )}
+      <SwipeActions onComplete={() => void toggle()} onDelete={() => void remove()}>
+        {row}
+      </SwipeActions>
       <EditTaskContent
         task={task}
         day={zoned(task.date)}
@@ -210,7 +214,7 @@ const pendingLabel = (n: number): string =>
 /** Topo de hoje: recorrentes (marcadas por período), afazeres sem data e o campo de anotar. */
 export function AnytimeBlock(): JSX.Element {
   const { undatedTasks, weekStart } = useDailify();
-  const swipe = useMediaQuery(SHEET_EDITING);
+  const swipe = useMediaQuery(MOBILE);
   const drag = !useMediaQuery(NO_DRAG);
   const { recurring, todo } = splitUndated(undatedTasks ?? []);
   const rows = [...recurring, ...todo];

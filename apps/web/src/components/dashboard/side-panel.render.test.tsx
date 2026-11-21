@@ -1,7 +1,16 @@
 /** @vitest-environment jsdom */
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { act, render, screen } from "@testing-library/react";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { act, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
+import type { Task } from "@dailify/shared";
+
+const { dailify } = vi.hoisted(() => ({ dailify: vi.fn() }));
+vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
+vi.mock("@/lib/auth", () => ({
+  useSession: () => ({ data: { user: { id: "u1" } }, isPending: false }),
+}));
+vi.mock("@/functions/api", () => ({}));
 
 import { copy } from "./copy";
 import { PanelHost } from "./side-panel";
@@ -22,9 +31,6 @@ describe("<PanelHost>", () => {
   it("titles each kind", () => {
     setAppTimeZone("America/Sao_Paulo");
     render(<PanelHost />);
-
-    act(() => openPanel({ kind: "task", id: "t1" }));
-    expect(panel()).toHaveAccessibleName(copy.panel.task);
 
     act(() => openPanel({ kind: "mew" }));
     expect(panel()).toHaveAccessibleName(copy.panel.mew);
@@ -51,6 +57,39 @@ describe("<PanelHost>", () => {
 
     act(() => openPanel({ kind: "mew" }));
     await user.click(screen.getByRole("button", { name: copy.panel.close }));
+    expect(panel()).toBeNull();
+  });
+
+  it("edits the open occurrence of a series, and closes once it is gone", () => {
+    const day = +zonedAt(2026, 10, 16, 9);
+    const series: Task = {
+      id: "t1",
+      title: "Academia",
+      date: day - 86_400_000,
+      duration: "",
+      priority: 0,
+      repeat: "Daily",
+      completed: [],
+    };
+    const context = (tasks: Task[]) =>
+      dailify.mockReturnValue({ tasks, undatedTasks: [], setTasks: vi.fn(), loadedMonths: [] });
+    context([series, { ...series, date: day }]);
+    const { rerender } = render(
+      <MemoryRouter>
+        <PanelHost />
+      </MemoryRouter>,
+    );
+
+    act(() => openPanel({ kind: "task", id: "t1", day }));
+    expect(panel()).toHaveAccessibleName(copy.panel.task);
+    expect(within(panel() ?? document.body).getByDisplayValue("2026-11-16")).toBeInTheDocument();
+
+    context([series]);
+    rerender(
+      <MemoryRouter>
+        <PanelHost />
+      </MemoryRouter>,
+    );
     expect(panel()).toBeNull();
   });
 

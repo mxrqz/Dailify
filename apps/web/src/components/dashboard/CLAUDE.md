@@ -35,13 +35,21 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
 
 ## Two editing modes, never both
 
-- `SHEET_EDITING = "(hover: none), (max-width: 639px)"` (`consts/media.ts`). Matched: rows are the read-only `TaskRow` +
-  `CheckCircle` inside `SwipeActions`, and all editing happens in the `EditTask` sheet. Otherwise:
-  the legacy `TaskCard` with chip popovers (its `edit` prop).
-- Read once per list and passed down (`DaySection` → `DayTaskRow sheetEditing`; `AnytimeBlock`).
-- A recurring reschedule from the desktop time chip asks the scope (`RecurrenceScopeDialog`); the
-  alert shifts by the same delta. Delete scope and Calendar-linked confirm are
-  `useTaskActions().deleteDialog`, rendered by the caller. Per-row dialogs mount on first use.
+- Both use kit `TaskRow` + `CheckCircle`. `MOBILE` (`consts/media.ts`, the complement of the
+  `DESKTOP` that mounts `PanelHost`), read once per list and passed down (`DaySection` →
+  `DayTaskRow sheetEditing`; `AnytimeBlock`), picks the mode.
+- Mobile: rows sit inside `SwipeActions` and open the `EditTask` sheet.
+- Desktop: rows open `openPanel({ kind: "task", id, day })`, `day` = the instance's `date` for a
+  recurring one (instances share the series id), none otherwise; the open row is `selected`
+  (`aria-current`). Dated rows show hover/focus chips (`TaskRow actions`): time (the
+  `DateTimePopover` wheel), day (`DayPopover`, keeps the clock) and a "more" menu (Abrir, Excluir).
+  Undated rows have no chips.
+- The editor is `useTaskEditor` (`components/edit-task.tsx`), laid out by the sheet and by
+  `PanelHost`'s `TaskPanel` (footer = Salvar/Concluir/Excluir). The panel looks the task up in
+  `tasks`/`undatedTasks` and closes when it is gone (deleted, or a save that detached it).
+- A recurring reschedule from a chip asks the scope (`RecurrenceScopeDialog`); the alert shifts by
+  the same delta. Delete scope and Calendar-linked confirm are `useTaskActions().deleteDialog`,
+  rendered by the caller. Per-row dialogs mount on first use.
 
 ## Composer
 
@@ -69,7 +77,7 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
 
 ## Chip editors (`task-meta-menus.tsx`)
 
-- Shared by both composers and the desktop `DayTaskRow`, so `DayPicker` and `TimeWheel` also run on
+- Shared by the composer and the desktop `DayTaskRow` chips, so `DayPicker` and `TimeWheel` also run on
   touch (the wheel scrolls natively there and drags by hand only for the mouse).
 - Each takes its trigger as `children` under `*Trigger asChild`. Single choice is a
   `DropdownMenuRadioGroup`, never a nested Select; a Popover only when the panel holds an editor

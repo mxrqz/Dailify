@@ -1,28 +1,34 @@
 import { useState, type ReactNode } from "react";
-import { BellIcon, RepeatIcon, VideoIcon } from "lucide-react";
+import {
+  BellIcon,
+  CalendarIcon,
+  ClockIcon,
+  EllipsisIcon,
+  RepeatIcon,
+  VideoIcon,
+} from "lucide-react";
 import { durationMinutes, isCalendarEventLink, videoLink } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { SwipeActions } from "@/components/dashboard/swipe-actions";
 import { RecurrenceScopeDialog } from "@/components/dashboard/recurrence-scope-dialog";
-import {
-  DateTimePopover,
-  DurationMenu,
-  LinksPopover,
-  PriorityMenu,
-  RepeatMenu,
-} from "@/components/dashboard/task-meta-menus";
-import { AddToCalendar } from "@/components/add-to-calendar";
-import { ClockCheck } from "@/components/clock-check";
+import { DateTimePopover, DayPopover } from "@/components/dashboard/task-meta-menus";
+import { Chip } from "@/components/kit/chip";
 import { CheckCircle, TaskRow } from "@/components/kit/task-row";
 import { CalendarBadge } from "@/components/logos";
 import { EditTask, EditTaskContent } from "@/components/edit-task";
-import { TaskCard } from "@/components/task-card";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
 import { useDailify } from "@/components/dailifyContext";
 import { clockAt } from "@/functions/date-label";
-import { fill, formatClock, taskToCardData } from "@/functions/functions";
+import { fill, getCompletionDate } from "@/functions/functions";
 import { repeatLabel } from "@/functions/repeat-label";
 import { isSaving } from "@/hooks/useCreateTask";
+import { openPanel, usePanel } from "@/hooks/usePanel";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import type { Task } from "@dailify/shared";
 import { zoned } from "@/functions/zone";
@@ -84,47 +90,33 @@ function taskMeta(task: Task, live: boolean, hour12: boolean): ReactNode {
 }
 
 /**
- * Uma linha da coluna do dia: o cartão + suas ações + a folha de edição, que no toque abre por
- * baixo — concluir e excluir moram no rodapé dela, sem modo leitura intermediário.
- *
- * O clique no cartão abre a folha por ESTADO (`open`), não por `SheetTrigger` — o TaskCard já tem
- * seu próprio botão-overlay, e envolvê-lo num trigger `asChild` aninharia botão dentro de botão.
- * `selected={open}` é o que dá ao cartão aberto a borda crimson: é o quinto papel do acento
- * ("tarefa aberta") previsto no spec, que até aqui não tinha quem o usasse.
+ * Uma linha da coluna do dia. No toque ela desliza (concluir/excluir) e abre a folha de edição; no
+ * desktop abre a tarefa no painel lateral e mostra no hover os atalhos de horário, dia e "mais".
  */
 export function DayTaskRow({
   task,
   day,
-  hour,
   live = false,
   sheetEditing,
 }: {
   task: Task;
   day: Date;
-  /** `SHEET_EDITING`, lido uma vez pela seção e não um matchMedia por linha. */
+  /** `MOBILE`, lido uma vez pela seção e não um matchMedia por linha. */
   sheetEditing: boolean;
-  /** "16:00" acima do primeiro cartão da hora (desktop); os seguintes não repetem. */
-  hour?: string;
   /** Em curso agora: a linha acende e ganha o "Agora". */
   live?: boolean;
 }): JSX.Element {
   const [open, setOpen] = useState(false);
   const { hour12 } = useDailify();
-  const data = taskToCardData(task, day);
-  const { onPatch, onRename, onComplete, onUncomplete, onDelete, deleteDialog } = useTaskActions(
-    task,
-    day,
-  );
+  const panel = usePanel();
+  const completed = getCompletionDate(task, day) === true;
+  const { onPatch, onComplete, onUncomplete, onDelete, deleteDialog } = useTaskActions(task, day);
 
-  const toggle = () => void (data.completed ? onUncomplete() : onComplete());
+  const toggle = () => void (completed ? onUncomplete() : onComplete());
   // Remarcar uma recorrente espera a escolha entre esta ocorrência e a série.
   const [moveTo, setMoveTo] = useState<Date | null>(null);
   // Os diálogos montam no primeiro uso e ficam (animação de saída): fechados, custavam por linha.
   const [dialogs, setDialogs] = useState(false);
-  const askScope = (to: Date) => {
-    setDialogs(true);
-    setMoveTo(to);
-  };
   const remove = () => {
     setDialogs(true);
     void onDelete();
@@ -137,101 +129,99 @@ export function DayTaskRow({
       occurrence,
     );
   };
+  const reschedule = (to: Date) => {
+    if (task.repeat === "Off") return move(to);
+    setDialogs(true);
+    setMoveTo(to);
+  };
 
-  // Um caminho de edição por vez: no toque o cartão é só leitura e tudo acontece na folha.
-  const edit = sheetEditing
-    ? undefined
-    : {
-        time: (chip: JSX.Element) => (
-          <DateTimePopover
-            value={zoned(task.date)}
-            onChange={(to) => (task.repeat === "Off" ? move(to) : askScope(to))}
-          >
-            {chip}
-          </DateTimePopover>
-        ),
-        link: (chip: JSX.Element) => (
-          <LinksPopover value={task.links ?? []} onChange={(links) => void onPatch({ links })}>
-            {chip}
-          </LinksPopover>
-        ),
-        repeat: (chip: JSX.Element) => (
-          <RepeatMenu
-            value={task.repeat}
-            every={task.repeatEvery}
-            date={task.date}
-            onChange={(repeat, every) =>
-              void onPatch({ repeat, repeatEvery: every > 1 ? every : null })
-            }
-          >
-            {chip}
-          </RepeatMenu>
-        ),
-        priority: (chip: JSX.Element) => (
-          <PriorityMenu value={task.priority} onChange={(priority) => void onPatch({ priority })}>
-            {chip}
-          </PriorityMenu>
-        ),
-        duration: (chip: JSX.Element) => (
-          <DurationMenu value={task.duration} onChange={(duration) => void onPatch({ duration })}>
-            {chip}
-          </DurationMenu>
-        ),
-        complete: { done: data.completed, toggle },
-        remove,
-        calendar: <AddToCalendar task={task} variant="toolbar" />,
-      };
+  // Recurring instances share the series id, so the panel tells them apart by occurrence.
+  const occurrence = task.repeat === "Off" ? undefined : task.date;
+  const openTask = () => openPanel({ kind: "task", id: task.id, day: occurrence });
+  const selected =
+    !sheetEditing && panel?.kind === "task" && panel.id === task.id && panel.day === occurrence;
+  const at = zoned(task.date);
+  const title = { title: task.title };
 
-  const time = hour ? formatClock(hour, hour12) : "";
-  // ponytail: o desktop segue no TaskCard (edição nos chips, por hover); portar pra TaskRow pede
-  // levar os popovers de horário/duração/repetição pra dentro da meta.
-  const card = sheetEditing ? (
+  const actions = sheetEditing ? undefined : (
+    <>
+      <DateTimePopover timeOnly value={at} onChange={reschedule}>
+        <Chip
+          variant="select"
+          size="sm"
+          icon={<ClockIcon aria-hidden="true" className="text-meta-time" />}
+          aria-label={fill(copy.task.editTime, title)}
+        >
+          {clockAt(task.date, hour12)}
+        </Chip>
+      </DateTimePopover>
+      <DayPopover
+        value={at}
+        onChange={(picked) => {
+          const to = zoned(picked);
+          to.setHours(at.getHours(), at.getMinutes(), 0, 0);
+          reschedule(to);
+        }}
+      >
+        <Chip
+          variant="select"
+          size="sm"
+          icon={<CalendarIcon aria-hidden="true" />}
+          aria-label={fill(copy.task.editDay, title)}
+        />
+      </DayPopover>
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Chip
+            variant="select"
+            size="sm"
+            icon={<EllipsisIcon aria-hidden="true" />}
+            aria-label={fill(copy.task.more, title)}
+          />
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end" className="min-w-44">
+          <DropdownMenuItem onSelect={openTask}>{copy.task.open}</DropdownMenuItem>
+          <DropdownMenuItem onSelect={remove} className="text-brand-text focus:text-brand-text">
+            {copy.task.delete}
+          </DropdownMenuItem>
+        </DropdownMenuContent>
+      </DropdownMenu>
+    </>
+  );
+
+  const row = (
     <TaskRow
-      time={formatClock(data.time, hour12)}
+      time={clockAt(task.date, hour12)}
       duration={task.duration ? durationText(durationMinutes(task.duration)) : undefined}
       title={task.title}
       meta={
         isSaving(task) ? (
           <span className="truncate">{copy.task.saving}</span>
         ) : (
-          taskMeta(task, live && !data.completed, hour12)
+          taskMeta(task, live && !completed, hour12)
         )
       }
-      done={data.completed}
-      live={live && !data.completed}
-      onOpen={() => setOpen(true)}
-      trailing={<CheckCircle checked={data.completed} onCheckedChange={toggle} />}
-    />
-  ) : (
-    <TaskCard
-      {...data}
-      time={time}
-      at={formatClock(data.time, hour12)}
-      selected={open}
-      check={
-        <ClockCheck
-          time={data.time}
-          checked={data.completed}
-          onCheckedChange={(next) => void (next ? onComplete() : onUncomplete())}
-          label={data.completed ? copy.task.uncomplete : copy.task.complete}
-        />
-      }
-      onTitleChange={onRename}
-      edit={edit}
+      done={completed}
+      live={live && !completed}
+      selected={selected}
+      onOpen={sheetEditing ? () => setOpen(true) : openTask}
+      actions={actions}
+      trailing={<CheckCircle checked={completed} onCheckedChange={toggle} />}
     />
   );
 
   return (
-    <EditTask open={open} onOpenChange={setOpen}>
+    <>
       {sheetEditing ? (
-        <SwipeActions onComplete={toggle} onDelete={remove}>
-          {card}
-        </SwipeActions>
+        <EditTask open={open} onOpenChange={setOpen}>
+          <SwipeActions onComplete={toggle} onDelete={remove}>
+            {row}
+          </SwipeActions>
+          <EditTaskContent task={task} day={day} open={open} onClose={() => setOpen(false)} />
+        </EditTask>
       ) : (
-        card
+        row
       )}
-
-      <EditTaskContent task={task} day={day} open={open} onClose={() => setOpen(false)} />
       {dialogs && (
         <>
           {deleteDialog}
@@ -250,6 +240,6 @@ export function DayTaskRow({
           />
         </>
       )}
-    </EditTask>
+    </>
   );
 }

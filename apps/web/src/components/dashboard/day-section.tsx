@@ -9,8 +9,7 @@ import { AnytimeBlock, ScheduleDrop } from "@/components/dashboard/anytime-block
 import { copy } from "@/components/dashboard/copy";
 import { dayRows, isDayZeroed, type Row } from "@/components/dashboard/day-rows";
 import { DayTaskRow, NowLine } from "@/components/dashboard/day-task-row";
-import { SHEET_EDITING } from "@/consts/media";
-import { TaskCard } from "@/components/task-card";
+import { MOBILE } from "@/consts/media";
 import { countLabel } from "@/functions/count-label";
 import { clockAt, dayLabel, weekdayDate } from "@/functions/date-label";
 import { getCompletionDate, getTasksForDay, getTime, timeToMinutes } from "@/functions/functions";
@@ -24,18 +23,13 @@ const SKELETON_ROWS = 3;
 /** Id da seção de um dia — a `DayList` usa isto pra rolar até ele. */
 export const dayAnchorId = (day: Date) => `day-${format(day, "yyyy-MM-dd")}`;
 
-// Shaped like the rows that replace it (TaskRow when sheet-editing), so boot doesn't shift layout.
+// Shaped like the TaskRows that replace it, so boot doesn't shift layout.
 export function TaskSkeletons(): JSX.Element {
-  const sheetEditing = useMediaQuery(SHEET_EDITING);
   return (
-    <ul className={sheetEditing ? "flex flex-col gap-2" : "flex flex-col gap-3"}>
+    <ul className="flex flex-col gap-2">
       {Array.from({ length: SKELETON_ROWS }).map((_, i) => (
         <li key={i}>
-          {sheetEditing ? (
-            <div className="card skeleton min-h-16 rounded-md" />
-          ) : (
-            <TaskCard loading time="" title="" duration="" tags={["", ""]} />
-          )}
+          <div className="card skeleton min-h-16 rounded-md" />
         </li>
       ))}
     </ul>
@@ -78,7 +72,8 @@ export function DaySection({
 }): JSX.Element {
   const { tasks, hour12, weekStart } = useDailify();
   const reduce = useReducedMotion();
-  const sheetEditing = useMediaQuery(SHEET_EDITING);
+  // The complement of `DESKTOP`, where `pages/home.tsx` mounts the side panel the rows open.
+  const sheetEditing = useMediaQuery(MOBILE);
   const isCurrentDay = isToday(day);
   // Só hoje tem o fio do agora; os outros dias só mudam (rótulo) na virada do dia.
   const now = useNow(isCurrentDay ? 60_000 : "day");
@@ -182,7 +177,6 @@ export function DaySection({
                     <DayTaskRow
                       task={row.task}
                       day={day}
-                      hour={row.hour}
                       live={live(row)}
                       sheetEditing={sheetEditing}
                     />

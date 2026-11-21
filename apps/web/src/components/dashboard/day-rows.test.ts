@@ -24,11 +24,6 @@ describe("dayRows", () => {
     );
     expect(ids(rows)).toEqual(["b", "now", "d", "a", "c"]);
   });
-
-  it("labels the first row of each hour run, again when a done task repeats an hour", () => {
-    const rows = dayRows([at("a", 540), at("b", 545), at("c", 550)], (t) => t.id === "b");
-    expect(rows.map((r) => ("task" in r ? r.hour : null))).toEqual(["09:00", undefined, "09:00"]);
-  });
 });
 
 describe("isDayZeroed", () => {

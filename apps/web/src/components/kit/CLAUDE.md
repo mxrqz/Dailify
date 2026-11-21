@@ -26,9 +26,11 @@ Repo-wide rules: [/RULES.md](../../../../../RULES.md). This file adds only what 
 - `ActionSheet({ open, onOpenChange, title, description?, actions, cancelLabel? })`:
   `role="alertdialog"` over `ui/dialog`'s `DialogOverlay`; every action closes it. Actions are keyed
   by `label`, so labels must be unique. `primary` = bold `brand-text`, `destructive` = `brand-text`.
-- `TaskRow({ time, duration?, title, meta?, done?, live?, muted?, onOpen?, trailing? })` +
+- `TaskRow({ time, duration?, title, meta?, done?, live?, muted?, selected?, onOpen?, actions?, trailing? })` +
   `CheckCircle({ checked, onCheckedChange, label? })` (`task-row.tsx`): the agenda row and its
-  complete circle, shared by `dashboard/day-task-row` and `mew-chat`. The check draws its path
+  complete circle, shared by `dashboard/day-task-row` and `mew-chat`. `selected` (the task open in
+  the side panel) sets `aria-current`; `actions` (desktop chips) show on row hover/focus-within and
+  stay up while one of their popovers is open. The check draws its path
   (`pathLength` 1); `strike(done)` is the left-to-right title strike, also used by the undated row.
 - `Refraction({ strength = 24, edge = 10 })`: the SVG `<filter id="refract">`, plus
   `<html class="refract">` on Chromium only.
@@ -54,9 +56,8 @@ Repo-wide rules: [/RULES.md](../../../../../RULES.md). This file adds only what 
 - ActionSheet for a multiple-choice question (`dashboard/recurrence-scope-dialog.tsx`, the
   linked-series delete in `hooks/useTaskActions.tsx`); `ui` Dialog for a confirmation with a body
   (`../delete-account.tsx` typed e-mail, the disconnect in `../integrations.tsx`).
-- Chip `action` (radius 10, the default) acts or toggles; `select` (capsule) picks one of many and
-  has no caller yet. The `Chip` inside `../task-card.tsx` is a file-local desktop metadata chip, not
-  this one.
+- Chip `action` (radius 10, the default) acts or toggles; `select` (capsule) picks one of many, and
+  is also the desktop row's quick-action chip (`dashboard/day-task-row.tsx`).
 - SegmentedControl never emits Radix's `""` on re-click and infers `T` from `options`, so
   `onValueChange` needs no cast (`ThemeSelect` in `../theme-select.tsx`).
 - Refraction is mounted once, in `App.tsx`: a second copy duplicates the `refract` id. Only the

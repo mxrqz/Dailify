@@ -1,7 +1,11 @@
 import { useEffect, type ReactNode } from "react";
 import { XIcon } from "lucide-react";
 
+import type { Task } from "@dailify/shared";
+
+import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
+import { useTaskEditor } from "@/components/edit-task";
 import { Button } from "@/components/ui/button";
 import { weekdayDate } from "@/functions/date-label";
 import { zoned } from "@/functions/zone";
@@ -83,6 +87,43 @@ export function PanelHost(): JSX.Element | null {
   }, [open]);
 
   if (!panel) return null;
+  if (panel.kind === "task") return <TaskPanel id={panel.id} day={panel.day} />;
   // ponytail: every kind renders an empty body; the task, Mew and day phases fill them here.
   return <SidePanel title={titleOf(panel)} onClose={closePanel} />;
+}
+
+/** `day` (an occurrence's `date`) picks one instance of a series, which all share its id. */
+function findTask(
+  tasks: readonly Task[] | undefined,
+  undated: readonly Task[] | undefined,
+  id: string,
+  day?: number,
+): Task | undefined {
+  if (day !== undefined) return tasks?.find((t) => t.id === id && t.date === day);
+  return tasks?.find((t) => t.id === id) ?? undated?.find((t) => t.id === id);
+}
+
+function TaskPanel({ id, day }: { id: string; day?: number }): JSX.Element | null {
+  const { tasks, undatedTasks } = useDailify();
+  const task = findTask(tasks, undatedTasks, id, day);
+  const gone = !task && tasks !== undefined && undatedTasks !== undefined;
+
+  // Deleted or moved elsewhere (another device, the Mew, an occurrence detached by a save).
+  useEffect(() => {
+    if (gone) closePanel();
+  }, [gone]);
+
+  if (!task) return null;
+  return <TaskEditorPanel key={`${task.id}:${day ?? ""}`} task={task} />;
+}
+
+function TaskEditorPanel({ task }: { task: Task }): JSX.Element {
+  const { back, form, footer, dialogs } = useTaskEditor(task, zoned(task.date), closePanel);
+  return (
+    <SidePanel title={copy.panel.task} footer={footer} onClose={closePanel}>
+      {back}
+      {form}
+      {dialogs}
+    </SidePanel>
+  );
 }

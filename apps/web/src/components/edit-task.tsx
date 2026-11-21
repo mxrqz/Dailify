@@ -95,6 +95,36 @@ export function EditTaskContent(props: EditTaskContentProps) {
 }
 
 function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
+  const { view, setView, back, form, footer, dialogs } = useTaskEditor(
+    task,
+    day,
+    onClose,
+    "min-h-0 flex-1 scrollbar-floating",
+  );
+
+  useEffect(() => {
+    if (!open) setView("root");
+  }, [open, setView]);
+
+  return (
+    // Folha de BAIXO: no desktop a edição acontece no painel lateral; quem abre isto é o toque.
+    // Altura pelo conteúdo, com teto em `svh` (o `dvh` encolheria com o teclado).
+    <SheetContent side="bottom" className="mx-auto max-h-sheet w-full max-w-lg">
+      <SheetTitle className="sr-only">{copy.form.editTitle}</SheetTitle>
+      <SheetDescription className="sr-only">{copy.form.editDescription}</SheetDescription>
+      {view !== "root" && <SheetHeader className="pb-2">{back}</SheetHeader>}
+      {form}
+      {footer && <SheetFooter className="gap-1 pb-4">{footer}</SheetFooter>}
+      {dialogs}
+    </SheetContent>
+  );
+}
+
+/**
+ * The task editor shared by the mobile sheet and the desktop side panel: form state, save and
+ * delete, returned as parts each frame lays out (`back` and `footer` are null on the root page).
+ */
+export function useTaskEditor(task: Task, day: Date, onClose: () => void, formClassName?: string) {
   const { tasks, setTasks, setUndatedTasks, loadedMonths, hour12 } = useDailify();
   const knownTags = useMemo(
     () => [...new Set((tasks ?? []).flatMap((t) => t.tags ?? []))],
@@ -110,9 +140,6 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
   /** Valores segurando na mão enquanto o usuário escolhe entre a ocorrência e a série. */
   const [pendingValues, setPendingValues] = useState<TaskFormValues | null>(null);
 
-  useEffect(() => {
-    if (!open) setView("root");
-  }, [open]);
   // onDeleted fecha a folha só depois que a exclusão aconteceu — fechar no clique desmontaria
   // o diálogo de escopo antes de o usuário escolher.
   const { onComplete, onUncomplete, onDelete, deleteDialog } = useTaskActions(task, day, {
@@ -235,32 +262,27 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
     </Button>
   );
 
-  return (
-    // Folha de BAIXO: no desktop a edição acontece no próprio cartão; quem abre isto é o toque.
-    // Altura pelo conteúdo, com teto em `svh` (o `dvh` encolheria com o teclado).
-    <SheetContent side="bottom" className="mx-auto max-h-sheet w-full max-w-lg">
-      <SheetTitle className="sr-only">{copy.form.editTitle}</SheetTitle>
-      <SheetDescription className="sr-only">{copy.form.editDescription}</SheetDescription>
-
-      {/* Na raiz o título da tarefa é o cabeçalho (do formulário); dentro de um campo vira
-          "voltar + nome dele". */}
-      {view !== "root" && (
-        <SheetHeader className="pb-2">
-          <div className="flex h-9 items-center gap-1">
-            <Button
-              variant="ghost"
-              size="icon"
-              aria-label={copy.form.back}
-              onClick={() => setView("root")}
-              className="relative -ml-2 size-9 hit-target text-ink-secondary hover:text-ink"
-            >
-              <ChevronLeftIcon className="size-5" />
-            </Button>
-            <span className="text-body font-semibold">{FORM_VIEWS[view].title}</span>
-          </div>
-        </SheetHeader>
-      )}
-
+  return {
+    view,
+    setView,
+    // Na raiz o título da tarefa é o cabeçalho (do formulário); dentro de um campo vira
+    // "voltar + nome dele".
+    back:
+      view === "root" ? null : (
+        <div className="flex h-9 items-center gap-1">
+          <Button
+            variant="ghost"
+            size="icon"
+            aria-label={copy.form.back}
+            onClick={() => setView("root")}
+            className="relative -ml-2 size-9 hit-target text-ink-secondary hover:text-ink"
+          >
+            <ChevronLeftIcon className="size-5" />
+          </Button>
+          <span className="text-body font-semibold">{FORM_VIEWS[view].title}</span>
+        </div>
+      ),
+    form: (
       <TaskForm
         id={formId}
         task={task}
@@ -273,16 +295,17 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
         onNewMeet={
           calendarReady && !locked && task.links?.some(isCalendarEventLink) ? newMeet : undefined
         }
-        className="min-h-0 flex-1 scrollbar-floating"
+        className={formClassName}
         onSubmit={handleSubmit}
       >
-        <AddToCalendar task={task} variant="sheet" />
+        <AddToCalendar task={task} />
       </TaskForm>
-
-      {/* Editar é tocar na linha; "Salvar" só aparece quando algo mudou. Dentro de um campo o rodapé
-          some: ali quem confirma é a própria escolha. */}
-      {view === "root" && (
-        <SheetFooter className="gap-1 pb-4">
+    ),
+    // Editar é tocar na linha; "Salvar" só aparece quando algo mudou. Dentro de um campo o rodapé
+    // some: ali quem confirma é a própria escolha.
+    footer:
+      view === "root" ? (
+        <>
           {dirty && (
             <Button type="submit" form={formId} size="lg" loading={loading}>
               {copy.form.save}
@@ -302,19 +325,21 @@ function EditTaskSheet({ task, day, open, onClose }: EditTaskContentProps) {
               {deleteButton(() => void onDelete())}
             </>
           )}
-        </SheetFooter>
-      )}
-
-      {/* A escolha só aparece pra tarefa recorrente, e só na hora de salvar: perguntar antes seria
-          ruído em toda edição. O diálogo gêmeo, o de excluir, vem do hook. */}
-      <RecurrenceScopeDialog
-        open={pendingValues !== null}
-        onOpenChange={(open) => !open && setPendingValues(null)}
-        description={copy.form.scopeDescription}
-        onOccurrence={() => applyScope(task.date)}
-        onSeries={() => applyScope(undefined)}
-      />
-      {deleteDialog}
-    </SheetContent>
-  );
+        </>
+      ) : null,
+    // A escolha só aparece pra tarefa recorrente, e só na hora de salvar: perguntar antes seria
+    // ruído em toda edição. O diálogo gêmeo, o de excluir, vem do hook.
+    dialogs: (
+      <>
+        <RecurrenceScopeDialog
+          open={pendingValues !== null}
+          onOpenChange={(open) => !open && setPendingValues(null)}
+          description={copy.form.scopeDescription}
+          onOccurrence={() => applyScope(task.date)}
+          onSeries={() => applyScope(undefined)}
+        />
+        {deleteDialog}
+      </>
+    ),
+  };
 }

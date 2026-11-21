@@ -14,8 +14,8 @@ motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hoo
 - Root, for what no single feature owns. Shell: `app-layout` (AppHeader, `nav/`,
   Outlet, Duplicates; no gutter on /dashboard), `app-header`, `protected-route`, `splash`,
   `scroll-restoration`, `error-boundary`, `brand`. State: `dailifyContext`, `theme-provider`. Task
-  UI: `edit-task`, `task-card` (legacy desktop row, rendered by `dashboard/day-task-row` when not
-  sheet-editing), `add-to-calendar`, `clock-check`, `duplicates-sheet`, `sync-badge`, `credits-tray`. Settings
+  UI: `edit-task` (mobile sheet + `useTaskEditor`, also behind the desktop side panel),
+  `add-to-calendar`, `duplicates-sheet`, `sync-badge`, `credits-tray`. Settings
   widgets for `pages/`: `hour-format-select`, `week-start-select`, `time-zone-select`,
   `theme-select`, `push-toggle`, `delete-account`, `integrations`,
   `settings-list.tsx:accountPage/accountGroups`.
@@ -65,7 +65,8 @@ It owns the task boot. Other code only re-triggers loads (`pages/integration-cal
 ## Overlays and widgets
 
 - Per-row overlay: `EditTask` wraps the Sheet; `EditTaskContent` mounts on first open and stays
-  mounted for the exit animation, so a closed row pays for none of the sheet's hooks. Its save
+  mounted for the exit animation, so a closed row pays for none of the sheet's hooks. Its logic is
+  `useTaskEditor`, which the desktop panel reuses (`dashboard/CLAUDE.md`). Its save
   calls `updateTask` itself, against RULES.md "Frontend" (legacy: route new writes through
   `hooks/`).
 - `Duplicates` shows at most once per app load (module `shown` flag), mounted once in `AppLayout`.

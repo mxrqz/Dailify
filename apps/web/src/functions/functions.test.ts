@@ -7,7 +7,6 @@ import {
   getTime,
   fill,
   formatClock,
-  taskToCardData,
   upsertTaskWithRecurrence,
   mergeMonth,
   initialMonths,
@@ -165,48 +164,6 @@ describe("índice por dia e faixas numéricas ≡ comparação por TZDate", () =
 describe("small date helpers", () => {
   test("getTime formats HH:MM zero-padded", () => {
     expect(getTime(new Date(2026, 7, 1, 9, 5).getTime(), "HH:MM")).toBe("09:05");
-  });
-});
-
-describe("taskToCardData", () => {
-  const day = new Date(2026, 7, 10);
-
-  test("maps the card fields off the task", () => {
-    const task = makeTask({
-      title: "Revisar PRs",
-      duration: "45min",
-      priority: 3,
-      tags: ["dev", "review"],
-      links: ["https://github.com/org/repo/pull/1"],
-      repeat: { Weekly: ["Monday"] },
-      date: new Date(2026, 7, 10, 8, 30).getTime(),
-    });
-    expect(taskToCardData(task, day)).toEqual({
-      time: "08:30",
-      title: "Revisar PRs",
-      duration: "45min",
-      tags: ["dev", "review"],
-      priority: 3,
-      completed: false,
-      links: ["https://github.com/org/repo/pull/1"],
-      repeat: "Seg",
-    });
-  });
-
-  test("missing tags become an empty array, never undefined", () => {
-    const task = makeTask({ tags: undefined });
-    expect(taskToCardData(task, day).tags).toEqual([]);
-  });
-
-  test("completed is true only when the task was completed on THAT day", () => {
-    const onDay = makeTask({ completed: [new Date(2026, 7, 10, 18, 0).getTime()] });
-    const otherDay = makeTask({ completed: [new Date(2026, 7, 9, 18, 0).getTime()] });
-    expect(taskToCardData(onDay, day).completed).toBe(true);
-    expect(taskToCardData(otherDay, day).completed).toBe(false);
-  });
-
-  test("completed is false (never undefined) for an empty completed list", () => {
-    expect(taskToCardData(makeTask({ completed: [] }), day).completed).toBe(false);
   });
 });
 
