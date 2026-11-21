@@ -17,6 +17,7 @@ import { EMAIL_COOLDOWN_MS } from "./auth-options";
 import { sweepMagicLinks } from "./db/user";
 import { syncOldest } from "./integrations/google-calendar/sync";
 import { fail } from "./lib/errors";
+import { MCP_ICON } from "./lib/mcp";
 import { isAllowedOrigin } from "./lib/origin";
 
 export interface Env {
@@ -69,6 +70,8 @@ app.use(
   }),
 );
 app.get("/health", (c) => c.json({ ok: true }));
+// AI clients show the MCP host's favicon next to the connector.
+app.get("/favicon.ico", (c) => c.redirect(MCP_ICON.src, 301));
 
 // Só o que manda e-mail ou cria sessão: `get-session` roda a cada foco de aba e não entra.
 app.use("/auth/sign-in/*", rateLimit("AUTH_LIMITER"));

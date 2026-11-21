@@ -1,4 +1,5 @@
 import {
+  APP_URL,
   TASK_LIMITS,
   durationMinutes,
   doneThisPeriod,
@@ -20,6 +21,11 @@ import { DATE_ONLY_RE, draftToTask, toDraft, toEpoch } from "./openai";
 
 // Remote MCP over streamable HTTP, stateless: one JSON-RPC message per POST, no sessions, no SSE.
 export const PROTOCOL_VERSIONS = ["2025-11-25", "2025-06-18", "2025-03-26"];
+export const MCP_ICON = {
+  src: `${APP_URL}/icons/icon-192.png`,
+  mimeType: "image/png",
+  sizes: ["192x192"],
+};
 
 export interface ToolResult {
   content: { type: "text"; text: string }[];
@@ -78,7 +84,7 @@ export async function handleRpc(
         protocolVersion:
           PROTOCOL_VERSIONS.find((v) => v === params.protocolVersion) ?? PROTOCOL_VERSIONS[0],
         capabilities: { tools: {} },
-        serverInfo: { name: "mewki", version },
+        serverInfo: { name: "mewki", title: "Mewki", version, icons: [MCP_ICON] },
         instructions: INSTRUCTIONS,
       });
     case "ping":
