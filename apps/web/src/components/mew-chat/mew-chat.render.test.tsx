@@ -206,7 +206,7 @@ describe("MewChat on desktop", () => {
     render(
       <MemoryRouter>
         <MewChat panel onCompose={vi.fn()} />
-        <PanelHost />
+        <PanelHost onCreateOn={vi.fn()} onOpenDay={vi.fn()} />
       </MemoryRouter>,
     );
     expect(screen.queryByRole("complementary")).toBeNull();

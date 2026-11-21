@@ -14,17 +14,21 @@ import {
 import { ptBR } from "date-fns/locale";
 import { AnimatePresence, motion, type Variants } from "motion/react";
 import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
-import type { WeekStart } from "@dailify/shared";
+import type { Task, WeekStart } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { DaySection } from "@/components/dashboard/day-section";
 import { Button } from "@/components/ui/button";
+import { DESKTOP } from "@/consts/media";
 import { duration, ease } from "@/consts/motion";
-import { weekdayDate, weekdayInitials } from "@/functions/date-label";
-import { capitalize, fill, getTasksForDay } from "@/functions/functions";
+import { clockAt, weekdayDate, weekdayInitials } from "@/functions/date-label";
+import { capitalize, fill, getCompletionDate, getTasksForDay } from "@/functions/functions";
 import { zoned } from "@/functions/zone";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
+import { useMediaQuery } from "@/hooks/useMediaQuery";
+import { useNow } from "@/hooks/useNow";
+import { openPanel, usePanel } from "@/hooks/usePanel";
 import { cn } from "@/lib/utils";
 
 // Forward (dir 1) pushes the day out left and the next in from the right; dir 0 swaps instantly.
@@ -115,6 +119,103 @@ export function MonthGrid({
   );
 }
 
+/** Tasks a desktop cell lists before the "+N mais". */
+const CELL_TASKS = 3;
+
+/**
+ * The desktop month (props → markup): a full-height grid of cells, each with the day number (today
+ * in a `brand` circle) and its first tasks as "HH:MM title" lines in clock order.
+ */
+export function MonthBoard({
+  month,
+  today,
+  selected,
+  weekStart,
+  hour12,
+  tasksOf,
+  onPick,
+}: {
+  month: Date;
+  today: Date;
+  selected: number | null;
+  weekStart: WeekStart;
+  hour12: boolean;
+  tasksOf: (day: Date) => readonly Task[];
+  onPick: (day: Date) => void;
+}): JSX.Element {
+  const days = eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) });
+  const lead = (days[0].getDay() - weekStart + 7) % 7;
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col">
+      <div aria-hidden="true" className="grid grid-cols-7 gap-1.5 pb-2">
+        {weekdayInitials(weekStart, copy.aside.weekDayShort).map((name) => (
+          <div key={name} className="px-2 text-footnote font-medium text-ink-secondary">
+            {name}
+          </div>
+        ))}
+      </div>
+      <div
+        role="group"
+        aria-label={format(month, "MMMM 'de' yyyy", { locale: ptBR })}
+        className="grid flex-1 auto-rows-fr grid-cols-7 gap-1.5"
+      >
+        {Array.from({ length: lead }, (_, i) => (
+          <span key={`b${i}`} aria-hidden="true" />
+        ))}
+        {days.map((day) => {
+          const list = [...tasksOf(day)].sort((a, b) => a.date - b.date);
+          const label = weekdayDate(day, "EEEE, d 'de' MMMM");
+          const isCurrent = isSameDay(day, today);
+          return (
+            <button
+              key={day.getTime()}
+              type="button"
+              aria-pressed={selected === day.getTime()}
+              aria-current={isCurrent ? "date" : undefined}
+              aria-label={list.length ? fill(copy.day.withTasks, { day: label }) : label}
+              onClick={() => onPick(day)}
+              className="flex min-h-28 min-w-0 cursor-pointer flex-col gap-0.5 overflow-hidden rounded-md bg-surface p-1.5 text-left outline -outline-offset-1 outline-card-edge transition-colors duration-fast hover:bg-fill focus-visible:outline-2 focus-visible:outline-brand-text aria-pressed:bg-brand-soft"
+            >
+              <span
+                className={cn(
+                  "mb-0.5 grid size-7 flex-none place-items-center rounded-full text-subhead font-semibold tabular-nums",
+                  isCurrent
+                    ? "bg-brand text-on-brand"
+                    : isBefore(day, today)
+                      ? "text-ink-secondary"
+                      : "text-ink",
+                )}
+              >
+                {format(day, "d")}
+              </span>
+              {list.slice(0, CELL_TASKS).map((task) => (
+                <span
+                  key={`${task.id}-${task.date}`}
+                  className={cn(
+                    "truncate px-1 text-footnote",
+                    getCompletionDate(task, day) === true && "text-ink-secondary line-through",
+                  )}
+                >
+                  <span className="text-ink-secondary tabular-nums">
+                    {clockAt(task.date, hour12)}
+                  </span>{" "}
+                  {task.title}
+                </span>
+              ))}
+              {list.length > CELL_TASKS && (
+                <span className="px-1 text-footnote font-medium text-ink-secondary">
+                  {fill(copy.day.more, { n: list.length - CELL_TASKS })}
+                </span>
+              )}
+            </button>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
+
 /**
  * O calendário da Hoje (o ícone da barra): o mês com setas, e embaixo o dia escolhido. Escolher um
  * dia é o `goToDay` — ao voltar, a lista já está nele. No mobile cobre a tela (barra própria, com
@@ -127,7 +228,10 @@ export function MonthCalendar({
   onClose: () => void;
   onCreateOn: (day: Date) => void;
 }): JSX.Element {
-  const { tasks, selectedDay, goToDay, loadMonth, weekStart } = useDailify();
+  const { tasks, selectedDay, goToDay, loadMonth, weekStart, hour12 } = useDailify();
+  const desktop = useMediaQuery(DESKTOP);
+  const panel = usePanel();
+  const today = useNow("day");
   const [month, setMonth] = useState(() => startOfMonth(selectedDay));
   const monthKey = month.getTime();
 
@@ -149,6 +253,50 @@ export function MonthCalendar({
   const pick = (day: Date) => void goToDay(day);
   const marked = (day: Date) => (tasks ? getTasksForDay(tasks, day).length > 0 : false);
   const title = format(month, "MMMM", { locale: ptBR });
+
+  if (desktop) {
+    // The sidebar is the way back, so there's no Voltar; a cell opens its day in the side panel.
+    return (
+      <div className="flex min-h-0 flex-1 flex-col px-8 pt-1 pb-8">
+        <header className="flex items-end justify-between gap-3 pb-5">
+          <h1 className="text-title-1">
+            {capitalize(title)}{" "}
+            <span className="font-normal text-ink-secondary">{format(month, "yyyy")}</span>
+          </h1>
+          <div className="flex items-center gap-1 pb-1">
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={copy.aside.prevMonth}
+              onClick={() => setMonth(addMonths(month, -1))}
+            >
+              <ChevronLeftIcon aria-hidden="true" />
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => setMonth(startOfMonth(today))}>
+              {copy.day.today}
+            </Button>
+            <Button
+              variant="ghost"
+              size="icon-sm"
+              aria-label={copy.aside.nextMonth}
+              onClick={() => setMonth(addMonths(month, 1))}
+            >
+              <ChevronRightIcon aria-hidden="true" />
+            </Button>
+          </div>
+        </header>
+        <MonthBoard
+          month={month}
+          today={today}
+          selected={panel?.kind === "day" ? panel.day : null}
+          weekStart={weekStart}
+          hour12={hour12}
+          tasksOf={(day) => (tasks ? getTasksForDay(tasks, day) : [])}
+          onPick={(day) => openPanel({ kind: "day", day: day.getTime() })}
+        />
+      </div>
+    );
+  }
 
   return (
     <div className="fixed inset-0 z-float overflow-y-auto overscroll-contain bg-canvas pb-30 md:static md:z-auto md:overflow-visible md:pb-10">

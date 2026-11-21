@@ -1,15 +1,17 @@
 import { useEffect, type ReactNode } from "react";
-import { XIcon } from "lucide-react";
-
+import { ArrowUpRightIcon, PlusIcon, XIcon } from "lucide-react";
 import type { Task } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { useTaskEditor } from "@/components/edit-task";
+import { CheckCircle, TaskRow } from "@/components/kit/task-row";
 import { Button } from "@/components/ui/button";
-import { weekdayDate } from "@/functions/date-label";
+import { clockAt, weekdayDate } from "@/functions/date-label";
+import { getCompletionDate, getTasksForDay } from "@/functions/functions";
 import { zoned } from "@/functions/zone";
-import { closePanel, usePanel, type PanelState } from "@/hooks/usePanel";
+import { closePanel, openPanel, usePanel, type PanelState } from "@/hooks/usePanel";
+import { useTaskActions } from "@/hooks/useTaskActions";
 import { cn } from "@/lib/utils";
 
 /** The toolbar toggle's `aria-controls`. */
@@ -71,8 +73,56 @@ const titleOf = (panel: PanelState): string =>
       ? copy.panel.mew
       : weekdayDate(zoned(panel.day), "EEEE, d 'de' MMMM");
 
+/** A compact agenda row in the day panel: opens the task, the circle completes this occurrence. */
+function DayPanelRow({ task, day }: { task: Task; day: Date }): JSX.Element {
+  const { hour12 } = useDailify();
+  const { onComplete, onUncomplete } = useTaskActions(task, day);
+  const done = getCompletionDate(task, day) === true;
+  return (
+    <TaskRow
+      time={clockAt(task.date, hour12)}
+      title={task.title}
+      done={done}
+      onOpen={() => openPanel({ kind: "task", id: task.id, day: day.getTime() })}
+      trailing={
+        <CheckCircle
+          checked={done}
+          onCheckedChange={() => void (done ? onUncomplete() : onComplete())}
+        />
+      }
+      className="min-h-12"
+    />
+  );
+}
+
+/** The calendar day's tasks in clock order, or the empty line. */
+function DayPanelBody({ day }: { day: Date }): JSX.Element {
+  const { tasks } = useDailify();
+  const list = tasks ? [...getTasksForDay(tasks, day)].sort((a, b) => a.date - b.date) : [];
+  if (!list.length) {
+    return <p className="pt-2 text-subhead text-ink-secondary">{copy.day.emptyDay}</p>;
+  }
+  return (
+    <ul className="flex flex-col gap-1.5">
+      {list.map((task) => (
+        <li key={`${task.id}-${task.date}`}>
+          <DayPanelRow task={task} day={day} />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
 /** The panel wired to `usePanel`: Esc closes it, and each `kind` picks its content. */
-export function PanelHost(): JSX.Element | null {
+export function PanelHost({
+  onCreateOn,
+  onOpenDay,
+}: {
+  /** "Nova tarefa nesse dia": the composer opened on that day. */
+  onCreateOn: (day: Date) => void;
+  /** Shows the day in Hoje, leaving the calendar. */
+  onOpenDay: (day: Date) => void;
+}): JSX.Element | null {
   const panel = usePanel();
   const open = panel !== null;
 
@@ -91,8 +141,31 @@ export function PanelHost(): JSX.Element | null {
   if (!panel) return null;
   if (panel.kind === "mew") return <div id={MEW_PANEL_SLOT} className="contents" />;
   if (panel.kind === "task") return <TaskPanel id={panel.id} day={panel.day} />;
-  // ponytail: every kind renders an empty body; the task, Mew and day phases fill them here.
-  return <SidePanel title={titleOf(panel)} onClose={closePanel} />;
+  const day = zoned(panel.day);
+  return (
+    <SidePanel
+      title={titleOf(panel)}
+      onClose={closePanel}
+      actions={
+        <Button
+          variant="ghost"
+          size="icon-sm"
+          aria-label={copy.panel.openInToday}
+          onClick={() => onOpenDay(day)}
+        >
+          <ArrowUpRightIcon aria-hidden="true" />
+        </Button>
+      }
+      footer={
+        <Button variant="secondary" className="w-full" onClick={() => onCreateOn(day)}>
+          <PlusIcon aria-hidden="true" />
+          {copy.panel.createOnDay}
+        </Button>
+      }
+    >
+      <DayPanelBody day={day} />
+    </SidePanel>
+  );
 }
 
 /** `day` (an occurrence's `date`) picks one instance of a series, which all share its id. */

@@ -185,7 +185,7 @@ describe("<AnytimeBlock>", () => {
     render(
       <MemoryRouter>
         <AnytimeBlock />
-        <PanelHost />
+        <PanelHost onCreateOn={vi.fn()} onOpenDay={vi.fn()} />
       </MemoryRouter>,
     );
     act(() => screen.getByRole("button", { name: /Pagar/ }).click());

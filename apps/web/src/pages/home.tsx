@@ -22,7 +22,7 @@ import { fill, getCompletionDate, getTasksForDay } from "@/functions/functions";
 import { useCreateTask } from "@/hooks/useCreateTask";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { togglePanel, usePanel } from "@/hooks/usePanel";
+import { closePanel, togglePanel, usePanel } from "@/hooks/usePanel";
 import { zoned } from "@/functions/zone";
 import { useNow } from "@/hooks/useNow";
 import { cn } from "@/lib/utils";
@@ -164,7 +164,16 @@ export default function Home() {
         />
       </div>
 
-      {desktop && <PanelHost />}
+      {desktop && (
+        <PanelHost
+          onCreateOn={setCreateOn}
+          onOpenDay={(day) => {
+            void goToDay(day);
+            if (calendarOpen) closeCalendar();
+            closePanel();
+          }}
+        />
+      )}
     </div>
   );
 }

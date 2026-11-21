@@ -41,9 +41,11 @@ export function dayLabel(day: Date, now: Date, weekStart: WeekStart): string {
   return weekdayDate(day, "EEEE");
 }
 
-/** The weekday initials starting at the configured first day (the copy list is Sunday-first). */
-export const weekdayInitials = (weekStart: WeekStart): string[] =>
-  copy.aside.weekDayInitials.map((_, i) => copy.aside.weekDayInitials[(i + weekStart) % 7]);
+/** The weekday initials (or `names`) starting at the configured first day; the lists are Sunday-first. */
+export const weekdayInitials = (
+  weekStart: WeekStart,
+  names: readonly string[] = copy.aside.weekDayInitials,
+): string[] => names.map((_, i) => names[(i + weekStart) % 7]);
 
 /** The seven days of `day`'s week. */
 export function weekOf(day: Date, weekStart: WeekStart): Date[] {

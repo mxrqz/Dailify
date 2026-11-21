@@ -14,6 +14,8 @@ vi.mock("@/components/dashboard/day-section", async (original) => ({
 }));
 
 import { MonthCalendar } from "./month-calendar";
+import { DESKTOP } from "@/consts/media";
+import { closePanel } from "@/hooks/usePanel";
 
 const day = new Date(2026, 10, 17);
 const task: Task = {
@@ -58,6 +60,50 @@ describe("<MonthCalendar>", () => {
 
     fireEvent.click(screen.getByRole("button", { name: /^Criar tarefa em/ }));
     expect(onCreateOn).toHaveBeenCalledWith(day);
+  });
+
+  it("on desktop lists up to three tasks per cell and opens the picked day in the panel", () => {
+    vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
+      matches: query === DESKTOP,
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    }));
+    const at = (h: number, id: string, completed: number[] = []): Task => ({
+      ...task,
+      id,
+      title: `T${h}`,
+      date: new Date(2026, 10, 20, h).getTime(),
+      completed,
+    });
+    dailify.mockReturnValue({
+      tasks: [
+        at(14, "c"),
+        at(8, "a", [new Date(2026, 10, 20, 9).getTime()]),
+        at(10, "b"),
+        at(16, "d"),
+      ],
+      selectedDay: day,
+      goToDay: vi.fn(),
+      loadMonth: vi.fn(),
+      weekStart: 1,
+      hour12: false,
+    });
+    render(<MonthCalendar onClose={() => {}} onCreateOn={() => {}} />);
+
+    const grid = within(screen.getByRole("group", { name: "novembro de 2026" }));
+    const cell = grid.getByRole("button", { name: /^Sexta, 20 .*com tarefas$/ });
+    expect(cell).toHaveTextContent("2008:00 T810:00 T1014:00 T14+1 mais");
+    expect(within(cell).getByText("T8", { exact: false })).toHaveClass("line-through");
+
+    fireEvent.click(cell);
+    expect(grid.getByRole("button", { pressed: true })).toBe(cell);
+    expect(screen.queryByRole("button", { name: copy.header.back })).not.toBeInTheDocument();
+    closePanel();
   });
 
   it("pages to the picked day once the context lands on it", () => {

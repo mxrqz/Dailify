@@ -80,12 +80,14 @@ export const copy = {
     meet: "Meet",
     noDate: "Sem data",
     withTasks: "{day}, com tarefas",
+    more: "+{n} mais",
   },
 
   aside: {
     prevMonth: "Mês anterior",
     nextMonth: "Próximo mês",
     weekDayInitials: ["D", "S", "T", "Q", "Q", "S", "S"],
+    weekDayShort: ["Dom", "Seg", "Ter", "Qua", "Qui", "Sex", "Sáb"],
   },
 
   sync: {
@@ -394,6 +396,8 @@ export const copy = {
     close: "Fechar painel",
     task: "Tarefa",
     mew: "Mew",
+    createOnDay: "Nova tarefa nesse dia",
+    openInToday: "Abrir na Hoje",
   },
 
   // Tarefas sem data: o bloco "A qualquer hora" no topo de hoje.
