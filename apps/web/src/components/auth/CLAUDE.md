@@ -35,7 +35,9 @@ The `/login` and `/signup` screens, plus the shell the hand-off pages reuse. Rep
 - Better Auth calls are read as `{ data, error }`. A throw maps to `classifyAuthError(null)`.
 - Every send and every `reset` bumps the `runId` ref, so a slow send that resolves after "Usar outro
   e-mail" is a no-op. That is also why the back button stays enabled while a resend is in flight.
-- `from` = `redirectTarget(location.state)`. The AuthShell cross-link forwards `location.state` plus the typed
+- `from` = `redirectTarget(location.state, location.search)`: a login opened by an MCP client's
+  authorize carries a signed query (`sig`), and then `from` is `/oauth/consent` plus that query
+  (Google instead resumes server-side through `oauthProviderClient`). The AuthShell cross-link forwards `location.state` plus the typed
   e-mail (`withEmail`/`carriedEmail`, router state only, never the URL), and
   on the web `from` becomes the `callbackURL`. In Tauri, `startNativeMagicLink`
   (`lib/native-auth.ts`) sends a device-bound link with no callback.

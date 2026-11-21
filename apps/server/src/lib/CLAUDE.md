@@ -27,6 +27,11 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   (`isAllowedOrigin`) and Better Auth `trustedOrigins` add it to `ALLOWED_ORIGIN`.
 - `reminder-feed.ts`: `reminderFeed`, the next 14 days of alerts (max 100) for the Android
   app's local alarms, skipping done occurrences; `routes/reminders.ts` serves it.
+- `mcp.ts`: the hand-written MCP server (no SDK: +280 KB and zod). `handleRpc` is the pure
+  JSON-RPC dispatcher (2025-11-25, stateless); `TOOLS` + `callTool` are the five agenda tools.
+  Reads hit `db/` directly, writes go through `McpContext.send` (the tasks routes). Times in and
+  out are local wall time in `user_settings.time_zone` (UTC fallback); a series instance is named
+  by its local day (`occurrenceOn`). Tests: `mcp-rpc`, `mcp-tools`, `mcp-oauth`.
 - `occurrence-alert.ts` (series alert math; `monthsTouching` is the one "which month starts does
   this window touch" helper), `errors.ts` (`fail`), `task-input.ts` (body gate).
 

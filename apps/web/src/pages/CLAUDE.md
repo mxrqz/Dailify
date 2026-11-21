@@ -26,6 +26,7 @@ One file per route. `src/App.tsx` declares the routes; each page owns its own I/
 | `/premium`                                            | `premium.tsx`                                  | AppLayout, **public** on purpose: it is the sales page                                                           |
 | `/login`, `/signup`                                   | `login.tsx`, `signup.tsx`                      | public; `AuthPage mode` (`components/auth/CLAUDE.md`)                                                            |
 | `/verify`, `/auth/app`, `/app/*`                      | `verify.tsx`, `auth-app.tsx`, `app-return.tsx` | public hand-off pages (below)                                                                                    |
+| `/oauth/consent`                                      | `oauth-consent.tsx`                            | full screen; gates on the session itself (signed out -> `/login` with the same query)                            |
 | `/privacidade`, `/termos`                             | `privacy.tsx`, `terms.tsx`                     | public; `components/legal-page.tsx`                                                                              |
 
 ## Adding a page
@@ -70,6 +71,10 @@ One file per route. `src/App.tsx` declares the routes; each page owns its own I/
     `mewki://open` once, after `internalPath` (`/app//evil.com` would still match `/app/*`).
   - `/auth/app` and `/app/*` share `components/auth/handoff.tsx`: `useOpenOnce` and
     `HandoffNotice`.
+- `/oauth/consent?<signed query>` is Better Auth's MCP consent page (`apps/server/CLAUDE.md`,
+  Auth). It skips `ProtectedRoute` so no task boot runs; `oauthProviderClient` (`lib/auth.ts`)
+  posts the query with the answer, and the returned `url` (the AI client's redirect) is a
+  `window.location.assign`, never `navigate`.
 - Single-shot effects (OAuth code, deep-link attempt) use a `useRef` flag (`integration-callback`,
   `useOpenOnce`). `integration-callback` and `verify` render tests run in `<StrictMode>`.
 - Legal pages: the body text is literal in `privacy.tsx`/`terms.tsx`, the one documented
@@ -77,5 +82,5 @@ One file per route. `src/App.tsx` declares the routes; each page owns its own I/
 
 ## Tests
 
-`billing`, `premium`, `security`, `verify`, `auth-app`, `app-return` and `integration-callback`
-have render tests. The older `it` names are legacy pt-BR; new ones are English.
+`billing`, `premium`, `security`, `verify`, `auth-app`, `app-return`, `integration-callback` and
+`oauth-consent` have render tests. The older `it` names are legacy pt-BR; new ones are English.

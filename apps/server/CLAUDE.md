@@ -9,8 +9,9 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
 
 - `src/index.ts`: `Env` (bindings + secrets), `AppEnv` and the app. Order: CORS (its `origin`
   callback is `isAllowedOrigin`: `ALLOWED_ORIGIN` plus `NATIVE_ORIGINS`), public `/health`,
-  `AUTH_LIMITER` on `/auth/sign-in/*` and `/auth/magic-link/*`, Better Auth on `/auth/*`, the 7 route
-  modules (voice before tasks: see `src/routes/CLAUDE.md`), `app.notFound` and `app.onError` ->
+  `AUTH_LIMITER` on `/auth/sign-in/*`, `/auth/magic-link/*` and `/auth/oauth2/register`, Better
+  Auth on `/auth/*` and `GET /.well-known/*`, `/mcp`, the other route modules (voice before tasks:
+  see `src/routes/CLAUDE.md`), `app.notFound` and `app.onError` ->
   `fail(c, 500, "Internal error")`. The default export is the app with `scheduled`
   attached, so tests keep `app.request()`.
 - `src/routes/` HTTP validation and wiring · `src/middleware/` `requireAuth`, `rateLimit` ·
@@ -38,6 +39,14 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
   `cf-connecting-ip`) is the real one.
 - `requireAuth` reads `plan` from D1, not from the session: the 5-minute `cookieCache` still holds
   the plan from before a checkout.
+- MCP (`POST /mcp`, bd `Dailify-7yoo.1`): `jwt` + `@better-auth/mcp` make Better Auth an OAuth 2.1
+  provider with open dynamic registration; login and consent pages are the web's `/login` and
+  `/oauth/consent`. Access tokens are JWTs bound to `mcpResource(env)` (`${BETTER_AUTH_URL}/mcp`);
+  `mcpUserId` (`auth.ts`) verifies one. Only `requireTaskAuth` (the tasks module) accepts it
+  besides `/mcp`, so the token never opens billing, settings or the AI routes. Discovery:
+  `/.well-known/oauth-protected-resource/mcp` and `/.well-known/oauth-authorization-server/auth`.
+- The provider seeds `oauthResource` at init, outside a request on Workers; that fails quietly
+  and is retried on first use.
 
 ## Errors
 

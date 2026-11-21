@@ -43,7 +43,9 @@ server's prettier, eslint and `tsc` gates. Its package-rename warning on every r
 
 - Auth: `vi.mock("../src/auth", () => import("./session"))` + `mockSession(() => ({ id, plan }))`,
   read on every request (`null` = 401). With `plan` it seeds the `"user"` row first, because
-  `requireAuth` reads the plan from D1; `seedUser` covers `stripeCustomerId`. `magic-link` and
+  `requireAuth` reads the plan from D1; `seedUser` covers `stripeCustomerId`. Its `mcpUserId` stub
+  reads `Bearer mcp:<userId>` as that user's MCP token (`mcp-tools.test.ts`); `mcp-oauth.test.ts`
+  runs the real verifier, discovery and client registration. `magic-link` and
   `account-delete` use the real Better Auth via `auth.api.*` (captcha runs only in the HTTP handler).
 - `stripe` and `openai` are module mocks shared like the session:
   `vi.mock("stripe", () => import("./stripe"))`, then `import { stripeMock } from "./stripe"`

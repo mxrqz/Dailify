@@ -52,6 +52,8 @@ The schema of the `dailify` D1 database, one numbered file per change. Repo-wide
 - To change them, run the command in the header of `scripts/auth-schema.ts` (it emits a full
   schema from `:memory:`, not a diff), diff the output against 0015 and hand-write the ALTERs in a
   new file.
+- `0019_mcp_oauth.sql` adds the `jwt` and `@better-auth/mcp` tables the same way. Their owner
+  column is `"userId"` with `ON DELETE CASCADE`, so they stay out of `deleteUserData`.
 - Never rebuild `"user"`: `session` and `account` reference it `ON DELETE CASCADE`, D1 enforces
   foreign keys, and `DROP TABLE` deletes the rows first, which signs everyone out and unlinks
   Google. `PRAGMA defer_foreign_keys` doesn't stop cascades.
