@@ -1,4 +1,6 @@
 <resources>
     <string name="app_name">Mewki</string>
     <string name="main_activity_title">Mewki</string>
+    <string name="mew_voice">Falar com a Mew</string>
+    <string name="mew_voice_short">Mew</string>
 </resources>
