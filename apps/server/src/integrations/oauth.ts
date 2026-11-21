@@ -24,10 +24,14 @@ export function authorizeUrl(
     response_type: "code",
     client_id: cfg.credentials(env).id,
     redirect_uri: p.redirectUri,
-    scope: cfg.scopes.join(" "),
     state: p.state,
-    code_challenge: p.challenge,
-    code_challenge_method: "S256",
+    ...(cfg.userToken
+      ? { user_scope: cfg.scopes.join(",") }
+      : {
+          scope: cfg.scopes.join(" "),
+          code_challenge: p.challenge,
+          code_challenge_method: "S256",
+        }),
     ...cfg.extraParams,
   }).toString();
   return url.toString();
@@ -46,7 +50,11 @@ async function tokenRequest(
     body: new URLSearchParams({ ...params, client_id: id, client_secret: secret }),
     signal: AbortSignal.timeout(15_000),
   });
-  const body: unknown = await res.json().catch(() => null);
+  const raw: unknown = await res.json().catch(() => null);
+  const body =
+    cfg.userToken && isRecord(raw) && isRecord(raw.authed_user)
+      ? { ...raw, ...raw.authed_user }
+      : raw;
   const field = (k: string): unknown => (isRecord(body) ? body[k] : undefined);
 
   if (field("error") === "invalid_grant") throw new InvalidGrantError("invalid_grant");
@@ -75,7 +83,7 @@ export const exchange = (
   tokenRequest(cfg, env, {
     grant_type: "authorization_code",
     code: p.code,
-    code_verifier: p.verifier,
+    ...(!cfg.userToken && { code_verifier: p.verifier }),
     redirect_uri: p.redirectUri,
   });
 
@@ -100,6 +108,7 @@ export async function revoke(cfg: OAuthConfig, tokens: Tokens): Promise<void> {
 }
 
 export const hasScopes = (cfg: OAuthConfig, granted: string) => {
-  const set = new Set(granted.split(/\s+/));
+  // Google separates granted scopes with spaces, Slack with commas.
+  const set = new Set(granted.split(/[\s,]+/));
   return cfg.required.every((s) => set.has(s));
 };

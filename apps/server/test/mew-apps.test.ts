@@ -1,6 +1,6 @@
 import { beforeEach, describe, expect, it, vi } from "vitest";
 
-// A fake reader/sender on the only provider id there is; nothing real implements them yet.
+// A fake reader/sender on the calendar, so the route is tested apart from Slack's HTTP.
 const fake = vi.hoisted(() => ({
   read: vi.fn<(env: unknown, userId: string, target: string) => Promise<string>>(),
   send: vi.fn<(env: unknown, userId: string, target: string, text: string) => Promise<void>>(),
@@ -9,6 +9,7 @@ vi.mock("../src/integrations/registry", async (importOriginal) => {
   const { PROVIDERS } = await importOriginal<typeof import("../src/integrations/registry")>();
   return {
     PROVIDERS: {
+      ...PROVIDERS,
       "google-calendar": {
         ...PROVIDERS["google-calendar"],
         target: "channel id",
