@@ -33,7 +33,8 @@ are in [Shared model](../../RULES.md#shared-model); required zones are in
 - `duration.ts`: the `Task.duration` format (`DEFAULT_DURATION`, `DURATION_RE`/`isDuration`,
   `durationMinutes`, `minutesToDuration`).
 - `testing.ts` (`@dailify/shared/testing`): `makeTask(over)` for tests; pure, no vitest import.
-- `limits.ts`: `TASK_LIMITS` (content caps, `repeatEveryMax`, `priorityMax`), `DATE_RANGE`.
+- `limits.ts`: `TASK_LIMITS` (content caps, `repeatEveryMax`, `priorityMax`, `spanDaysMax`: how
+  far the month read looks back for a multi-day task), `DATE_RANGE`.
   `pricing.ts`: `PLAN_PRICING` in cents, `formatPrice`.
 - `quotas.ts`: `QUOTAS` per `Role`. Only `ai` has a limit (`tasks` is `-1` for every plan).
   `QuotaSnapshot` (`GET /permissions`) and `QUOTA_ERRORS`, the exhausted-quota error texts.

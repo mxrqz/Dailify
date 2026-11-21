@@ -9,7 +9,7 @@ const env = vi.hoisted(() => ({ mobile: true }));
 // The shell's widgets have their own tests; here only which top bar shows matters.
 vi.mock("@/components/app-header", async () => {
   const { copy } = await import("./dashboard/copy");
-  return { AppHeader: () => <button>{copy.header.openNav}</button> };
+  return { AppHeader: () => <button>{copy.header.openNav}</button>, Toolbar: () => null };
 });
 vi.mock("@/components/nav", () => ({ Sidebar: () => null }));
 vi.mock("@/components/duplicates-sheet", () => ({ Duplicates: () => null }));

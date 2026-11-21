@@ -27,11 +27,12 @@ import { useDailify } from "@/components/dailifyContext";
 import { clockAt } from "@/functions/date-label";
 import { fill, getCompletionDate } from "@/functions/functions";
 import { repeatLabel } from "@/functions/repeat-label";
+import { spanOf } from "@/functions/span";
 import { isSaving } from "@/hooks/useCreateTask";
 import { openPanel, usePanel } from "@/hooks/usePanel";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import type { Task } from "@dailify/shared";
-import { zoned } from "@/functions/zone";
+import { appTimeZone, zoned } from "@/functions/zone";
 
 /** 15 → "15 min", 60 → "1h", 90 → "1h30": a duração embaixo do horário. */
 export function durationText(minutes: number): string {
@@ -143,18 +144,23 @@ export function DayTaskRow({
   const at = zoned(task.date);
   const title = { title: task.title };
 
+  const span = spanOf(task, +day, appTimeZone());
+  const spanLabel = span && fill(copy.day.spanDay, span);
+
   const actions = sheetEditing ? undefined : (
     <>
-      <DateTimePopover timeOnly value={at} onChange={reschedule}>
-        <Chip
-          variant="select"
-          size="sm"
-          icon={<ClockIcon aria-hidden="true" className="text-meta-time" />}
-          aria-label={fill(copy.task.editTime, title)}
-        >
-          {clockAt(task.date, hour12)}
-        </Chip>
-      </DateTimePopover>
+      {!span && (
+        <DateTimePopover timeOnly value={at} onChange={reschedule}>
+          <Chip
+            variant="select"
+            size="sm"
+            icon={<ClockIcon aria-hidden="true" className="text-meta-time" />}
+            aria-label={fill(copy.task.editTime, title)}
+          >
+            {clockAt(task.date, hour12)}
+          </Chip>
+        </DateTimePopover>
+      )}
       <DayPopover
         value={at}
         onChange={(picked) => {
@@ -191,8 +197,14 @@ export function DayTaskRow({
 
   const row = (
     <TaskRow
-      time={clockAt(task.date, hour12)}
-      duration={task.duration ? durationText(durationMinutes(task.duration)) : undefined}
+      time={
+        spanLabel ? (
+          <span className="text-right text-xs leading-tight">{spanLabel}</span>
+        ) : (
+          clockAt(task.date, hour12)
+        )
+      }
+      duration={task.duration && !span ? durationText(durationMinutes(task.duration)) : undefined}
       title={task.title}
       meta={
         isSaving(task) ? (

@@ -30,6 +30,18 @@ describe("db/tasks", () => {
     expect(rows[0]).toMatchObject({ id: "a1", tags: ["x"], repeat: "Off", completed: [] });
   });
 
+  it("a month also reads a task that started the month before and runs into it", async () => {
+    const user = `u-${crypto.randomUUID()}`;
+    await insertTask(
+      env.DB,
+      user,
+      t({ id: `${user}-trip`, date: Date.UTC(2025, 11, 30), duration: "72h" }),
+    );
+    await insertTask(env.DB, user, t({ id: `${user}-old`, date: Date.UTC(2025, 11, 31, 20) }));
+    const rows = await getMonthTasks(env.DB, user, new Date(2026, 0, 1));
+    expect(rows.map((r) => r.id)).toEqual([`${user}-trip`]);
+  });
+
   it("stores Weekly repeat as kind+days", async () => {
     await insertTask(env.DB, "u2", t({ id: "a2", repeat: { Weekly: ["Monday"] } }));
     expect((await getTask(env.DB, "u2", "a2"))?.repeat).toEqual({ Weekly: ["Monday"] });

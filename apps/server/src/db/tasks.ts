@@ -1,11 +1,15 @@
 import type { Task, Repeat } from "@dailify/shared";
 import {
+  TASK_LIMITS,
+  durationMinutes,
   endOfMonthMs,
   expandRecurringTask,
   stampUpdatedAt,
   startOfMonthMs,
   taskHash,
 } from "@dailify/shared";
+
+const DAY = 86_400_000;
 
 export interface TaskRow {
   id: string;
@@ -149,11 +153,15 @@ export async function getMonthTasks(
   month: Date,
   timeZone?: string,
 ): Promise<Task[]> {
+  const from = startOfMonthMs(month, timeZone);
+  // A task that started up to the span cap earlier may still run into the month.
   const { results } = await db
     .prepare(`SELECT * FROM tasks WHERE user_id=? AND undated=0 AND date>=? AND date<=?`)
-    .bind(userId, startOfMonthMs(month, timeZone), endOfMonthMs(month, timeZone))
+    .bind(userId, from - TASK_LIMITS.spanDaysMax * DAY, endOfMonthMs(month, timeZone))
     .all<TaskRow>();
-  return results.map(rowToTask);
+  return results
+    .filter((r) => r.date >= from || r.date + durationMinutes(r.duration) * 60_000 > from)
+    .map(rowToTask);
 }
 
 export async function getRecurringTasks(db: D1Database, userId: string): Promise<Task[]> {

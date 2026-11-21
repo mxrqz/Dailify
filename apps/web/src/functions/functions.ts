@@ -1,7 +1,8 @@
 import type { Task } from "@dailify/shared";
 import { addMonths, eachDayOfInterval, endOfMonth, isSameMonth, startOfMonth } from "date-fns";
-import { expandRecurringTask, seriesOf, zonedParts } from "@dailify/shared";
+import { expandRecurringTask, seriesOf } from "@dailify/shared";
 
+import { dayKey, spanDayKeys } from "@/functions/span";
 import { appTimeZone, zoned, zonedAt } from "@/functions/zone";
 
 export const capitalize = (value: string) => value.charAt(0).toUpperCase() + value.slice(1);
@@ -27,10 +28,6 @@ export function getCompletionDate(task: Task, selectedDay: Date) {
   return task.completed.some((completedAt) => completedAt >= from && completedAt < to);
 }
 
-const dayKey = (ms: number, zone: string) => {
-  const p = zonedParts(ms, zone);
-  return `${p.year}-${p.month}-${p.day}`;
-};
 const NO_TASKS: readonly Task[] = [];
 // O array de tarefas é imutável (todo setTasks troca a referência), então o índice vale enquanto ele viver.
 const dayIndex = new WeakMap<Task[], { zone: string; byDay: Map<string, Task[]> }>();
@@ -38,18 +35,19 @@ const dayIndex = new WeakMap<Task[], { zone: string; byDay: Map<string, Task[]> 
 /**
  * As tarefas do dia (no fuso do app). Chamado dias × renders: um índice por array troca o
  * `isSameDay` por tarefa por uma consulta. Devolve arrays compartilhados — não mutar.
+ * A task crossing midnight sits in every day it covers.
  */
 export function getTasksForDay(tasks: Task[], day: Date): readonly Task[] {
   const zone = appTimeZone();
   let index = dayIndex.get(tasks);
   if (index?.zone !== zone) {
     const byDay = new Map<string, Task[]>();
-    for (const task of tasks) {
-      const key = dayKey(task.date, zone);
-      const bucket = byDay.get(key);
-      if (bucket) bucket.push(task);
-      else byDay.set(key, [task]);
-    }
+    for (const task of tasks)
+      for (const key of spanDayKeys(task, zone)) {
+        const bucket = byDay.get(key);
+        if (bucket) bucket.push(task);
+        else byDay.set(key, [task]);
+      }
     index = { zone, byDay };
     dayIndex.set(tasks, index);
   }
@@ -92,9 +90,10 @@ export function listDays({
 }): Date[] {
   // Uma passada nas tarefas, não uma por dia: com meses carregados o filtro virava O(dias × tarefas).
   const zone = appTimeZone();
-  const keep = new Set(
-    [...tasks.map((t) => t.date), ...extra.map(Number)].map((ms) => dayKey(ms, zone)),
-  );
+  const keep = new Set([
+    ...tasks.flatMap((t) => spanDayKeys(t, zone)),
+    ...extra.map((day) => dayKey(+day, zone)),
+  ]);
   return eachDayOfInterval({ start, end }).filter((day) => keep.has(dayKey(+day, zone)));
 }
 
@@ -116,7 +115,12 @@ export function monthsBetween(from: Date, to: Date): Date[] {
 export function mergeMonth(tasks: Task[], month: Date, fetched: Task[]): Task[] {
   const from = +startOfMonth(month);
   const to = +endOfMonth(month);
-  return [...tasks.filter((t) => t.date < from || t.date > to), ...fetched];
+  // The server also sends tasks that start earlier and run into the month: keep one copy each.
+  const sent = new Set(fetched.map((t) => `${t.id}-${t.date}`));
+  return [
+    ...tasks.filter((t) => (t.date < from || t.date > to) && !sent.has(`${t.id}-${t.date}`)),
+    ...fetched,
+  ];
 }
 
 export function isTaskModified(task: Task, updated: Task): boolean {

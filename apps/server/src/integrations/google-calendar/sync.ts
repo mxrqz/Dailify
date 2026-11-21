@@ -125,7 +125,7 @@ const ymd = (date: string) => {
   return { year, month: month - 1, day };
 };
 
-/** `null` = não cabe no modelo (regra que a Mewki não expressa, dia inteiro recorrente ou multi-dia). */
+/** `null` = não cabe no modelo (regra que a Mewki não expressa, dia inteiro recorrente ou longo demais). */
 function toFields(ev: Remote, timeZone: string): Mapped | null {
   if (!ev.start || !ev.end) return null;
   // The invite's sender writes the title: cap it like any task title before it reaches the AI.
@@ -138,7 +138,24 @@ function toFields(ev: Remote, timeZone: string): Mapped | null {
     const day = ymd(ev.start.date);
     const end = ymd(ev.end.date);
     const span = Date.UTC(end.year, end.month, end.day) - Date.UTC(day.year, day.month, day.day);
-    if (span > DAY) return null; // 0xp.11: multi-dia ainda não tem forma na Mewki
+    if (span > TASK_LIMITS.spanDaysMax * DAY) return null;
+    if (span > DAY) {
+      // Several days: a dated task from the first midnight to the last, shown on every day it covers.
+      const from = zonedEpoch({ ...day, hour: 0, minute: 0, second: 0 }, timeZone);
+      const to = zonedEpoch({ ...end, hour: 0, minute: 0, second: 0 }, timeZone);
+      return {
+        fields: {
+          title,
+          date: from,
+          duration: minutesToDuration((to - from) / 60_000),
+          undated: undefined,
+          ...off,
+        },
+        exdates: [],
+        links,
+        end: to,
+      };
+    }
     const anchor = zonedEpoch({ ...day, hour: 9, minute: 0, second: 0 }, timeZone);
     return {
       fields: { title, date: anchor, duration: DEFAULT_DURATION, undated: true, ...off },

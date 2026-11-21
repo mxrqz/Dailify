@@ -74,6 +74,18 @@ describe("<DaySection> now line", () => {
   });
 });
 
+describe("<DaySection> multi-day tasks", () => {
+  it("opens the next day with a task that started the day before", () => {
+    const trip = { ...task("Trip", new Date(2026, 10, 18)), duration: "48h" };
+    renderAt(WEDNESDAY, new Date(2026, 10, 19), [
+      task("At eight", new Date(2026, 10, 19, 8, 0)),
+      trip,
+    ]);
+    const order = screen.getAllByRole("listitem").map((li) => li.textContent);
+    expect(order).toEqual(["Trip", "At eight"]);
+  });
+});
+
 describe("<DaySection> done tasks", () => {
   const done = (t: Task) => ({ ...t, completed: [t.date] });
 

@@ -23,6 +23,8 @@ import { copy } from "./copy";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import { closePanel, usePanel } from "@/hooks/usePanel";
 import { fill } from "@/functions/functions";
+import { TooltipProvider } from "@/components/ui/tooltip";
+import { MemoryRouter } from "react-router-dom";
 
 const day = new Date(2026, 9, 23);
 const task: Task = {
@@ -103,6 +105,20 @@ describe("DayTaskRow", () => {
     // A series asks the scope first.
     expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
     act(() => closePanel());
+  });
+
+  it.each([true, false])("a multi-day task shows its day count instead of the clock", (sheet) => {
+    const trip = { ...task, date: new Date(2026, 9, 22).getTime(), duration: "72h" };
+    dailify.mockReturnValue({ tasks: [trip], setTasks: vi.fn(), loadedMonths: [day] });
+    render(
+      <MemoryRouter>
+        <TooltipProvider>
+          <DayTaskRow task={trip} day={day} sheetEditing={sheet} />
+        </TooltipProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText(fill(copy.day.spanDay, { k: 2, n: 3 }))).toBeInTheDocument();
+    expect(screen.queryByText("00:00")).toBeNull();
   });
 
   it("duração: minutos, horas e horas com minutos", () => {
