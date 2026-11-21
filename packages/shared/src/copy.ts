@@ -9,7 +9,10 @@ export const sharedCopy = {
   locale: "pt-BR",
   /** "16/03": a yearly series' day. */
   dayMonth: "{dd}/{mm}",
-  providers: { "google-calendar": "Google Agenda" } satisfies Record<ProviderId, string>,
+  providers: { "google-calendar": "Google Agenda", slack: "Slack" } satisfies Record<
+    ProviderId,
+    string
+  >,
   /** Sunday first, as `Date#getDay`. */
   weekdays: ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"],
   /** Joins the last item of a list: "segunda, terça e quarta". */

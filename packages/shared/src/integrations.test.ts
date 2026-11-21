@@ -22,7 +22,13 @@ describe("integrations", () => {
     expect(isProviderId("google-calendar")).toBe(true);
     expect(isProviderId("toString")).toBe(false);
     expect(isProviderId(1)).toBe(false);
-    expect(PROVIDER_IDS).toEqual(["google-calendar"]);
+    expect(PROVIDER_IDS).toEqual(["google-calendar", "slack"]);
+  });
+
+  it("Slack is Pro and up", () => {
+    expect(canUseIntegration("free", "slack")).toBe(false);
+    for (const role of ["pro", "max", "admin"] as const)
+      expect(canUseIntegration(role, "slack")).toBe(true);
   });
 });
 
