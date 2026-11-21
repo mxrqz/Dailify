@@ -83,8 +83,13 @@ export function classifyAuthError(error: BetterAuthError | null): AuthFailure {
   return { key: "generic", code: error.code ?? String(error.status) };
 }
 
-/** De onde o ProtectedRoute mandou o usuário — `location.state` é `unknown` por definição. */
-export function redirectTarget(state: unknown): string {
+/**
+ * De onde o ProtectedRoute mandou o usuário — `location.state` é `unknown` por definição. A login
+ * opened by an MCP client's authorize carries its signed query (`sig`): after sign-in it goes on
+ * to the consent page with that same query.
+ */
+export function redirectTarget(state: unknown, query = ""): string {
+  if (new URLSearchParams(query).has("sig")) return `/oauth/consent${query}`;
   if (state === null || typeof state !== "object" || !("from" in state)) return "/dashboard";
   const { from } = state;
   if (from === null || typeof from !== "object") return "/dashboard";
