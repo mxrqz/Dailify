@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import type { AppEnv } from "../index";
-import { requireAuth } from "../middleware/auth";
+import { requireTaskAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import {
   readMonth,
@@ -31,7 +31,7 @@ import { linkInstance } from "../integrations/google-calendar";
 import { syncIfDue } from "../integrations/google-calendar/sync";
 
 const tasks = new Hono<AppEnv>();
-tasks.use("*", requireAuth);
+tasks.use("*", requireTaskAuth);
 tasks.use("*", rateLimit("API_LIMITER"));
 
 tasks.get("/", async (c) => {

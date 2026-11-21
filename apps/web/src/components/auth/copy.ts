@@ -79,6 +79,19 @@ export const copy = {
     browser: "Continuar no navegador",
   },
 
+  // /oauth/consent: an AI assistant (Claude, ChatGPT, Gemini) asks for the agenda over MCP.
+  consent: {
+    pageTitle: "Mewki — Conectar assistente",
+    bubble: "Alguém quer me ajudar com a sua agenda!",
+    title: "Conectar {client}?",
+    unknownClient: "um assistente",
+    grants: "Ele vai poder ver e editar suas tarefas.",
+    returnsTo: "Depois você volta para {host}.",
+    allow: "Permitir",
+    deny: "Não permitir",
+    failed: "Não deu para concluir. Volte ao assistente e tente conectar de novo.",
+  },
+
   errors: {
     invalidEmail: "E-mail inválido.",
     captcha: "A verificação de segurança falhou. Recarregue a página e tente de novo.",

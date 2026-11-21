@@ -16,6 +16,10 @@ provider work in `lib/` and `integrations/`.
 - `settings.ts` at `/`: `GET|PUT /settings`.
 - `reminders.ts` at `/reminders`: `POST /token` (session) mints the Android app's read-only feed
   token; `GET /feed?tz=` (that token as Bearer, `feedAuth`) returns the next 14 days of alerts.
+- `mcp.ts` at `/mcp`: `POST /` (MCP access token, `API_LIMITER`), one JSON-RPC message per call,
+  dispatched by `lib/mcp.ts`; `GET|DELETE` answer 405. Its tools write through
+  `tasks.request(path, init, c.env, c.executionCtx)` with the same token (`requireTaskAuth`), so
+  each write counts twice against `API_LIMITER`.
 - `integrations.ts` at `/`: `GET /integrations`, `POST /:provider/{connect,callback}`,
   `DELETE /:provider`, `POST google-calendar/{events,events/:taskId/meet|sync,duplicates/:id}`.
 
@@ -29,8 +33,8 @@ things.use("*", rateLimit("API_LIMITER")); // only if every route shares it, els
 ```
 
 - Canonical: `tasks.ts:26-28`. Mount once at its own prefix: never `/`, never a taken prefix.
-- Only `/health`, `/auth/*` (index.ts), `/push/key`, `/webhooks/stripe` and `/reminders/feed`
-  (its own token) skip `requireAuth`. A
+- Only `/health`, `/auth/*` and `/.well-known/*` (index.ts), `/push/key`, `/webhooks/stripe`,
+  `/reminders/feed` and `/mcp` (their own tokens) skip `requireAuth`. A
   new public endpoint goes above the `use("*")` or in its own module.
 - Legacy, don't copy: modules at `/` with path-scoped auth (billing, push, settings, integrations).
 - A new authenticated route gets a row in `AUTHENTICATED` (`test/auth.test.ts`).

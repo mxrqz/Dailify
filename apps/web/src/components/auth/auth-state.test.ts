@@ -203,6 +203,14 @@ describe("redirectTarget", () => {
     expect(redirectTarget({ from: { pathname: "/\\evil.com" } })).toBe("/dashboard");
     expect(redirectTarget({ from: { pathname: "https://evil.com" } })).toBe("/dashboard");
   });
+
+  it("resumes an MCP client's signed authorize query on the consent page", () => {
+    const search = "?client_id=c1&scope=openid&exp=1&sig=abc";
+    expect(redirectTarget({ from: { pathname: "/billing" } }, search)).toBe(
+      `/oauth/consent${search}`,
+    );
+    expect(redirectTarget(null, "?error=SESSION_EXPIRED")).toBe("/dashboard");
+  });
 });
 
 describe("canResend", () => {

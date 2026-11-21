@@ -1,7 +1,8 @@
 import type { BetterAuthOptions } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import type { GenericEndpointContext } from "better-auth";
-import { bearer, captcha, magicLink, oneTimeToken } from "better-auth/plugins";
+import { bearer, captcha, jwt, magicLink, oneTimeToken } from "better-auth/plugins";
+import { mcp } from "@better-auth/mcp";
 import type { Env } from "./index";
 import { allowedOrigins, NATIVE_ORIGINS } from "./lib/origin";
 import { sha256b64url } from "./lib/encoding";
@@ -86,6 +87,9 @@ const dropChallenge = (db: D1Database) =>
     await dropUsedMagicLinkChallenge(db, await sha256b64url(ctx.query.token));
   });
 
+/** The audience of every MCP access token, served at `POST /mcp`. */
+export const mcpResource = (env: Env) => `${env.BETTER_AUTH_URL}/mcp`;
+
 /** Pura (sem `cloudflare:workers`): a CLI do schema e os testes montam a instância a partir dela. */
 export function authOptions(env: Env, background?: (promise: Promise<unknown>) => void) {
   return {
@@ -146,6 +150,17 @@ export function authOptions(env: Env, background?: (promise: Promise<unknown>) =
         endpoints: ["/sign-in/magic-link"],
       }),
       oneTimeToken(),
+      // Signs the MCP access tokens; the header would hand every session a JWT it never uses.
+      jwt({ disableSettingJwtHeader: true }),
+      mcp({
+        resource: mcpResource(env),
+        loginPage: `${allowedOrigins(env)[0]}/login`,
+        consentPage: `${allowedOrigins(env)[0]}/oauth/consent`,
+        // Open DCR: Gemini needs a registration_endpoint, and consent is always asked.
+        allowDynamicClientRegistration: true,
+        allowUnauthenticatedClientRegistration: true,
+        clientRegistrationDefaultApplicationType: "infer",
+      }),
     ],
   } satisfies BetterAuthOptions;
 }

@@ -31,6 +31,10 @@ export async function seedUser(
     .run();
 }
 
+/** Fake MCP access token: `Authorization: Bearer mcp:<userId>` is that user, anything else null. */
+export const mcpUserId = async (req: Request) =>
+  /^Bearer mcp:(.+)$/.exec(req.headers.get("authorization") ?? "")?.[1] ?? null;
+
 export const auth = {
   api: {
     getSession: async () => {

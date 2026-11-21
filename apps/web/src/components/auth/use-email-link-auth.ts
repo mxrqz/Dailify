@@ -24,7 +24,7 @@ import { isTauri } from "@/lib/platform";
  */
 export function useEmailLinkAuth() {
   const location = useLocation();
-  const from = redirectTarget(location.state);
+  const from = redirectTarget(location.state, location.search);
   const { ref: captchaRef, token: captchaToken } = useTurnstile();
 
   const [state, dispatch] = useReducer(authReducer, initialAuthState);

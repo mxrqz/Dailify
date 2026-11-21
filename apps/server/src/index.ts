@@ -11,6 +11,7 @@ import push from "./routes/push";
 import integrations from "./routes/integrations";
 import mew from "./routes/mew";
 import reminders from "./routes/reminders";
+import mcp from "./routes/mcp";
 import { dispatchAlerts } from "./alerts";
 import { EMAIL_COOLDOWN_MS } from "./auth-options";
 import { sweepMagicLinks } from "./db/user";
@@ -72,7 +73,12 @@ app.get("/health", (c) => c.json({ ok: true }));
 // Só o que manda e-mail ou cria sessão: `get-session` roda a cada foco de aba e não entra.
 app.use("/auth/sign-in/*", rateLimit("AUTH_LIMITER"));
 app.use("/auth/magic-link/*", rateLimit("AUTH_LIMITER"));
+// Open client registration for MCP clients: it writes a row per call.
+app.use("/auth/oauth2/register", rateLimit("AUTH_LIMITER"));
 app.on(["GET", "POST"], "/auth/*", (c) => auth.handler(c.req.raw));
+// OAuth discovery (RFC 8414, RFC 9728) for MCP clients; the mcp plugin answers these paths.
+app.get("/.well-known/*", (c) => auth.handler(c.req.raw));
+app.route("/mcp", mcp);
 // Order is load-bearing: sub-apps at one prefix share middleware. Voice first, so its handlers end
 // the chain and tasks' use("*") (a second requireAuth + API_LIMITER) never runs for /parse, /voice.
 app.route("/tasks", voice);

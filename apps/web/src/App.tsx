@@ -22,6 +22,7 @@ const SignUp = lazy(() => import("@/pages/signup"));
 const Verify = lazy(() => import("@/pages/verify"));
 const AuthApp = lazy(() => import("@/pages/auth-app"));
 const AppReturn = lazy(() => import("@/pages/app-return"));
+const OAuthConsent = lazy(() => import("@/pages/oauth-consent"));
 const BillingPage = lazy(() => import("@/pages/billing"));
 const PremiumPage = lazy(() => import("@/pages/premium"));
 const ProfilePage = lazy(() => import("@/pages/profile"));
@@ -85,6 +86,8 @@ export default function App() {
                       <Route path="/auth/app" element={<AuthApp />} />
 
                       <Route path="/app/*" element={<AppReturn />} />
+
+                      <Route path="/oauth/consent" element={<OAuthConsent />} />
 
                       <Route path="/privacidade" element={<PrivacyPage />} />
 
