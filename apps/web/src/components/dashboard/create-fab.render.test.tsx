@@ -111,6 +111,22 @@ describe("<CreateFab> mobile", () => {
     setup();
     expect(screen.queryByRole("button", { name: copy.composer.dockVoice })).not.toBeInTheDocument();
   });
+
+  it("the voice signal (Android assistant) opens the sheet already recording", () => {
+    env.voice = true;
+    const { rerender } = render(<CreateFab onSubmit={vi.fn()} voiceSignal={0} />);
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+
+    rerender(<CreateFab onSubmit={vi.fn()} voiceSignal={1} />);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(env.start).toHaveBeenCalledTimes(1);
+  });
+
+  it("without voice, the voice signal opens the sheet for typing", () => {
+    render(<CreateFab onSubmit={vi.fn()} voiceSignal={1} />);
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(env.start).not.toHaveBeenCalled();
+  });
 });
 
 describe("<CreateFab> desktop", () => {

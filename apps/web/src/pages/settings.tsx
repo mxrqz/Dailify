@@ -10,6 +10,7 @@ import { PushToggle } from "@/components/push-toggle";
 import { accountGroups, accountPage } from "@/components/settings-list";
 import { TimeZoneSelect } from "@/components/time-zone-select";
 import { WeekStartSelect } from "@/components/week-start-select";
+import { nativeReminders } from "@/lib/reminders";
 
 export default function SettingsPage(): JSX.Element {
   return (
@@ -33,6 +34,13 @@ export default function SettingsPage(): JSX.Element {
         <ListGroup title={copy.profile.notificationsTitle} footer={copy.form.notificationsOff}>
           <PushToggle />
         </ListGroup>
+
+        {/* ponytail: text only; a button needs a native command opening ACTION_VOICE_INPUT_SETTINGS. */}
+        {nativeReminders() && (
+          <ListGroup title={copy.profile.groupAssistant} footer={copy.profile.assistantFooter}>
+            <ListRow label={copy.profile.assistantTitle} sublabel={copy.profile.assistantPath} />
+          </ListGroup>
+        )}
 
         <IntegrationsSummary />
       </div>

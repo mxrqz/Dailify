@@ -58,6 +58,8 @@ describe("parseOpenLink", () => {
       "/billing?checkout=cancel",
     );
     expect(parseOpenLink("mewki://open")).toBe("/dashboard");
+    // MainActivity.kt turns Android's ACTION_ASSIST into this one.
+    expect(parseOpenLink("mewki://open/dashboard?mew=voice")).toBe("/dashboard?mew=voice");
   });
 
   it("rejects anything else", () => {
