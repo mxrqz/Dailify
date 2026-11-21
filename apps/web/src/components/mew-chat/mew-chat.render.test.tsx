@@ -1,8 +1,8 @@
 /** @vitest-environment jsdom */
-import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import type { SetStateAction } from "react";
 import { MemoryRouter } from "react-router-dom";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import {
   API_ERROR,
   MEW_CONSENT_REQUIRED,
@@ -13,7 +13,9 @@ import {
 
 import { CreditsTray } from "@/components/credits-tray";
 import { copy } from "@/components/dashboard/copy";
+import { PanelHost } from "@/components/dashboard/side-panel";
 import { setCreditsTray } from "@/hooks/useCreditsTray";
+import { closePanel, openPanel } from "@/hooks/usePanel";
 
 import { copy as t } from "./copy";
 import { MewChat } from "./mew-chat";
@@ -193,5 +195,35 @@ describe("MewChat", () => {
     const { chat, onCompose } = mount();
     fireEvent.click(within(chat).getByRole("button", { name: copy.composer.open }));
     expect(onCompose).toHaveBeenCalled();
+  });
+});
+
+describe("MewChat on desktop", () => {
+  afterEach(() => act(() => closePanel()));
+
+  it("sending from the agenda dock opens the side panel, which then holds the only input", async () => {
+    api.mewChat.mockResolvedValue({ reply: { reply: "Oi!", intent: "answer", blocks: [] } });
+    render(
+      <MemoryRouter>
+        <MewChat panel onCompose={vi.fn()} />
+        <PanelHost />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole("complementary")).toBeNull();
+
+    fireEvent.change(screen.getByRole("textbox", { name: t.open }), { target: { value: "oi" } });
+    fireEvent.click(screen.getByRole("button", { name: t.send }));
+
+    const side = await screen.findByRole("complementary", { name: copy.panel.mew });
+    expect(await within(side).findByText("Oi!")).toBeInTheDocument();
+    expect(api.mewChat).toHaveBeenCalledWith(expect.objectContaining({ text: "oi" }));
+    expect(screen.queryByRole("textbox", { name: t.open })).toBeNull();
+    expect(within(side).getByRole("textbox", { name: t.placeholder })).toHaveFocus();
+
+    // Closed and reopened, the thread is still there.
+    fireEvent.click(within(side).getByRole("button", { name: copy.panel.close }));
+    expect(screen.getByRole("textbox", { name: t.open })).toBeInTheDocument();
+    act(() => openPanel({ kind: "mew" }));
+    expect(await within(screen.getByRole("complementary")).findByText("Oi!")).toBeInTheDocument();
   });
 });

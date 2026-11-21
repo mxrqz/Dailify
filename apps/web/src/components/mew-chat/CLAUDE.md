@@ -1,17 +1,19 @@
 # apps/web/src/components/mew-chat — the Mew chat
 
-Repo-wide rules: [/RULES.md](../../../../../RULES.md). This folder is the mobile chat the dock opens
-(mounted by `dashboard/create-fab.tsx` when not desktop): one `POST /mew/chat` per turn, confirm boxes
-applied to the agenda.
+Repo-wide rules: [/RULES.md](../../../../../RULES.md). This folder is the Mew chat the dock opens
+(mounted by `dashboard/create-fab.tsx`): one `POST /mew/chat` per turn, confirm boxes applied to the
+agenda. Mobile: a bottom drawer. Desktop (`panel`): the dock is a material-bar strip at the agenda's
+foot whose input sends and opens the side panel `{ kind: "mew" }`; the thread renders there.
 
 ## Layout
 
 - `thread.ts`: pure state machine. `Message`/`Block` types, `chatReducer`, persistence.
 - `apply.ts`: pure `writes` plus the `useMewApply` hook that runs a box against the agenda.
-- `mew-chat.tsx`: container (session, API, quotas, consent, scrim, the dock).
-- `dock.tsx`: `CreateDock`, the mobile pill that opens the chat and becomes its input, and
-  `DockButton`.
-- `chat-drawer.tsx`: `ChatDrawer` (header, log, empty state, consent card). `bubbles.tsx`: `Mine`,
+- `mew-chat.tsx`: container (session, API, quotas, consent, scrim, the dock, the desktop panel).
+- `dock.tsx`: `CreateDock`, the pill that opens the chat and becomes its input (`inline` on
+  desktop), `DOCK_PILL` and `DockButton`.
+- `chat-drawer.tsx`: `ChatDrawer` (the mobile Sheet and its header) over `ChatLog` (log, empty state,
+  consent card), which the desktop `SidePanel` also renders. `bubbles.tsx`: `Mine`,
   `Reply`, `Reveal`. `confirm-box.tsx`: `ConfirmBody` and the task `Row`, which read `hour12` from
   `useDailify`, so they are not provider-free Views yet. `chat-input.tsx`: `ChatInput`.
   `photo.ts`: thumbnail and upload scaling. `mood.ts`: `moodOf`.
@@ -42,6 +44,10 @@ applied to the agenda.
 - The drawer is a non-modal bottom `Sheet` so the dock stays usable; the scrim is rendered by
   mew-chat.tsx. The dock is the input (`CreateDock chat={<ChatInput/>}`, from
   `dock.tsx`), so `onInteractOutside` ignores `[data-slot="create-dock"]` and the credits tray (`[role="alertdialog"]`).
+- Desktop keeps one input at a time: the agenda dock unmounts while the Mew panel is open and the
+  panel footer holds `ChatInput` (both use `INPUT_ID`). `MewChat` stays mounted with the panel
+  closed, so a reply in flight still lands; `PanelHost` gives it a slot (`MEW_PANEL_SLOT`) to
+  portal the `SidePanel` into.
 - A create draft opens `DraftSheet` (`confirm-box.tsx`), the agenda's `TaskForm` over the draft;
   saving dispatches `edit` with the whole task and writes nothing. It renders inside the drawer's
   React tree, so Radix doesn't count touches in it as outside the drawer.
@@ -63,4 +69,5 @@ applied to the agenda.
 - `thread.test.ts` (jsdom, for localStorage), `apply.test.ts` (node, pure half), `mood.test.ts`
   (node, `moodOf`).
 - `mew-chat.render.test.tsx` mocks `@/functions/api`, `dailifyContext` and `@/lib/auth`, and covers
-  send, confirm, undo, refused write, consent and out of credits.
+  send, confirm, undo, refused write, consent and out of credits; on desktop it mounts `PanelHost`
+  beside `MewChat panel` (dock send opens the panel, the thread survives closing it).

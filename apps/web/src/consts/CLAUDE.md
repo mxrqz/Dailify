@@ -8,7 +8,7 @@ Repo-wide rules: [/RULES.md](../../../../RULES.md). Token and motion policy:
 - `conts.ts` + `conts.test.ts`: priority class tables, `planMap`, `CALENDAR_VIEW`, `apiURL`.
   `media.ts`: the `useMediaQuery` queries (`DESKTOP`, `MOBILE`, `SHEET_EDITING`, `NO_DRAG`). The filename typo is
   real; import it as `@/consts/conts`.
-- `motion.ts` + `motion.test.ts`: `duration`, `ease`, `spring`, `fade`, `reveal` for `motion` and
+- `motion.ts` + `motion.test.ts`: `duration`, `ease`, `spring`, `fade` for `motion` and
   WAAPI, and `radius` (px) for surfaces that morph their corners.
 - The `PLAN_ID` re-export in `conts.ts` is a shim over `@dailify/shared`; new code imports
   `PLAN_ID`, `PlanRole`, `PLAN_PRICING` and `formatPrice` from shared.

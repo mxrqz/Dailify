@@ -10,6 +10,8 @@ import { cn } from "@/lib/utils";
 
 /** The toolbar toggle's `aria-controls`. */
 export const SIDE_PANEL_ID = "side-panel";
+/** The "mew" kind's mount point: `MewChat` owns the thread (alive while closed) and portals its panel here. */
+export const MEW_PANEL_SLOT = "mew-panel-slot";
 
 /**
  * The desktop side panel: glass, header (title, actions, close), a scrolling body and an optional
@@ -83,6 +85,7 @@ export function PanelHost(): JSX.Element | null {
   }, [open]);
 
   if (!panel) return null;
+  if (panel.kind === "mew") return <div id={MEW_PANEL_SLOT} className="contents" />;
   // ponytail: every kind renders an empty body; the task, Mew and day phases fill them here.
   return <SidePanel title={titleOf(panel)} onClose={closePanel} />;
 }

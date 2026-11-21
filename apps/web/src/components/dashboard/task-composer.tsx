@@ -528,6 +528,11 @@ export function TaskComposer({
         }
       >
         {!large && canVoice && <MicButton onClick={() => void voice.start()} />}
+        {!large && onCancel && (
+          <Button variant="secondary" onClick={onCancel}>
+            {kitCopy.cancel}
+          </Button>
+        )}
         {primary}
       </ComposerActions>
     </>,

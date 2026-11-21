@@ -34,11 +34,5 @@ export const fade = {
   transition: { duration: duration.base, ease: ease.out },
 } as const;
 
-/** Conteúdo que aparece depois de um morph: espera a superfície tomar forma. */
-export const reveal = {
-  initial: { opacity: 0 },
-  animate: { opacity: 1, transition: { duration: 0.14, delay: 0.06 } },
-} as const;
-
 // A morphing surface takes its radius through `style` (motion corrects it only there), in px.
 export const radius = { panel: 22 } as const;

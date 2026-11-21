@@ -16,6 +16,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetClose, SheetContent, SheetTitle } from "@/components/ui/sheet";
 import { spring } from "@/consts/motion";
+import { cn } from "@/lib/utils";
 
 import { Mine, Reply, Reveal } from "./bubbles";
 import { INPUT_ID } from "./chat-input";
@@ -26,12 +27,9 @@ import type { ChatAction, Message } from "./thread";
 const CHIP_DELAY = 0.1;
 const CHIP_STAGGER = 0.05;
 
-type Props = {
+type LogProps = {
   messages: Message[];
   dispatch: (action: ChatAction) => void;
-  busy: boolean;
-  /** "Créditos de IA · 3 restantes"; `null` when unlimited or not loaded. */
-  credits: string | null;
   /** `false`: the LGPD card shows until accepted; `undefined` = not read yet. */
   consent: boolean | undefined;
   onConsent: () => void;
@@ -41,10 +39,18 @@ type Props = {
   onOpenTask: (task: Task) => void;
 };
 
+type Props = LogProps & {
+  busy: boolean;
+  /** "Créditos de IA · 3 restantes"; `null` when unlimited or not loaded. */
+  credits: string | null;
+};
+
 /** Near-full-height, non-modal sheet under the dock, which becomes its message box (`ChatInput`). */
 export function ChatDrawer({
   open,
   onOpenChange,
+  busy,
+  credits,
   ...props
 }: Props & { open: boolean; onOpenChange: (open: boolean) => void }) {
   return (
@@ -67,24 +73,62 @@ export function ChatDrawer({
         }}
         className="z-chat h-11/12 px-0 pb-0 sm:mx-auto sm:w-sheet"
       >
-        <ChatPanel {...props} />
+        <header className="grid grid-cols-[1fr_auto_1fr] items-center px-3 pb-2">
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon"
+                aria-label={t.menu}
+                className="justify-self-start"
+              >
+                <EllipsisIcon aria-hidden="true" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="start">
+              <DropdownMenuItem onSelect={props.onCompose}>{copy.composer.open}</DropdownMenuItem>
+              <DropdownMenuItem onSelect={() => props.dispatch({ type: "clear" })}>
+                {t.clear}
+              </DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+          <div className="flex flex-col items-center">
+            <Mew mood={moodOf(props.messages.at(-1), busy)} className="w-14" />
+            <SheetTitle className="sr-only">{t.title}</SheetTitle>
+            <p aria-live="polite" className="sr-only">
+              {busy ? t.thinking : ""}
+            </p>
+            {credits !== null && (
+              <p className="mt-1 text-footnote text-ink-secondary tabular-nums">{credits}</p>
+            )}
+          </div>
+          <SheetClose asChild>
+            <Button variant="ghost" size="icon" aria-label={t.close} className="justify-self-end">
+              <XIcon aria-hidden="true" />
+            </Button>
+          </SheetClose>
+        </header>
+        <ChatLog {...props} />
       </SheetContent>
     </Sheet>
   );
 }
 
-function ChatPanel({
+/**
+ * The thread (messages, empty state, consent card). Mobile, it scrolls under the dock; `panel`
+ * (desktop), it fills the side panel's body above the footer input.
+ */
+export function ChatLog({
   messages,
   dispatch,
-  busy,
-  credits,
   consent,
   onConsent,
   onSend,
   onPhoto,
   onCompose,
   onOpenTask,
-}: Props) {
+  panel,
+}: LogProps & { panel?: boolean }) {
   const log = useRef<HTMLDivElement>(null);
   const list = useRef<HTMLDivElement>(null);
   const pinned = useRef(true);
@@ -117,65 +161,38 @@ function ChatPanel({
   }, [messages.length]);
 
   return (
-    <>
-      <header className="grid grid-cols-[1fr_auto_1fr] items-center px-3 pb-2">
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon" aria-label={t.menu} className="justify-self-start">
-              <EllipsisIcon aria-hidden="true" />
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="start">
-            <DropdownMenuItem onSelect={onCompose}>{copy.composer.open}</DropdownMenuItem>
-            <DropdownMenuItem onSelect={() => dispatch({ type: "clear" })}>
-              {t.clear}
-            </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-        <div className="flex flex-col items-center">
-          <Mew mood={moodOf(messages.at(-1), busy)} className="w-14" />
-          <SheetTitle className="sr-only">{t.title}</SheetTitle>
-          <p aria-live="polite" className="sr-only">
-            {busy ? t.thinking : ""}
-          </p>
-          {credits !== null && (
-            <p className="mt-1 text-footnote text-ink-secondary tabular-nums">{credits}</p>
-          )}
-        </div>
-        <SheetClose asChild>
-          <Button variant="ghost" size="icon" aria-label={t.close} className="justify-self-end">
-            <XIcon aria-hidden="true" />
-          </Button>
-        </SheetClose>
-      </header>
-
-      {/* Newest at the bottom, against the dock; older ones scroll up under the fade. */}
+    // Newest at the bottom, against the dock; older ones scroll up under the fade.
+    <div
+      ref={log}
+      role="log"
+      aria-label={t.thread}
+      className={cn(
+        "fade-top flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain",
+        !panel && "px-4",
+      )}
+    >
       <div
-        ref={log}
-        role="log"
-        aria-label={t.thread}
-        className="fade-top flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain px-4"
+        ref={list}
+        className={cn("flex grow flex-col justify-end pt-6", !panel && "pb-dock-clear")}
       >
-        <div ref={list} className="flex grow flex-col justify-end pt-6 pb-dock-clear">
-          {messages.length === 0 && consent !== false && (
-            <Empty onPick={onSend} onPhoto={onPhoto} onCompose={onCompose} />
-          )}
-          {messages.map((m) => {
-            const fresh = !initial.has(m.id);
-            return (
-              <Reveal key={m.id} enter={fresh} className="py-1.5">
-                {m.from === "me" ? (
-                  <Mine message={m} />
-                ) : (
-                  <Reply message={m} fresh={fresh} dispatch={dispatch} onOpenTask={onOpenTask} />
-                )}
-              </Reveal>
-            );
-          })}
-          {consent === false && <Consent onAccept={onConsent} />}
-        </div>
+        {messages.length === 0 && consent !== false && (
+          <Empty onPick={onSend} onPhoto={onPhoto} onCompose={onCompose} />
+        )}
+        {messages.map((m) => {
+          const fresh = !initial.has(m.id);
+          return (
+            <Reveal key={m.id} enter={fresh} className="py-1.5">
+              {m.from === "me" ? (
+                <Mine message={m} />
+              ) : (
+                <Reply message={m} fresh={fresh} dispatch={dispatch} onOpenTask={onOpenTask} />
+              )}
+            </Reveal>
+          );
+        })}
+        {consent === false && <Consent onAccept={onConsent} />}
       </div>
-    </>
+    </div>
   );
 }
 
