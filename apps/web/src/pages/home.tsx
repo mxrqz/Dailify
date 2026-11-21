@@ -88,6 +88,22 @@ export default function Home() {
   useEffect(() => {
     if (Number.isFinite(at) && at > 0) landOn(at);
   }, [at]);
+  // The Android assist gesture, shortcut and tile open `/dashboard?mew=voice`: the Mew listening.
+  const [voiceSignal, setVoiceSignal] = useState(0);
+  const mewVoice = params.get("mew") === "voice";
+  const startVoice = useEffectEvent(() => {
+    setVoiceSignal((n) => n + 1);
+    setParams(
+      (prev) => {
+        prev.delete("mew");
+        return prev;
+      },
+      { replace: true },
+    );
+  });
+  useEffect(() => {
+    if (mewVoice) startVoice();
+  }, [mewVoice]);
   // Entrou direto pelo link: não há o que voltar no histórico, então tira o parâmetro.
   const closeCalendar = () =>
     location.key === "default" ? setParams({}, { replace: true }) : navigate(-1);
@@ -161,6 +177,7 @@ export default function Home() {
           submitting={submitting}
           onSubmit={({ parsed, calendar }) => create(parsed, { calendar })}
           openSignal={createSignal}
+          voiceSignal={voiceSignal}
         />
       </div>
 

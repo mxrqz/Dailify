@@ -10,6 +10,7 @@ import { INPUT_ID } from "@/components/mew-chat/chat-input";
 import { MewChat } from "@/components/mew-chat/mew-chat";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
+import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useOnline } from "@/hooks/useOnline";
 import { voiceSupported } from "@/hooks/useVoiceCreate";
@@ -27,6 +28,8 @@ interface CreateFabProps {
   onDayDone?: () => void;
   /** Bumped by the desktop toolbar's "Nova tarefa": each new value opens the composer. */
   openSignal?: number;
+  /** Bumped by `?mew=voice` (the Android assistant): each new value opens the composer listening. */
+  voiceSignal?: number;
 }
 
 /**
@@ -41,6 +44,7 @@ export function CreateFab({
   text,
   onDayDone,
   openSignal,
+  voiceSignal,
 }: CreateFabProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const desktop = useMediaQuery(DESKTOP);
@@ -87,6 +91,15 @@ export function CreateFab({
   useEffect(() => {
     if (openSignal) setOpen(true);
   }, [openSignal]);
+
+  // Offline or without a mic API it still opens, for typing.
+  const openListening = useEffectEvent(() => {
+    setListen(online && voiceSupported());
+    setOpen(true);
+  });
+  useEffect(() => {
+    if (voiceSignal) openListening();
+  }, [voiceSignal]);
 
   useEffect(() => {
     if (!text) return;

@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- Long-press the launcher icon: the same ACTION_ASSIST as the assist gesture (MainActivity). -->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android">
+    <shortcut
+        android:shortcutId="mew_voice"
+        android:enabled="true"
+        android:icon="@mipmap/ic_launcher"
+        android:shortcutShortLabel="@string/mew_voice_short"
+        android:shortcutLongLabel="@string/mew_voice">
+        <intent
+            android:action="android.intent.action.ASSIST"
+            android:targetPackage="com.mewki.app"
+            android:targetClass="com.mewki.app.MainActivity" />
+    </shortcut>
+</shortcuts>

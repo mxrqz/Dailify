@@ -88,10 +88,16 @@ Flow and keyring accounts: `apps/web/src/lib/CLAUDE.md`; contract:
 ## `gen/android`
 
 - Committed and partly hand-edited, so never re-run `tauri android init`. Hand edits:
-  `app/build.gradle.kts` (signing block), `MainActivity.kt` (`enableEdgeToEdge()`), and
+  `app/build.gradle.kts` (signing block), `MainActivity.kt` (`enableEdgeToEdge()`, below), and
   `res/values{,-night}/themes.xml`, whose `windowBackground` is the light/dark `--canvas` hex: the
   webview is transparent, so it is the boot background. Change them with `--canvas` in
   `apps/web/src/global.css`, along with `backgroundColor` (the dark one) in `tauri.conf.json`.
+- Digital assistant (bd `Dailify-7yoo.2`), no VoiceInteractionService: the manifest's
+  `ACTION_ASSIST` filter lists the app under Default apps › Digital assistant app, and the static
+  shortcut (`res/xml/shortcuts.xml`) and the Quick Settings tile (`MewTile.kt`,
+  `drawable/ic_mew_tile.xml`) send the same action. `MainActivity.assistToView` rewrites it to
+  `mewki://open/dashboard?mew=voice` (the deep-link plugin reads only VIEW), except from Recents.
+  `RECORD_AUDIO`/`MODIFY_AUDIO_SETTINGS` are there for the WebView's `getUserMedia`.
 - `mipmap-*/ic_launcher_foreground.png` (the adaptive icon) has the cat at 54% of the 108dp canvas,
   inside the 66dp safe zone launchers mask to. `tauri icon` writes it edge to edge, which crops the
   ears: after regenerating icons, shrink it again (ImageMagick `-resize` + `-extent`).
