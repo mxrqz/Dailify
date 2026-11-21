@@ -10,6 +10,32 @@
 <tr>
 <td>
 
+`reminders:allow-assistant`
+
+</td>
+<td>
+
+Enables the assistant command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
+`reminders:deny-assistant`
+
+</td>
+<td>
+
+Denies the assistant command without any pre-configured scope.
+
+</td>
+</tr>
+
+<tr>
+<td>
+
 `reminders:allow-battery`
 
 </td>

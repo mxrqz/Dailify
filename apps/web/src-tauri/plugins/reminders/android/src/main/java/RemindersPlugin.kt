@@ -83,6 +83,19 @@ class RemindersPlugin(private val activity: Activity) : Plugin(activity) {
     invoke.resolve()
   }
 
+  // The default-assistant picker; OEMs without it get Default apps, then the Settings root.
+  @Command
+  fun assistant(invoke: Invoke) {
+    listOf(
+      Settings.ACTION_VOICE_INPUT_SETTINGS,
+      Settings.ACTION_MANAGE_DEFAULT_APPS_SETTINGS,
+      Settings.ACTION_SETTINGS,
+    ).any { action ->
+      runCatching { activity.startActivity(Intent(action).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) }.isSuccess
+    }
+    invoke.resolve()
+  }
+
   private fun state(): JSObject {
     val permission = getPermissionState(NOTIFICATIONS)
     val notifications = when {

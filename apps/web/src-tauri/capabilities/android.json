@@ -11,6 +11,7 @@
     "reminders:allow-status",
     "reminders:allow-permit",
     "reminders:allow-settings",
-    "reminders:allow-battery"
+    "reminders:allow-battery",
+    "reminders:allow-assistant"
   ]
 }
