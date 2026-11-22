@@ -59,6 +59,10 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   zone, drops any `Z`/offset, and rejects values outside `DATE_RANGE`.
 - Mew agenda: ±`WINDOW_DAYS` (14) plus the undated tasks, capped at `AGENDA_MAX` (300). A series
   instance's ref is `id@yyyy-mm-dd`, and `toBlocks` resolves refs only through that map.
+- Search: a turn's first call (not a read's) gets a nullable `search: {query, from, to}`; `askMew`
+  runs `searchTasks` (`db/tasks.ts`), sends the hits as the last user-role item in `lines()` format
+  and merges them into the map, so found tasks can be shown or moved. That second call offers
+  neither `search` nor `read`; still one credit.
 - Agenda titles are untrusted (Google invites): `lines()` goes in as the first user-role input
   item, never into `instructions`. The client also sends `history`, assistant turns included.
 - Apps (`MewApp`): the schema gets nullable `read`/`send` only for connected providers that

@@ -7,6 +7,7 @@ import {
   stampUpdatedAt,
   startOfMonthMs,
   taskHash,
+  zonedParts,
 } from "@dailify/shared";
 
 const DAY = 86_400_000;
@@ -187,6 +188,66 @@ export async function readMonth(
   const byKey = new Map<string, Task>();
   for (const t of [...inRange, ...expanded]) byKey.set(`${t.id}-${t.date}`, t);
   return [...byKey.values()];
+}
+
+// ponytail: one bounded pass. Page the results or add FTS once people hit either cap.
+export const SEARCH_DAYS_MAX = 366;
+export const SEARCH_MAX = 200;
+
+/** `%query%` for `LIKE ? ESCAPE '\'`, wildcards escaped, trimmed to D1's 50-byte pattern cap. */
+export function likePattern(query: string): string {
+  let chars = [...query.trim()];
+  const pattern = () => `%${chars.join("").replace(/[\\%_]/g, "\\$&")}%`;
+  while (new TextEncoder().encode(pattern()).length > 50) chars = chars.slice(0, -1);
+  return pattern();
+}
+
+/**
+ * Tasks whose title or tags contain `query` (LIKE: ASCII case-insensitive), dated in
+ * `[from, to)` when either end is given (capped at `SEARCH_DAYS_MAX`), series by their
+ * occurrences in it. Newest first, at most `SEARCH_MAX`.
+ */
+export async function searchTasks(
+  db: D1Database,
+  userId: string,
+  search: { query: string | null; from: number | null; to: number | null },
+  timeZone: string,
+): Promise<Task[]> {
+  const query = search.query?.trim() ? likePattern(search.query) : null;
+  const span = SEARCH_DAYS_MAX * DAY;
+  let { from, to } = search;
+  if (from !== null || to !== null) {
+    from ??= (to ?? 0) - span;
+    to = Math.min(to ?? from + span, from + span);
+  }
+  if ((query === null && from === null) || (from !== null && to !== null && to <= from)) return [];
+  // Series sort first so the LIMIT never drops one whose occurrences fall in the range.
+  const { results } = await db
+    .prepare(
+      `SELECT * FROM tasks WHERE user_id=?1
+         AND (?2 IS NULL OR title LIKE ?2 ESCAPE '\\' OR tags LIKE ?2 ESCAPE '\\')
+         AND (?3 IS NULL OR (undated=0 AND date<?4 AND (date>=?3 OR repeat_kind!='Off')))
+       ORDER BY repeat_kind!='Off' DESC, date DESC LIMIT ?5`,
+    )
+    .bind(userId, query, from, to, SEARCH_MAX)
+    .all<TaskRow>();
+  const tasks = results.map(rowToTask);
+  if (from === null || to === null) return tasks.slice(0, SEARCH_MAX);
+  const [start, end] = [from, to];
+  const months: Date[] = [];
+  const last = zonedParts(end - 1, timeZone);
+  for (let p = zonedParts(start, timeZone); ;) {
+    months.push(new Date(p.year, p.month, 1));
+    if (p.year === last.year && p.month === last.month) break;
+    p = p.month === 11 ? { ...p, year: p.year + 1, month: 0 } : { ...p, month: p.month + 1 };
+  }
+  const byKey = new Map<string, Task>();
+  for (const t of tasks) {
+    const all =
+      t.repeat === "Off" ? [t] : [t, ...months.flatMap((m) => expandRecurringTask(t, m, timeZone))];
+    for (const o of all) if (o.date >= start && o.date < end) byKey.set(`${o.id}-${o.date}`, o);
+  }
+  return [...byKey.values()].sort((a, b) => b.date - a.date).slice(0, SEARCH_MAX);
 }
 
 export async function getUndatedTasks(db: D1Database, userId: string): Promise<Task[]> {
