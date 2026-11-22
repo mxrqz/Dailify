@@ -348,6 +348,16 @@ export const copy = {
         disconnectDescription:
           "A Mew deixa de ler e mandar mensagens no Slack. Você pode conectar de novo quando quiser.",
       },
+      gmail: {
+        name: "Gmail",
+        does: ["Manda os e-mails que você confirmar", "Nunca lê sua caixa de entrada"],
+        connected: "Gmail conectado",
+        disconnected: "Gmail desconectado",
+        denied: "Conexão com o Gmail cancelada",
+        missingScope: "Faltou permissão: marque o envio de e-mails na tela do Google",
+        disconnectDescription:
+          "A Mew deixa de mandar e-mails pelo Gmail. Você pode conectar de novo quando quiser.",
+      },
     } satisfies Record<
       ProviderId,
       {
@@ -365,7 +375,6 @@ export const copy = {
     always: "Sempre",
     never: "Nunca",
     upcoming: {
-      gmail: { name: "Gmail", hint: "Envia e-mails que você confirmar" },
       notion: { name: "Notion", hint: "Lembra prazos das suas páginas" },
       github: { name: "GitHub", hint: "Reviews e issues viram tarefas" },
     },

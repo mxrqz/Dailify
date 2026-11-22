@@ -416,7 +416,8 @@ export function toBlocks(
             id: nanoid(),
             provider: sender,
             target: out.send.target.trim(),
-            to: out.send.to.trim() || out.send.target.trim(),
+            // An e-mail goes to its address: the box shows that, never a name the model chose.
+            to: (sender !== "gmail" && out.send.to.trim()) || out.send.target.trim(),
             text: out.send.text.trim().slice(0, MEW_SEND_MAX),
           },
         ]

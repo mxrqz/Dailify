@@ -1,7 +1,7 @@
 # apps/server/src/integrations — provider integrations
 
 OAuth providers: connecting, sealing the tokens, pushing task edits out (`google-calendar`, whose
-objects mirror tasks) and the Mew's on-demand reads and sends (`slack`). Repo-wide rules:
+objects mirror tasks) and the Mew's on-demand reads and sends (`slack`, `gmail`). Repo-wide rules:
 `/RULES.md` ("Backend and API"). Google's event mapping and sync: `google-calendar/CLAUDE.md`.
 
 ## Layout
@@ -86,6 +86,21 @@ those routed through `PROVIDERS[id]` first.
   Mew's turn.
 - Redirect URLs on the Slack app: `${web origin}/integrations/slack/callback` and
   `${APP_URL}/app/integrations/slack/callback` (the Tauri app). Tests: `test/integrations-slack.test.ts`.
+
+## Gmail (`gmail/index.ts`, bd `Dailify-3i5`)
+
+- Send only: `gmail.send` (+ `openid email` for the address), sensitive but no CASA; every read
+  scope is restricted (yearly CASA audit), so don't add one. Reuses the Calendar's OAuth config
+  and `identify` (same `GOOGLE_CLIENT_*`) with its own scopes and no `include_granted_scopes`.
+- `target` = one bare address (`ADDRESS`; no name, list or CR/LF), checked again in `send`. The
+  send box's `to` is that address, never the model's label (`toBlocks`, `lib/mew.ts`). The first
+  line of `text` is the subject (RFC 2047 words), the rest a base64 `text/plain` body; Gmail fills
+  `From`. A 401 marks the connection revoked.
+- One Google client means one grant, and Google's revoke drops all of it: disconnect and the
+  missing-scope callback skip the revoke while the other Google app stays connected (`sharesGrant`,
+  `routes/integrations.ts`, the `ponytail:`). Redirect URIs on the Google client:
+  `${web origin}/integrations/gmail/callback` and `${APP_URL}/app/integrations/gmail/callback`.
+  Tests: `test/integrations-gmail.test.ts`.
 
 ## Propagation and sync
 
