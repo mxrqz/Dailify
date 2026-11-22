@@ -50,14 +50,11 @@ export default defineConfig({
   // sourcemaps are unaffected.
   logLevel: "error",
   test: {
-    setupFiles: ["./test/apply-migrations.ts"],
+    setupFiles: ["./test/apply-migrations.ts", "./test/rejections.ts"],
     // Calls cleared and spies/globals restored per test, so no hand-written vi.clearAllMocks().
     clearMocks: true,
     restoreMocks: true,
     unstubGlobals: true,
-    // Under workerd, Better Auth also reports each APIError a handler throws (bad OTP, invalid
-    // link) as an unhandled rejection, though the caller gets the 4xx. Any other error still fails.
-    onUnhandledError: (error) => error.name !== "APIError",
   },
   plugins: [
     cloudflareTest(async () => {

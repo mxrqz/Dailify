@@ -23,6 +23,9 @@ server's prettier, eslint and `tsc` gates. Its package-rename warning on every r
 - Migrations are applied per file by `apply-migrations.ts` (a `setupFiles` `beforeAll`); files
   don't apply their own. The setup never imports `cloudflare:test`: that loads `src/` (before the
   file's `vi.mock` if static, ~8 s inside the hook if dynamic).
+- `rejections.ts` (also a `setupFiles` entry) fails a test on any rejection still unhandled a
+  macrotask later. workerd reports one an async function returns before its caller adopts it,
+  which Better Auth does on every APIError; vitest alone would count those.
 - `clearMocks`, `restoreMocks` and `unstubGlobals` are on: create spies and stubs in `beforeEach`
   or the test, never in `beforeAll`, and don't call `vi.clearAllMocks`/`restoreAllMocks` by hand.
 - Call the app with `app.request(path, init, env, ctx)`. Hono's `c.executionCtx` throws without a
