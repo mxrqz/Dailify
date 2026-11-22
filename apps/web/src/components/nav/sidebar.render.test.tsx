@@ -18,6 +18,8 @@ import { MobileNav } from "./mobile-nav";
 import { copy } from "@/components/dashboard/copy";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { setAppTimeZone, zonedAt } from "@/functions/zone";
+import { fill } from "@/functions/functions";
+import { forgetUser, rememberUser } from "@/functions/offline";
 import { closePanel, usePanel } from "@/hooks/usePanel";
 
 beforeEach(() => {
@@ -234,5 +236,26 @@ describe("<Sidebar> upgrade", () => {
     });
     renderAt("/dashboard");
     expect(screen.queryByRole("link", { name: copy.profile.upgradePro })).not.toBeInTheDocument();
+  });
+});
+
+describe("<Sidebar> offline", () => {
+  it("shows the last signed-in user when get-session can't reach the server", () => {
+    rememberUser({ id: "u1", name: "Offline", email: "off@mewki.app", plan: "pro" });
+    useSession.mockReturnValue({ data: null, error: { status: 0 } });
+    renderAt("/dashboard");
+    expect(
+      screen.getByRole("button", { name: fill(copy.profile.accountMenu, { name: "Offline" }) }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("link", { name: copy.header.signIn })).not.toBeInTheDocument();
+    forgetUser();
+  });
+
+  it("shows nobody after a 401", () => {
+    rememberUser({ id: "u1", name: "Offline", email: "off@mewki.app" });
+    useSession.mockReturnValue({ data: null, error: { status: 401 } });
+    renderAt("/dashboard");
+    expect(screen.getByRole("link", { name: copy.header.signIn })).toBeInTheDocument();
+    forgetUser();
   });
 });

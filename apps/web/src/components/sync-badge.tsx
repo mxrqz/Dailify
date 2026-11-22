@@ -5,7 +5,7 @@ import { copy } from "@/components/dashboard/copy";
 import { fill } from "@/functions/functions";
 import { pendingCount } from "@/functions/offline";
 import { useOnline } from "@/hooks/useOnline";
-import { useSession } from "@/lib/auth";
+import { useUser } from "@/hooks/useUser";
 
 /**
  * O aviso de que o app está guardando escritas em vez de mandá-las. Sem ele o offline é silencioso
@@ -15,7 +15,7 @@ import { useSession } from "@/lib/auth";
  */
 export function SyncBadge(): JSX.Element | null {
   const online = useOnline();
-  const userId = useSession().data?.user.id;
+  const userId = useUser()?.id;
   const { tasks } = useDailify();
 
   if (!userId) return null;

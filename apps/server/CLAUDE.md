@@ -9,7 +9,8 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
 
 - `src/index.ts`: `Env` (bindings + secrets), `AppEnv` and the app. Order: CORS (its `origin`
   callback is `isAllowedOrigin`: `ALLOWED_ORIGIN` plus `NATIVE_ORIGINS`), public `/health`,
-  `AUTH_LIMITER` on `/auth/sign-in/*`, `/auth/magic-link/*` and `/auth/oauth2/register`, Better
+  `AUTH_LIMITER` on `/auth/sign-in/*`, `/auth/magic-link/*`, `/auth/one-time-token/*` and
+  `/auth/oauth2/register`, Better
   Auth on `/auth/*` and `GET /.well-known/*`, `/mcp`, the other route modules (voice before tasks:
   see `src/routes/CLAUDE.md`), `app.notFound` and `app.onError` ->
   `fail(c, 500, "Internal error")`. The default export is the app with `scheduled`
@@ -33,6 +34,9 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
   `${WEB_URL}/verify#token=...`, app = `${WEB_URL}/auth/app?token=...`. An app request stores a
   `magic_link_challenge`; the `before` hook rejects `/magic-link/verify` unless `x-mewki-verifier`
   hashes (S256) to it, before the token is consumed.
+- Google in the app: `oneTimeToken` (hashed, 3 min). Its `generateToken` demands `?challenge=` and
+  stores it in `magic_link_challenge`; the same `before` hook rejects `/one-time-token/verify` unless
+  `x-mewki-verifier` matches, with no web exception (every one-time token is the app's).
 - `LINK_TTL_S` (600) is mirrored by `copy.inbox.hint` in `apps/web/src/components/auth/copy.ts`;
   change both. Sends are capped at one per e-mail per minute in `magic_link_sent`.
 - Better Auth's built-in rate limit stays off: it counts in isolate memory. `AUTH_LIMITER` (by

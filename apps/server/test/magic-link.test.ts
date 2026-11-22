@@ -100,6 +100,57 @@ describe("magic link", () => {
   });
 });
 
+describe("one-time token (Google in the app)", () => {
+  const verifier = "v".repeat(43);
+
+  /** A web session (as after Google on the web origin) asks for a token bound to `challenge`. */
+  async function generate(email: string, challenge?: string) {
+    const { token: session } = await verify(tokenOf((await requestLink(email)) ?? ""));
+    return auth.api.generateOneTimeToken({
+      query: challenge === undefined ? {} : { challenge },
+      headers: new Headers({ authorization: `Bearer ${session}` }),
+    });
+  }
+
+  const exchange = (token: string, verifier?: string) =>
+    auth.api.verifyOneTimeToken({
+      body: { token },
+      headers: new Headers(verifier ? { "x-mewki-verifier": verifier } : {}),
+      returnHeaders: true,
+    });
+
+  it("needs a challenge to generate", async () => {
+    await expect(generate("ott-none@test.local")).rejects.toMatchObject({ statusCode: 400 });
+    await expect(generate("ott-bad@test.local", "short")).rejects.toMatchObject({
+      statusCode: 400,
+    });
+  });
+
+  it("hands the session only to the verifier's holder, once, as a bearer", async () => {
+    const { token } = await generate("ott@test.local", await challengeOf(verifier));
+    // A crafted deep link on the victim's app: no verifier, or the victim's own, is refused.
+    await expect(exchange(token)).rejects.toMatchObject({ statusCode: 403 });
+    await expect(exchange(token, "w".repeat(43))).rejects.toMatchObject({ statusCode: 403 });
+
+    const { headers, response } = await exchange(token, verifier);
+    expect(response.user.email).toBe("ott@test.local");
+    expect(headers.get("set-auth-token")).toBeTruthy();
+    await expect(exchange(token, verifier)).rejects.toMatchObject({ statusCode: 403 });
+  });
+
+  // Read from D1: an endpoint's own "Invalid token" throw leaks an unhandled rejection in workerd.
+  it("is stored hashed and lives three minutes", async () => {
+    const before = Date.now();
+    const { token } = await generate("ott-ttl@test.local", await challengeOf(verifier));
+    const row = await env.DB.prepare(`SELECT expiresAt FROM verification WHERE identifier=?`)
+      .bind(`one-time-token:${await challengeOf(token)}`)
+      .first<{ expiresAt: string }>();
+    const ttl = Date.parse(row?.expiresAt ?? "") - before;
+    expect(ttl).toBeGreaterThan(2.9 * 60_000);
+    expect(ttl).toBeLessThanOrEqual(3 * 60_000 + 5_000);
+  });
+});
+
 describe("sweepMagicLinks", () => {
   it("drops expired challenges and sends past the cooldown, keeping live ones", async () => {
     const now = 1_000_000;

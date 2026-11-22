@@ -26,6 +26,7 @@ One file per route. `src/App.tsx` declares the routes; each page owns its own I/
 | `/premium`                                            | `premium.tsx`                                  | AppLayout, **public** on purpose: it is the sales page                                                                                                                          |
 | `/login`, `/signup`                                   | `login.tsx`, `signup.tsx`                      | public; `AuthPage mode` (`components/auth/CLAUDE.md`)                                                                                                                           |
 | `/verify`, `/auth/app`, `/app/*`                      | `verify.tsx`, `auth-app.tsx`, `app-return.tsx` | public hand-off pages (below)                                                                                                                                                   |
+| `/auth/google`                                        | `auth-google.tsx`                              | public hand-off page (below)                                                                                                                                                    |
 | `/oauth/consent`                                      | `oauth-consent.tsx`                            | full screen; gates on the session itself (signed out -> `/login` with the same query)                                                                                           |
 | `/privacidade`, `/termos`                             | `privacy.tsx`, `terms.tsx`                     | public; `components/legal-page.tsx`                                                                                                                                             |
 
@@ -67,6 +68,10 @@ One file per route. `src/App.tsx` declares the routes; each page owns its own I/
     but don't click), strips the hash on mount, and passes `next` through `internalPath`.
   - `/auth/app?token=…` never calls verify: the token is bound to the requesting device's
     verifier. On desktop it tries `mewki://auth` once; the browser restarts at `/login`.
+  - `/auth/google?challenge=…` (`auth-google.tsx`) is the app's Google sign-in in the system
+    browser: signed out it starts Google back to itself; signed in it mints one one-time token for
+    the challenge and tries `mewki://auth?ott=` once. Not under the App Link prefixes on purpose,
+    so Android opens it in the browser.
   - `/app/<path>` is where Stripe returns a checkout started in the app; it hands the path to
     `mewki://open` once, after `internalPath` (`/app//evil.com` would still match `/app/*`).
   - `/auth/app` and `/app/*` share `components/auth/handoff.tsx`: `useOpenOnce` and
@@ -84,5 +89,5 @@ One file per route. `src/App.tsx` declares the routes; each page owns its own I/
 
 `home.tsx` also mounts the first-run intro (`components/onboarding/CLAUDE.md`).
 
-`billing`, `premium`, `settings`, `security`, `verify`, `auth-app`, `app-return`, `integration-callback` and
+`billing`, `premium`, `settings`, `security`, `verify`, `auth-app`, `auth-google`, `app-return`, `integration-callback` and
 `oauth-consent` have render tests. The older `it` names are legacy pt-BR; new ones are English.

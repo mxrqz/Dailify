@@ -9,7 +9,7 @@ import {
 } from "@/components/auth/auth-state";
 import { useTurnstile } from "@/components/auth/turnstile";
 import { authClient } from "@/lib/auth";
-import { startNativeMagicLink } from "@/lib/native-auth";
+import { startNativeGoogle, startNativeMagicLink } from "@/lib/native-auth";
 import { isTauri } from "@/lib/platform";
 
 /**
@@ -78,6 +78,13 @@ export function useEmailLinkAuth() {
       dispatch({ type: "reset" });
     }, []),
     signInWithGoogle: useCallback(() => {
+      // The webview's redirect wouldn't come back with the session: the system browser signs in.
+      if (isTauri()) {
+        startNativeGoogle().catch(() =>
+          dispatch({ type: "failed", failure: classifyAuthError(null) }),
+        );
+        return;
+      }
       const origin = window.location.origin;
       // Sucesso navega a página inteira pro Google; só um erro antes disso volta pra cá.
       authClient.signIn

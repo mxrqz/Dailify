@@ -10,7 +10,7 @@ import { enqueue, newTaskId, shouldQueue } from "@/functions/offline";
 import { upsertUndated } from "@/functions/undated";
 import { useCalendarPush, type CalendarPick } from "@/hooks/useCalendarPush";
 import { zoned } from "@/functions/zone";
-import { useSession } from "@/lib/auth";
+import { useUser } from "@/hooks/useUser";
 import { haptic } from "@/lib/haptics";
 
 // The optimistic object itself: the server's reply (or the queued copy) replaces it, which ends it.
@@ -26,7 +26,7 @@ const queueable = (error: ApiError | undefined, userId: string | undefined): use
  * hora e avisa com Desfazer.
  */
 export function useShowCreated() {
-  const userId = useSession().data?.user.id;
+  const userId = useUser()?.id;
   const { setTasks, setUndatedTasks, loadedMonths } = useDailify();
 
   // Functional: the reply lands seconds after the tap, so it reads the lists of that moment.
@@ -77,7 +77,7 @@ export function useShowCreated() {
  * Devolve `true` quando a tarefa existe (no servidor ou na fila), pra quem chamou limpar o campo.
  */
 export function useCreateTask() {
-  const userId = useSession().data?.user.id;
+  const userId = useUser()?.id;
   const { setTasks, setUndatedTasks, loadedMonths } = useDailify();
   const [submitting, setSubmitting] = useState(false);
   const showCreated = useShowCreated();

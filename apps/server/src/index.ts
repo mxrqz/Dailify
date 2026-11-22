@@ -78,6 +78,7 @@ app.get("/favicon.ico", (c) => c.redirect(MCP_ICON.src, 301));
 // Só o que manda e-mail ou cria sessão: `get-session` roda a cada foco de aba e não entra.
 app.use("/auth/sign-in/*", rateLimit("AUTH_LIMITER"));
 app.use("/auth/magic-link/*", rateLimit("AUTH_LIMITER"));
+app.use("/auth/one-time-token/*", rateLimit("AUTH_LIMITER"));
 // Open client registration for MCP clients: it writes a row per call.
 app.use("/auth/oauth2/register", rateLimit("AUTH_LIMITER"));
 app.on(["GET", "POST"], "/auth/*", (c) => auth.handler(c.req.raw));

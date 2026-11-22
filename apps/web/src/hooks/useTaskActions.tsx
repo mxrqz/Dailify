@@ -3,7 +3,7 @@ import { isSameDay } from "date-fns";
 import { toast } from "sonner";
 
 import { useDailify } from "@/components/dailifyContext";
-import { useSession } from "@/lib/auth";
+import { useUser } from "@/hooks/useUser";
 import { haptic } from "@/lib/haptics";
 import { copy } from "@/components/dashboard/copy";
 import { RecurrenceScopeDialog } from "@/components/dashboard/recurrence-scope-dialog";
@@ -30,7 +30,7 @@ export function useTaskActions(
   { onDeleted }: { onDeleted?: () => void } = {},
 ) {
   const { tasks, setTasks, loadedMonths } = useDailify();
-  const userId = useSession().data?.user.id;
+  const userId = useUser()?.id;
   const [scopeOpen, setScopeOpen] = useState(false);
   // Ligada à Agenda: excluir apaga o evento lá também, e não há desfazer que o traga de volta.
   const linked = task.links?.some(isCalendarEventLink) ?? false;

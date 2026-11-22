@@ -1,18 +1,45 @@
 import { describe, expect, it, vi } from "vitest";
 
 // O cliente do Better Auth lê `window.location` ao carregar; aqui só as funções puras importam.
-const auth = vi.hoisted(() => ({ authClient: { signOut: vi.fn() }, setBearer: vi.fn() }));
+const auth = vi.hoisted(() => ({
+  authClient: { signOut: vi.fn(), $store: { notify: vi.fn() } },
+  setBearer: vi.fn(),
+}));
 vi.mock("@/lib/auth", () => auth);
+const tauri = vi.hoisted(() => ({
+  invoke: vi.fn(),
+  getCurrent: vi.fn(),
+  onOpenUrl: vi.fn(async () => () => {}),
+}));
+vi.mock("@tauri-apps/api/core", () => ({ invoke: tauri.invoke }));
+vi.mock("@tauri-apps/plugin-deep-link", () => ({
+  getCurrent: tauri.getCurrent,
+  onOpenUrl: tauri.onOpenUrl,
+}));
 
-const { base64url, parseAuthLink, parseOpenLink, s256, signOutAndReload } =
+const { base64url, initNativeAuth, parseAuthLink, parseOpenLink, s256, signOutAndReload } =
   await import("./native-auth");
 
 const TOKEN = "aBcDeFgHiJkLmNoPqRsTuVwXyZaBcDeF";
 
 describe("parseAuthLink", () => {
   it("aceita só os dois formatos do e-mail", () => {
-    expect(parseAuthLink(`mewki://auth?token=${TOKEN}`)).toBe(TOKEN);
-    expect(parseAuthLink(`https://mewki.mxrqz.com/auth/app?token=${TOKEN}`)).toBe(TOKEN);
+    expect(parseAuthLink(`mewki://auth?token=${TOKEN}`)).toEqual({ via: "token", token: TOKEN });
+    expect(parseAuthLink(`https://mewki.mxrqz.com/auth/app?token=${TOKEN}`)).toEqual({
+      via: "token",
+      token: TOKEN,
+    });
+  });
+
+  it("accepts the Google hand-off's one-time token", () => {
+    expect(parseAuthLink(`mewki://auth?ott=${TOKEN}`)).toEqual({ via: "ott", token: TOKEN });
+  });
+
+  it("rejects a link carrying both kinds or an unknown one", () => {
+    expect(parseAuthLink(`mewki://auth?ott=${TOKEN}&token=${TOKEN}`)).toBeNull();
+    expect(parseAuthLink(`mewki://auth?ott=${TOKEN}&x=1`)).toBeNull();
+    expect(parseAuthLink(`mewki://auth?session=${TOKEN}`)).toBeNull();
+    expect(parseAuthLink("mewki://auth?ott=curto")).toBeNull();
   });
 
   it("recusa host, caminho, porta, credencial, fragmento e token suspeitos", () => {
@@ -70,6 +97,53 @@ describe("parseOpenLink", () => {
     expect(parseOpenLink("mewki://open//evil.example")).toBe("/dashboard");
     expect(parseOpenLink("mewki://open/\\evil.example?x=1")).toBe("/dashboard");
     expect(parseOpenLink("not a url")).toBeNull();
+  });
+});
+
+describe("initNativeAuth: Google hand-off", () => {
+  it("exchanges the one-time token with this device's verifier and keeps the bearer", async () => {
+    vi.stubGlobal("window", { location: { origin: "tauri://localhost" } });
+    const vault: Record<string, string | null> = { "mewki.google-verifier": "my-verifier" };
+    tauri.invoke.mockImplementation(async (cmd: string, args: { accounts?: string[] }) =>
+      cmd.endsWith("get_passwords") ? args.accounts?.map((a) => vault[a] ?? null) : undefined,
+    );
+    const fetch = vi.fn<(url: URL, init: RequestInit) => Promise<Response>>(
+      async () => new Response("{}", { headers: { "set-auth-token": "bearer" } }),
+    );
+    vi.stubGlobal("fetch", fetch);
+    tauri.getCurrent.mockResolvedValue([`mewki://auth?ott=${TOKEN}`]);
+
+    await initNativeAuth(vi.fn());
+
+    await vi.waitFor(() => expect(auth.setBearer).toHaveBeenCalledWith("bearer"));
+    const [url, init] = fetch.mock.calls[0];
+    expect(String(url)).toMatch(/\/auth\/one-time-token\/verify$/);
+    expect(init).toMatchObject({
+      method: "POST",
+      headers: { "x-mewki-verifier": "my-verifier" },
+      body: JSON.stringify({ token: TOKEN }),
+    });
+    expect(tauri.invoke).toHaveBeenCalledWith("plugin:keyring-store|set_passwords", {
+      entries: [{ account: "mewki.session", secret: "bearer" }],
+    });
+    expect(tauri.invoke).toHaveBeenCalledWith("plugin:keyring-store|delete_passwords", {
+      accounts: ["mewki.google-verifier"],
+    });
+  });
+
+  it("never calls the server without a Google request from this device", async () => {
+    vi.stubGlobal("window", { location: { origin: "tauri://localhost" } });
+    tauri.invoke.mockResolvedValue([null]);
+    const fetch = vi.fn();
+    vi.stubGlobal("fetch", fetch);
+    tauri.getCurrent.mockResolvedValue([`mewki://auth?ott=${TOKEN.toLowerCase()}`]);
+    const onError = vi.fn();
+
+    await initNativeAuth(onError);
+
+    await vi.waitFor(() => expect(onError).toHaveBeenCalled());
+    expect(fetch).not.toHaveBeenCalled();
+    expect(auth.setBearer).not.toHaveBeenCalled();
   });
 });
 

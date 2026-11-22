@@ -65,7 +65,8 @@ um lado só.
 - Web: `authClient.signIn.social({ provider: "google", callbackURL, errorCallbackURL })`. Mesmo
   `GOOGLE_CLIENT_ID/SECRET` da integração Agenda; redirect URI nova:
   `https://api.mewki.mxrqz.com/auth/callback/google`. `accountLinking.trustedProviders: ["google"]`.
-- App (depois): navegador do sistema + `oneTimeToken()` → `mewki://auth?ott=…`.
+- App: navegador do sistema (`/auth/google?challenge=`) + `oneTimeToken()` → `mewki://auth?ott=…`,
+  amarrado ao verifier do app como o magic link (`apps/server/CLAUDE.md`, Auth).
 
 ## Contrato do cliente web — `apps/web/src/lib/auth.ts` (já existe)
 

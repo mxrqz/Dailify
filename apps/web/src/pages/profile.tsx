@@ -21,7 +21,8 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { authClient, settle, useSession } from "@/lib/auth";
+import { useUser } from "@/hooks/useUser";
+import { authClient, settle } from "@/lib/auth";
 import { formString } from "@/lib/form";
 import { signOutAndReload } from "@/lib/native-auth";
 
@@ -52,7 +53,7 @@ export function ProfileHero({
 }
 
 export default function ProfilePage(): JSX.Element {
-  const user = useSession().data?.user;
+  const user = useUser();
   const [editOpen, setEditOpen] = useState(false);
   const [saving, setSaving] = useState(false);
 

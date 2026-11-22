@@ -34,13 +34,20 @@ rules: [/RULES.md](../../../../RULES.md).
   `metadata.challenge = s256(verifier)`. Verify sends `x-mewki-verifier`, reads the `set-auth-token`
   header, then deletes the verifier. The server contract lives in
   `docs/research/2026-11-17-better-auth.md` (Magic link); change both sides together.
+- Native Google: `startNativeGoogle` stores a verifier in `mewki.google-verifier` and opens
+  `${APP_URL}/auth/google?challenge=` in the system browser (`pages/auth-google.tsx`), which signs
+  in on the web and links back `mewki://auth?ott=`. The app POSTs `/auth/one-time-token/verify` with
+  `x-mewki-verifier`, then the same as a magic link. The server refuses any one-time token without
+  its challenge, so a crafted link can't sign the app into another account. The app then shares the
+  browser's session (signing out of one ends the other).
 - After a session change Better Auth doesn't signal itself (magic-link verify, bearer restore),
   call `authClient.$store.notify("$sessionSignal")`, or `useSession` keeps the stale atom.
 
 ## Deep links: the trust boundary
 
-- `parseAuthLink` accepts only `mewki://auth?token=` and `https://<APP_HOST>/auth/app?token=`, with
-  one token matching `TOKEN_RE` and no port, credentials or hash. `parseOpenLink` accepts
+- `parseAuthLink` accepts only `mewki://auth` and `https://<APP_HOST>/auth/app`, with exactly one
+  query param, `token` (magic link) or `ott` (Google), matching `TOKEN_RE`, and no port, credentials
+  or hash. `parseOpenLink` accepts
   `mewki://open/<path>` and `https://<APP_HOST>/app/<path>`; a path `internalPath` rejects becomes
   `/dashboard`, without its query.
 - Change them only together with `native-auth.test.ts`.
@@ -51,7 +58,7 @@ rules: [/RULES.md](../../../../RULES.md).
 ## Sign-out
 
 - `signOut()` clears the last-user marker; in the app it also clears the bearer and both keyring
-  accounts, even when the server call fails. `signedOutPath()` is `/login` in the app (no landing)
+  accounts (and the Google verifier), even when the server call fails. `signedOutPath()` is `/login` in the app (no landing)
   and `/` on the web. Callers use `signOutAndReload(path?)`, which always ends in a full page load
   (RULES.md › Security and privacy); account deletion's SESSION_EXPIRED passes
   `/login?error=SESSION_EXPIRED`, which the auth page shows as `copy.errors.reauth`.

@@ -12,7 +12,6 @@ import { useEmailLinkAuth } from "@/components/auth/use-email-link-auth";
 import { Splash } from "@/components/splash";
 import { useSession } from "@/lib/auth";
 import { isSigningIn, onSigningIn } from "@/lib/native-auth";
-import { isTauri } from "@/lib/platform";
 
 /**
  * Corpo comum de /login e /signup. As duas rotas são a MESMA mecânica — a separação é de
@@ -93,10 +92,7 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
             defaultEmail={(state.status === "error" ? state.email : undefined) ?? carried}
             onEmailChange={setEmail}
           />
-          {/* Google no app é a bd rzz.8: o redirect da webview não volta com a sessão. */}
-          {!isTauri() && (
-            <OAuthButtons onGoogle={signInWithGoogle} disabled={state.status === "sending"} />
-          )}
+          <OAuthButtons onGoogle={signInWithGoogle} disabled={state.status === "sending"} />
         </>
       )}
       {/* Fora do condicional: o reenvio, na caixa de entrada, também precisa do widget montado. */}
