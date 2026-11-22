@@ -5,12 +5,13 @@ import { renderToStaticMarkup } from "react-dom/server";
 
 import { MewArt, restPose, type Pose } from "@/components/mew/mew-static";
 
-// Token hex (resvg reads no oklch or Tailwind): white head, ink eyes, ink-secondary outline. One
-// transparent GIF serves both themes: the grey outline reads on the white and the dark card.
+// Token hex (resvg reads no oklch or Tailwind): the app icon's look, a canvas-white Mew on an ink
+// tile, so one GIF reads on the white card and the dark one (a white Mew on white vanished).
 const STYLE =
-  "<style>.fill-surface{fill:#ffffff}.fill-ink{fill:#131110}.stroke-ink{stroke:#131110}" +
-  ".stroke-ink-secondary{stroke:#666261}.fill-none{fill:none}.stroke-none{stroke:none}" +
+  "<style>.fill-surface{fill:#f6f5f4}.fill-ink{fill:#131110}.stroke-ink{stroke:#131110}" +
+  ".stroke-ink-secondary{stroke:none}.fill-none{fill:none}.stroke-none{stroke:none}" +
   ".mew-x,.mew-q,[data-mew=dot]{display:none}</style>";
+const TILE = '<rect x="-260" y="-300" width="1800" height="1800" rx="400" fill="#131110"/>';
 const PX = 96;
 // resvg has no non-scaling-stroke: half of the stroke hides under the head fill, so 58 viewBox
 // units ≈ 2 px visible at 96 px. The head paths sit under HEAD_T's scale(.1), the seam doesn't.
@@ -35,7 +36,7 @@ const svg = (pose: Pose, blink: number) =>
     .replace(/^<span[^>]*>|<\/span>$/g, "")
     .replace(
       /<svg [^>]*>/,
-      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-60 -60 1400 1400">${STYLE}`,
+      `<svg xmlns="http://www.w3.org/2000/svg" viewBox="-260 -300 1800 1800">${STYLE}${TILE}`,
     )
     .replaceAll(`stroke-linejoin="round" ${NON_SCALING}`, `stroke-width="${OUTLINE * 10}"`)
     .replaceAll(NON_SCALING, `stroke-width="${OUTLINE}"`)
