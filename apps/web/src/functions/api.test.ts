@@ -6,7 +6,7 @@ const auth = vi.hoisted(() => ({
 }));
 vi.mock("@/lib/auth", () => auth);
 
-import { createCalendarEvent, createTaskVoice, deleteTask, getUndatedTasks } from "./api";
+import { createCalendarEvent, createTaskVoice, deleteTask, syncTasks } from "./api";
 
 const fetchMock = vi.fn<typeof fetch>();
 const respond = (status: number, body: string) =>
@@ -20,23 +20,30 @@ afterEach(() => {
 });
 
 describe("request", () => {
+  it("sends the cursor and the app zone to the pull", async () => {
+    respond(200, JSON.stringify({ full: false, tasks: [], deleted: [], cursor: "c2" }));
+    const { sync } = await syncTasks("a/b");
+    expect(sync?.cursor).toBe("c2");
+    expect(String(fetchMock.mock.calls[0][0])).toMatch(/\/tasks\/sync\?since=a%2Fb&tz=/);
+  });
+
   it("reports a rejected fetch as offline", async () => {
     fetchMock.mockRejectedValueOnce(new TypeError("Failed to fetch"));
-    const { tasks, error } = await getUndatedTasks();
-    expect(tasks).toEqual([]);
+    const { sync, error } = await syncTasks();
+    expect(sync).toBeUndefined();
     expect(error?.offline).toBe(true);
   });
 
   it("turns an HTML 502 into a status-only error", async () => {
     respond(502, "<html>Bad gateway</html>");
-    const { error } = await getUndatedTasks();
+    const { error } = await syncTasks();
     expect(error).toMatchObject({ offline: false, status: 502, code: undefined });
     expect(error?.message).toContain("502");
   });
 
   it("fires the session signal on a 401", async () => {
     respond(401, JSON.stringify({ error: "Unauthorized" }));
-    const { error } = await getUndatedTasks();
+    const { error } = await syncTasks();
     expect(error).toMatchObject({ status: 401, message: "Unauthorized" });
     expect(auth.authClient.$store.notify).toHaveBeenCalledWith("$sessionSignal");
   });

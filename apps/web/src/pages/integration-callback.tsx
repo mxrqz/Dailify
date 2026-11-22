@@ -4,10 +4,10 @@ import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import { API_ERROR, isProviderId } from "@dailify/shared";
 
-import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
 import { completeIntegration } from "@/functions/api";
 import { fill } from "@/functions/functions";
+import { pullTasks } from "@/functions/task-store";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 
 const t = copy.integrations;
@@ -17,7 +17,6 @@ export default function IntegrationCallback(): JSX.Element {
   const { provider } = useParams();
   const [params] = useSearchParams();
   const navigate = useNavigate();
-  const { reloadMonths, loadedMonths } = useDailify();
   const app = isProviderId(provider) ? t.apps[provider] : undefined;
   const name = app?.name ?? "";
   // O state é de uso único: o segundo efeito do StrictMode mandaria um POST que volta 400.
@@ -40,8 +39,8 @@ export default function IntegrationCallback(): JSX.Element {
     if (error?.status === 403) return fail(t.wrongUser);
     if (error) return fail(t.failed);
 
-    // O servidor já importou os eventos da Agenda: a lista relê os meses pra eles aparecerem.
-    void reloadMonths(loadedMonths);
+    // O servidor já importou os eventos da Agenda: o pull os traz.
+    void pullTasks();
     toast.success(app.connected);
     navigate("/integrations", { replace: true });
   });

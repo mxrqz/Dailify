@@ -5,16 +5,14 @@ import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { API_ERROR } from "@dailify/shared";
 
-const { completeIntegration, toast, reloadMonths } = vi.hoisted(() => ({
-  reloadMonths: vi.fn(),
+const { completeIntegration, toast, pullTasks } = vi.hoisted(() => ({
+  pullTasks: vi.fn(),
   completeIntegration: vi.fn(),
   toast: { error: vi.fn(), success: vi.fn() },
 }));
 vi.mock("@/functions/api", () => ({ completeIntegration }));
 vi.mock("sonner", () => ({ toast }));
-vi.mock("@/components/dailifyContext", () => ({
-  useDailify: () => ({ reloadMonths, loadedMonths: [] }),
-}));
+vi.mock("@/functions/task-store", () => ({ pullTasks }));
 
 import IntegrationCallback from "./integration-callback";
 import { copy } from "@/components/dashboard/copy";
@@ -44,7 +42,7 @@ describe("<IntegrationCallback>", () => {
     expect(completeIntegration).toHaveBeenCalledTimes(1);
     expect(completeIntegration).toHaveBeenCalledWith("google-calendar", "c", "s");
     expect(toast.success).toHaveBeenCalledWith("Agenda conectada");
-    expect(reloadMonths).toHaveBeenCalledTimes(1);
+    expect(pullTasks).toHaveBeenCalledTimes(1);
   });
 
   it("access_denied não chama o servidor", async () => {

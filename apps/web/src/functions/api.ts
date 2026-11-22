@@ -9,6 +9,7 @@ import type {
   OccurrenceEdit,
   Task,
   TaskInput,
+  TaskSync,
   QuotaSnapshot,
   PaymentDetails,
   Invoice,
@@ -114,9 +115,12 @@ export async function getTasksForMonth(month: Date): Promise<{ tasks: Task[]; er
   return { tasks: data?.tasks ?? [], error };
 }
 
-export async function getUndatedTasks(): Promise<{ tasks: Task[]; error?: ApiError }> {
-  const { data, error } = await request<{ tasks?: Task[] }>("/tasks/undated");
-  return { tasks: data?.tasks ?? [], error };
+/** Stored rows changed since `since` (the last pull's cursor), or the whole window without one. */
+export async function syncTasks(since?: string): Promise<{ sync?: TaskSync; error?: ApiError }> {
+  const tz = encodeURIComponent(appTimeZone());
+  const after = since ? `since=${encodeURIComponent(since)}&` : "";
+  const { data, error } = await request<TaskSync>(`/tasks/sync?${after}tz=${tz}`);
+  return { sync: data, error };
 }
 
 export async function getSettings(): Promise<{ settings?: UserSettings; error?: ApiError }> {

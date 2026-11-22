@@ -3,21 +3,22 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, render, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
-const { api, offline, dailify, session } = vi.hoisted(() => ({
+const { api, offline, store, dailify, session } = vi.hoisted(() => ({
   api: {
-    getTasksForMonth: vi.fn(async () => ({ tasks: [] })),
     getQuotas: vi.fn(async () => ({})),
-    getUndatedTasks: vi.fn(async () => ({ tasks: [] })),
     getSettings: vi.fn(async () => ({})),
   },
   offline: {
     flushQueue: vi.fn(),
-    cacheTasks: vi.fn(),
-    cacheUndated: vi.fn(),
-    readCachedTasks: vi.fn(),
-    readCachedUndated: vi.fn(),
     readLastUser: vi.fn(),
     rememberUser: vi.fn(),
+  },
+  store: {
+    openTasks: vi.fn(async () => {}),
+    pullTasks: vi.fn(
+      async (): Promise<{ message: string; offline: boolean } | undefined> => undefined,
+    ),
+    tasksSnapshot: () => ({ dated: [], undated: [], months: [] }),
   },
   session: {
     current: (): { data: unknown; error: unknown; isPending: boolean } => ({
@@ -28,21 +29,17 @@ const { api, offline, dailify, session } = vi.hoisted(() => ({
   },
   dailify: {
     tasks: [],
-    selectedDay: new Date(2026, 9, 23),
     setTasks: vi.fn(),
     setIsLoading: vi.fn(),
     isLoading: false,
-    loadedMonths: [],
-    loadMonth: vi.fn(async () => {}),
-    reloadMonths: vi.fn(async () => undefined),
     setQuotas: vi.fn(),
-    undatedTasks: [],
     setUndatedTasks: vi.fn(),
     setWeekStart: vi.fn(),
   },
 }));
 vi.mock("@/functions/api", () => api);
 vi.mock("@/functions/offline", () => offline);
+vi.mock("@/functions/task-store", () => store);
 vi.mock("./dailifyContext", () => ({ useDailify: () => dailify, reportLoadError: vi.fn() }));
 // Objeto novo a cada render, como o do Better Auth no refetch: o gate depende do id, não dele.
 vi.mock("@/lib/auth", () => ({
@@ -64,10 +61,9 @@ const app = () => (
 describe("<ProtectedRoute>", () => {
   beforeEach(() => {
     offline.flushQueue.mockResolvedValue({ sent: 0, dropped: 0, offline: false });
-    dailify.selectedDay = new Date(2026, 9, 23);
   });
 
-  it("lê a Sem data só depois que a fila offline subiu", async () => {
+  it("opens the store, then flushes the outbox, and only then pulls", async () => {
     let flushed!: () => void;
     offline.flushQueue.mockReturnValue(
       new Promise((resolve) => {
@@ -77,16 +73,17 @@ describe("<ProtectedRoute>", () => {
 
     render(app());
 
-    await waitFor(() => expect(offline.flushQueue).toHaveBeenCalled());
-    expect(api.getUndatedTasks).not.toHaveBeenCalled();
+    await waitFor(() => expect(offline.flushQueue).toHaveBeenCalledWith("u1"));
+    expect(store.openTasks).toHaveBeenCalledWith("u1");
+    expect(store.pullTasks).not.toHaveBeenCalled();
 
     await act(async () => flushed());
-    expect(api.getUndatedTasks).toHaveBeenCalledTimes(1);
+    expect(store.pullTasks).toHaveBeenCalledTimes(1);
   });
 
-  it("carrega uma vez: re-render com tarefas novas não refaz nenhuma leitura", async () => {
+  it("boots once: re-renders with new tasks redo no read", async () => {
     const { rerender } = render(app());
-    await waitFor(() => expect(dailify.reloadMonths).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(store.pullTasks).toHaveBeenCalledTimes(1));
 
     for (let i = 0; i < 3; i++) {
       dailify.tasks = [];
@@ -94,47 +91,46 @@ describe("<ProtectedRoute>", () => {
     }
     await act(async () => {});
 
-    expect(dailify.reloadMonths).toHaveBeenCalledTimes(1);
+    expect(store.pullTasks).toHaveBeenCalledTimes(1);
     expect(offline.flushQueue).toHaveBeenCalledTimes(1);
-    expect(api.getUndatedTasks).toHaveBeenCalledTimes(1);
+    expect(api.getSettings).toHaveBeenCalledTimes(1);
     expect(api.getQuotas).toHaveBeenCalledTimes(1);
-    expect(dailify.loadMonth).not.toHaveBeenCalled();
   });
 
-  it("dia em outro mês só soma aquele mês; a revalidação usa o dia de agora", async () => {
-    const { rerender } = render(app());
-    await waitFor(() => expect(dailify.reloadMonths).toHaveBeenCalledTimes(1));
-
-    const later = new Date(2027, 2, 10);
-    dailify.selectedDay = later;
-    rerender(app());
-    await waitFor(() => expect(dailify.loadMonth).toHaveBeenCalledWith(later));
-    expect(dailify.loadMonth).toHaveBeenCalledTimes(1);
-    expect(dailify.reloadMonths).toHaveBeenCalledTimes(1);
-
-    // Reconectar ignora o piso de 30s.
-    await act(async () => window.dispatchEvent(new Event("online")));
-    await waitFor(() => expect(dailify.reloadMonths).toHaveBeenCalledTimes(2));
-    expect(dailify.reloadMonths).toHaveBeenLastCalledWith(expect.arrayContaining([later]));
-  });
-
-  // O cache da agenda não serializa a cada setTasks; sair da página grava o pendente.
-  it("grava o cache adiado e descarrega no pagehide", async () => {
+  it("going online flushes and pulls again, ignoring the 30 s floor", async () => {
     render(app());
-    await act(async () => {});
-    expect(offline.cacheTasks).not.toHaveBeenCalled();
+    await waitFor(() => expect(store.pullTasks).toHaveBeenCalledTimes(1));
 
-    window.dispatchEvent(new Event("pagehide"));
-    expect(offline.cacheTasks).toHaveBeenCalledTimes(1);
-    expect(offline.cacheTasks).toHaveBeenCalledWith("u1", dailify.tasks);
+    await act(async () => window.dispatchEvent(new Event("online")));
+    await waitFor(() => expect(store.pullTasks).toHaveBeenCalledTimes(2));
+    expect(offline.flushQueue).toHaveBeenCalledTimes(2);
+  });
 
-    // Já gravado: o timer e um segundo pagehide não regravam.
-    window.dispatchEvent(new Event("pagehide"));
-    expect(offline.cacheTasks).toHaveBeenCalledTimes(1);
+  it("fills empty lists when neither the store nor the pull had any", async () => {
+    store.pullTasks.mockResolvedValueOnce({ message: "", offline: true });
+    render(app());
+    await waitFor(() => expect(dailify.setTasks).toHaveBeenCalled());
+    const [fill] = dailify.setTasks.mock.calls[0];
+    expect(fill(undefined)).toEqual([]);
+    expect(fill([1])).toEqual([1]);
+  });
+
+  it("boots the other account when the user changes", async () => {
+    const original = session.current;
+    try {
+      const view = render(app());
+      await waitFor(() => expect(store.openTasks).toHaveBeenCalledWith("u1"));
+      session.current = () => ({ data: { user: { id: "u2" } }, error: null, isPending: false });
+      view.rerender(app());
+      await waitFor(() => expect(store.openTasks).toHaveBeenCalledWith("u2"));
+      expect(store.pullTasks).toHaveBeenCalledTimes(2);
+    } finally {
+      session.current = original;
+    }
   });
 
   // O splash só segura quem montou carregando: trocar de rota com tudo em mãos abre a rota direto.
-  it("carregando mostra o splash e não a rota; com os dados em mãos, a rota sem espera", () => {
+  it("shows the splash and not the route while loading; with data in hand, the route at once", () => {
     Object.assign(dailify, { isLoading: true, tasks: undefined });
     try {
       const loading = render(app());
@@ -154,23 +150,21 @@ describe("<ProtectedRoute>", () => {
       session.current = original;
     });
 
-    it("rede/5xx segue offline com o último usuário e pinta o cache", async () => {
+    it("a network or 5xx error goes on offline with the last user and paints their store", async () => {
       session.current = () => ({ data: null, error: { status: 503 }, isPending: false });
       offline.readLastUser.mockReturnValue({ id: "u1", name: "", email: "a@b.c" });
-      offline.readCachedTasks.mockReturnValue([{ id: "t1" }]);
       Object.assign(dailify, { tasks: undefined });
       try {
         const view = render(app());
         await act(async () => {});
         expect(view.queryByText("login")).toBeNull();
-        expect(offline.readCachedTasks).toHaveBeenCalledWith("u1");
-        expect(dailify.setTasks).toHaveBeenCalledWith([{ id: "t1" }]);
+        expect(store.openTasks).toHaveBeenCalledWith("u1");
       } finally {
         Object.assign(dailify, { tasks: [] });
       }
     });
 
-    it("401 é sair de verdade: vai pro /login mesmo com usuário salvo", async () => {
+    it("a 401 is a real sign-out: /login even with a saved user", async () => {
       session.current = () => ({ data: null, error: { status: 401 }, isPending: false });
       offline.readLastUser.mockReturnValue({ id: "u1", name: "", email: "a@b.c" });
       const view = render(app());
