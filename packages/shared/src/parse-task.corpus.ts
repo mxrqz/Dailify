@@ -6,6 +6,7 @@ import holdoutEn from "./parse-task.corpus/holdout-en";
 import holdoutPt from "./parse-task.corpus/holdout-pt";
 import holdout2En from "./parse-task.corpus/holdout2-en";
 import holdout2Pt from "./parse-task.corpus/holdout2-pt";
+import holdout3Pt from "./parse-task.corpus/holdout3-pt";
 import type { CorpusEntry } from "./parse-task.corpus/kit";
 import mix from "./parse-task.corpus/mix";
 import ptDates from "./parse-task.corpus/pt-dates";
@@ -26,7 +27,7 @@ export const corpus: CorpusEntry[] = [
   ...enMisc,
   ...mix,
   ...unsure,
-  ...[...holdoutPt, ...holdoutEn, ...holdout2Pt, ...holdout2En].map((entry) => ({
+  ...[...holdoutPt, ...holdoutEn, ...holdout2Pt, ...holdout2En, ...holdout3Pt].map((entry) => ({
     ...entry,
     holdout: true,
   })),

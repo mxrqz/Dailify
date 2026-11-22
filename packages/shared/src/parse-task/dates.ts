@@ -36,6 +36,31 @@ export function dated(now: Date, month: number, day: number, rawYear?: string): 
   return date.getDate() === day && date.getMonth() === month ? date : null;
 }
 
+// "26-11", "03-12", "17.11": day-month written with a dash or a dot. A dash is an hour range unless
+// the day can't be an hour of one ("26") or is zero-padded; a dot is a clock unless the month can't
+// pass for round minutes ("17.10" stays 17:10). After "às" both are the clock.
+const SEPARATED_DATE_RE =
+  /(?<!(?:\b(?:as|a|at|pelas|das|de|from|entre|ate|versao|version|v)|r\$|\$|@)\s*)(?<![\d/.:,-])\b(\d{1,2})([-.])(\d{2})\b(?![-/.:,]?\d|\s*h\b)/g;
+
+/** `text` (normalized) with those separators turned into "/", same length, for the `15/08` reader. */
+export function slashDates(input: string, text: string): string {
+  const out = text.split("");
+  // The normalize turned the dash into a space; put it back to read the shape.
+  const probe = out.map((char, i) => (input[i] === "-" ? "-" : char)).join("");
+  for (const found of probe.matchAll(SEPARATED_DATE_RE)) {
+    const [, rawDay, sep, rawMonth] = found;
+    const [day, month] = [Number(rawDay), Number(rawMonth)];
+    const date =
+      day >= 1 &&
+      day <= 31 &&
+      month >= 1 &&
+      month <= 12 &&
+      (sep === "-" ? day > 12 || rawDay.startsWith("0") : month % 5 !== 0);
+    if (date) out[(found.index ?? 0) + rawDay.length] = "/";
+  }
+  return out.join("");
+}
+
 const ORDINAL = "(?:st|nd|rd|th)\\b";
 const dayNumber = (raw: string) =>
   raw === "primeiro" ? 1 : (HOUR_WORDS[raw.replace(/\s+/g, " ")] ?? Number(raw));
@@ -73,15 +98,15 @@ function weekdayInContext(text: string, match: RegExpMatchArray): boolean {
 }
 
 // "segunda, 23 de novembro" / "4 de dezembro, sexta": o dia da semana colado na data só a confirma.
+// One that contradicts it ("segunda dia 18", a Wednesday) stays in the title for `unsure` to see.
 function withWeekday(text: string, match: RegExpMatchArray, date: Date): Hit<Date> {
   const [start, end] = spanOf(match);
   const spans: Span[] = [[start, end]];
-  const before = text
-    .slice(0, start)
-    .match(new RegExp(`\\b(?:${WEEKDAY_RE})(?:\\s*feira)?[\\s,]*$`));
-  if (before) spans.push([before.index ?? 0, start]);
-  const after = text.slice(end).match(new RegExp(`^[\\s,]*(?:${WEEKDAY_RE})(?:\\s*feira)?\\b`));
-  if (after) spans.push([end, end + after[0].length]);
+  const names = (found: RegExpMatchArray | null) => found && WEEKDAYS[found[1]] === date.getDay();
+  const before = text.slice(0, start).match(new RegExp(`\\b(${WEEKDAY_RE})(?:\\s*feira)?[\\s,]*$`));
+  if (before && names(before)) spans.push([before.index ?? 0, start]);
+  const after = text.slice(end).match(new RegExp(`^[\\s,]*(${WEEKDAY_RE})(?:\\s*feira)?\\b`));
+  if (after && names(after)) spans.push([end, end + after[0].length]);
   return { value: date, spans };
 }
 
