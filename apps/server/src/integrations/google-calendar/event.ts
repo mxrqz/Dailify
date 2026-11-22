@@ -86,7 +86,7 @@ export function toEvent(task: Task, timeZone: string, opts: { meet: boolean }): 
   let startParts: ZonedParts;
   if (slot.allDay) {
     startParts = slot.day;
-    const next = new Date(Date.UTC(slot.day.year, slot.day.month, slot.day.day + 1));
+    const next = new Date(Date.UTC(slot.day.year, slot.day.month, slot.day.day + slot.days));
     start = { date: isoDate(slot.day) };
     end = { date: next.toISOString().slice(0, 10) };
   } else {

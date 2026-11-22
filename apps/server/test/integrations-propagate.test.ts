@@ -142,6 +142,15 @@ describe("propagação de tarefa vinculada", () => {
     expect(bodyOf()).toEqual({ description: "Criado pela Mewki\nhttps://x.com/doc" });
   });
 
+  it("a multi-day task moved to another day goes out all-day, not 00:00 to 00:00", async () => {
+    await seed({ date: at(16, 0), duration: "48h" });
+    await patch({ date: at(20, 0) });
+    expect(bodyOf()).toEqual({
+      start: { date: "2026-11-20", dateTime: null, timeZone: null },
+      end: { date: "2026-11-22", dateTime: null, timeZone: null },
+    });
+  });
+
   it("evento vinculado (não criado pela Mewki): nunca description/location/extendedProperties", async () => {
     await seed({}, { external: "ev1" });
     await patch({ title: "Dentista", links: [HTML, "https://x.com/doc"] });

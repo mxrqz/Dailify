@@ -34,6 +34,8 @@ tokens, `propagate`) is in `../CLAUDE.md`.
 - PATCH merges objects: `start`/`end` spread `CLEAR_WHEN` (null `date`/`dateTime`/`timeZone`), or
   switching all-day <-> timed keeps both. A body with `conferenceData` needs
   `?conferenceDataVersion=1` (`conferenceQuery`), or Google ignores it.
+- A dated task from midnight to midnight in the zone goes out all-day (`calendarSlot`, shared), so
+  a re-pushed multi-day import stays all-day.
 - Every write stores the response `updated` as `remote_updated`; sync uses it to skip its own echo.
 - 404/410 on PATCH/DELETE returns `"unlink"`. The `htmlLink` in `task.links` is what the web reads
   as "already linked" (`isCalendarEventLink`, shared), so unlinking also removes that URL from the

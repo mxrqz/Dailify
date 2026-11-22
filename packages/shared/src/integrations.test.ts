@@ -76,6 +76,21 @@ describe("calendário", () => {
     expect(calendarSlot(task({ undated: true }), TZ)).toBeNull();
   });
 
+  it("slot: midnight to midnight in the zone is all-day for that many days", () => {
+    expect(calendarSlot(task({ date: at(20, 0), duration: "72h" }), TZ)).toMatchObject({
+      allDay: true,
+      day: { year: 2026, month: 10, day: 20 },
+      days: 3,
+    });
+    // Midnight start but a part-day end, or a whole-day span off midnight, stays timed.
+    expect(calendarSlot(task({ date: at(20, 0), duration: "30h" }), TZ)?.allDay).toBe(false);
+    expect(calendarSlot(task({ date: at(20, 1), duration: "48h" }), TZ)?.allDay).toBe(false);
+    // Midnight in UTC is 21:00 in São Paulo: not all-day there.
+    expect(calendarSlot(task({ date: Date.UTC(2026, 10, 20), duration: "48h" }), TZ)?.allDay).toBe(
+      false,
+    );
+  });
+
   it("preview diz quando e se cria Meet", () => {
     expect(calendarEventPreview(task(), TZ, { meet: true, now })).toBe(
       "Criar evento na Agenda · amanhã 15:00–15:30 · com Meet",
