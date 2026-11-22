@@ -13,6 +13,7 @@ export const sharedCopy = {
     "google-calendar": "Google Agenda",
     slack: "Slack",
     gmail: "Gmail",
+    github: "GitHub",
   } satisfies Record<ProviderId, string>,
   /** Sunday first, as `Date#getDay`. */
   weekdays: ["domingo", "segunda", "terça", "quarta", "quinta", "sexta", "sábado"],

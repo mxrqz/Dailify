@@ -22,10 +22,10 @@ describe("integrations", () => {
     expect(isProviderId("google-calendar")).toBe(true);
     expect(isProviderId("toString")).toBe(false);
     expect(isProviderId(1)).toBe(false);
-    expect(PROVIDER_IDS).toEqual(["google-calendar", "slack", "gmail"]);
+    expect(PROVIDER_IDS).toEqual(["google-calendar", "slack", "gmail", "github"]);
   });
 
-  it.each(["slack", "gmail"] as const)("%s is Pro and up", (id) => {
+  it.each(["slack", "gmail", "github"] as const)("%s is Pro and up", (id) => {
     expect(canUseIntegration("free", id)).toBe(false);
     for (const role of ["pro", "max", "admin"] as const)
       expect(canUseIntegration(role, id)).toBe(true);
