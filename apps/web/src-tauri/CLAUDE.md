@@ -99,7 +99,8 @@ Flow and keyring accounts: `apps/web/src/lib/CLAUDE.md`; contract:
 ## `gen/android`
 
 - Committed and partly hand-edited, so never re-run `tauri android init`. Hand edits:
-  `app/build.gradle.kts` (signing block), `MainActivity.kt` (`enableEdgeToEdge()`, below), and
+  `app/build.gradle.kts` (signing block), `MainActivity.kt` (`enableEdgeToEdge()`, below, and the IME inset padding that makes the
+  WebView shrink for the keyboard, which SDK 35 edge-to-edge no longer does), and
   `res/values{,-night}/themes.xml`, whose `windowBackground` is the light/dark `--canvas` hex: the
   webview is transparent, so it is the boot background. Change them with `--canvas` in
   `apps/web/src/global.css`, along with `backgroundColor` (the dark one) in `tauri.conf.json`.
