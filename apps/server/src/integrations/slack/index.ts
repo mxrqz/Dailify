@@ -84,6 +84,32 @@ async function resolve(
   return { channel: id };
 }
 
+/** Target `*`: the workspace, who the user is and the conversations they're in, by name. */
+async function overview(ctx: Ctx): Promise<string> {
+  const [me, list, team] = await Promise.all([
+    call(ctx, "auth.test", {}),
+    call(ctx, "conversations.list", {
+      types: "public_channel,private_channel,mpim,im",
+      exclude_archived: "true",
+      limit: "200",
+    }),
+    people(ctx),
+  ]);
+  const names = new Map(team.map((p) => [p.id, p.label]));
+  const conversations = records(list.channels);
+  const channels = conversations
+    .filter((c) => c.is_member === true && !c.is_im)
+    .map((c) => `#${str(c.name)}${c.is_private === true ? " (privado)" : ""}`);
+  const dms = conversations
+    .filter((c) => c.is_im === true && !c.is_user_deleted)
+    .map((c) => `@${names.get(str(c.user)) ?? str(c.user)}`);
+  return [
+    `Workspace: ${str(me.team)} (${str(me.url)}); a pessoa é @${names.get(str(me.user_id)) ?? str(me.user)}`,
+    `Canais em que ela está: ${channels.join(", ") || "(nenhum)"}`,
+    `DMs: ${dms.join(", ") || "(nenhuma)"}`,
+  ].join("\n");
+}
+
 async function connected(env: Env, userId: string) {
   const ctx = await loadCtx(env, userId, "slack");
   if (!ctx) throw new Error("slack is not connected");
@@ -121,10 +147,11 @@ export const slack: Provider = {
       email: URL.canParse(url) ? new URL(url).host : null,
     };
   },
-  target: `canal "#geral", pessoa "@nome" (a DM com ela) ou o link de uma mensagem (a thread dela)`,
+  target: `"*" (o workspace, a conta e os canais e DMs da pessoa: leia este antes de adivinhar um canal), canal "#geral", pessoa "@nome" (a DM com ela) ou o link de uma mensagem (a thread dela)`,
   async read(env, userId, target) {
     const ctx = await connected(env, userId);
     try {
+      if (target.trim() === "*") return await overview(ctx);
       let team: Promise<Person[]> | undefined;
       const members = () => (team ??= people(ctx));
       const to = await resolve(ctx, target, members);

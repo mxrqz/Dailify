@@ -159,6 +159,26 @@ describe("Slack read", () => {
     );
   });
 
+  it("*: the workspace, the user and the conversations they're in, by name", async () => {
+    routes[`${API}/conversations.list`] = () =>
+      ok({
+        channels: [
+          { id: "C100GERAL", name: "geral", is_channel: true, is_member: true },
+          { id: "C300PROJ", name: "projeto", is_private: true, is_member: true },
+          { id: "C400OUTRO", name: "outro", is_channel: true, is_member: false },
+          { id: "D200JOAO", is_im: true, user: "U2" },
+        ],
+      });
+    expect(await slack.read?.(env, userId, "*")).toBe(
+      [
+        "Workspace: Acme (https://acme.slack.com/); a pessoa é @Eu Mesma",
+        "Canais em que ela está: #geral, #projeto (privado)",
+        "DMs: @João",
+      ].join("\n"),
+    );
+    expect(callsTo("conversations.history")).toHaveLength(0);
+  });
+
   it("a person: their DM", async () => {
     await slack.read?.(env, userId, "@joão");
     expect(query("conversations.history").get("channel")).toBe("D200JOAO");
