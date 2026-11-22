@@ -36,7 +36,8 @@ import { fill, getCompletionDate, getTasksForDay } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
 import { openPanel } from "@/hooks/usePanel";
 import { useQuotas } from "@/hooks/useQuotas";
-import { planOf, useSession } from "@/lib/auth";
+import { useUser } from "@/hooks/useUser";
+import { planOf } from "@/lib/auth";
 import { signOutAndReload } from "@/lib/native-auth";
 import { cn } from "@/lib/utils";
 import { SidebarItem, sidebarItemClass } from "./sidebar-item";
@@ -173,7 +174,7 @@ export function NavMenu({
 
 /** O `NavMenu` ligado à sessão e às quotas. */
 export function NavItems(): JSX.Element {
-  const user = useSession().data?.user;
+  const user = useUser();
   const { loading, states } = useQuotas();
   const ai = states.ai;
   const plan = planMap[planOf(user)] ?? planMap[PLAN_ID.free];
@@ -342,7 +343,7 @@ export function SidebarMenu({
 
 /** A coluna de vidro do desktop. No mobile quem serve a navegação é o `MobileNav`, no header. */
 export function Sidebar(): JSX.Element {
-  const user = useSession().data?.user;
+  const user = useUser();
   const { tasks } = useDailify();
   const { loading, states } = useQuotas();
   const today = useNow("day");

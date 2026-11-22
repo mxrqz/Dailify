@@ -9,11 +9,11 @@ import {
   flushQueue,
   readCachedTasks,
   readCachedUndated,
-  readLastUser,
   rememberUser,
 } from "@/functions/offline";
 import { fill, initialMonths } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
+import { useUser } from "@/hooks/useUser";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { AnimatePresence } from "motion/react";
 import { Splash, SPLASH_MIN_MS } from "@/components/splash";
@@ -33,8 +33,7 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const user = session.data?.user;
   // Rede ou 5xx no get-session não é sair: segue com quem estava logado e pinta o cache. Só um
   // 401 (ou resposta sem sessão) manda pro /login.
-  const unreachable = !user && session.error && session.error.status !== 401;
-  const userId = user?.id ?? (unreachable ? readLastUser()?.id : undefined);
+  const userId = useUser()?.id;
   const {
     tasks,
     selectedDay,

@@ -16,7 +16,7 @@ import { revertTask } from "@/functions/revert-task";
 import { enqueue, shouldQueue, type Mutation } from "@/functions/offline";
 import { removeUndated, upsertUndated } from "@/functions/undated";
 import { appTimeZone } from "@/functions/zone";
-import { useSession } from "@/lib/auth";
+import { useUser } from "@/hooks/useUser";
 
 /**
  * Marcar/desmarcar/excluir/agendar na lista Sem data. Mesmo contrato de `useTaskActions` (otimista; erro de
@@ -25,7 +25,7 @@ import { useSession } from "@/lib/auth";
  */
 export function useUndatedActions(task: Task) {
   const { undatedTasks, setUndatedTasks, tasks, setTasks, loadedMonths, weekStart } = useDailify();
-  const userId = useSession().data?.user.id;
+  const userId = useUser()?.id;
 
   const done =
     task.repeat === "Off"

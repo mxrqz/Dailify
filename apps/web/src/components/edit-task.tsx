@@ -10,7 +10,7 @@ import {
 import { AddToCalendar } from "@/components/add-to-calendar";
 import { RecurrenceScopeDialog } from "@/components/dashboard/recurrence-scope-dialog";
 import type { Task } from "@dailify/shared";
-import { useSession } from "@/lib/auth";
+import { useUser } from "@/hooks/useUser";
 import { useDailify } from "./dailifyContext";
 import { Button } from "./ui/button";
 import { replaceCalendarMeet, updateTask } from "@/functions/api";
@@ -130,7 +130,7 @@ export function useTaskEditor(task: Task, day: Date, onClose: () => void, formCl
     () => [...new Set((tasks ?? []).flatMap((t) => t.tags ?? []))],
     [tasks],
   );
-  const user = useSession().data?.user;
+  const user = useUser();
   const userId = user?.id;
   const navigate = useNavigate();
   const formId = useId();

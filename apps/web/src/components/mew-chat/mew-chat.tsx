@@ -33,7 +33,7 @@ import { useOnline } from "@/hooks/useOnline";
 import { useQuotas } from "@/hooks/useQuotas";
 import { closePanel, openPanel, usePanel } from "@/hooks/usePanel";
 import { useVoiceCreate, voiceSupported } from "@/hooks/useVoiceCreate";
-import { useSession } from "@/lib/auth";
+import { useUser } from "@/hooks/useUser";
 import { cn } from "@/lib/utils";
 
 import { useMewApply } from "./apply";
@@ -75,7 +75,7 @@ export function MewChat({
   /** Bumped by `?mew=voice` (the Android assistant): each new value opens the chat listening. */
   listenSignal?: number;
 }) {
-  const userId = useSession().data?.user.id;
+  const userId = useUser()?.id;
   const [messages, dispatch] = useReducer(chatReducer, userId, loadChat);
   const [drawer, setDrawer] = useState(false);
   const inPanel = usePanel()?.kind === "mew";

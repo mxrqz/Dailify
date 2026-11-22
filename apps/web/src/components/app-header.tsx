@@ -8,7 +8,7 @@ import { Tip } from "@/components/tip";
 import { copy } from "@/components/dashboard/copy";
 import { Button } from "@/components/ui/button";
 import { CALENDAR_VIEW } from "@/consts/conts";
-import { useSession } from "@/lib/auth";
+import { useUser } from "@/hooks/useUser";
 import { cn } from "@/lib/utils";
 
 const barButton =
@@ -20,7 +20,7 @@ const barButton =
  * page's `Toolbar`. "Entrar" survives because `/premium` reuses the layout.
  */
 export function AppHeader({ className }: { className?: string }): JSX.Element {
-  const isSignedIn = Boolean(useSession().data?.user);
+  const isSignedIn = Boolean(useUser());
   const dashboard = useMatch("/dashboard") !== null;
 
   return (

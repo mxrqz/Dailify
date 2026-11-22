@@ -52,7 +52,9 @@ It owns the task boot. Other code only re-triggers loads (`pages/integration-cal
 `reloadMonths` after an import), and page-specific data loads in its page (`pages/billing.tsx`).
 
 - Session gate: a network/5xx get-session error falls back to `readLastUser()` and paints the cache;
-  only a 401 or an empty session redirects to /login.
+  only a 401 or an empty session redirects to /login. That fallback is `useUser()`
+  (`hooks/useUser.ts`), which every identity read uses (nav, profile, writers), not
+  `useSession().data?.user`.
 - Hydrates tasks and undated from the cache; writes the cache debounced (1s), flushed on `pagehide`
   and when the page goes hidden, which also refreshes the Android local alarms (`lib/reminders.ts`).
 - `getTasks`: `flushQueue` first, then undated + settings, and `reloadMonths` for the loaded months,
