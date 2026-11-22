@@ -174,7 +174,7 @@ export function TaskComposer({
   const focusText = () => textRef.current?.focus();
   const edit = (next: Edits) => setEdits((current) => ({ ...current, ...next }));
   // As palavras que deram o campo voltam pro título; sem palavras (Mew, calendário), o campo só zera.
-  const remove = (field: Field) => {
+  const remove = (field: Exclude<Field, "tags">) => {
     const spans = read.fields[field];
     if (spans.length) setIgnore((current) => [...current, ...spans]);
     setEdits((current) => {
@@ -183,6 +183,13 @@ export function TaskComposer({
       else next[field] = null;
       return next;
     });
+    focusText();
+  };
+  // Every "#tag" spelling of it goes back to the title (the parser dedupes case-insensitively).
+  const removeTag = (tag: string) => {
+    const same = (span: Span) =>
+      input.slice(span[0] + 1, span[1]).toLocaleLowerCase() === tag.toLocaleLowerCase();
+    setIgnore((current) => [...current, ...read.fields.tags.filter(same)]);
     focusText();
   };
 
@@ -490,6 +497,16 @@ export function TaskComposer({
             )}
           >
             {linkLabel(url)}
+          </MetaChip>
+        ))}
+        {parsed.tags.map((tag) => (
+          <MetaChip
+            key={tag}
+            {...size}
+            removeLabel={fill(copy.composer.removeTag, { tag })}
+            onRemove={() => removeTag(tag)}
+          >
+            {fill(copy.composer.tag, { tag })}
           </MetaChip>
         ))}
       </ChipStrip>

@@ -24,6 +24,11 @@ describe("composeTaskInput", () => {
     expect(task.repeat).toBe("Off");
   });
 
+  it("carries the text's tags, and none when there are none", () => {
+    expect(compose("comprar pão #casa").tags).toEqual(["casa"]);
+    expect(compose("comprar pão").tags).toBeUndefined();
+  });
+
   it("sem dia nem horário: Sem data, sem lembrete", () => {
     const task = compose("comprar pão");
     expect(task).toMatchObject({ undated: true, date: NOW.getTime(), repeat: "Off" });

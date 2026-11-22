@@ -39,7 +39,7 @@ export const Chip = forwardRef<HTMLButtonElement, ChipProps>(function Chip(
 ) {
   const shape = variant === "select" ? "rounded-full" : "rounded-sm";
   const face = cn(
-    "inline-flex flex-none items-center whitespace-nowrap font-medium tabular-nums transition-colors duration-fast [&_svg]:flex-none [&_svg:not([class*='size-'])]:size-4",
+    "inline-flex flex-none items-center whitespace-nowrap font-medium tabular-nums transition-[color,background-color,scale] duration-fast active:scale-97 [&_svg]:flex-none [&_svg:not([class*='size-'])]:size-4",
     size === "default" ? "h-9 text-subhead" : "text-footnote",
     size === "sm" && "h-8",
     size === "square" && "size-10 justify-center",

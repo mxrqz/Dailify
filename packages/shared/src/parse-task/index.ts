@@ -1,4 +1,5 @@
 import type { TZDate } from "@date-fns/tz";
+import { TASK_LIMITS } from "../limits";
 import { parseLinks } from "../parse-links";
 import type { ParsedTaskWire } from "../types";
 import { parseDuration } from "./durations";
@@ -35,11 +36,13 @@ import { parseWhen } from "./when";
 export { type Span, remapSpans } from "./spans";
 export { type Unsure, type UnsureCode } from "./unsure";
 
-export type Field = "day" | "time" | "duration" | "repeat" | "links";
+export type Field = "day" | "time" | "duration" | "repeat" | "links" | "tags";
 
 /** Mesmo formato que a IA devolve (`ParsedTaskWire`), com a data como `Date` e os motivos de dúvida. */
 export interface ParsedTask extends Omit<ParsedTaskWire, "date"> {
   date: Date | null;
+  /** `#word` tags, deduplicated case-insensitively, at most `TASK_LIMITS.tagsMax`. */
+  tags: string[];
   /** Por que a leitura pode estar errada; vazio = confiante. */
   unsure: Unsure[];
   /** Os trechos do input que deram cada campo; vazio = não veio do texto (IA, calendário, edição). */
@@ -51,6 +54,25 @@ const QUOTED_RE = /"([^"\n]+)"|“([^”\n]+)”/g;
 
 export const quotedSpans = (input: string): Span[] => [...input.matchAll(QUOTED_RE)].map(spanOf);
 
+// A tag starts after a space and with a letter: "#" alone, "PR #23" and a link's "/#anchor" stay.
+const TAG_RE = new RegExp(
+  `(?<!\\S)#(\\p{L}[\\p{L}\\p{N}_-]{0,${TASK_LIMITS.tagMax - 1}})(?![\\p{L}\\p{N}_-])`,
+  "gu",
+);
+
+function parseTags(text: string): { tags: string[]; spans: Span[] } {
+  const tags: string[] = [];
+  const spans: Span[] = [];
+  for (const match of text.matchAll(TAG_RE)) {
+    const tag = match[1];
+    const seen = tags.some((t) => t.toLocaleLowerCase() === tag.toLocaleLowerCase());
+    if (!seen && tags.length === TASK_LIMITS.tagsMax) continue;
+    if (!seen) tags.push(tag);
+    spans.push(spanOf(match));
+  }
+  return { tags, spans };
+}
+
 /** `ignore`: trechos que ficam no título como texto e fora da vista dos detectores. */
 export function parseTaskText(
   input: string,
@@ -61,9 +83,10 @@ export function parseTaskText(
   const normalized = normalize(input);
   const open = mask(input, keep);
   const links = parseLinks(open);
+  const tags = parseTags(mask(open, links.spans));
   // "lembrete: pagar luz amanhã": o rótulo de abertura sai do título junto com os links.
   const label = open.match(/^\s*(?:lembrete|reminder|todo|to\s*do|tarefa|task)\s*:\s*/i);
-  const fixed = label ? [...links.spans, spanOf(label)] : links.spans;
+  const fixed = [...links.spans, ...tags.spans, ...(label ? [spanOf(label)] : [])];
   const title = unquote(cut(input, fixed));
   const unsupported: ParsedTask = {
     text: title,
@@ -72,8 +95,9 @@ export function parseTaskText(
     hasDay: false,
     duration: null,
     links: links.urls,
+    tags: tags.tags,
     repeat: "Off",
-    fields: { day: [], time: [], duration: [], repeat: [], links: links.spans },
+    fields: { day: [], time: [], duration: [], repeat: [], links: links.spans, tags: tags.spans },
     unsure: unsureOf({
       input,
       normalized,
@@ -184,6 +208,7 @@ export function parseTaskText(
     hasDay: Boolean(when?.hasDay) || citesWeekday,
     duration: duration?.duration ?? null,
     links: links.urls,
+    tags: tags.tags,
     repeat: value,
     repeatEvery: repeat?.every,
     fields: {
@@ -192,6 +217,7 @@ export function parseTaskText(
       duration: duration?.spans ?? [],
       repeat: repeat?.spans ?? [],
       links: links.spans,
+      tags: tags.spans,
     },
     unsure: unsureOf({
       input,

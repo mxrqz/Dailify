@@ -424,6 +424,8 @@ export const copy = {
     removeDuration: "Tirar a duração",
     removeRepeat: "Tirar a repetição",
     removeLinks: "Tirar o link",
+    tag: "#{tag}",
+    removeTag: "Tirar a tag {tag}",
     // "Vai para Agenda | A qualquer hora | A qualquer hora · Recorrentes", antes de enviar.
     goesTo: "Vai para",
     toAgenda: "Agenda",

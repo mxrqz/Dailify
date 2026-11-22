@@ -21,7 +21,8 @@ transcript. Repo-wide rules: [/RULES.md](../../../../RULES.md)
 
 Each step masks what it consumed before the next one looks, so reordering changes results.
 
-1. Mask `ignore` and quoted spans, parse links, cut a leading `lembrete:`/`reminder:`/`todo:` label.
+1. Mask `ignore` and quoted spans, parse links, then `#tags` (after a space, letter first, capped by
+   `TASK_LIMITS`), cut a leading `lembrete:`/`reminder:`/`todo:` label.
 2. `parseInterval`, then the `UNSUPPORTED_REPEAT_RE` gate: a series `Repeat` can't hold returns
    title + links only.
 3. Mask proper nouns (`Sessão da Tarde`), then `parseDuration`. Ranges run first, so `das 15 às 16`

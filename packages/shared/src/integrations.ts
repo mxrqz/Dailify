@@ -74,18 +74,23 @@ export const INTEGRATION_ERROR = {
 /**
  * Onde a tarefa cai na agenda: com horário = início e fim; Sem data com lembrete = dia inteiro, no
  * dia do lembrete (o 09:00 é só a hora do push); Sem data sem lembrete não tem dia = `null`.
+ * Midnight to midnight in `timeZone` (an imported multi-day event) is `days` whole days.
  */
 export type CalendarSlot =
-  { allDay: false; start: number; end: number } | { allDay: true; day: ZonedParts };
+  { allDay: false; start: number; end: number } | { allDay: true; day: ZonedParts; days: number };
+
+const isMidnight = (p: ZonedParts) => p.hour === 0 && p.minute === 0 && p.second === 0;
 
 export function calendarSlot(task: Task, timeZone: string): CalendarSlot | null {
-  if (!task.undated)
-    return {
-      allDay: false,
-      start: task.date,
-      end: task.date + durationMinutes(task.duration) * 60_000,
-    };
-  return task.alert === undefined ? null : { allDay: true, day: zonedParts(task.alert, timeZone) };
+  if (task.undated)
+    return task.alert === undefined
+      ? null
+      : { allDay: true, day: zonedParts(task.alert, timeZone), days: 1 };
+  const end = task.date + durationMinutes(task.duration) * 60_000;
+  const [from, to] = [zonedParts(task.date, timeZone), zonedParts(end, timeZone)];
+  const days = civilDay(to) - civilDay(from);
+  if (days > 0 && isMidnight(from) && isMidnight(to)) return { allDay: true, day: from, days };
+  return { allDay: false, start: task.date, end };
 }
 
 const MATCH_WINDOW = 15;

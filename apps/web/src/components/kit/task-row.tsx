@@ -153,7 +153,7 @@ export function TaskRow({
           type="button"
           onClick={onOpen}
           aria-current={selected || undefined}
-          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 self-stretch rounded-sm text-left outline-none focus-visible:outline-2 focus-visible:outline-brand-text"
+          className="flex min-w-0 flex-1 cursor-pointer items-center gap-2 self-stretch rounded-sm text-left outline-none transition-[scale] duration-fast focus-visible:outline-2 focus-visible:outline-brand-text active:scale-97"
         >
           {body}
         </button>

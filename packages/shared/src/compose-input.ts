@@ -27,6 +27,7 @@ export function composeTaskInput(
     repeatEvery: parsed.repeatEvery,
     // Um link por tarefa: a frase pode trazer vários, fica o primeiro.
     links: parsed.links.length ? parsed.links.slice(0, 1) : undefined,
+    tags: parsed.tags.length ? parsed.tags : undefined,
   };
 
   if (parsed.date && parsed.hasTime && !opts.undatedOnly) {
@@ -43,8 +44,9 @@ export function composeTaskInput(
 export const fromWire = (wire: ParsedTaskWire, timeZone: string): ParsedTask => ({
   ...wire,
   date: wire.date === null ? null : new TZDate(wire.date, timeZone),
+  tags: [],
   unsure: [],
-  fields: { day: [], time: [], duration: [], repeat: [], links: [] },
+  fields: { day: [], time: [], duration: [], repeat: [], links: [], tags: [] },
 });
 
 /** Lembrete de Sem data: o dia às 09:00, ou `null` se já passou e não há próxima ocorrência. */

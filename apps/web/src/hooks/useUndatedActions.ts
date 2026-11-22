@@ -17,6 +17,7 @@ import { enqueue, shouldQueue, type Mutation } from "@/functions/offline";
 import { removeUndated, upsertUndated } from "@/functions/undated";
 import { appTimeZone } from "@/functions/zone";
 import { useSession } from "@/lib/auth";
+import { haptic } from "@/lib/haptics";
 
 /**
  * Marcar/desmarcar/excluir/agendar na lista Sem data. Mesmo contrato de `useTaskActions` (otimista; erro de
@@ -88,6 +89,7 @@ export function useUndatedActions(task: Task) {
 
     const completed = { ...task, completed: [...task.completed, at], updatedAt: at };
     setUndatedTasks((cur) => upsertUndated(cur ?? [], completed));
+    haptic("success");
     const ok = await run(
       previous,
       { op: "complete", taskId: task.id, at },
@@ -122,6 +124,7 @@ export function useUndatedActions(task: Task) {
     const at = Date.now();
     const previous = undatedTasks ?? [];
     setUndatedTasks((cur) => removeUndated(cur ?? [], task.id));
+    haptic("impact");
 
     const ok = await run(
       previous,

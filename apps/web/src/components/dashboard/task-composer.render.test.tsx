@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import type { AiParse, ParsedTaskWire } from "@dailify/shared";
 
+import { fill } from "@/functions/functions";
 import { zonedAt } from "@/functions/zone";
 import { copy } from "./copy";
 
@@ -238,6 +239,20 @@ describe("<TaskComposer> chips", () => {
 
     await user.keyboard("{Enter}");
     expect(submitted(onSubmit)).toMatchObject({ text: "pagar luz amanhã cedo", hasDay: false });
+  });
+
+  it("reads #tags into chips, and removing one puts its word back in the title", async () => {
+    const { user, onSubmit } = setup();
+    await user.type(screen.getByRole("textbox"), "academia #saúde #Treino");
+    expect(
+      screen.getByRole("button", { name: fill(copy.composer.tag, { tag: "saúde" }) }),
+    ).toBeInTheDocument();
+
+    await user.click(
+      screen.getByRole("button", { name: fill(copy.composer.removeTag, { tag: "Treino" }) }),
+    );
+    await user.keyboard("{Enter}");
+    expect(submitted(onSubmit)).toMatchObject({ text: "academia #Treino", tags: ["saúde"] });
   });
 
   it("Backspace no chip tira; editar dentro do trecho volta a ler", async () => {

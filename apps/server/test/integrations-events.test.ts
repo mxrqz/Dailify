@@ -63,6 +63,12 @@ describe("toEvent", () => {
     expect(toEvent(task({ undated: true }), TZ, { meet: false })).toBeNull();
   });
 
+  it("a multi-day task (midnight to midnight) goes out all-day, end exclusive", () => {
+    const e = toEvent(task({ date: at(10, 30, 0), duration: "72h" }), TZ, { meet: false });
+    expect(e?.start).toEqual({ date: "2026-11-30" });
+    expect(e?.end).toEqual({ date: "2026-12-03" });
+  });
+
   it("semanal a cada 2 com BYDAY ordenado e WKST no dia da tarefa (quarta)", () => {
     const e = toEvent(
       task({ date: at(10, 18, 9), repeat: { Weekly: ["Friday", "Monday"] }, repeatEvery: 2 }),
