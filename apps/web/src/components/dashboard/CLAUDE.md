@@ -9,8 +9,10 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
   (`DayTaskRow` container, `NowLine`), over kit `TaskRow`/`CheckCircle`.
 - Undated: `anytime-block.tsx` (today's card, `ScheduleDrop`), `check-history.tsx`;
 - Layout: `side-panel.tsx` is the desktop side panel (below, "Side panel").
-- Navigation: `week-strip.tsx` (`WeekDays`/`WeekStrip`, sticky under the bar or toolbar; its
-  bottom is the reading line, and day sections scroll to `scroll-mt-agenda` just under it).
+- Navigation: `week-strip.tsx` (`WeekDays`/`WeekStrip`). Desktop: sticky under the toolbar, day
+  sections scroll to `scroll-mt-agenda` just under it. Mobile: in the flow; scrolled under the bar
+  it portals a `compact` copy into `BAR_STRIP_ID` (`app-header.tsx`), whose `[data-docked]` hides
+  the bar's actions but the menu. The reading line is the lower of strip and bar.
   `?view=calendar` (`hooks/useCalendarView.ts`, the bar's calendar button toggles it): on mobile
   the strip expands into `MonthPicker` (`MonthGrid` + arrows) and a pick collapses it before
   `goToDay` scrolls; on `DESKTOP` `MonthCalendar` replaces the agenda with the full-height

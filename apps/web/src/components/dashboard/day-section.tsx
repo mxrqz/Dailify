@@ -129,7 +129,7 @@ export function DaySection({ day }: { day: Date }): JSX.Element {
         id={dayAnchorId(day)}
         // What the WeekStrip queries (`section[data-day]`), so it never re-types the id format.
         data-day
-        className="flex scroll-mt-agenda max-md:[contain-intrinsic-size:auto_20rem] max-md:[content-visibility:auto] flex-col gap-2 rounded-lg outline-offset-4 data-drop-over:outline-2 data-drop-over:outline-dashed data-drop-over:outline-brand"
+        className="flex scroll-mt-bar md:scroll-mt-agenda max-md:[contain-intrinsic-size:auto_20rem] max-md:[content-visibility:auto] flex-col gap-2 rounded-lg outline-offset-4 data-drop-over:outline-2 data-drop-over:outline-dashed data-drop-over:outline-brand"
       >
         <header className="flex items-baseline justify-between gap-3 px-1 pb-1">
           <h2 ref={heading} className="origin-left text-title-3 font-semibold">

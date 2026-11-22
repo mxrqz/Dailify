@@ -1,9 +1,10 @@
 /** @vitest-environment jsdom */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { act, fireEvent, render, screen, within } from "@testing-library/react";
 import { addDays, startOfWeek } from "date-fns";
 import type { Task } from "@dailify/shared";
 
+import { BAR_STRIP_ID } from "@/components/app-header";
 import { copy } from "@/components/dashboard/copy";
 import { dayAnchorId } from "@/components/dashboard/day-section";
 import { weekdayDate } from "@/functions/date-label";
@@ -84,5 +85,32 @@ describe("WeekStrip", () => {
     view.rerender(<WeekStrip onCollapse={onCollapse} />);
     expect(goToDay).toHaveBeenCalledWith(new Date(2026, 9, 30));
     expect(screen.getAllByRole("button")).toHaveLength(7);
+  });
+
+  it("docks a compact week into the bar once the strip scrolls under it", () => {
+    dailify.mockReturnValue({
+      tasks: [],
+      goToDay: vi.fn(),
+      weekStart: 0,
+      selectedDay: new Date(NOW),
+    });
+    const header = document.createElement("header");
+    const slot = document.createElement("div");
+    slot.id = BAR_STRIP_ID;
+    header.append(slot);
+    document.body.append(header);
+    render(<WeekStrip />);
+    expect(slot).toBeEmptyDOMElement();
+
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockImplementation(function (
+      this: HTMLElement,
+    ) {
+      const bottom = this === header ? 60 : -10;
+      const rect = { x: 0, y: 0, width: 0, height: 0, top: 0, right: 0, bottom, left: 0 };
+      return { ...rect, toJSON: () => rect };
+    });
+    act(() => void window.dispatchEvent(new Event("scroll")));
+    expect(within(slot).getAllByRole("button")).toHaveLength(7);
+    header.remove();
   });
 });

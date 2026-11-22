@@ -63,7 +63,7 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
   `kit/refraction.tsx`): Chromium-only, empty under reduced motion or transparency.
 - `hit-target`: a 44px `::after`, so the element must be positioned. Safe-area math: `pb-safe`,
   `pb-dock`, `pb-dock-clear`, `h-bar` (height and padding-top), `pt-safe`, `top-safe`,
-  `scroll-mt-bar`, `top-bar` and `scroll-mt-agenda` (the sticky week strip). `px-gutter`/`pr-gutter` pad in percent of the containing block, so `pr-gutter`
+  `scroll-mt-bar`, `scroll-mt-agenda` (desktop: under the toolbar and the sticky week strip). `px-gutter`/`pr-gutter` pad in percent of the containing block, so `pr-gutter`
   doesn't subtract the sidebar. Also `min-w-duration` (6ch), `min-h-2lh`, `fade-top`,
   `max-h-sheet` (bottom sheets). Desktop has no app bar: sticky columns (sidebar, side panel) are
   `sticky top-0 h-dvh`, and sticky headers inside the agenda sit under the 52px `Toolbar` (`top-13`).
@@ -76,7 +76,7 @@ where every token lives and how to add one. Tailwind 4, CSS-first: there is no `
 
 - twMerge knows the custom `text-*`, `rounded-*`, `shadow-*`, `ease-*`, `duration-*`, `z-*`,
   `w-sheet|side`, `max-w-bubble`, `max-h-sheet`, `h-bar`, `pb-*`, `pt-safe`,
-  `top-safe`, `top-bar`, `px-gutter`, `pr-gutter`, `scroll-mt-bar|agenda`, `min-w-duration`, and `caps` as a font
+  `top-safe`, `px-gutter`, `pr-gutter`, `scroll-mt-bar|agenda`, `min-w-duration`, and `caps` as a font
   size (so it replaces a Button's `text-subhead`).
 - Don't use: `ring-[3px]` focus recipes (use `focus-ring`), `tracking-[0.04em]` caps labels (use
   `caps`), `max-h-[94svh]` (use `max-h-sheet`), `rounded-xl` (Tailwind's 12px, off the DS scale; panels are `rounded-lg`). Scale forms:
