@@ -1,8 +1,10 @@
+import { useState } from "react";
 import { toast } from "sonner";
-import { doneThisPeriod, periodStart, type Task } from "@dailify/shared";
+import { doneThisPeriod, isCalendarEventLink, periodStart, type Task } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
+import { ActionSheet } from "@/components/kit/action-sheet";
 import {
   completeTask,
   createTask,
@@ -11,7 +13,7 @@ import {
   updateTask,
 } from "@/functions/api";
 import type { ApiError } from "@/functions/api";
-import { upsertTaskWithRecurrence } from "@/functions/functions";
+import { fill, upsertTaskWithRecurrence } from "@/functions/functions";
 import { revertTask } from "@/functions/revert-task";
 import { enqueue, shouldQueue, type Mutation } from "@/functions/offline";
 import { removeUndated, upsertUndated } from "@/functions/undated";
@@ -24,9 +26,12 @@ import { haptic } from "@/lib/haptics";
  * rede vai pra fila, recusa do servidor desfaz), mas contra `undatedTasks` e com marcação por
  * PERÍODO: a recorrente fica feita até o período virar, não só no dia.
  */
-export function useUndatedActions(task: Task) {
+export function useUndatedActions(task: Task, { onDeleted }: { onDeleted?: () => void } = {}) {
   const { undatedTasks, setUndatedTasks, tasks, setTasks, loadedMonths, weekStart } = useDailify();
   const userId = useUser()?.id;
+  // Same as the dated path: the Google event goes too, and a re-create would come back unlinked.
+  const linked = task.links?.some(isCalendarEventLink) ?? false;
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   const done =
     task.repeat === "Off"
@@ -120,11 +125,12 @@ export function useUndatedActions(task: Task) {
     if (ok) toast.success(copy.task.restored);
   };
 
-  const remove = async () => {
+  const removeNow = async () => {
     const at = Date.now();
     const previous = undatedTasks ?? [];
     setUndatedTasks((cur) => removeUndated(cur ?? [], task.id));
     haptic("impact");
+    onDeleted?.();
 
     const ok = await run(
       previous,
@@ -134,6 +140,10 @@ export function useUndatedActions(task: Task) {
     );
     if (!ok) return;
 
+    if (linked) {
+      toast.success(copy.task.deleted, { description: task.title });
+      return;
+    }
     toast.success(copy.task.deleted, {
       description: task.title,
       duration: 6000,
@@ -159,5 +169,23 @@ export function useUndatedActions(task: Task) {
     if (!ok) setTasks((cur) => revertTask(cur ?? [], agenda, task.id));
   };
 
-  return { done, toggle, remove, schedule };
+  const remove = async () => {
+    if (linked) setConfirmOpen(true);
+    else await removeNow();
+  };
+
+  // Rendered by the caller; only linked tasks pay for it.
+  const deleteDialog = linked ? (
+    <ActionSheet
+      open={confirmOpen}
+      onOpenChange={setConfirmOpen}
+      title={fill(copy.calendar.deleteTitle, { title: task.title })}
+      description={task.repeat === "Off" ? undefined : copy.calendar.deleteSeries}
+      actions={[
+        { label: copy.calendar.deleteConfirm, destructive: true, onSelect: () => void removeNow() },
+      ]}
+    />
+  ) : null;
+
+  return { done, toggle, remove, schedule, deleteDialog };
 }

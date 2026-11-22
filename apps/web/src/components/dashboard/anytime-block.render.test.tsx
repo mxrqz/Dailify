@@ -400,6 +400,38 @@ describe("useUndatedActions", () => {
     ]);
   });
 
+  it("a Calendar-linked delete confirms first and offers no Undo", async () => {
+    const linked = task({
+      id: "g",
+      title: "Feriado",
+      links: ["https://www.google.com/calendar/event?eid=abc"],
+    });
+    const setUndatedTasks = context([linked]);
+    api.deleteTask.mockResolvedValue({});
+    const success = vi.spyOn(toast, "success");
+    function Delete() {
+      const { remove, deleteDialog } = useUndatedActions(linked);
+      return (
+        <>
+          <button onClick={() => void remove()}>excluir</button>
+          {deleteDialog}
+        </>
+      );
+    }
+    render(<Delete />);
+
+    fireEvent.click(screen.getByRole("button", { name: "excluir" }));
+    expect(api.deleteTask).not.toHaveBeenCalled();
+    await screen.findByRole("alertdialog", { name: "Excluir “Feriado” da Mewki e da Agenda?" });
+    await act(async () =>
+      fireEvent.click(screen.getByRole("button", { name: copy.calendar.deleteConfirm })),
+    );
+
+    expect(api.deleteTask).toHaveBeenCalledWith("g");
+    expect(last(setUndatedTasks)).toEqual([]);
+    expect(success).toHaveBeenCalledWith(copy.task.deleted, { description: "Feriado" });
+  });
+
   it("série concluída não oferece desfazer (continua na lista)", async () => {
     const series = task({ id: "s", repeat: "Daily" });
     context([series]);

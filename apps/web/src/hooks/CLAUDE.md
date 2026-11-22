@@ -5,7 +5,7 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 
 ## What lives here
 
-- Task writes: `useTaskActions.tsx` (dated), `useUndatedActions.ts` (undated), `useCreateTask.ts`
+- Task writes: `useTaskActions.tsx` (dated), `useUndatedActions.tsx` (undated), `useCreateTask.ts`
   (+ `useShowCreated`), `useCalendarPush.ts` (+ `useApplyTask`, `calendarRevoked`). The rest are
   module stores, platform wrappers and `useQuotas` (sections below).
 - `useMewParse` serves only the dashboard composer; `useVoiceCreate` the composer and, with
@@ -19,7 +19,7 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
   or 401) with a userId calls `enqueue(userId, mutation)` and keeps it (a 401 is a dead session, not
   a refused edit); anything else rolls back and shows
   `toast.error(copy.task.*Error, { description: error.message })`. Model: `run` in
-  `useUndatedActions.ts`. Every settle, `edit-task.tsx` and `drainQueue` included, calls
+  `useUndatedActions.tsx`. Every settle, `edit-task.tsx` and `drainQueue` included, calls
   `shouldQueue`; never re-spell the predicate.
 - Writes a caller reacts to return `Promise<boolean>` = the write stands (on the server or queued).
 - Take `at = Date.now()` once per action and reuse it as `updatedAt` in the optimistic state, the
@@ -52,6 +52,9 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 - `useUndatedActions(task)`: `done`/`toggle`/`remove`/`schedule` on `upsertUndated`/`removeUndated`.
   A series is done per period (`doneThisPeriod`); reopening clears `periodStart(...)` to now
   (`uncomplete` with `until`). Only a one-off completion gets Undo, since it leaves the list.
+  `remove` of a Calendar-linked task opens `deleteDialog` (the dated path's ActionSheet, rendered
+  by the caller) and has no Undo: the Google event is gone and a re-create would come back
+  unlinked. `onDeleted` fires right after the optimistic removal (the sheet closes then).
   `schedule(at)` moves it to the agenda with `date = alert = at`.
 - `useCreateTask().create` is optimistic and queueable; `createMany` (Mew drafts) is online-only,
   sequential, stops at the first failure and returns `true` if any landed (a retry would duplicate).
