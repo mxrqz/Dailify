@@ -1,5 +1,5 @@
 import { MailIcon } from "lucide-react";
-import { useState, useSyncExternalStore } from "react";
+import { useEffect, useState, useSyncExternalStore } from "react";
 import { Helmet } from "react-helmet-async";
 import { Navigate, useLocation, useSearchParams } from "react-router-dom";
 
@@ -12,8 +12,10 @@ import { OAuthButtons } from "@/components/auth/oauth-buttons";
 import { useEmailLinkAuth } from "@/components/auth/use-email-link-auth";
 import { Splash } from "@/components/splash";
 import { Button } from "@/components/ui/button";
+import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { useSession } from "@/lib/auth";
 import { isSigningIn, onSigningIn } from "@/lib/native-auth";
+import { passkeysHere } from "@/lib/passkey";
 
 /**
  * Corpo comum de /login e /signup. As duas rotas são a MESMA mecânica — a separação é de
@@ -32,7 +34,14 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
     reset,
     verifyCode,
     signInWithGoogle,
+    signInWithPasskey,
   } = useEmailLinkAuth();
+  // Sign-in only: a passkey is added from /security, after an account exists.
+  const passkeys = mode === "signIn" && passkeysHere();
+  const offerSaved = useEffectEvent(() => void signInWithPasskey(true));
+  useEffect(() => {
+    if (passkeys) offerSaved();
+  }, [passkeys]);
   // Password first, as in the design; the magic link stays one tap away.
   const [method, setMethod] = useState<"password" | "link">("password");
   // O Google que falha volta pra cá via `errorCallbackURL` com `?error=<código>`; a exclusão de
@@ -139,8 +148,13 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
                 mode === "signUp" ? ("new-password" as const) : ("current-password" as const),
               forgotTo: mode === "signIn" ? "/reset-password" : undefined,
             })}
+            webauthn={passkeys}
           />
-          <OAuthButtons onGoogle={signInWithGoogle} disabled={sending} />
+          <OAuthButtons
+            onGoogle={signInWithGoogle}
+            onPasskey={passkeys ? () => void signInWithPasskey() : undefined}
+            disabled={sending}
+          />
           <Button
             type="button"
             size="lg"

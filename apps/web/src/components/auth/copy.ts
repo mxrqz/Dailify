@@ -18,6 +18,7 @@ export const copy = {
     emailLabel: "E-mail",
     emailPlaceholder: "voce@exemplo.com",
     continueWithGoogle: "Continuar com Google",
+    passkey: "Entrar com passkey",
     passwordLabel: "Senha",
     // 10 and 128 = `minPasswordLength`/`maxPasswordLength` in apps/server/src/auth-options.ts.
     newPasswordHint: "Pelo menos 10 caracteres.",
@@ -176,8 +177,9 @@ export const copy = {
     captcha: "A verificação de segurança falhou. Recarregue a página e tente de novo.",
     tooManyRequests: "Muitas tentativas. Espere um minuto e tente de novo.",
     network: "Sem conexão. Confira sua internet e tente de novo.",
-    // Excluir a conta pede uma sessão recente: o /profile sai e volta pra cá com `?error=SESSION_EXPIRED`.
-    reauth: "Por segurança, entre de novo e repita a exclusão.",
+    // Deleting the account or adding a passkey needs a recent session: both sign out and come back
+    // here with `?error=SESSION_EXPIRED`.
+    reauth: "Por segurança, entre de novo e repita o que estava fazendo.",
     invalidCode: "Código incorreto. Confira o e-mail e tente de novo.",
     // Expired, or burned by too many wrong tries: either way only a new e-mail helps.
     staleCode: "Este código não vale mais. Reenvie para receber outro.",
@@ -186,6 +188,7 @@ export const copy = {
     passwordCompromised: "Esta senha apareceu num vazamento de dados. Escolha outra.",
     emailNotVerified: "Confirme seu e-mail primeiro. Mandamos um link novo.",
     staleChallenge: "Passou tempo demais. Entre de novo.",
+    passkeyFailed: "Não deu para usar a passkey. Tente de novo ou entre de outro jeito.",
     generic: "Algo deu errado. Tente de novo.",
   } satisfies Record<AuthErrorKey, string>,
 

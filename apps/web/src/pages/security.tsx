@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
 import { formatDistanceToNow } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { MonitorIcon, SmartphoneIcon } from "lucide-react";
+import { KeyRoundIcon, MonitorIcon, SmartphoneIcon } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
-import { API_ERROR, parseUserAgent } from "@dailify/shared";
+import { API_ERROR, isRecord, parseUserAgent } from "@dailify/shared";
 
 import { classifyAuthError, type AuthFailure } from "@/components/auth/auth-state";
 import { copy as authCopy } from "@/components/auth/copy";
@@ -31,18 +31,22 @@ import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { withStepUp } from "@/hooks/useStepUp";
 import { authClient, settle, useSession } from "@/lib/auth";
 import { formString } from "@/lib/form";
-import { verifySecondFactor } from "@/lib/native-auth";
+import { signOutAndReload, verifySecondFactor } from "@/lib/native-auth";
 import { openExternal } from "@/lib/open-external";
+import { passkeysHere } from "@/lib/passkey";
 import { isTauri } from "@/lib/platform";
 
 type Session = typeof authClient.$Infer.Session.session;
 type Account = { providerId: string; updatedAt: Date };
+type Passkey = { id: string; name?: string | null; createdAt: Date };
 type MfaAction = "enable" | "disable" | "codes";
 type Open =
   | { kind: "password" }
   | { kind: "confirm"; action: MfaAction }
   | { kind: "setup"; uri: string; codes: string[] }
-  | { kind: "codes"; codes: string[] };
+  | { kind: "codes"; codes: string[] }
+  | { kind: "passkeys" }
+  | { kind: "rename"; passkey: Passkey };
 
 const FIELD = "h-12 rounded-md border-0 bg-fill px-4 text-body shadow-none md:text-body";
 
@@ -99,6 +103,50 @@ export function SessionRow({
   );
 }
 
+/** A passkey: its name and age, with rename and remove. */
+export function PasskeyRow({
+  passkey,
+  onRename,
+  onRemove,
+}: {
+  passkey: Passkey;
+  onRename: () => void;
+  onRemove: () => void;
+}): JSX.Element {
+  const name = passkey.name || copy.profile.passkeyUnnamed;
+  return (
+    <ListRow
+      icon={<KeyRoundIcon />}
+      label={name}
+      sublabel={fill(copy.profile.passkeyCreated, {
+        when: formatDistanceToNow(passkey.createdAt, { addSuffix: true, locale: ptBR }),
+      })}
+      trailing={
+        <span className="flex gap-1.5">
+          <Button
+            variant="ghost"
+            size="sm"
+            className="relative hit-target"
+            aria-label={fill(copy.profile.passkeyRename, { name })}
+            onClick={onRename}
+          >
+            {copy.profile.passkeyRenameAction}
+          </Button>
+          <Button
+            variant="soft-danger"
+            size="sm"
+            className="relative hit-target"
+            aria-label={fill(copy.profile.passkeyRemove, { name })}
+            onClick={onRemove}
+          >
+            {copy.profile.passkeyRemoveAction}
+          </Button>
+        </span>
+      }
+    />
+  );
+}
+
 function ErrorLine({ failure }: { failure: AuthFailure | null }): JSX.Element | null {
   if (!failure) return null;
   return (
@@ -115,6 +163,7 @@ export default function SecurityPage(): JSX.Element {
   const mfaOn = Boolean(data?.user.twoFactorEnabled);
   const [sessions, setSessions] = useState<Session[]>();
   const [accounts, setAccounts] = useState<Account[]>();
+  const [passkeys, setPasskeys] = useState<Passkey[]>();
   const [open, setOpen] = useState<Open | null>(null);
   const [busy, setBusy] = useState(false);
   const [failure, setFailure] = useState<AuthFailure | null>(null);
@@ -122,13 +171,15 @@ export default function SecurityPage(): JSX.Element {
   const hasPassword = credential !== undefined;
 
   const load = async () => {
-    const [listed, linked] = await Promise.all([
+    const [listed, linked, keys] = await Promise.all([
       settle(authClient.listSessions()),
       settle(authClient.listAccounts()),
+      passkeysHere() ? settle(authClient.passkey.listUserPasskeys()) : null,
     ]);
     if (listed.error) toast.error(copy.profile.sessionsError);
     if (listed.data) setSessions(listed.data);
     if (linked.data) setAccounts(linked.data);
+    if (keys?.data) setPasskeys(keys.data);
   };
 
   // Uma vez ao abrir; depois, só o revogar relê.
@@ -222,6 +273,32 @@ export default function SecurityPage(): JSX.Element {
     toast.success(copy.profile.mfaOn);
   };
 
+  // Better Auth also wants a session younger than a day here; like account deletion, sign in again.
+  const addPasskey = async () => {
+    let stale = false;
+    const added = await attempt(async () => {
+      const result = await withStepUp(() => settle(authClient.passkey.addPasskey()));
+      stale = isRecord(result.error) && Reflect.get(result.error, "code") === "SESSION_NOT_FRESH";
+      return result;
+    });
+    if (stale) return signOutAndReload("/login?error=SESSION_EXPIRED");
+    if (!added) return;
+    toast.success(copy.profile.passkeyAdded);
+    await load();
+  };
+
+  const renamePasskey = async (id: string, name: string) => {
+    if (!(await attempt(() => settle(authClient.passkey.updatePasskey({ id, name }))))) return;
+    show({ kind: "passkeys" });
+    await load();
+  };
+
+  const removePasskey = async (id: string) => {
+    if (!(await attempt(() => settle(authClient.passkey.deletePasskey({ id }))))) return;
+    toast.success(copy.profile.passkeyRemoved);
+    await load();
+  };
+
   const copyText = async (text: string) => {
     await navigator.clipboard.writeText(text).catch(() => undefined);
     toast.success(authCopy.mfaSetup.copied);
@@ -266,6 +343,14 @@ export default function SecurityPage(): JSX.Element {
             disabled={accounts === undefined}
             onClick={() => show({ kind: "password" })}
           />
+          {passkeys && (
+            <ListRow
+              label={copy.profile.passkeys}
+              value={passkeys.length}
+              accessory="chevron"
+              onClick={() => show({ kind: "passkeys" })}
+            />
+          )}
         </ListGroup>
 
         <ListGroup title={copy.profile.groupMfa} footer={copy.profile.mfaFooter}>
@@ -422,6 +507,64 @@ export default function SecurityPage(): JSX.Element {
                 failure={failure}
               />
             </>
+          )}
+
+          {open?.kind === "passkeys" && (
+            <>
+              <DialogHeader>
+                <DialogTitle>{copy.profile.passkeys}</DialogTitle>
+                <DialogDescription>{copy.profile.passkeysLead}</DialogDescription>
+              </DialogHeader>
+              {passkeys?.length ? (
+                <ListGroup>
+                  {passkeys.map((passkey) => (
+                    <PasskeyRow
+                      key={passkey.id}
+                      passkey={passkey}
+                      onRename={() => show({ kind: "rename", passkey })}
+                      onRemove={() => void removePasskey(passkey.id)}
+                    />
+                  ))}
+                </ListGroup>
+              ) : (
+                <p className="text-subhead text-ink-secondary">{copy.profile.passkeysEmpty}</p>
+              )}
+              <ErrorLine failure={failure} />
+              <DialogFooter>
+                <Button loading={busy} onClick={() => void addPasskey()}>
+                  {copy.profile.passkeyAdd}
+                </Button>
+              </DialogFooter>
+            </>
+          )}
+
+          {open?.kind === "rename" && (
+            <form
+              className="flex flex-col gap-4"
+              onSubmit={(e) => {
+                e.preventDefault();
+                const name = formString(new FormData(e.currentTarget), "name").trim();
+                void renamePasskey(open.passkey.id, name);
+              }}
+            >
+              <DialogHeader>
+                <DialogTitle>{copy.profile.passkeyName}</DialogTitle>
+              </DialogHeader>
+              <Input
+                name="name"
+                required
+                maxLength={64}
+                defaultValue={open.passkey.name ?? ""}
+                aria-label={copy.profile.passkeyName}
+                className={FIELD}
+              />
+              <ErrorLine failure={failure} />
+              <DialogFooter>
+                <Button type="submit" loading={busy}>
+                  {copy.profile.passkeySave}
+                </Button>
+              </DialogFooter>
+            </form>
           )}
 
           {open?.kind === "codes" && (

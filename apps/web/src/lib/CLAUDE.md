@@ -18,6 +18,8 @@ rules: [/RULES.md](../../../../RULES.md).
   assistant picker, used by the intro and /settings).
 - `back-button.ts` (Android back), `haptics.ts` (`haptic(kind)`), `open-external.ts`
   (`openExternal`).
+- `passkey.ts`: `passkeysHere()`, whether to show any passkey UI: WebAuthn present, not Tauri,
+  and on APP_HOST or localhost (the server's rpID; `apps/server/CLAUDE.md`, Auth).
 - `form.ts`: `formString` reads `FormData` without `as string`. `utils.ts`: `cn()`.
 - No React components, no app-data calls (`functions/api.ts`), no imports from `components/`: lib
   is imported by everything, so that edge makes cycles. The one outward import is `forgetUser`

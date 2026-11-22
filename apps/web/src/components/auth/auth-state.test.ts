@@ -210,6 +210,11 @@ describe("classifyAuthError", () => {
       key: "emailNotVerified",
     });
   });
+
+  it("reads a failed or cancelled passkey ceremony as passkeyFailed", () => {
+    for (const code of ["ERROR_CEREMONY_ABORTED", "AUTH_CANCELLED", "PASSKEY_NOT_FOUND"])
+      expect(classifyAuthError({ status: 400, code })).toEqual({ key: "passkeyFailed" });
+  });
 });
 
 describe("authReducer verifySent", () => {

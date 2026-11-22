@@ -14,6 +14,9 @@ The `/login` and `/signup` screens, plus the shell the hand-off pages reuse. Rep
   takes `password` (`current-password` | `new-password`) and `forgotTo`.
 - Password is the default method on both pages; "Receber link por e-mail" switches to the magic
   link. Sign-up never signs in (`verifySent` state): the confirmation link on `/verify` does.
+- Passkey (sign-in only, where `passkeysHere()`): "Entrar com passkey" in `OAuthButtons`, plus a
+  conditional request on mount behind `autocomplete="username webauthn"`, whose failures stay
+  silent. It is both factors, so it never opens `/two-factor`.
 - Second factor: `mfa-challenge.tsx` (`MfaChallenge` View + `useSecondFactor`) serves
   `pages/two-factor.tsx` and `step-up-dialog.tsx` (mounted in App, driven by
   `hooks/useStepUp.ts`). Any first factor answering `twoFactorRedirect` (`needsSecondFactor`)
@@ -36,7 +39,8 @@ The `/login` and `/signup` screens, plus the shell the hand-off pages reuse. Rep
   `invalidEmail`, `MISSING_RESPONSE`/`VERIFICATION_FAILED` -> `captcha`, `INVALID_OTP` ->
   `invalidCode`, `OTP_EXPIRED`/`TOO_MANY_ATTEMPTS` -> `staleCode` (the 2FA codes map the same),
   `INVALID_TWO_FACTOR_COOKIE` -> `staleChallenge`, the password codes, `password_compromised`
-  and `EMAIL_NOT_VERIFIED`, `null` (fetch threw) -> `network`. Anything else is `generic`, with the code (or status) shown in mono for bug reports.
+  and `EMAIL_NOT_VERIFIED`, a browser ceremony error (`ERROR_*`, `AUTH_CANCELLED`) or an unknown
+  passkey -> `passkeyFailed`, `null` (fetch threw) -> `network`. Anything else is `generic`, with the code (or status) shown in mono for bug reports.
 - `internalPath`/`redirectTarget` are the repo's open-redirect guard
   ([RULES.md, Security and privacy](../../../../../RULES.md#security-and-privacy)). Keep the `//`
   and `/\` cases in `auth-state.test.ts`.
