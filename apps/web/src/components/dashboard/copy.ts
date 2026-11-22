@@ -215,6 +215,8 @@ export const copy = {
     settingsPageTitle: "Configurações",
     securityPageTitle: "Segurança",
     navLabel: "Navegação",
+    collapseNav: "Recolher menu",
+    expandNav: "Expandir menu",
     navDashboard: "Hoje",
     navPersonal: "Perfil",
     navSecurity: "Segurança",

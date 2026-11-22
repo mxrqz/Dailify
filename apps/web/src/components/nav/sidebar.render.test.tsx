@@ -125,6 +125,23 @@ describe("<Sidebar>", () => {
     expect(mew).not.toHaveAttribute("aria-current");
   });
 
+  it("folds to icons, keeping each item's name, and remembers it", async () => {
+    const user = userEvent.setup();
+    localStorage.clear();
+    const view = renderAt("/settings");
+    await user.click(screen.getByRole("button", { name: copy.profile.collapseNav }));
+
+    // The label stays (no jump) and fades; the item keeps its name.
+    expect(current()).toHaveAccessibleName(copy.profile.navSettings);
+    expect(screen.getByText(copy.profile.navSettings)).toHaveClass("opacity-0");
+
+    view.unmount();
+    renderAt("/settings");
+    await user.click(screen.getByRole("button", { name: copy.profile.expandNav }));
+    expect(screen.getByText(copy.profile.navSettings)).not.toHaveClass("opacity-0");
+    localStorage.clear();
+  });
+
   it("counts today's open tasks beside Hoje", () => {
     setAppTimeZone("America/Sao_Paulo");
     const at = (h: number) => +zonedAt(2026, 10, 20, h);

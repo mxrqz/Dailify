@@ -8,6 +8,8 @@ import {
   LayoutListIcon,
   LogOutIcon,
   MessageCircleIcon,
+  PanelLeftCloseIcon,
+  PanelLeftOpenIcon,
   SettingsIcon,
   ShieldIcon,
   UserIcon,
@@ -36,11 +38,12 @@ import { fill, getCompletionDate, getTasksForDay } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
 import { openPanel } from "@/hooks/usePanel";
 import { useQuotas } from "@/hooks/useQuotas";
+import { useStoredFlag } from "@/hooks/useStoredFlag";
 import { useUser } from "@/hooks/useUser";
 import { planOf } from "@/lib/auth";
 import { signOutAndReload } from "@/lib/native-auth";
 import { cn } from "@/lib/utils";
-import { SidebarItem, sidebarItemClass } from "./sidebar-item";
+import { FADE, SidebarItem, sidebarItemClass } from "./sidebar-item";
 
 const NAV_ITEMS = [
   { icon: LayoutListIcon, label: copy.profile.navDashboard, to: "/dashboard" },
@@ -209,6 +212,8 @@ export function SidebarMenu({
   upgrade,
   pending,
   onSignOut,
+  collapsed = false,
+  onCollapse,
 }: {
   account?: { name: string; imageUrl?: string; plan: string };
   credits?: Credits;
@@ -216,36 +221,63 @@ export function SidebarMenu({
   /** Today's open tasks, beside "Hoje". */
   pending?: number;
   onSignOut?: () => void;
+  /** Icons only, names in tooltips; `onCollapse` toggles it. */
+  collapsed?: boolean;
+  onCollapse?: (collapsed: boolean) => void;
 }): JSX.Element {
   const navigate = useNavigate();
+  const toggleLabel = collapsed ? copy.profile.expandNav : copy.profile.collapseNav;
+  const ToggleIcon = collapsed ? PanelLeftOpenIcon : PanelLeftCloseIcon;
+  // Folded, what fades stays mounted (no jump) but leaves the tab order and the a11y tree.
+  const folded = (el: HTMLElement | null) => el?.toggleAttribute("inert", collapsed);
+  const fade = collapsed && "opacity-0";
 
   return (
     <>
-      <div className="mb-3 flex h-11 items-center justify-between pl-2">
-        <Brand to="/dashboard" />
-        <div className="flex gap-0.5">
-          <Tip content={copy.header.back}>
+      <div className="mb-3 flex h-11 items-center gap-1 overflow-hidden pl-2 whitespace-nowrap">
+        {onCollapse && (
+          <Tip content={toggleLabel} side={collapsed ? "right" : "bottom"}>
             <Button
               variant="ghost"
               size="icon-sm"
-              aria-label={copy.header.back}
-              onClick={() => navigate(-1)}
-              className="text-ink-secondary"
+              aria-label={toggleLabel}
+              aria-expanded={!collapsed}
+              onClick={() => onCollapse(!collapsed)}
+              className="shrink-0 text-ink-secondary"
             >
-              <ChevronLeftIcon aria-hidden="true" />
+              <ToggleIcon aria-hidden="true" />
             </Button>
           </Tip>
-          <Tip content={copy.header.forward}>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={copy.header.forward}
-              onClick={() => navigate(1)}
-              className="text-ink-secondary"
-            >
-              <ChevronRightIcon aria-hidden="true" />
-            </Button>
-          </Tip>
+        )}
+        <div
+          ref={folded}
+          className={cn("flex min-w-0 flex-1 items-center justify-between", FADE, fade)}
+        >
+          <Brand to="/dashboard" />
+          <div className="flex gap-0.5">
+            <Tip content={copy.header.back}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={copy.header.back}
+                onClick={() => navigate(-1)}
+                className="text-ink-secondary"
+              >
+                <ChevronLeftIcon aria-hidden="true" />
+              </Button>
+            </Tip>
+            <Tip content={copy.header.forward}>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={copy.header.forward}
+                onClick={() => navigate(1)}
+                className="text-ink-secondary"
+              >
+                <ChevronRightIcon aria-hidden="true" />
+              </Button>
+            </Tip>
+          </div>
         </div>
       </div>
 
@@ -255,38 +287,58 @@ export function SidebarMenu({
           label={copy.profile.navDashboard}
           to="/dashboard"
           count={pending}
+          collapsed={collapsed}
         />
         <SidebarItem
           icon={CalendarIcon}
           label={copy.profile.navCalendar}
           to={`/dashboard?view=${CALENDAR_VIEW}`}
+          collapsed={collapsed}
         />
         <SidebarItem
           icon={MessageCircleIcon}
           label={copy.profile.navMew}
           to="/dashboard"
           onClick={() => openPanel({ kind: "mew" })}
+          collapsed={collapsed}
         />
       </div>
 
-      <p className="px-3 pt-5 pb-1.5 text-footnote font-medium text-ink-secondary">
+      <p
+        ref={folded}
+        className={cn(
+          "px-3.5 pt-5 pb-1.5 text-footnote font-medium whitespace-nowrap text-ink-secondary",
+          FADE,
+          fade,
+        )}
+      >
         {copy.profile.navAccount}
       </p>
       <div className="flex flex-col gap-0.5">
         {ACCOUNT_ITEMS.map((item) => (
-          <SidebarItem key={item.to} {...item} />
+          <SidebarItem key={item.to} {...item} collapsed={collapsed} />
         ))}
       </div>
 
       <div className="mt-auto flex flex-col gap-2 pt-4">
-        {account && credits && <CreditsMeter {...credits} />}
+        {account && credits && (
+          <div ref={folded} className={cn("overflow-hidden", FADE, fade)}>
+            <CreditsMeter {...credits} />
+          </div>
+        )}
         {account && upgrade && (
-          <Button asChild variant="secondary" className="mx-1">
-            <Link to="/premium">
-              <CrownIcon aria-hidden="true" className="text-brand-text" />
-              {copy.profile.upgradePro}
-            </Link>
-          </Button>
+          <Tip content={collapsed ? copy.profile.upgradePro : ""} side="right">
+            <Button
+              asChild
+              variant="secondary"
+              className="justify-start gap-3 overflow-hidden px-3.5 whitespace-nowrap"
+            >
+              <Link to="/premium">
+                <CrownIcon aria-hidden="true" className="text-brand-text" />
+                <span className={cn(FADE, fade)}>{copy.profile.upgradePro}</span>
+              </Link>
+            </Button>
+          </Tip>
         )}
         {account ? (
           <DropdownMenu>
@@ -294,7 +346,7 @@ export function SidebarMenu({
               <button
                 type="button"
                 aria-label={fill(copy.profile.accountMenu, { name: account.name })}
-                className="flex h-13 w-full cursor-pointer items-center gap-2.5 rounded-md px-2 text-left transition-colors hover:bg-fill focus-ring"
+                className="flex h-13 w-full cursor-pointer items-center gap-2.5 overflow-hidden rounded-md px-2 text-left whitespace-nowrap transition-colors hover:bg-fill focus-ring"
               >
                 <Avatar className="size-8 rounded-full">
                   <AvatarImage src={account.imageUrl} alt="" />
@@ -302,13 +354,16 @@ export function SidebarMenu({
                     {account.name.charAt(0).toUpperCase()}
                   </AvatarFallback>
                 </Avatar>
-                <span className="flex min-w-0 flex-1 flex-col">
+                <span className={cn("flex min-w-0 flex-1 flex-col", FADE, fade)}>
                   <span className="truncate text-body font-semibold">{account.name}</span>
                   <span className="truncate text-footnote text-ink-secondary">
                     {fill(copy.profile.planName, { plan: account.plan })}
                   </span>
                 </span>
-                <ChevronsUpDownIcon aria-hidden="true" className="size-4 text-ink-secondary" />
+                <ChevronsUpDownIcon
+                  aria-hidden="true"
+                  className={cn("size-4 shrink-0 text-ink-secondary", FADE, fade)}
+                />
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-56">
@@ -344,6 +399,7 @@ export function SidebarMenu({
 /** A coluna de vidro do desktop. No mobile quem serve a navegação é o `MobileNav`, no header. */
 export function Sidebar(): JSX.Element {
   const user = useUser();
+  const [collapsed, setCollapsed] = useStoredFlag("dailify:sidebar-collapsed");
   const { tasks } = useDailify();
   const { loading, states } = useQuotas();
   const today = useNow("day");
@@ -356,7 +412,10 @@ export function Sidebar(): JSX.Element {
   return (
     <nav
       aria-label={copy.profile.navLabel}
-      className="glass sticky top-0 hidden h-dvh w-62 shrink-0 flex-col overflow-y-auto border-r border-separator px-3 pt-2.5 pb-4 md:flex"
+      className={cn(
+        "glass sticky top-0 hidden h-dvh shrink-0 flex-col overflow-x-hidden overflow-y-auto border-r border-separator px-2 pt-2.5 pb-4 transition-[width] duration-base ease-out motion-reduce:transition-none md:flex",
+        collapsed ? "w-16" : "w-62",
+      )}
     >
       <SidebarMenu
         account={
@@ -368,6 +427,8 @@ export function Sidebar(): JSX.Element {
         upgrade={planOf(user) === PLAN_ID.free}
         pending={pending}
         onSignOut={() => signOutAndReload()}
+        collapsed={collapsed}
+        onCollapse={setCollapsed}
       />
     </nav>
   );
