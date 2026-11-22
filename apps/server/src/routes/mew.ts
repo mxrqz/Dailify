@@ -126,7 +126,7 @@ mew.post("/chat", rateLimit("AI_LIMITER"), async (c) => {
       const read = await readFrom(c.env, userId, claimed.provider, claimed.target);
       reply = await askMew(c.env, req, agenda, allowed, apps, read);
     } else {
-      reply = await askMew(c.env, req, agenda, allowed, apps);
+      reply = await askMew(c.env, req, agenda, allowed, apps, undefined, userId);
       const ask = reply.blocks.find((b) => b.kind === "permission");
       if (ask && (await hasGrant(db, userId, ask.provider, ask.capability))) {
         const read = await readFrom(c.env, userId, ask.provider, ask.target);

@@ -7,7 +7,9 @@ The Worker's SQL, hand-written over the raw `D1Database` binding (no ORM). Repo-
 ## Modules
 
 - `tasks.ts`: `tasks` rows, `TaskRow` + `rowToTask` (reused by push.ts and calendar-sync.ts), JSON
-  codecs, the LWW upsert, completions and occurrences.
+  codecs, the LWW upsert, completions and occurrences. `searchTasks` is the Mew's search: title or
+  tags LIKE (`likePattern` escapes `\%_` and fits the 50-byte cap) and a `[from, to)` range capped
+  at `SEARCH_DAYS_MAX`, series expanded month by month into it, at most `SEARCH_MAX` hits.
 - `user.ts`: the Better Auth `"user"` row (`planOf`, `billingProfile`, `updateUserRole`; `roleOf`
   maps an absent or unknown plan to `free`), the magic-link tables (`magic_link_sent`,
   `magic_link_challenge`, `verification`) for `auth-options.ts`, and `USER_TABLES` +
