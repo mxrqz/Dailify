@@ -1,4 +1,5 @@
 import {
+  BlocksIcon,
   CalendarIcon,
   ChevronLeftIcon,
   ChevronRightIcon,
@@ -7,7 +8,6 @@ import {
   LayoutListIcon,
   LogOutIcon,
   MessageCircleIcon,
-  PlugIcon,
   SettingsIcon,
   ShieldIcon,
   UserIcon,
@@ -194,7 +194,7 @@ export function NavItems(): JSX.Element {
 }
 
 const ACCOUNT_ITEMS = [
-  { icon: PlugIcon, label: copy.profile.navIntegrations, to: "/integrations" },
+  { icon: BlocksIcon, label: copy.profile.navIntegrations, to: "/integrations" },
   { icon: CrownIcon, label: copy.profile.navPremium, to: "/billing", alsoActive: "/premium" },
   { icon: SettingsIcon, label: copy.profile.navSettings, to: "/settings" },
 ];
