@@ -12,10 +12,13 @@ import {
   deleteTask,
   detachOccurrence,
   excludeOccurrence,
+  pullTasks,
 } from "../db/tasks";
-import { isRecord, type OccurrenceEdit, type Task } from "@dailify/shared";
+import { isRecord, type OccurrenceEdit, type Task, type TaskSync } from "@dailify/shared";
 import {
+  encodeCursor,
   isEpochMs,
+  parseCursor,
   newTaskId,
   parseClientId,
   parseMonth,
@@ -46,6 +49,19 @@ tasks.get("/", async (c) => {
   c.executionCtx.waitUntil(syncIfDue(c.env, userId));
 
   return c.json({ tasks: await readMonth(c.env.DB, userId, month, timeZone) });
+});
+
+tasks.get("/sync", async (c) => {
+  const userId = c.get("userId");
+  const zone = validZone(c.req.query("tz")) ?? "UTC";
+  c.executionCtx.waitUntil(syncIfDue(c.env, userId));
+  const { next, ...pull } = await pullTasks(
+    c.env.DB,
+    userId,
+    parseCursor(c.req.query("since")),
+    zone,
+  );
+  return c.json({ ...pull, cursor: encodeCursor(next) } satisfies TaskSync);
 });
 
 tasks.get("/undated", async (c) =>

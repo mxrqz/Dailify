@@ -41,7 +41,7 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   `@dailify/shared`.
 - task-input.ts: `validZone`, `readJson`, `parseAudio`, `isEpochMs`, `parseMonth`, `parseOccurrence`,
   `sanitizeLinks`, `parseClientId`, `newTaskId` (every server-minted task id), `parseTaskFields`,
-  `parseNewTask`.
+  `parseNewTask`, `encodeCursor`/`parseCursor` (the `GET /tasks/sync` cursor).
 - Contract: an absent key keeps the stored value and `null` clears it (`alert`, `repeatEvery`,
   `tags`, `links`). Optional parsers are tri-state: `undefined`, `"invalid"`, or the value.
   `updatedAt` passes through (the offline queue's LWW stamp). `id`, `completed` and `exdates` never

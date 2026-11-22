@@ -10,6 +10,7 @@ import app from "../src/index";
 const AUTHENTICATED: [method: string, path: string][] = [
   ["GET", "/tasks?month=2026-01"],
   ["GET", "/tasks/undated"],
+  ["GET", "/tasks/sync"],
   ["POST", "/tasks"],
   ["PATCH", "/tasks/t1"],
   ["DELETE", "/tasks/t1"],

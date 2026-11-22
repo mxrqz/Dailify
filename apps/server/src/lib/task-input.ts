@@ -9,6 +9,7 @@ import {
   parseMonthKey,
   type Task,
 } from "@dailify/shared";
+import { base64urlToBytes, bytesToBase64url } from "./encoding";
 
 /** Fuso vindo do cliente: sempre presente (Intl), mas é entrada de usuário — validar antes de usar. */
 export function validZone(value: unknown): string | undefined {
@@ -51,6 +52,21 @@ export function parseOccurrence(raw: string | undefined): number | undefined | "
   if (raw === undefined) return undefined;
   const at = Number(raw);
   return isEpochMs(at) ? at : "invalid";
+}
+
+/** The GET /tasks/sync cursor: `v1.<epoch-ms>` in base64url, opaque so clients never do math on it. */
+export const encodeCursor = (at: number): string =>
+  bytesToBase64url(new TextEncoder().encode(`v1.${at}`));
+
+/** `?since=`: absent or anything malformed -> undefined, which the pull answers in full. */
+export function parseCursor(raw: string | undefined): number | undefined {
+  if (!raw) return undefined;
+  try {
+    const m = /^v1\.(\d{1,16})$/.exec(new TextDecoder().decode(base64urlToBytes(raw)));
+    return m ? Number(m[1]) : undefined;
+  } catch {
+    return undefined;
+  }
 }
 
 /** Campos que o cliente pode ditar. `id`, `completed` e `exdates` são do servidor, nunca do body. */
