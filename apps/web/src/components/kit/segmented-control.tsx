@@ -38,7 +38,7 @@ export function SegmentedControl<T extends string>({
         <ToggleGroupPrimitive.Item
           key={option.value}
           value={option.value}
-          className="min-w-0 flex-1 cursor-pointer rounded-full px-1 text-subhead font-medium text-ink-secondary focus-ring transition-colors duration-base hover:text-ink data-[state=on]:bg-ink data-[state=on]:font-semibold data-[state=on]:text-canvas"
+          className="min-w-0 flex-1 cursor-pointer rounded-full px-1 text-subhead font-medium text-ink-secondary focus-ring transition-[color,background-color,scale] duration-base hover:text-ink active:scale-97 data-[state=on]:bg-ink data-[state=on]:font-semibold data-[state=on]:text-canvas"
         >
           {option.label}
         </ToggleGroupPrimitive.Item>

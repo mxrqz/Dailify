@@ -49,7 +49,8 @@ Repo-wide rules: [/RULES.md](../../../../../RULES.md). This file adds only what 
 - Spacing between groups is the caller's: `gap-7` (`accountGroups` in `../settings-list.tsx`).
 - The group is already a `card`: never nest another one inside. `IntegrationCard` in
   `../integrations.tsx` is the legacy exception.
-- Press and focus tints are `pointer-fine:` only; touch gets no tint.
+- Press and focus tints are `pointer-fine:` only; touch gets no tint. The press cue every pointer
+  gets is `active:scale-97` (Button, Chip, SegmentedControl items, the TaskRow body): it can't stick.
 
 ## Which one
 

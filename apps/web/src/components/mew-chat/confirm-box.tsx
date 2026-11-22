@@ -22,6 +22,7 @@ import { clockAt } from "@/functions/date-label";
 import { buildEdit } from "@/functions/edit-input";
 import { fill, getCompletionDate } from "@/functions/functions";
 import { fromDateInput, zoned } from "@/functions/zone";
+import { haptic } from "@/lib/haptics";
 import { cn } from "@/lib/utils";
 
 import { copy as t } from "./copy";
@@ -238,7 +239,10 @@ export function ConfirmBody({
         <Button
           size="sm"
           disabled={!n}
-          onClick={() => dispatch({ type: "confirm", block: block.id })}
+          onClick={() => {
+            haptic("success");
+            dispatch({ type: "confirm", block: block.id });
+          }}
         >
           {fill(cta, values)}
         </Button>

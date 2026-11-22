@@ -11,6 +11,7 @@ import { upsertUndated } from "@/functions/undated";
 import { useCalendarPush, type CalendarPick } from "@/hooks/useCalendarPush";
 import { zoned } from "@/functions/zone";
 import { useSession } from "@/lib/auth";
+import { haptic } from "@/lib/haptics";
 
 // The optimistic object itself: the server's reply (or the queued copy) replaces it, which ends it.
 const saving = new WeakSet<Task>();
@@ -112,6 +113,7 @@ export function useCreateTask() {
     const remove = (list: Task[] | undefined) => (list ?? []).filter((t) => t.id !== input.id);
     const restore = () => (undated ? setUndatedTasks(remove) : setTasks(remove));
     apply(optimistic);
+    haptic("success");
 
     try {
       const { task, error } = await createTask(input);

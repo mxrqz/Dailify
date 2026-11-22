@@ -83,6 +83,7 @@ export function useTaskActions(
       updatedAt: at,
     };
     setTasks((cur) => upsertTaskWithRecurrence(cur ?? [], reopened, loadedMonths));
+    haptic("selection");
 
     const mutation: Mutation = { op: "uncomplete", taskId: task.id, day: from, at };
     const { error } = await uncompleteTask(task.id, day);
@@ -106,6 +107,7 @@ export function useTaskActions(
     const at = Date.now();
     const previous = tasks ?? [];
     setTasks((cur) => (cur ?? []).filter((t) => t.id !== task.id));
+    haptic("impact");
 
     const mutation: Mutation = { op: "delete", taskId: task.id, at };
     // Um 500 aqui não pode passar por sucesso: antes o cartão sumia da tela com a tarefa viva.
@@ -136,6 +138,7 @@ export function useTaskActions(
     const previous = tasks ?? [];
     const isThis = (t: Task) => t.id === task.id && t.date === task.date;
     setTasks((cur) => (cur ?? []).filter((t) => !isThis(t)));
+    haptic("impact");
     onDeleted?.();
 
     const mutation: Mutation = {
