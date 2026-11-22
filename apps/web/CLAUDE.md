@@ -34,6 +34,8 @@ What goes where is in RULES.md "Where code goes"; this is the map, each folder w
 - Deploy: Workers Builds runs the build and deploys `wrangler.jsonc` (assets `./dist`, SPA
   fallback); no deploy script here. `public/_headers` serves `.well-known/*` as JSON for App Links.
 - Favicon and PWA icons: `bun scripts/icons.ts` from this folder, with `resvg` on PATH.
+- E-mail logo (`public/email/mew.gif`, the Mew blinking): `bun scripts/email-mew.tsx`, with
+  `resvg` and `magick` on PATH. Server e-mails link it by URL, so keep the path.
 
 ## Adding a `VITE_*` variable
 

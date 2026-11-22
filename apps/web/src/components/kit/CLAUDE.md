@@ -32,6 +32,11 @@ Repo-wide rules: [/RULES.md](../../../../../RULES.md). This file adds only what 
   the side panel) sets `aria-current`; `actions` (desktop chips) show on row hover/focus-within and
   stay up while one of their popovers is open. The check draws its path
   (`pathLength` 1); `strike(done)` is the left-to-right title strike, also used by the undated row.
+- `OtpInput({ onComplete, error?, disabled?, ...input })` (`otp-input.tsx`): 6 boxes (3 – 3) over
+  one real input (`one-time-code`, digits only), so OS autofill and paste fill every box; a paste
+  is read whole, spaces stripped. `onComplete` fires once on the 6th digit; `error` rings every
+  box in `brand-text`, clears the field and refocuses it. The ring follows the next empty box.
+  `aria-label` defaults to `copy.code`; `name` makes it post with a form (`auth/check-inbox.tsx`).
 - `Refraction({ strength = 24, edge = 10 })`: the SVG `<filter id="refract">`, plus
   `<html class="refract">` on Chromium only.
 

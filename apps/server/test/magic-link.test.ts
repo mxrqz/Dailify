@@ -41,7 +41,7 @@ describe("magic link", () => {
   it("pedido pela web: link pra /verify#token (nunca o GET de verify) e entra sem verifier", async () => {
     const url = await requestLink("web@test.local");
     expect(url).toMatch(new RegExp(`^${web}/verify#token=[A-Za-z]{32}$`));
-    expect(sendEmail.mock.calls.at(-1)?.[1].text).toContain("expira em 10 minutos");
+    expect(sendEmail.mock.calls.at(-1)?.[1].text).toContain("por 10 minutos");
     const { user, token } = await verify(tokenOf(url ?? ""));
     expect(user.email).toBe("web@test.local");
     expect(token).toBeTruthy();
@@ -154,7 +154,7 @@ describe("one-time token (Google in the app)", () => {
 describe("e-mailed code (emailOTP)", () => {
   const codeOf = (to: string) => {
     const mail = sendEmail.mock.calls.findLast((c) => c[1].to === to)?.[1];
-    return /entrada: (\d{6})$/m.exec(mail?.text ?? "")?.[1] ?? "";
+    return /no app: (\d{6})$/m.exec(mail?.text ?? "")?.[1] ?? "";
   };
   // Through the HTTP handler, as the clients call it, so the bearer header shows up.
   const post = (path: string, body: object) =>

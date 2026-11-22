@@ -3,8 +3,8 @@ import { useEffect, useState } from "react";
 
 import { type AuthFailure, canResend, RESEND_COOLDOWN_MS } from "@/components/auth/auth-state";
 import { copy } from "@/components/auth/copy";
+import { OtpInput } from "@/components/kit/otp-input";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { fill } from "@/functions/functions";
 import { formString } from "@/lib/form";
 
@@ -88,21 +88,14 @@ export function CheckInbox({
           void submitCode(formString(new FormData(e.currentTarget), "code"));
         }}
       >
-        <label htmlFor="code" className="sr-only">
-          {copy.inbox.codeLabel}
-        </label>
-        <Input
-          id="code"
+        <OtpInput
           name="code"
           required
-          inputMode="numeric"
-          autoComplete="one-time-code"
-          pattern="\d{6}"
-          maxLength={6}
-          placeholder={copy.inbox.codePlaceholder}
-          className="h-13 rounded-md border-0 bg-fill px-4 text-center font-mono text-title-1 tracking-widest shadow-none placeholder:text-ink-tertiary md:text-title-1"
-          aria-invalid={codeFailure?.key === "invalidCode"}
+          aria-label={copy.inbox.codeLabel}
           aria-describedby={codeFailure ? "code-error" : undefined}
+          error={codeFailure !== null}
+          disabled={verifying}
+          onComplete={(code) => void submitCode(code)}
         />
         {codeFailure && (
           <p id="code-error" className="px-1 text-subhead text-brand-text">

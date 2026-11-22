@@ -5,7 +5,9 @@ import userEvent from "@testing-library/user-event";
 
 import { ActionSheet } from "./action-sheet";
 import { Chip } from "./chip";
+import { copy as kitCopy } from "./copy";
 import { ListGroup, ListRow } from "./list";
+import { OtpInput } from "./otp-input";
 import { Refraction } from "./refraction";
 import { SegmentedControl } from "./segmented-control";
 import { Switch } from "./switch";
@@ -146,5 +148,31 @@ describe("Refraction", () => {
     chromium.unmount();
     expect(html).not.toHaveClass("refract");
     vi.unstubAllGlobals();
+  });
+});
+
+describe("OtpInput", () => {
+  it("keeps digits only, fills on paste, completes once on the 6th digit and clears on error", async () => {
+    const user = userEvent.setup();
+    const onComplete = vi.fn();
+    const { rerender } = render(<OtpInput onComplete={onComplete} />);
+    const field = screen.getByRole("textbox", { name: kitCopy.code });
+    expect(field).toHaveAttribute("autocomplete", "one-time-code");
+
+    await user.type(field, "4a8-2");
+    expect(field).toHaveValue("482");
+    expect(onComplete).not.toHaveBeenCalled();
+
+    await user.clear(field);
+    await user.click(field);
+    await user.paste("482 913 77");
+    expect(field).toHaveValue("482913");
+    expect(onComplete).toHaveBeenCalledExactlyOnceWith("482913");
+
+    field.blur();
+    rerender(<OtpInput onComplete={onComplete} error />);
+    expect(field).toHaveValue("");
+    expect(field).toHaveAttribute("aria-invalid", "true");
+    expect(field).toHaveFocus();
   });
 });

@@ -7,7 +7,7 @@ import type { Env } from "./index";
 import { allowedOrigins, NATIVE_ORIGINS } from "./lib/origin";
 import { bytesToBase64url, sha256b64url } from "./lib/encoding";
 import { sendEmail } from "./lib/email";
-import { magicLinkEmail } from "./lib/email/templates/magic-link";
+import { signIn } from "./lib/email/templates/emails";
 import { cancelSubscriptionsOf, stripeClient } from "./lib/stripe";
 import { revokeAll } from "./integrations/connection";
 import {
@@ -62,7 +62,7 @@ async function sendMagicLink(
       })
     : undefined;
 
-  const mail = magicLinkEmail(url, LINK_TTL_S / 60, code);
+  const mail = signIn(url, LINK_TTL_S / 60, code);
   const send = sendEmail(env, { to: data.email, ...mail }).catch(async (err) => {
     await releaseMagicLinkSend(env.DB, email, sentAt);
     throw err;
