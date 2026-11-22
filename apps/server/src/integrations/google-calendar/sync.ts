@@ -35,6 +35,7 @@ import { appendLinks, withoutLink } from "../links";
 import type { Ctx } from "../types";
 import { EVENTS_API, field, text } from "./api";
 import { eventId } from "./event";
+import { TASKS_SCOPE, syncTasks } from "./tasks";
 
 const P = "google-calendar";
 const THROTTLE = 60_000;
@@ -456,7 +457,17 @@ export async function syncCalendar(
     listed.syncToken ?? null,
     full ? { set: s.skipped } : { add: s.skipped },
   );
-  return { imported: s.imported };
+
+  // Tasks only for connections that granted the scope; its failure never undoes the Calendar pass.
+  let tasks = 0;
+  if (claim.scopes.split(/\s+/).includes(TASKS_SCOPE)) {
+    try {
+      tasks = await syncTasks(ctx, s, opts.full ? null : claim.tasksSyncedAt);
+    } catch (err) {
+      console.error(`Google Tasks sync failed for ${userId}`, err);
+    }
+  }
+  return { imported: s.imported + tasks };
 }
 
 /** O `waitUntil` do `GET /tasks`: o throttle decide se roda, e falha só vai pro log. */

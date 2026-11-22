@@ -1,5 +1,5 @@
 import { Hono } from "hono";
-import type { AppEnv } from "../index";
+import type { AppEnv, Env } from "../index";
 import { requireTaskAuth } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import {
@@ -32,6 +32,7 @@ import { fail } from "../lib/errors";
 import { linkedTask, propagate } from "../integrations/propagate";
 import { linkInstance } from "../integrations/google-calendar";
 import { syncIfDue } from "../integrations/google-calendar/sync";
+import { isGoogleTask } from "../integrations/google-calendar/tasks";
 
 const tasks = new Hono<AppEnv>();
 tasks.use("*", requireTaskAuth);
@@ -107,7 +108,7 @@ tasks.patch("/:id", async (c) => {
       const ctx = { env: c.env, userId };
       const instances = await Promise.all(
         linked.links
-          .filter((l) => l.provider === "google-calendar" && l.timeZone)
+          .filter((l) => l.provider === "google-calendar" && l.timeZone && !isGoogleTask(l))
           .map((l) => linkInstance(ctx, l, linked.before, detached.task, at)),
       );
       c.executionCtx.waitUntil(
@@ -127,16 +128,26 @@ tasks.patch("/:id", async (c) => {
   return c.json({ task: updated });
 });
 
-// Concluir não propaga: avulsa concluída segue sendo o compromisso que foi, e na série a conclusão
-// é histórico (`completed`), não muda regra nem datas do evento.
+// Completion reaches only Google Tasks: a done event is still the appointment it was, and a
+// series' completions are history, not its rule or dates.
+async function linkedGoogleTask(env: Env, userId: string, id: string) {
+  const linked = await linkedTask(env, userId, id);
+  const links = linked?.links.filter(isGoogleTask) ?? [];
+  return linked && links.length ? { ...linked, links } : null;
+}
+
 tasks.post("/:id/complete", async (c) => {
   const userId = c.get("userId");
+  const id = c.req.param("id");
   // `at` opcional: uma conclusão feita offline aconteceu quando o cliente diz, não quando a fila
   // subiu. Sem corpo (o caminho online normal), vale o relógio do servidor.
   const body = await readJson(c);
   const at = isRecord(body) && isEpochMs(body.at) ? body.at : Date.now();
-  const updated = await appendCompletion(c.env.DB, userId, c.req.param("id"), at);
+  const linked = await linkedGoogleTask(c.env, userId, id);
+  const updated = await appendCompletion(c.env.DB, userId, id, at);
   if (!updated) return fail(c, 404, "Task not found");
+  if (linked)
+    c.executionCtx.waitUntil(propagate(c.env, userId, linked.links, linked.before, updated));
   return c.json({ task: updated });
 });
 
@@ -146,8 +157,13 @@ tasks.delete("/:id/complete", async (c) => {
   if (!Number.isFinite(from) || !Number.isFinite(to) || to < from)
     return fail(c, 400, "invalid range");
 
-  const updated = await removeCompletions(c.env.DB, c.get("userId"), c.req.param("id"), from, to);
+  const userId = c.get("userId");
+  const id = c.req.param("id");
+  const linked = await linkedGoogleTask(c.env, userId, id);
+  const updated = await removeCompletions(c.env.DB, userId, id, from, to);
   if (!updated) return fail(c, 404, "Task not found");
+  if (linked)
+    c.executionCtx.waitUntil(propagate(c.env, userId, linked.links, linked.before, updated));
   return c.json({ task: updated });
 });
 

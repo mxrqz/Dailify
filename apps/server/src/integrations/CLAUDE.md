@@ -94,7 +94,8 @@ those routed through `PROVIDERS[id]` first.
   offers a resend (`POST /integrations/google-calendar/events/:taskId/sync`, `before = null` =
   push without diffing).
 - `onTaskChanged` returning `"unlink"` deletes the link and drops its `url` from `task.links` (the
-  web reads that url as "linked"). A success clears `stale`. Completing a task does not propagate.
+  web reads that url as "linked"). A success clears `stale`. Completing a task propagates only to
+  Google Tasks links (`isGoogleTask`): a done event stays on the calendar.
 - Sync never calls `propagate`; echoes are caught by `remote_updated`. The cron runs `syncOldest`,
   which calls `syncIfDue` per user, each isolated.
 - Disconnect has no plan gate. It revokes best-effort and deletes the connection and its links,

@@ -5,23 +5,34 @@ const P = "google-calendar";
 
 /**
  * Throttle e lock numa escrita só: quem consegue mover o `synced_at` roda, quem chega dentro de
- * `minGap` (ou com a conexão revogada/ausente) recebe null. Devolve o syncToken guardado.
+ * `minGap` (ou com a conexão revogada/ausente) recebe null. Devolve o syncToken guardado, os
+ * scopes concedidos e o cursor do Google Tasks.
  */
 export async function claimSync(
   db: D1Database,
   userId: string,
   now: number,
   minGap: number,
-): Promise<{ syncToken: string | null } | null> {
+): Promise<{ syncToken: string | null; scopes: string; tasksSyncedAt: number | null } | null> {
   const row = await db
     .prepare(
       `UPDATE integration_connections SET synced_at=?1
        WHERE user_id=?2 AND provider=?3 AND status='active' AND COALESCE(synced_at,0)<?4
-       RETURNING sync_token`,
+       RETURNING sync_token, scopes, tasks_synced_at`,
     )
     .bind(now, userId, P, now - minGap)
-    .first<{ sync_token: string | null }>();
-  return row && { syncToken: row.sync_token };
+    .first<{ sync_token: string | null; scopes: string; tasks_synced_at: number | null }>();
+  return (
+    row && { syncToken: row.sync_token, scopes: row.scopes, tasksSyncedAt: row.tasks_synced_at }
+  );
+}
+
+/** Saved only after a whole Tasks pass, so a failed one is pulled again. */
+export async function saveTasksCursor(db: D1Database, userId: string, at: number): Promise<void> {
+  await db
+    .prepare(`UPDATE integration_connections SET tasks_synced_at=? WHERE user_id=? AND provider=?`)
+    .bind(at, userId, P)
+    .run();
 }
 
 /** `skipped`: o full recontou (`set`); o incremental soma ao que já estava (`add`). */
