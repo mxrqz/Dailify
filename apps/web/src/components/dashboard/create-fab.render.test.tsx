@@ -1,9 +1,14 @@
 /** @vitest-environment jsdom */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { act, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
-const env = vi.hoisted(() => ({ desktop: true, voice: false, start: vi.fn() }));
+const env = vi.hoisted(() => ({
+  desktop: true,
+  voice: false,
+  start: vi.fn(),
+  media: new EventTarget(),
+}));
 
 vi.mock("@/components/dailifyContext", () => ({ useDailify: () => ({ hour12: false }) }));
 // A voz fala com a API, rota e quotas; aqui só importa quem a liga.
@@ -37,6 +42,7 @@ vi.mock("@/components/mew-chat/mew-chat", () => ({
 }));
 
 import { copy as kitCopy } from "@/components/kit/copy";
+import { fill } from "@/functions/functions";
 
 import { copy } from "./copy";
 import { CreateFab } from "./create-fab";
@@ -54,12 +60,17 @@ beforeEach(() => {
   env.voice = false;
   env.start.mockClear();
   vi.spyOn(navigator, "onLine", "get").mockReturnValue(true);
+  env.media = new EventTarget();
   vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
-    matches: env.desktop,
+    get matches() {
+      return env.desktop;
+    },
     media: query,
     onchange: null,
-    addEventListener: () => {},
-    removeEventListener: () => {},
+    addEventListener: (type: string, listener: EventListenerOrEventListenerObject) =>
+      env.media.addEventListener(type, listener),
+    removeEventListener: (type: string, listener: EventListenerOrEventListenerObject) =>
+      env.media.removeEventListener(type, listener),
     addListener: () => {},
     removeListener: () => {},
     dispatchEvent: () => false,
@@ -96,6 +107,29 @@ describe("<CreateFab> mobile", () => {
     render(<CreateFab onSubmit={vi.fn()} text="dentista amanhã" />);
     expect(screen.getByRole("dialog")).toBeInTheDocument();
     expect(screen.getByRole("textbox")).toHaveValue("dentista amanhã");
+  });
+
+  it("crossing to desktop while open keeps the draft, its chip edit and the focus", async () => {
+    const { user } = setup();
+    await user.click(screen.getByRole("button", { name: copy.composer.open }));
+    await user.keyboard("call de 1h");
+    await user.click(
+      screen.getByRole("button", { name: fill(copy.composer.editDuration, { value: "1h" }) }),
+    );
+    await user.click(await screen.findByRole("menuitemradio", { name: "30m" }));
+    screen.getByRole("textbox").focus();
+
+    env.desktop = true;
+    act(() => {
+      env.media.dispatchEvent(new Event("change"));
+    });
+
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByRole("textbox")).toHaveValue("call de 1h");
+    expect(screen.getByRole("textbox")).toHaveFocus();
+    expect(
+      screen.getByRole("button", { name: fill(copy.composer.editDuration, { value: "30m" }) }),
+    ).toBeInTheDocument();
   });
 
   it("the voice signal (Android assistant) goes to the Mew chat, not the composer", () => {
