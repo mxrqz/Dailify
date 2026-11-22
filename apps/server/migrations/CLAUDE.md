@@ -7,7 +7,7 @@ The schema of the `dailify` D1 database, one numbered file per change. Repo-wide
 
 - Wrangler and vitest (`readD1Migrations` + `applyD1Migrations` in each suite's `beforeAll`) both
   replay every `*.sql` here in number order. Write
-  plain SQLite with no `BEGIN`/`COMMIT`: D1 runs each file in its own transaction, and a failing
+  plain SQLite with no `BEGIN`/`COMMIT` (a trigger's `BEGIN ... END` body is fine, `0023`): D1 runs each file in its own transaction, and a failing
   file rolls back alone while the earlier ones stay applied.
 - `bun run deploy` applies `--remote` and then runs `wrangler deploy`; `bun run dev` applies
   `--local` before `wrangler dev`. The Workers Builds deploy command must be `bun run deploy`: a
@@ -41,6 +41,9 @@ The schema of the `dailify` D1 database, one numbered file per change. Repo-wide
 - Indexes are named `idx_<table>_<cols>`, partial for sparse columns (`idx_tasks_alert`, with
   `WHERE alert IS NOT NULL`), and added only with the query that needs them, checked with
   `EXPLAIN QUERY PLAN`: every index costs every write.
+- `0023_task_sync.sql` triggers stamp `tasks.changed_at` and write `task_tombstones`; a new Task
+  column joins the `AFTER UPDATE OF` list there (in a new migration that recreates the trigger), or
+  edits to it never reach `GET /tasks/sync`.
 - Outliers, don't copy: `push_subscriptions.created`/`.timezone` and the index `mew_actions_user`
   (renaming them would break the running worker). The pt-BR headers in 0001-0015 stay as they are.
 

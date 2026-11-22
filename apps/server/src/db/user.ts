@@ -118,6 +118,8 @@ export async function otherUserAgents(
 /** Every app table keyed by `user_id`; `account-delete.test.ts` fails when the schema adds one. */
 export const USER_TABLES = [
   "tasks",
+  // After tasks: their delete trigger writes tombstones.
+  "task_tombstones",
   "push_subscriptions",
   "user_settings",
   "usage",

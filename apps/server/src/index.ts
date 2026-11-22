@@ -18,6 +18,7 @@ import mcp from "./routes/mcp";
 import { dispatchAlerts } from "./alerts";
 import { EMAIL_COOLDOWN_MS } from "./auth-options";
 import { sweepMagicLinks } from "./db/user";
+import { sweepTombstones } from "./db/tasks";
 import { syncOldest } from "./integrations/google-calendar/sync";
 import { fail } from "./lib/errors";
 import { MCP_ICON } from "./lib/mcp";
@@ -148,5 +149,6 @@ export default Object.assign(app, {
     ctx.waitUntil(syncOldest(env));
     // Its own waitUntil: a failed sweep never holds back alerts or sync.
     ctx.waitUntil(sweepMagicLinks(env.DB, Date.now(), EMAIL_COOLDOWN_MS));
+    ctx.waitUntil(sweepTombstones(env.DB));
   },
 });

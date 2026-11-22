@@ -10,6 +10,7 @@ The Worker's SQL, hand-written over the raw `D1Database` binding (no ORM). Repo-
   codecs, the LWW upsert, completions and occurrences. `searchTasks` is the Mew's search: title or
   tags LIKE (`likePattern` escapes `\%_` and fits the 50-byte cap) and a `[from, to)` range capped
   at `SEARCH_DAYS_MAX`, series expanded month by month into it, at most `SEARCH_MAX` hits.
+  `pullTasks` is `GET /tasks/sync` (raw rows, `task_tombstones`), `sweepTombstones` its cron.
 - `user.ts`: the Better Auth `"user"` row (`planOf`, `billingProfile`, `updateUserRole`; `roleOf`
   maps an absent or unknown plan to `free`), the magic-link tables (`magic_link_sent`,
   `magic_link_challenge`, `verification`) for `auth-options.ts`, `USER_TABLES` +
@@ -64,6 +65,13 @@ The Worker's SQL, hand-written over the raw `D1Database` binding (no ORM). Repo-
   skip. `repeat_every` NULL = 1. `everyCol`/`untilCol` null series-only fields when repeat is Off.
 - `upsertConnection` with a new `account_id` drops that provider's links and `sync_token` in the
   same batch. A disconnect never deletes tasks.
+- `changed_at` (not in `TaskRow`) is D1's clock (`NOW_MS`) at the row's last change, stamped
+  by the 0023 triggers on every insert and on any update of a Task column (not `alert_sent`); a
+  delete writes a `task_tombstones` row, a re-insert drops it. Never write either from JS: a new
+  write path is covered as is. The sync cursor is that clock, never the client's `updated_at`.
+  `pullTasks` reads `NOW_MS` before the rows and returns `next` = it minus `SYNC_SKEW_MS`, so a
+  write racing the pull comes twice, never zero times. A `since` older than `TOMBSTONE_TTL_MS`
+  (the sweep's cutoff on the same clock) answers full.
 - Instance links: external_id `${masterId}_<YYYYMMDDTHHMMSSZ>` (all-day `_<YYYYMMDD>`), built in
   `integrations/google-calendar/index.ts`.
 

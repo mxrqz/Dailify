@@ -7,10 +7,20 @@ import {
   stampUpdatedAt,
   startOfMonthMs,
   taskHash,
+  zonedEpoch,
   zonedParts,
 } from "@dailify/shared";
 
 const DAY = 86_400_000;
+
+// D1's clock in epoch-ms: the one the 0023 triggers stamp `changed_at` and tombstones with.
+const NOW_MS = `CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)`;
+/** How far back a full pull reaches for one-off dated tasks (~6 months). */
+export const SYNC_WINDOW_DAYS = 183;
+/** Tombstone lifetime; a `since` older than this answers a full pull. */
+export const TOMBSTONE_TTL_MS = 90 * DAY;
+// The next cursor trails the read: covers same-ms writes and a D1 clock step. Re-sent rows are harmless.
+const SYNC_SKEW_MS = 5_000;
 
 export interface TaskRow {
   id: string;
@@ -256,6 +266,54 @@ export async function getUndatedTasks(db: D1Database, userId: string): Promise<T
     .bind(userId)
     .all<TaskRow>();
   return results.map(rowToTask);
+}
+
+/**
+ * GET /tasks/sync: rows changed after `since` plus the ids deleted since, or (no, future or expired
+ * `since`) the whole window: undated, series not ended before its start, one-offs from its start.
+ * `next` is the `since` of the following pull, on D1's clock.
+ */
+export async function pullTasks(
+  db: D1Database,
+  userId: string,
+  since: number | undefined,
+  timeZone: string,
+): Promise<{ full: boolean; tasks: Task[]; deleted: string[]; next: number }> {
+  // Read before the rows: a write landing in between comes now and again next pull, never neither.
+  const now = (await db.prepare(`SELECT ${NOW_MS} AS now`).first<number>("now")) ?? Date.now();
+  const next = now - SYNC_SKEW_MS;
+  if (since !== undefined && since <= now && since >= now - TOMBSTONE_TTL_MS) {
+    const [changed, gone] = await Promise.all([
+      db
+        .prepare(`SELECT * FROM tasks WHERE user_id=? AND changed_at>?`)
+        .bind(userId, since)
+        .all<TaskRow>(),
+      db
+        .prepare(`SELECT task_id FROM task_tombstones WHERE user_id=? AND deleted_at>?`)
+        .bind(userId, since)
+        .all<{ task_id: string }>(),
+    ]);
+    const deleted = gone.results.map((r) => r.task_id);
+    return { full: false, tasks: changed.results.map(rowToTask), deleted, next };
+  }
+  const day = zonedParts(now - SYNC_WINDOW_DAYS * DAY, timeZone);
+  const start = zonedEpoch({ ...day, hour: 0, minute: 0, second: 0, ms: 0 }, timeZone);
+  const { results } = await db
+    .prepare(
+      `SELECT * FROM tasks WHERE user_id=?1 AND (undated=1 OR date>=?2
+         OR (repeat_kind!='Off' AND (repeat_until IS NULL OR repeat_until>=?2)))`,
+    )
+    .bind(userId, start)
+    .all<TaskRow>();
+  return { full: true, tasks: results.map(rowToTask), deleted: [], next };
+}
+
+// ponytail: full scan of task_tombstones (no deleted_at index); add one if the sweep shows up.
+export async function sweepTombstones(db: D1Database): Promise<void> {
+  await db
+    .prepare(`DELETE FROM task_tombstones WHERE deleted_at<${NOW_MS}-?`)
+    .bind(TOMBSTONE_TTL_MS)
+    .run();
 }
 
 export async function getTask(db: D1Database, userId: string, id: string): Promise<Task | null> {

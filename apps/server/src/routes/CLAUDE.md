@@ -7,7 +7,11 @@ provider work in `lib/` and `integrations/`.
 ## Inventory (mounted in `../index.ts`)
 
 - `tasks.ts` at `/tasks`: `GET /?month=YYYY-MM&tz=`, `GET /undated`, `POST /`, `PATCH|DELETE /:id`
-  (`?occurrence=<epoch-ms>` = one instance), `POST|DELETE /:id/complete`.
+  (`?occurrence=<epoch-ms>` = one instance), `POST|DELETE /:id/complete`, and
+  `GET /sync?since=<cursor>&tz=` (`TaskSync`, shared): no, malformed, future or >90-day `since` =
+  full pull of the window (undated, series not ended `SYNC_WINDOW_DAYS` before today in `tz`,
+  one-offs from that day), else rows changed and ids deleted since. Raw rows, series unexpanded.
+  Cursor: `encodeCursor`/`parseCursor` (`lib/task-input.ts`), base64url `v1.<epoch-ms>`.
 - `voice.ts`, also at `/tasks`: `POST /parse` (text), `POST /voice` (multipart audio).
 - `mew.ts` at `/mew`: `POST /chat` (`permission: { id, always }` = the re-sent turn after a
   permission box: claims the pending read, no quota check and no debit, since its first reply was
