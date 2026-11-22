@@ -1,3 +1,4 @@
+import type { LinkFailure } from "@/lib/native-auth";
 import type { AuthErrorKey } from "./auth-state";
 
 /**
@@ -49,7 +50,10 @@ export const copy = {
     title: "Confira seu e-mail",
     sentTo: "Enviamos um link de acesso para",
     // 10 minutos é o `expiresIn` do magicLink no servidor (apps/server). Se mudar lá, mude aqui.
-    hint: "Clique no link para entrar. Ele vale por 10 minutos.",
+    hint: "Toque no link ou digite o código do e-mail. Os dois valem por 10 minutos.",
+    codeLabel: "Código de 6 dígitos",
+    codePlaceholder: "000000",
+    codeSubmit: "Entrar com o código",
     resend: "Reenviar link",
     resendIn: "Reenviar em {seconds}s",
     back: "Usar outro e-mail",
@@ -99,8 +103,21 @@ export const copy = {
     network: "Sem conexão. Confira sua internet e tente de novo.",
     // Excluir a conta pede uma sessão recente: o /profile sai e volta pra cá com `?error=SESSION_EXPIRED`.
     reauth: "Por segurança, entre de novo e repita a exclusão.",
+    invalidCode: "Código incorreto. Confira o e-mail e tente de novo.",
+    // Expired, or burned by too many wrong tries: either way only a new e-mail helps.
+    staleCode: "Este código não vale mais. Reenvie para receber outro.",
     generic: "Algo deu errado. Tente de novo.",
   } satisfies Record<AuthErrorKey, string>,
+
+  // The app's toast when an e-mailed link opens it and fails (main.tsx).
+  linkErrors: {
+    otherDevice:
+      "Este link foi pedido em outro aparelho ou por um pedido mais novo. Use o código do e-mail ou peça outro link.",
+    expired: "Este link expirou ou já foi usado. Peça um novo.",
+    tooManyRequests: "Muitas tentativas. Espere um minuto e tente de novo.",
+    network: "Sem conexão. Confira sua internet e abra o link de novo.",
+    generic: "Não deu para entrar com este link. Tente de novo.",
+  } satisfies Record<LinkFailure, string>,
 } as const;
 
 /** O contrato que um locale futuro precisa cumprir (bd Dailify-1xy). */

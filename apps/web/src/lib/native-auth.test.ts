@@ -4,8 +4,20 @@ import { describe, expect, it, vi } from "vitest";
 const auth = vi.hoisted(() => ({ authClient: { signOut: vi.fn() }, setBearer: vi.fn() }));
 vi.mock("@/lib/auth", () => auth);
 
-const { base64url, parseAuthLink, parseOpenLink, s256, signOutAndReload } =
+const { base64url, linkFailure, parseAuthLink, parseOpenLink, s256, signOutAndReload } =
   await import("./native-auth");
+
+describe("linkFailure", () => {
+  it("names why a link verify failed, by status", () => {
+    expect(linkFailure(403)).toBe("otherDevice");
+    expect(linkFailure(429)).toBe("tooManyRequests");
+    expect(linkFailure(503)).toBe("generic");
+    // An invalid or used token redirects: followed it lands on a 404, unfollowed it is opaque (0).
+    expect(linkFailure(404)).toBe("expired");
+    expect(linkFailure(0)).toBe("expired");
+    expect(linkFailure(200)).toBe("expired");
+  });
+});
 
 const TOKEN = "aBcDeFgHiJkLmNoPqRsTuVwXyZaBcDeF";
 

@@ -1,10 +1,12 @@
 import { ArrowLeftIcon, MailIcon, RotateCwIcon } from "lucide-react";
 import { useEffect, useState } from "react";
 
-import { canResend, RESEND_COOLDOWN_MS } from "@/components/auth/auth-state";
+import { type AuthFailure, canResend, RESEND_COOLDOWN_MS } from "@/components/auth/auth-state";
 import { copy } from "@/components/auth/copy";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { fill } from "@/functions/functions";
+import { formString } from "@/lib/form";
 
 /** Segundos que faltam pro reenvio liberar. Zero = liberado. */
 function useCooldown(sentAt: number): number {
@@ -31,6 +33,7 @@ export function CheckInbox({
   busy,
   onResend,
   onBack,
+  onCode,
 }: {
   email: string;
   sentAt: number;
@@ -43,8 +46,23 @@ export function CheckInbox({
   busy?: boolean;
   onResend: () => void;
   onBack: () => void;
+  /** Signs in with the e-mailed code; resolves to the failure, or null once the session lands. */
+  onCode: (code: string) => Promise<AuthFailure | null>;
 }): JSX.Element {
   const remaining = useCooldown(sentAt);
+  const [verifying, setVerifying] = useState(false);
+  const [codeFailure, setCodeFailure] = useState<AuthFailure | null>(null);
+
+  const submitCode = async (code: string) => {
+    setVerifying(true);
+    setCodeFailure(null);
+    const failure = await onCode(code);
+    // On success the page leaves for `from` as soon as the session lands; stay busy until then.
+    if (failure) {
+      setCodeFailure(failure);
+      setVerifying(false);
+    }
+  };
 
   return (
     <div className="flex flex-col items-center text-center">
@@ -63,7 +81,41 @@ export function CheckInbox({
         {copy.inbox.hint}
       </p>
 
-      <div className="mt-8 flex w-full flex-col gap-2">
+      <form
+        className="mt-6 flex w-full flex-col gap-3"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void submitCode(formString(new FormData(e.currentTarget), "code"));
+        }}
+      >
+        <label htmlFor="code" className="sr-only">
+          {copy.inbox.codeLabel}
+        </label>
+        <Input
+          id="code"
+          name="code"
+          required
+          inputMode="numeric"
+          autoComplete="one-time-code"
+          pattern="\d{6}"
+          maxLength={6}
+          placeholder={copy.inbox.codePlaceholder}
+          className="h-13 rounded-md border-0 bg-fill px-4 text-center font-mono text-title-1 tracking-widest shadow-none placeholder:text-ink-tertiary md:text-title-1"
+          aria-invalid={codeFailure?.key === "invalidCode"}
+          aria-describedby={codeFailure ? "code-error" : undefined}
+        />
+        {codeFailure && (
+          <p id="code-error" className="px-1 text-subhead text-brand-text">
+            {copy.errors[codeFailure.key]}
+            {codeFailure.code && <span className="ml-1 caps opacity-70">{codeFailure.code}</span>}
+          </p>
+        )}
+        <Button type="submit" size="lg" loading={verifying}>
+          {copy.inbox.codeSubmit}
+        </Button>
+      </form>
+
+      <div className="mt-6 flex w-full flex-col gap-2">
         <Button
           size="lg"
           variant="secondary"

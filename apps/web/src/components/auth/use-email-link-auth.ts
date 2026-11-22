@@ -9,7 +9,7 @@ import {
 } from "@/components/auth/auth-state";
 import { useTurnstile } from "@/components/auth/turnstile";
 import { authClient } from "@/lib/auth";
-import { startNativeMagicLink } from "@/lib/native-auth";
+import { startNativeMagicLink, verifyNativeCode } from "@/lib/native-auth";
 import { isTauri } from "@/lib/platform";
 
 /**
@@ -73,6 +73,17 @@ export function useEmailLinkAuth() {
     captchaRef,
     submit: start,
     resend: useCallback(() => start(lastEmail.current), [start]),
+    // The code from the same e-mail. In the app the bearer lands in the keyring like a link's.
+    verifyCode: useCallback(async (email: string, otp: string) => {
+      try {
+        const { error } = await (isTauri()
+          ? verifyNativeCode(email, otp)
+          : authClient.signIn.emailOtp({ email, otp }));
+        return error ? classifyAuthError(error) : null;
+      } catch {
+        return classifyAuthError(null);
+      }
+    }, []),
     reset: useCallback(() => {
       runId.current++;
       dispatch({ type: "reset" });

@@ -32,7 +32,9 @@ rules: [/RULES.md](../../../../RULES.md).
 - Native magic link: `startNativeMagicLink` stores a random verifier in keyring account
   `mewki.magic-link-verifier` (the app may close before the mail arrives) and sends
   `metadata.challenge = s256(verifier)`. Verify sends `x-mewki-verifier`, reads the `set-auth-token`
-  header, then deletes the verifier. The server contract lives in
+  header, then deletes the verifier (`landSession`, shared with `verifyNativeCode`, the e-mailed
+  code's sign-in). A failed verify throws `LinkError` with a `kind` (`linkFailure(status)`). The
+  server contract lives in
   `docs/research/2026-11-17-better-auth.md` (Magic link); change both sides together.
 - After a session change Better Auth doesn't signal itself (magic-link verify, bearer restore),
   call `authClient.$store.notify("$sessionSignal")`, or `useSession` keeps the stale atom.

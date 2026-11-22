@@ -6,7 +6,7 @@ import { toast } from "sonner";
 import App from "./App";
 import { copy } from "@/components/auth/copy";
 import { initBackButton } from "@/lib/back-button";
-import { initNativeAuth } from "@/lib/native-auth";
+import { initNativeAuth, LinkError } from "@/lib/native-auth";
 import { isTauri } from "@/lib/platform";
 
 // Deploy novo troca os hashes e o SW apaga o precache velho: a aba aberta há horas pede uma rota
@@ -35,7 +35,7 @@ if (isTauri()) {
   initBackButton().catch(console.error);
   initNativeAuth((error) => {
     console.error(error);
-    toast.error(copy.verify.invalid);
+    toast.error(copy.linkErrors[error instanceof LinkError ? error.kind : "generic"]);
   })
     .catch(console.error)
     .finally(render);

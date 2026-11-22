@@ -7,7 +7,14 @@ import { internalPath } from "@/lib/platform";
 export type AuthMode = "signIn" | "signUp";
 
 export type AuthErrorKey =
-  "invalidEmail" | "captcha" | "tooManyRequests" | "network" | "reauth" | "generic";
+  | "invalidEmail"
+  | "captcha"
+  | "tooManyRequests"
+  | "network"
+  | "reauth"
+  | "invalidCode"
+  | "staleCode"
+  | "generic";
 
 /** `code` só no genérico: a tela mostra em mono pra virar relato de bug. */
 export type AuthFailure = { key: AuthErrorKey; code?: string };
@@ -79,6 +86,11 @@ export function classifyAuthError(error: BetterAuthError | null): AuthFailure {
   // Códigos do plugin `captcha` (token ausente, recusado pela Cloudflare ou já gasto).
   if (error.code === "MISSING_RESPONSE" || error.code === "VERIFICATION_FAILED") {
     return { key: "captcha" };
+  }
+  // The e-mailed code (`emailOTP`): a typo, or a code that only a new e-mail can replace.
+  if (error.code === "INVALID_OTP") return { key: "invalidCode" };
+  if (error.code === "OTP_EXPIRED" || error.code === "TOO_MANY_ATTEMPTS") {
+    return { key: "staleCode" };
   }
   return { key: "generic", code: error.code ?? String(error.status) };
 }

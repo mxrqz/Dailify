@@ -109,20 +109,63 @@ export const onSigningIn = (listener: () => void): (() => void) => {
   return () => listeners.delete(listener);
 };
 
+/** Why an e-mailed link didn't sign in; `main.tsx` toasts the matching copy. */
+export type LinkFailure = "otherDevice" | "expired" | "tooManyRequests" | "network" | "generic";
+
+export class LinkError extends Error {
+  readonly kind: LinkFailure;
+  constructor(kind: LinkFailure) {
+    super(`magic link verify failed: ${kind}`);
+    this.kind = kind;
+  }
+}
+
+// 403 = the verifier doesn't match: asked on another device, or replaced by a newer request here.
+// An invalid token redirects with an error, so it never comes back 2xx with a session.
+export const linkFailure = (status: number): LinkFailure =>
+  status === 403
+    ? "otherDevice"
+    : status === 429
+      ? "tooManyRequests"
+      : status >= 500
+        ? "generic"
+        : "expired";
+
+// A session from a link or a code lands the same way: keyring, bearer, then the session atom.
+async function landSession(session: string): Promise<void> {
+  await vaultSet(SESSION_ACCOUNT, session);
+  setBearer(session);
+  await vaultDelete(VERIFIER_ACCOUNT);
+  authClient.$store.notify("$sessionSignal");
+}
+
+/** Signs in with the e-mailed code; the bearer comes back in `set-auth-token`, like a link's. */
+export const verifyNativeCode = (email: string, otp: string) =>
+  authClient.signIn.emailOtp({
+    email,
+    otp,
+    fetchOptions: {
+      onSuccess: async ({ response }: { response: Response }) => {
+        const session = response.headers.get("set-auth-token");
+        if (!session) throw new Error("code sign-in returned no bearer");
+        await landSession(session);
+      },
+    },
+  });
+
 async function verifyLink(token: string): Promise<void> {
   setSigningIn(true);
   try {
     const verifier = await vaultGet(VERIFIER_ACCOUNT);
-    if (!verifier) throw new Error("magic link opened without a request from this device");
+    if (!verifier) throw new LinkError("otherDevice");
     const url = new URL(`${apiURL}/auth/magic-link/verify`, window.location.origin);
     url.searchParams.set("token", token);
-    const res = await fetch(url, { headers: { "x-mewki-verifier": verifier } });
+    const res = await fetch(url, { headers: { "x-mewki-verifier": verifier } }).catch(() => {
+      throw new LinkError("network");
+    });
     const session = res.headers.get("set-auth-token");
-    if (!res.ok || !session) throw new Error(`magic link verify failed (${res.status})`);
-    await vaultSet(SESSION_ACCOUNT, session);
-    setBearer(session);
-    await vaultDelete(VERIFIER_ACCOUNT);
-    authClient.$store.notify("$sessionSignal");
+    if (!res.ok || !session) throw new LinkError(linkFailure(res.status));
+    await landSession(session);
   } catch (error) {
     // On success it stays on until the session lands and the login screen navigates away.
     setSigningIn(false);
