@@ -18,9 +18,8 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   npm libraries are Node-only. On a 404/410 from `sendPush` the caller deletes the subscription.
 - `encoding.ts`: base64url and `sha256b64url` (PKCE S256, the magic-link verifier hash).
 - `email/`: `sendEmail` is the only entry point, with one file per vendor in `providers/` (today
-  the Cloudflare `EMAIL` binding). Templates are pure, return `{ subject, text, html }`, and use
-  inline styles with no images or tracking. `FROM` (`entrar@${APP_HOST}`) must be in wrangler.toml
-  `allowed_sender_addresses`.
+  the Cloudflare `EMAIL` binding). `FROM` (`entrar@${APP_HOST}`) must be in wrangler.toml
+  `allowed_sender_addresses`. Templates (below) are pure and return `{ subject, text, html }`.
 - `origin.ts`: `appOrigin` returns the caller's origin when it is allowed, otherwise the first
   `ALLOWED_ORIGIN`. `returnBase` sends native callers to `${APP_URL}/app`, because Stripe can't
   reopen the app. `NATIVE_ORIGINS` is the only list of the app's webview origins: CORS
@@ -69,6 +68,22 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   implement them, and `toBlocks` drops any other provider. Read content (`MewRead`) is the last
   user-role item, capped at `READ_MAX`; that second call never offers `read` again.
 
+## E-mail templates (`email/templates/`)
+
+- `layout.ts` is every e-mail's anatomy (approved design, bd `Dailify-i39k`): the Mew GIF
+  (`${APP_URL}/email/mew.gif`, from `apps/web/scripts/email-mew.tsx`, the only image: same URL for
+  everyone, no tracking) + "Mewki", title, one intro sentence, the `parts`, the "Não foi você?"
+  lines, an optional fallback link, and the footer outside the card. Inline styles, hex with the
+  token named in the header comment, dark mode through the `prefers-color-scheme` classes.
+- Parts: `button` (the one red action), `code` (unspaced, `user-select:all`; mail runs no copy
+  button), `details` (grey label/value rows), `para`. One action per e-mail: a button or a code,
+  both only in `signIn`. A code never goes in the subject (lock-screen notifications).
+- Everything is HTML-escaped: detail values carry user agents. The plain-text part is built from
+  the same parts.
+- `emails.ts` holds every template; only `signIn` is wired (`auth-options.ts`). Adding one: a
+  function there that calls `layout` with pt-BR copy, a case in `test/email-templates.test.ts`.
+  `securityChanged` reads its title and intro from `CHANGES`, keyed by `SecurityChange`.
+
 ## Stripe
 
 - Read expandable fields only through `customerId`, `subscriptionId`, `priceIdOf` and
@@ -99,7 +114,7 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
 
 ## Tests (`apps/server/test/`)
 
-- Unit: `push.test.ts` (the RFC 8291 vector; `encryptPayload`'s `fixed` exists only for it),
+- Unit: `email-templates`, `push.test.ts` (the RFC 8291 vector; `encryptPayload`'s `fixed` exists only for it),
   `occurrence-alert`, `task-input`, `pricing-stripe`.
 - Through routes: `tasks-parse` and `voice` (openai), `mew-chat`, `webhook`, `checkout` and
   `invoices` (stripe), `magic-link` and `account-delete` (email).
