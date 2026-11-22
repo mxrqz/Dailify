@@ -45,6 +45,9 @@ export function CreateFab({
 }: CreateFabProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const desktop = useMediaQuery(DESKTOP);
+  // Swapping Sheet and Dialog remounts the composer and drops its draft: an open one keeps its shell.
+  const [shell, setShell] = useState(desktop);
+  if (!open && shell !== desktop) setShell(desktop);
   // A folha fecha no ⏎ (a tarefa já entrou otimista); se o servidor recusar, reabre com o texto.
   const [retry, setRetry] = useState<string>();
   const label = copy.composer.open;
@@ -105,7 +108,7 @@ export function CreateFab({
   // A folha fecha no ⏎ (a tarefa já entrou otimista); ⇧⏎ a mantém aberta pra próxima.
   const composer = (
     <TaskComposer
-      large={!desktop}
+      large={!shell}
       initialText={retry}
       day={day}
       onCreated={() => changeOpen(false)}
@@ -134,7 +137,7 @@ export function CreateFab({
   return (
     <>
       <MewChat panel={desktop} onCompose={() => changeOpen(true)} listenSignal={voiceSignal} />
-      {desktop ? (
+      {shell ? (
         <Dialog open={open} onOpenChange={changeOpen}>
           <DialogContent
             aria-describedby={undefined}
