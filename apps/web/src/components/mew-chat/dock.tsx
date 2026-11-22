@@ -80,7 +80,8 @@ export function CreateDock({
     return (
       <div
         className={cn(
-          "sticky bottom-0 z-dock mt-auto bg-material-bar px-8 pt-3 pb-5 backdrop-blur-xl backdrop-saturate-180",
+          // The mobile veil, not a bar: blur fading in from the top, the chromatic edge at the bottom.
+          "dock-veil sticky bottom-0 z-dock mt-auto px-8 pt-3 pb-5",
           className,
         )}
       >
