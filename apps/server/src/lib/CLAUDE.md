@@ -39,7 +39,7 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
 
 - `isRecord`, `isStringArray`, `isRepeatEvery`, `isTimeZone`, `isDuration` come from
   `@dailify/shared`.
-- task-input.ts: `validZone`, `readJson`, `isEpochMs`, `parseMonth`, `parseOccurrence`,
+- task-input.ts: `validZone`, `readJson`, `parseAudio`, `isEpochMs`, `parseMonth`, `parseOccurrence`,
   `sanitizeLinks`, `parseClientId`, `newTaskId` (every server-minted task id), `parseTaskFields`,
   `parseNewTask`.
 - Contract: an absent key keeps the stored value and `null` clears it (`alert`, `repeatEvery`,

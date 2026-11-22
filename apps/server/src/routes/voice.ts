@@ -10,7 +10,7 @@ import { insertTask } from "../db/tasks";
 import { aiQuota, debitAi } from "../db/limits";
 import { aiTargets } from "../db/integrations";
 import { fail } from "../lib/errors";
-import { readJson, validZone } from "../lib/task-input";
+import { parseAudio, readJson, validZone } from "../lib/task-input";
 
 const voice = new Hono<AppEnv>();
 
@@ -61,16 +61,8 @@ voice.post("/voice", requireAuth, rateLimit("AI_LIMITER"), async (c) => {
   if (quota) return fail(c, quota.status, quota.error, { code: quota.code });
 
   const body = await c.req.parseBody();
-  const audio = body["audio"];
-  if (!(audio instanceof File)) return fail(c, 400, "No audio");
-
-  // 60s a 24 kbps = ~180 KB; 512 KB dá folga pro AAC do Safari. Este é o teto de custo por comando:
-  // a transcrição é cobrada por minuto de áudio, e sem ele um upload cabia ~28 minutos.
-  // ponytail: byte é proxy de duração. Uma request forjada pode encodar ~8 min a 8 kbps aqui
-  // dentro; quem fecha a conta é a quota mensal, não este cap sozinho.
-  const MAX_AUDIO_BYTES = 512 * 1024;
-  if (audio.size > MAX_AUDIO_BYTES) return fail(c, 413, "Audio too large (max 512KB)");
-  if (audio.type && !audio.type.startsWith("audio/")) return fail(c, 415, "Unsupported audio type");
+  const audio = parseAudio(body["audio"]);
+  if ("error" in audio) return fail(c, audio.status, audio.error);
 
   const timezone =
     validZone(body["timezone"]) ?? validZone((await getSettings(c.env.DB, userId)).timeZone);

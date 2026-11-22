@@ -269,3 +269,46 @@ describe("PATCH /mew/actions/:id", () => {
     expect(row?.status).toBe("done");
   });
 });
+
+const speak = (audio = new File([new Uint8Array([1, 2, 3])], "a.ogg", { type: "audio/ogg" })) => {
+  const form = new FormData();
+  form.append("audio", audio);
+  return app.request("/mew/transcribe", { method: "POST", body: form }, env);
+};
+
+describe("POST /mew/transcribe", () => {
+  it("returns the transcript without a debit; the chat turn it becomes debits one", async () => {
+    userId = "mw-voice";
+    await consent(userId);
+    openaiMock.audio.transcriptions.create.mockResolvedValue({ text: " o que tenho hoje? " });
+    const res = await speak();
+    expect(res.status).toBe(200);
+    const { text } = await res.json<{ text: string }>();
+    expect(text).toBe("o que tenho hoje?");
+    expect(await used(userId)).toBe(0);
+
+    aiReturns({ reply: "Nada hoje." });
+    expect((await chat({ text })).status).toBe(200);
+    expect(await used(userId)).toBe(1);
+  });
+
+  it("refuses without consent, a bad upload or no credits, before transcribing", async () => {
+    userId = "mw-voice-gates";
+    expect((await speak()).status).toBe(403);
+    await consent(userId);
+    expect((await speak(new File(["x"], "a.txt", { type: "text/plain" }))).status).toBe(415);
+    expect((await speak(new File([new Uint8Array(513 * 1024)], "a.ogg"))).status).toBe(413);
+    for (let i = 0; i < limitsFor("free").ai; i++)
+      await bumpStoredUsage(env.DB, userId, "ai", periodFor(new Date()));
+    expect((await speak()).status).toBe(429);
+    expect(openaiMock.audio.transcriptions.create).not.toHaveBeenCalled();
+  });
+
+  it("answers 502 without a debit when the transcription fails", async () => {
+    userId = "mw-voice-502";
+    await consent(userId);
+    openaiMock.audio.transcriptions.create.mockRejectedValue(new Error("timeout"));
+    expect((await speak()).status).toBe(502);
+    expect(await used(userId)).toBe(0);
+  });
+});

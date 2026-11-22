@@ -74,4 +74,9 @@ export interface MewReply {
   blocks: MewBlock[];
 }
 
+/** `POST /mew/transcribe`: the spoken turn, sent next as a normal `/mew/chat` text. */
+export interface MewTranscript {
+  text: string;
+}
+
 export type MewActionStatus = "proposed" | "done" | "cancelled" | "undone";

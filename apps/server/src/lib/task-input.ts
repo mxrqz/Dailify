@@ -24,6 +24,21 @@ export async function readJson(c: { req: { json: () => Promise<unknown> } }): Pr
   }
 }
 
+// 60s a 24 kbps = ~180 KB; 512 KB dá folga pro AAC do Safari. Este é o teto de custo por comando:
+// a transcrição é cobrada por minuto de áudio, e sem ele um upload cabia ~28 minutos.
+// ponytail: byte é proxy de duração. Uma request forjada pode encodar ~8 min a 8 kbps aqui
+// dentro; quem fecha a conta é a quota mensal, não este cap sozinho.
+const MAX_AUDIO_BYTES = 512 * 1024;
+
+/** The multipart `audio` part, checked before anything pays to transcribe it. */
+export function parseAudio(value: unknown): File | { error: string; status: 400 | 413 | 415 } {
+  if (!(value instanceof File)) return { error: "No audio", status: 400 };
+  if (value.size > MAX_AUDIO_BYTES) return { error: "Audio too large (max 512KB)", status: 413 };
+  if (value.type && !value.type.startsWith("audio/"))
+    return { error: "Unsupported audio type", status: 415 };
+  return value;
+}
+
 /** "YYYY-MM" with month 1..12 -> the 1st of that month; anything else -> null. */
 export function parseMonth(value: string | undefined): Date | null {
   const key = value === undefined ? null : parseMonthKey(value);

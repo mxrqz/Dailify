@@ -11,7 +11,9 @@ provider work in `lib/` and `integrations/`.
 - `voice.ts`, also at `/tasks`: `POST /parse` (text), `POST /voice` (multipart audio).
 - `mew.ts` at `/mew`: `POST /chat` (`permission: { id, always }` = the re-sent turn after a
   permission box: claims the pending read, no quota check and no debit, since its first reply was
-  the turn's credit), `PATCH /actions/:id`, `POST /actions/:id/send` (a confirmed send box).
+  the turn's credit), `POST /transcribe` (the chat's mic: consent and quota gates, no debit; the
+  `/chat` turn the text becomes debits), `PATCH /actions/:id`, `POST /actions/:id/send` (a
+  confirmed send box).
 - `billing.ts` at `/`: `GET /permissions`, `/billing/{checkout,portal,payment-details,invoices}`,
   `POST /webhooks/stripe` (public, signature-checked, empty 200).
 - `push.ts` at `/`: `GET /push/key` (public), `GET|POST|DELETE /push/subscription`.
@@ -52,7 +54,7 @@ things.use("*", rateLimit("API_LIMITER")); // only if every route shares it, els
 ## Limiters (`wrangler.toml`)
 
 - `API_LIMITER` 120/min per user: D1 and Stripe. `AI_LIMITER` 6/min per user: every OpenAI
-  route (`/tasks/parse`, `/tasks/voice`, `/mew/chat`). `AUTH_LIMITER` 5/min per
+  route (`/tasks/parse`, `/tasks/voice`, `/mew/chat`, `/mew/transcribe`). `AUTH_LIMITER` 5/min per
   `cf-connecting-ip`: before login only.
 - Tests run the real bindings (`test/CLAUDE.md`); only `tasks-parse.test.ts` asserts a limiter's
   429 (`AI_LIMITER`), and a missing binding is a no-op: a forgotten `rateLimit(...)` passes the
@@ -68,7 +70,8 @@ things.use("*", rateLimit("API_LIMITER")); // only if every route shares it, els
   `isEpochMs`, `parseOccurrence` (all `lib/task-input.ts`). Caps: `TASK_LIMITS`, `DATE_RANGE`, `MEW_*` from `@dailify/shared`.
 - Partial writes: absent key keeps, `null` clears, no known key is a 400 (`parseTaskFields` with
   `partial: true`, `parsePatch` in settings.ts).
-- Multipart (voice.ts): `parseBody()`, `instanceof File`, 413 size cap, 415 MIME, before paying.
+- Multipart (voice.ts, mew.ts `/transcribe`): `parseBody()`, then `parseAudio` (`lib/task-input.ts`:
+  `instanceof File`, 413 size cap, 415 MIME), before paying.
 
 ## Status codes
 
