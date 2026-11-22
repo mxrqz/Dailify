@@ -206,6 +206,10 @@ const ACCOUNT_ITEMS = [
  * The desktop column, props only: brand and history on top, the app, then the account pages; at
  * the bottom credits, the Free upsell and the account menu (Perfil, Segurança, Sair).
  */
+// The grid-rows reveal (an allowed layout animation): a row that opens or closes its height.
+const REVEAL =
+  "grid transition-[grid-template-rows] duration-base ease-out motion-reduce:transition-none";
+
 export function SidebarMenu({
   account,
   credits,
@@ -304,17 +308,25 @@ export function SidebarMenu({
         />
       </div>
 
-      <hr className="mx-3.5 mt-4 border-separator" />
-      <p
-        ref={folded}
-        className={cn(
-          "px-3.5 pt-3 pb-1.5 text-footnote font-medium whitespace-nowrap text-ink-secondary",
-          FADE,
-          fade,
-        )}
-      >
-        {copy.profile.navAccount}
-      </p>
+      {/* Expanded, the "Conta" label parts the groups; folded, a faint line does, and the label's
+          row closes so the icons stay evenly spaced. */}
+      <div className={cn(REVEAL, collapsed ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
+        <div className="overflow-hidden">
+          <hr className="mx-3.5 my-3 border-ink-tertiary/40" />
+        </div>
+      </div>
+      <div className={cn(REVEAL, collapsed ? "grid-rows-[0fr]" : "grid-rows-[1fr]")}>
+        <p
+          ref={folded}
+          className={cn(
+            "overflow-hidden px-3.5 pt-5 pb-1.5 text-footnote font-medium whitespace-nowrap text-ink-secondary",
+            FADE,
+            fade,
+          )}
+        >
+          {copy.profile.navAccount}
+        </p>
+      </div>
       <div className="flex flex-col gap-0.5">
         {ACCOUNT_ITEMS.map((item) => (
           <SidebarItem key={item.to} {...item} collapsed={collapsed} />
