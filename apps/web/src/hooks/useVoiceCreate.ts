@@ -21,9 +21,10 @@ export const voiceSupported = (): boolean =>
 
 /**
  * Grava, manda pro servidor (que transcreve e cria) e põe as tarefas na tela, com Desfazer.
- * `analyser` alimenta a onda ao vivo; `cancel` solta o microfone sem enviar.
+ * `analyser` alimenta a onda ao vivo; `cancel` solta o microfone sem enviar. `onAudio` takes the
+ * recording instead (the Mew chat), while the state stays "sending".
  */
-export function useVoiceCreate(onCreated?: () => void) {
+export function useVoiceCreate(onCreated?: () => void, onAudio?: (audio: Blob) => Promise<void>) {
   const { bumpUsage } = useDailify();
   const showCreated = useShowCreated();
   const quotas = useQuotas();
@@ -38,6 +39,7 @@ export function useVoiceCreate(onCreated?: () => void) {
   const send = async (audio: Blob) => {
     setState("sending");
     try {
+      if (onAudio) return await onAudio(audio);
       const form = new FormData();
       form.append("audio", audio);
       form.append("timezone", appTimeZone());

@@ -5,6 +5,7 @@ import type {
   MewActionStatus,
   MewReply,
   MewRequest,
+  MewTranscript,
   OccurrenceEdit,
   Task,
   TaskInput,
@@ -243,6 +244,15 @@ export async function mewChat(req: MewRequest): Promise<{ reply?: MewReply; erro
     body: JSON.stringify(req),
   });
   return { reply: data, error };
+}
+
+/** The chat's mic: audio in, the text to send as the turn. Debits nothing; the turn does. */
+export async function transcribeMew(form: FormData): Promise<{ text?: string; error?: ApiError }> {
+  const { data, error } = await request<MewTranscript>("/mew/transcribe", {
+    method: "POST",
+    body: form,
+  });
+  return { text: data?.text, error };
 }
 
 /** Audit trail of a confirm box; fire and forget. */

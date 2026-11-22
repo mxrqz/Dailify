@@ -17,13 +17,22 @@ import { copy } from "@/components/dashboard/copy";
 import { MEW_PANEL_SLOT, SidePanel } from "@/components/dashboard/side-panel";
 import { Button } from "@/components/ui/button";
 import { fade } from "@/consts/motion";
-import { getSettings, mewChat, saveSettings, sendMewAction, setMewAction } from "@/functions/api";
+import {
+  getSettings,
+  mewChat,
+  saveSettings,
+  sendMewAction,
+  setMewAction,
+  transcribeMew,
+} from "@/functions/api";
 import { creditsLabel } from "@/functions/quota-label";
 import { appTimeZone, zoned } from "@/functions/zone";
 import { setCreditsTray } from "@/hooks/useCreditsTray";
+import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { useOnline } from "@/hooks/useOnline";
 import { useQuotas } from "@/hooks/useQuotas";
 import { closePanel, openPanel, usePanel } from "@/hooks/usePanel";
+import { useVoiceCreate, voiceSupported } from "@/hooks/useVoiceCreate";
 import { useSession } from "@/lib/auth";
 import { cn } from "@/lib/utils";
 
@@ -57,13 +66,14 @@ const failure = (reply: string): MewReply => ({ reply, intent: "unsupported", bl
 /** The dock and the Mew chat it opens: one `/mew/chat` call per turn, boxes applied to the agenda. */
 export function MewChat({
   onCompose,
-  onVoice,
   panel,
+  listenSignal,
 }: {
   onCompose: () => void;
-  onVoice?: () => void;
   /** Desktop: the dock sits at the agenda's foot and the thread lives in the side panel. */
   panel?: boolean;
+  /** Bumped by `?mew=voice` (the Android assistant): each new value opens the chat listening. */
+  listenSignal?: number;
 }) {
   const userId = useSession().data?.user.id;
   const [messages, dispatch] = useReducer(chatReducer, userId, loadChat);
@@ -110,6 +120,44 @@ export function MewChat({
       image,
     );
   };
+
+  const say = (line: string) => {
+    const id = newId();
+    dispatch({ type: "wait", id });
+    dispatch({ type: "reply", to: mewId(id), reply: failure(line) });
+  };
+
+  // The mic: the transcript goes out as a normal turn, whose reply is the turn's one credit.
+  const voice = useVoiceCreate(undefined, async (audio) => {
+    const form = new FormData();
+    form.append("audio", audio);
+    const { text, error } = await transcribeMew(form);
+    if (text) return void send(text);
+    if (error?.code === API_ERROR.mewConsentRequired) return setConsent(false);
+    const out = error?.code === API_ERROR.aiExhausted;
+    if (out) setCreditsTray(true);
+    say(
+      !error
+        ? t.heardNothing
+        : error.offline
+          ? t.offline
+          : out
+            ? copy.mew.exhausted
+            : error.code === API_ERROR.rateLimited
+              ? t.tooFast
+              : t.heardFailed,
+    );
+  });
+  const canListen = online && voiceSupported();
+  const listen = () => {
+    if (panel) openPanel({ kind: "mew" });
+    else setDrawer(true);
+    if (canListen) void voice.start();
+  };
+  const listenNow = useEffectEvent(listen);
+  useEffect(() => {
+    if (listenSignal) listenNow();
+  }, [listenSignal]);
 
   /** One `/mew/chat` call into the typing reply `mewId(id)`; `false` = it failed. */
   const ask = async (id: string, req: MewRequest, image?: Photo) => {
@@ -211,13 +259,6 @@ export function MewChat({
 
   const credits = creditsLabel(ai);
 
-  const voice =
-    onVoice &&
-    (() => {
-      setDrawer(false);
-      onVoice();
-    });
-
   const log = {
     messages,
     dispatch: act,
@@ -239,13 +280,16 @@ export function MewChat({
   const input = (dock?: boolean) => (
     <ChatInput
       dock={dock}
-      busy={busy}
+      busy={busy || voice.state === "sending"}
       offline={!online}
       onSend={(text, image) => {
         if (dock) openPanel({ kind: "mew" });
         void send(text, image);
       }}
-      onVoice={voice}
+      onVoice={canListen ? listen : undefined}
+      listening={voice.state === "recording"}
+      onStop={voice.stop}
+      onCancel={voice.cancel}
       file={photo}
     />
   );
@@ -292,12 +336,26 @@ export function MewChat({
   return (
     <>
       {/* Open, the dock is the chat's message box, above the drawer. */}
-      <CreateDock onOpen={() => setDrawer(true)} onVoice={onVoice} chat={open && input()} />
+      <CreateDock
+        onOpen={() => setDrawer(true)}
+        onVoice={canListen ? listen : undefined}
+        chat={open && input()}
+      />
       {/* The drawer is non-modal (the dock outside it must stay usable), so the scrim is ours. */}
       <AnimatePresence>
         {open && <motion.div {...fade} aria-hidden="true" className="fixed inset-0 z-chat scrim" />}
       </AnimatePresence>
-      <ChatDrawer open={open} onOpenChange={setDrawer} busy={busy} credits={credits} {...log} />
+      <ChatDrawer
+        open={open}
+        onOpenChange={(next) => {
+          setDrawer(next);
+          // Closed mid-recording, the mic would keep listening with nothing on screen to stop it.
+          if (!next) voice.cancel();
+        }}
+        busy={busy}
+        credits={credits}
+        {...log}
+      />
     </>
   );
 }

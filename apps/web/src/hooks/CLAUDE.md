@@ -8,8 +8,8 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 - Task writes: `useTaskActions.tsx` (dated), `useUndatedActions.ts` (undated), `useCreateTask.ts`
   (+ `useShowCreated`), `useCalendarPush.ts` (+ `useApplyTask`, `calendarRevoked`). The rest are
   module stores, platform wrappers and `useQuotas` (sections below).
-- `useMewParse` and `useVoiceCreate` serve only the dashboard composer and FAB; they predate the
-  placement rule. One-feature hooks sit beside their component: `useCalendarChip`
+- `useMewParse` serves only the dashboard composer; `useVoiceCreate` the composer and, with
+  `onAudio` (the recording goes there instead of `/tasks/voice`), the Mew chat. One-feature hooks sit beside their component: `useCalendarChip`
   (`dashboard/calendar-chip.tsx`), `useWeek` (`dashboard/week-strip.tsx`), `useMewApply`
   (`mew-chat/apply.ts`).
 

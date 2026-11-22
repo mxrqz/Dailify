@@ -30,6 +30,8 @@ const api = vi.hoisted(() => ({
   updateTask: vi.fn(),
   deleteTask: vi.fn(),
   createCalendarEvent: vi.fn(),
+  transcribeMew: vi.fn(),
+  createTaskVoice: vi.fn(),
 }));
 vi.mock("@/functions/api", () => api);
 
@@ -325,5 +327,70 @@ describe("MewChat on desktop", () => {
     expect(screen.getByRole("textbox", { name: t.open })).toBeInTheDocument();
     act(() => openPanel({ kind: "mew" }));
     expect(await within(screen.getByRole("complementary")).findByText("Oi!")).toBeInTheDocument();
+  });
+});
+
+describe("MewChat voice", () => {
+  // A recorder that hands over one chunk on stop, as the browser does.
+  class FakeRecorder {
+    mimeType = "audio/webm";
+    ondataavailable?: (event: { data: Blob }) => void;
+    onstop?: () => void;
+    start() {}
+    stop() {
+      this.ondataavailable?.({ data: new Blob(["a"]) });
+      this.onstop?.();
+    }
+    static isTypeSupported = () => true;
+  }
+
+  beforeEach(() => {
+    vi.stubGlobal("MediaRecorder", FakeRecorder);
+    Object.defineProperty(navigator, "mediaDevices", {
+      configurable: true,
+      value: { getUserMedia: vi.fn(async () => ({ getTracks: () => [] })) },
+    });
+  });
+  afterEach(() => {
+    Reflect.deleteProperty(navigator, "mediaDevices");
+  });
+
+  it("the mic records, then sends the transcript as my message", async () => {
+    api.transcribeMew.mockResolvedValue({ text: "o que tenho hoje?" });
+    api.mewChat.mockResolvedValue({ reply: { reply: "Nada.", intent: "answer", blocks: [] } });
+    const { chat } = mount();
+
+    fireEvent.click(screen.getByRole("button", { name: t.mic }));
+    fireEvent.click(await screen.findByRole("button", { name: t.micStop }));
+
+    expect(await within(chat).findByText("o que tenho hoje?")).toBeInTheDocument();
+    expect(api.transcribeMew).toHaveBeenCalledWith(expect.any(FormData));
+    expect(api.mewChat).toHaveBeenCalledWith(
+      expect.objectContaining({ text: "o que tenho hoje?" }),
+    );
+    expect(await within(chat).findByText("Nada.")).toBeInTheDocument();
+  });
+
+  it("a failed transcription says so in the chat and sends no turn", async () => {
+    api.transcribeMew.mockResolvedValue({
+      error: { message: "AI request failed", offline: false, status: 502 },
+    });
+    const { chat } = mount();
+
+    fireEvent.click(screen.getByRole("button", { name: t.mic }));
+    fireEvent.click(await screen.findByRole("button", { name: t.micStop }));
+
+    expect(await within(chat).findByText(/ouvir/)).toBeInTheDocument();
+    expect(api.mewChat).not.toHaveBeenCalled();
+  });
+
+  it("the listen signal (?mew=voice) opens the chat already recording", async () => {
+    render(
+      <MemoryRouter>
+        <MewChat onCompose={vi.fn()} listenSignal={1} />
+      </MemoryRouter>,
+    );
+    expect(await screen.findByRole("button", { name: t.micStop })).toBeInTheDocument();
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
   });
 });
