@@ -34,8 +34,8 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
       )}
     >
       <MobileNav />
-      {/* `--undock` (1 → 0) fades them as the week strip docks over the bar, all but the menu. */}
-      <div className="ml-auto inline-flex items-center opacity-(--undock)">
+      {/* Fades as the week strip docks over the bar, all but the menu (`dock-fade`). */}
+      <div className="ml-auto inline-flex items-center dock-fade">
         <SyncBadge />
 
         {!isSignedIn && (

@@ -27,7 +27,7 @@ const twMerge = extendTailwindMerge({
       h: [{ h: ["bar"] }],
       pb: [{ pb: ["safe", "dock", "dock-clear"] }],
       pt: [{ pt: ["safe"] }],
-      top: [{ top: ["safe", "inset"] }],
+      top: [{ top: ["safe"] }],
       px: [{ px: ["gutter"] }],
       pr: [{ pr: ["gutter"] }],
     },

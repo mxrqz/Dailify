@@ -10,10 +10,11 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
 - Undated: `anytime-block.tsx` (today's card, `ScheduleDrop`), `check-history.tsx`;
 - Layout: `side-panel.tsx` is the desktop side panel (below, "Side panel").
 - Navigation: `week-strip.tsx` (`WeekDays`/`WeekStrip`). Desktop: sticky under the toolbar, day
-  sections scroll to `scroll-mt-agenda` just under it. Mobile: sticky at `top-inset` above
-  the bar (`z-float`); over the bar's last 52px a rAF transform (`strip-dock.ts`) scales it beside
-  the menu (`APP_BAR_ID`), and `--undock` on the root fades its background, dots and the bar's
-  actions. Docked, the reading line is the bar's bottom.
+  sections scroll to `scroll-mt-agenda` just under it. Mobile: `dock-strip` keeps it sticky
+  above the bar, and scroll-timeline animations in `global.css` (`dock-week`, `dock-fade`) scale it
+  beside the menu (`APP_BAR_ID`) over the bar's last 52px and fade its background, dots and the
+  bar's actions. JS only measures (`strip-dock.ts`, on resize). Docked, the reading line is the
+  bar's bottom.
   `?view=calendar` (`hooks/useCalendarView.ts`, the bar's calendar button toggles it): on mobile
   the strip expands into `MonthPicker` (`MonthGrid` + arrows) and a pick collapses it before
   `goToDay` scrolls; on `DESKTOP` `MonthCalendar` replaces the agenda with the full-height

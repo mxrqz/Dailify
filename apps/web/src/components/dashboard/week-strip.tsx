@@ -9,7 +9,7 @@ import { copy } from "@/components/dashboard/copy";
 import { ScheduleDrop } from "@/components/dashboard/anytime-block";
 import { dayAnchorId } from "@/components/dashboard/day-section";
 import { MonthPicker } from "@/components/dashboard/month-calendar";
-import { dockProgress, dockTransform } from "@/components/dashboard/strip-dock";
+import { dockPose, dockProgress } from "@/components/dashboard/strip-dock";
 import { weekdayDate, weekOf } from "@/functions/date-label";
 import { fill, getTasksForDay } from "@/functions/functions";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
@@ -157,7 +157,7 @@ export function WeekDays({
             <i
               aria-hidden="true"
               className={cn(
-                "size-1 rounded-full opacity-(--undock)",
+                "size-1 rounded-full max-md:dock-fade",
                 has ? "bg-ink-secondary" : "bg-transparent",
               )}
             />
@@ -176,8 +176,8 @@ export function useWeek(): Date[] {
 
 /**
  * The Today week: the pill follows the day being read, a tap scrolls to it. Desktop, it sticks
- * under the toolbar. Mobile, it scrolls up over the bar and docks there (`strip-dock.ts`), the bar's
- * actions fading under `--undock`. `expanded` (mobile `?view=calendar`) swaps it for the month,
+ * under the toolbar. Mobile, it scrolls up over the bar and docks there on a scroll timeline
+ * (`dock-*` in global.css), measured here. `expanded` (mobile `?view=calendar`) swaps it for the month,
  * in the flow; a pick collapses it, then scrolls.
  */
 export function WeekStrip({
@@ -191,6 +191,8 @@ export function WeekStrip({
   const days = useWeek();
   const strip = useRef<HTMLDivElement>(null);
   const week = useRef<HTMLDivElement>(null);
+  // Zero height, where the strip sits in the flow: sticky, the strip's own box moves.
+  const anchor = useRef<HTMLDivElement>(null);
   const visible = useVisibleDay(days, strip);
   // Scrolled only once the strip is back to its week height, or the day lands under the month.
   const [picked, setPicked] = useState<Date | null>(null);
@@ -201,70 +203,78 @@ export function WeekStrip({
     setPicked(null);
   }, [expanded, picked]);
 
+  // Measured only when the layout changes: the scroll itself runs on the compositor.
   useEffect(() => {
-    const root = document.documentElement.style;
     const el = week.current;
-    if (expanded || !el) return;
-    let frame = 0;
-    const update = () => {
-      frame = 0;
+    const anchorEl = anchor.current;
+    if (expanded || !el || !anchorEl) return;
+    const root = document.documentElement.style;
+    const measure = () => {
       const header = bar();
-      const box = rectOf(strip.current);
-      const p = dockProgress(box.top, rectOf(header).bottom);
-      const menu = rectOf(header?.firstElementChild ?? null);
-      el.style.transform = p
-        ? dockTransform(
-            p,
-            { left: box.left + el.offsetLeft, width: el.offsetWidth },
-            { left: menu.right + 4, right: window.innerWidth - 8 },
-          )
-        : "";
-      root.setProperty("--undock", String(1 - p));
+      const barBox = rectOf(header);
+      if (!barBox.height) return root.removeProperty("--dock-start");
+      const start = anchorEl.getBoundingClientRect().top + window.scrollY - barBox.bottom;
+      const pose = dockPose(
+        { left: rectOf(strip.current).left + el.offsetLeft, width: el.offsetWidth },
+        { left: rectOf(header?.firstElementChild ?? null).right + 4, right: window.innerWidth - 8 },
+      );
+      el.style.setProperty("--dock-x", `${pose.x}px`);
+      el.style.setProperty("--dock-y", `${pose.y}px`);
+      el.style.setProperty("--dock-s", String(pose.s));
+      root.setProperty("--dock-start", `${start}px`);
     };
-    const schedule = () => {
-      if (!frame) frame = requestAnimationFrame(update);
-    };
-    update();
-    window.addEventListener("scroll", schedule, { passive: true });
-    window.addEventListener("resize", schedule);
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(document.body);
+    window.addEventListener("resize", measure);
     return () => {
-      cancelAnimationFrame(frame);
-      window.removeEventListener("scroll", schedule);
-      window.removeEventListener("resize", schedule);
-      el.style.transform = "";
-      root.removeProperty("--undock");
+      observer.disconnect();
+      window.removeEventListener("resize", measure);
+      root.removeProperty("--dock-start");
     };
   }, [expanded]);
 
   return (
-    // Taps go to the week only: docked, the strip's box still covers a band under the bar.
-    <div
-      ref={strip}
-      className={cn(
-        "pointer-events-none relative -mx-4 mt-2 px-4 py-2 md:sticky md:top-13 md:z-10 md:-mx-8 md:px-8",
-        !expanded && "sticky top-inset z-float",
-      )}
-    >
-      <div aria-hidden="true" className="absolute inset-0 bg-canvas opacity-(--undock)" />
-      <div ref={week} className="pointer-events-auto relative origin-top-left">
-        {expanded ? (
-          <MonthPicker
-            selected={selectedDay}
-            onPick={(day) => {
-              setPicked(day);
-              onCollapse?.();
-            }}
-          />
-        ) : (
-          <WeekDays
-            days={days}
-            selected={days.find((day) => dayAnchorId(day) === visible)}
-            marked={(day) => (tasks ? getTasksForDay(tasks, day).length > 0 : false)}
-            onPick={(day) => void goToDay(day)}
-            wrap={(day, node) => <ScheduleDrop day={day}>{node}</ScheduleDrop>}
-          />
+    <>
+      <div ref={anchor} aria-hidden="true" className="mt-2" />
+      {/* Taps go to the week only: docked, the strip's box still covers a band under the bar. */}
+      <div
+        ref={strip}
+        className={cn(
+          "pointer-events-none -mx-4 px-4 py-2 md:sticky md:top-13 md:z-10 md:-mx-8 md:px-8",
+          expanded ? "relative" : "max-md:dock-strip",
         )}
+      >
+        <div
+          aria-hidden="true"
+          className={cn("absolute inset-0 bg-canvas", !expanded && "max-md:dock-fade")}
+        />
+        <div
+          ref={week}
+          className={cn(
+            "pointer-events-auto relative origin-top-left",
+            !expanded && "max-md:dock-week",
+          )}
+        >
+          {expanded ? (
+            <MonthPicker
+              selected={selectedDay}
+              onPick={(day) => {
+                setPicked(day);
+                onCollapse?.();
+              }}
+            />
+          ) : (
+            <WeekDays
+              days={days}
+              selected={days.find((day) => dayAnchorId(day) === visible)}
+              marked={(day) => (tasks ? getTasksForDay(tasks, day).length > 0 : false)}
+              onPick={(day) => void goToDay(day)}
+              wrap={(day, node) => <ScheduleDrop day={day}>{node}</ScheduleDrop>}
+            />
+          )}
+        </div>
       </div>
-    </div>
+    </>
   );
 }

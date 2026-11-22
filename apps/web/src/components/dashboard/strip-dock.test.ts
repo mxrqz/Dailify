@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { dockProgress, dockTransform } from "./strip-dock";
+import { dockPose, dockProgress } from "./strip-dock";
 
 describe("dockProgress", () => {
   it("runs 0 to 1 over the bar's last 52px, clamped", () => {
@@ -15,16 +15,13 @@ describe("dockProgress", () => {
   });
 });
 
-describe("dockTransform", () => {
-  const box = { left: 16, width: 380 };
-  const slot = { left: 60, right: 345 };
-
-  it("is the identity in the flow", () => {
-    expect(dockTransform(0, box, slot)).toBe("translate(0px, 0px) scale(1)");
-  });
-
-  it("docked, fits the slot and centers the pills on the bar", () => {
+describe("dockPose", () => {
+  it("fits the slot and centers the pills on the bar", () => {
     // s = 285 / 380 = 0.75: pills 39px tall, from 26 - 19.5 under the bar's top.
-    expect(dockTransform(1, box, slot)).toBe("translate(44px, -1.5px) scale(0.75)");
+    expect(dockPose({ left: 16, width: 380 }, { left: 60, right: 345 })).toEqual({
+      x: 44,
+      y: -1.5,
+      s: 0.75,
+    });
   });
 });

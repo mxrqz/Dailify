@@ -463,9 +463,44 @@
 @utility scroll-mt-bar {
   scroll-margin-top: calc(--spacing(16) + env(safe-area-inset-top));
 }
-/* Sticky right under the status bar: the mobile week strip docking over the app bar. */
-@utility top-inset {
-  top: env(safe-area-inset-top);
+/*
+ * The mobile week strip docking over the app bar (`WeekStrip`), driven by the scroll on the
+ * compositor: no JS per frame. JS only measures `--dock-start` (the scroll where it reaches the bar,
+ * on the root) and `--dock-x|y|s` (its docked pose). Unset, the range is never reached. Without
+ * scroll timelines (Firefox) the strip just scrolls away under the bar.
+ */
+@keyframes dock {
+  to {
+    transform: translate(var(--dock-x), var(--dock-y)) scale(var(--dock-s));
+  }
+}
+@keyframes undock {
+  to {
+    opacity: 0;
+  }
+}
+@utility dock-strip {
+  position: relative;
+  @supports (animation-timeline: scroll()) {
+    position: sticky;
+    top: env(safe-area-inset-top);
+    z-index: var(--layer-float);
+  }
+}
+@utility dock-week {
+  @supports (animation-timeline: scroll()) {
+    animation: dock linear both;
+    animation-timeline: scroll(root);
+    animation-range: var(--dock-start, 1e5px) calc(var(--dock-start, 1e5px) + 52px);
+  }
+}
+/* Fades out as the strip docks: its background, its dots and the bar's actions. */
+@utility dock-fade {
+  @supports (animation-timeline: scroll()) {
+    animation: undock linear both;
+    animation-timeline: scroll(root);
+    animation-range: var(--dock-start, 1e5px) calc(var(--dock-start, 1e5px) + 52px);
+  }
 }
 /* Desktop: a day the agenda scrolls to lands under the toolbar plus the sticky strip (~78px). */
 @utility scroll-mt-agenda {

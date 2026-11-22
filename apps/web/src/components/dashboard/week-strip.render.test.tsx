@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { act, fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { addDays, startOfWeek } from "date-fns";
 import type { Task } from "@dailify/shared";
 
@@ -87,7 +87,7 @@ describe("WeekStrip", () => {
     expect(screen.getAllByRole("button")).toHaveLength(7);
   });
 
-  it("docks over the bar as it scrolls, fading the bar's actions, and lets go on unmount", async () => {
+  it("measures where it docks over the bar, and lets go on unmount", () => {
     dailify.mockReturnValue({
       tasks: [],
       goToDay: vi.fn(),
@@ -98,19 +98,16 @@ describe("WeekStrip", () => {
     header.id = APP_BAR_ID;
     header.append(document.createElement("button"));
     document.body.append(header);
+    // Every box: top 300, 76 tall; so the bar ends at 376 and the strip reaches it at 300 - 376.
+    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
+      new DOMRect(0, 300, 50, 76),
+    );
     const view = render(<WeekStrip />);
     const root = document.documentElement.style;
-    expect(root.getPropertyValue("--undock")).toBe("1");
-
-    // Stuck at the top (24) of a bar ending at 76: fully docked.
-    vi.spyOn(HTMLElement.prototype, "getBoundingClientRect").mockReturnValue(
-      new DOMRect(0, 24, 50, 52),
-    );
-    act(() => void window.dispatchEvent(new Event("scroll")));
-    await vi.waitFor(() => expect(root.getPropertyValue("--undock")).toBe("0"));
+    expect(root.getPropertyValue("--dock-start")).toBe("-76px");
 
     view.unmount();
-    expect(root.getPropertyValue("--undock")).toBe("");
+    expect(root.getPropertyValue("--dock-start")).toBe("");
     header.remove();
   });
 });
