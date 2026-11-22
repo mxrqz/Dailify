@@ -4,7 +4,7 @@ import { parseDuration } from "./durations";
 import { parseRepeat } from "./repeat";
 import { type Span, spanOf } from "./spans";
 import { parseWhen } from "./when";
-import { HOUR_WORD_RE, normalize, startOfDay } from "./vocab";
+import { HOUR_WORD_RE, MONTH_RE, WEEKDAY_RE, dateIn, normalize, startOfDay } from "./vocab";
 
 /**
  * Por que o parser pode ter errado — cada motivo é um gatilho determinístico, não um score. Vazio =
@@ -58,7 +58,7 @@ const EN_MARKER_RE =
 // venha depois ("quanto custa o conserto — perguntar amanhã"). "o que levar", "what to buy", "do
 // the dishes" e "tenho que ligar" são tarefa.
 const QUESTION_LEAD_RE =
-  /^\s*(?:o\s+que\s+(?:eu\s+|a\s+gente\s+)?(?![a-z]+(?:ar|er|ir)\b)[a-z]|que\s+(?:horas?|dia)\b|qua(?:l|is)\b|quant[ao]s?\b|quando\s+(?:e|eh|vence|tenho|tem|sera|foi|que|vai|vou|comeca|termina|acaba)\b|onde\s+(?:e|fica|tem|vai|vou|era)\b|quem\b|cade\b|(?:por\s*que|pq)\b|como\s+(?:ta|esta|fica|ficou|e|anda|vai|foi|estao)\b|sera\s+que\b|(?:eu\s+)?(?:tenho|tem|ha)\s+(?:algo|algum|alguma|nada|coisa|compromisso)\b|(?:eu\s+)?(?:estou|to|tou|fico)\s+(?:livre|ocupad)|(?:voce|vc)\s+(?:pode|sabe|consegue|lembra|tem)\b|what(?:\s*s\b|\s+(?!to\b|if\b)[a-z])|whats\b|when\s*(?:s|is|do|does|did|am|are|was|will|can|should)\b|where\s*(?:s|is|are|do|did|was|should|can)\b|wheres\b|which\b|who\s*(?:s|is|are|do|did|was|will|has)\b|why\b|how\s*(?:s|is|are|much|many|long|do|does|did|was|about)\b|hows\b|any(?:thing|one|body)?\b|(?:am|is|are|was|were|isn\s*t|aren\s*t)\s+[a-z]|(?:do|does|did|have|has|can|could|will|would|should|shall|may)\s+(?:i|we|you|u|they|he|she|there)\b)/;
+  /^\s*(?:o\s+que\s+(?:eu\s+|a\s+gente\s+)?(?![a-z]+(?:ar|er|ir)\b)[a-z]|que\s+(?:horas?|dia)\b|qua(?:l|is)\b|quant[ao]s?\b|quando\s+(?:e|eh|vence|tenho|tem|sera|foi|que|vai|vou|comeca|termina|acaba)\b|onde\s+(?:e|fica|tem|vai|vou|era)\b|quem\b|cade\b|(?:por\s*que|pq)\b|como\s+(?:ta|esta|fica|ficou|e|anda|vai|foi|estao)\b|sera\s+que\b|(?:tem|vai\s+ter)\s+(?!que\b|q\b)[a-z]|(?:eu\s+)?(?:tenho|tem|ha)\s+(?:algo|algum|alguma|nada|coisa|compromisso)\b|(?:eu\s+)?(?:estou|to|tou|fico)\s+(?:livre|ocupad)|(?:voce|vc)\s+(?:pode|sabe|consegue|lembra|tem)\b|what(?:\s*s\b|\s+(?!to\b|if\b)[a-z])|whats\b|when\s*(?:s|is|do|does|did|am|are|was|will|can|should)\b|where\s*(?:s|is|are|do|did|was|should|can)\b|wheres\b|which\b|who\s*(?:s|is|are|do|did|was|will|has)\b|why\b|how\s*(?:s|is|are|much|many|long|do|does|did|was|about)\b|hows\b|any(?:thing|one|body)?\b|(?:am|is|are|was|were|isn\s*t|aren\s*t)\s+[a-z]|(?:do|does|did|have|has|can|could|will|would|should|shall|may)\s+(?:i|we|you|u|they|he|she|there)\b)/;
 // "ligar pro João — ele vem?": a interrogação de uma oração depois de travessão/vírgula é do título.
 const QUESTION_TAIL_RE = /\?[\s!?.\p{Extended_Pictographic}]*$/u;
 const CLAUSE_BREAK_RE = /[—–:;,(]|\s-\s/;
@@ -69,7 +69,7 @@ const CLAUSE_BREAK_RE = /[—–:;,(]|\s-\s/;
 // ("cancelar a assinatura da Netflix", "delete old photos") e é tarefa. Verbo que só existe pra
 // agenda (remarcar, adiar, reschedule) e "me mostra"/"show me" dispensam a referência.
 const SCHEDULE_VERB_RE =
-  /^\s*(?:(?:por\s+favor|please|pls)\s+)?(?:(?:cancela|cancele|apaga|apague|exclui|exclua|deleta|adia|adie|remarca|remarque|desmarca|desmarque|reagenda|reagende|adiar|remarcar|desmarcar|reagendar|antecipa|antecipe|atrasa|atrase|renomeia|renomeie|reschedule|postpone|snooze|undo|rename)\b|clear\s+(?:my|everything|all)\b|(?:complete|conclui|concluir)\s+(?:buy|call|email|pay|send|book|fix|check|[a-z]+(?:ar|er|ir))\b|push\s+(?:back|everything|all|my)\b|(?:me\s+)?(?:mostra|mostre|lista|liste)\s+(?:pra\s+mim\s+)?(?:o\s+que|tudo|minhas?|meus?|as\s+tarefas|a\s+agenda)\b|me\s+(?:mostra|mostre|lista|liste|fala|diz|diga)\b|(?:show|tell|give)\s+me\b|(?:show|list)\s+(?:my|all|everything|what)\b|(?:marca|marcar|marque)\s+(?:\S+\s+){0,5}como\s+(?:feit|conclu|lid)|mark\s+(?:\S+\s+){0,5}(?:as\s+)?(?:done|complete|read)\b|passa\s+(?:a|o|as|os)\s+.*\b(?:pra|pras|para)\b|(?:joga|jogue|empurra|empurre|passa|deixa)\s+(?:\S+\s+){0,4}pra\s+(?:depois|frente)\b)/;
+  /^\s*(?:(?:por\s+favor|please|pls)\s+)?(?:(?:cancela|cancele|apaga|apague|exclui|exclua|deleta|adia|adie|remarca|remarque|desmarca|desmarque|reagenda|reagende|adiar|remarcar|desmarcar|reagendar|antecipa|antecipe|atrasa|atrase|renomeia|renomeie|reschedule|postpone|snooze|undo|rename)\b|clear\s+(?:my|everything|all)\b|(?:complete|conclui|concluir)\s+(?:buy|call|email|pay|send|book|fix|check|[a-z]+(?:ar|er|ir))\b|push\s+(?:back|everything|all|my)\b|(?:me\s+)?(?:mostra|mostre|lista|liste)\s+(?:pra\s+mim\s+)?(?:o\s+que|tudo|minhas?|meus?|as\s+tarefas|a\s+agenda)\b|me\s+(?:mostra|mostre|lista|liste|fala|diz|diga|ajuda|ajude)\b|(?:oi|ola)\b|(?:show|tell|give)\s+me\b|(?:show|list)\s+(?:my|all|everything|what)\b|(?:marca|marcar|marque)\s+(?:\S+\s+){0,5}como\s+(?:feit|conclu|lid)|mark\s+(?:\S+\s+){0,5}(?:as\s+)?(?:done|complete|read)\b|passa\s+(?:a|o|as|os)\s+.*\b(?:pra|pras|para)\b|(?:joga|jogue|empurra|empurre|passa|deixa)\s+(?:\S+\s+){0,4}pra\s+(?:depois|frente)\b)/;
 const EDIT_VERB_RE =
   /^\s*(?:(?:por\s+favor|please|pls)\s+)?(?:muda|mude|mudar|cancelar|apagar|excluir|deletar|mova|move|mover|empurra|empurrar|transfere|transferir|joga|jogar|troca|trocar|conclui|concluir|tira|tirar|remove|remover|edita|editar|passa|passar|cancel|delete|change|complete|remove|edit|push|bump|shift|drop|set)\b/;
 // "cancel gym tomorrow", "delete tomorrow's gym session": apagar algo com dia é a sessão da agenda.
@@ -165,8 +165,12 @@ const VAGUE_RE = new RegExp(
 );
 // "ligar mais tarde" sem hora quer uma hora de hoje; "asap" e "read later" não querem data nenhuma.
 const LATER_RE = /\bmais\s+tarde\b/;
-// "uma hora dessas" tem uma hora dentro, que o detector de hora leva.
-const VAGUE_IDIOM_RE = /\b(?:uma\s+hora\s+dessas|um\s+dia\s+desses)\b/;
+// Read on the full text: the time detectors take a piece of each ("hora", "dia util", "terça").
+const VAGUE_IDIOM_RE = new RegExp(
+  String.raw`\b(?:uma\s+hora\s+dessas|um\s+dia\s+desses|proximo\s+dia\s+util|entre\s+(?:a\s+|o\s+)?(?:${WEEKDAY_RE})\b)`,
+);
+// "levar presente no aniversário da Maria": the day hangs on an event the parser can't date.
+const EVENT_DAY_RE = /\bn[oa]\s+(?:dia\s+d[oa]\s+)?(?:aniversario|casamento|formatura|batizado)\b/;
 const OR_RE = /\b(?:ou|or)\b/;
 
 // Ponto entre dois números ("17.11", "23.11") é data em pt e hora em todo lugar.
@@ -210,6 +214,10 @@ const INTEGRATION_RE = new RegExp(
     String.raw`\b(?:to|on|in|into)\s+(?:my\s+|the\s+)?(?:google\s+calendar|gcal)\b(?!\s+(?:api|sdk)\b)|\b(?:to|on|in|into)\s+my\s+calendar\b`,
     String.raw`\b(?:add|put|send|save|throw|stick)\s+(?:\S+\s+){0,3}?(?:to|on|in|into)\s+(?:the\s+)?calendar\b`,
   ].join("|"),
+);
+
+const DAY_OVERFLOW_RE = new RegExp(
+  String.raw`\bdia\s+(29|30|31)\b(?!\s*(?:\/|(?:de\s+)?(?:${MONTH_RE})\b))`,
 );
 
 /** "hoje às 8" às 14h: hoje foi pedido com todas as letras — não é dúvida. "ontem pagar boleto" é. */
@@ -277,6 +285,7 @@ export function unsureOf({
   const vague =
     match(VAGUE_RE, rest ?? normalized) ??
     match(VAGUE_IDIOM_RE, normalized) ??
+    (date ? null : match(EVENT_DAY_RE, normalized)) ??
     (hasTime ? null : match(LATER_RE, rest ?? normalized));
   // "ler Quando Nietzsche Chorou", "watch When Harry Met Sally": conector com maiúscula no meio é nome.
   const named = vague && vague[0] > input.search(/\S/) && /\p{Lu}/u.test(input[vague[0]]);
@@ -295,7 +304,7 @@ export function unsureOf({
     const leftover = leftoverIn(rest, input, now);
     if (leftover) flag("leftover", leftover);
     // "reunião amanhã a s 10": o "às" partido deixou a hora sem conector.
-    else if (consumed && /\b[a-z]\s+\d{1,2}\s*$/i.test(title)) flag("leftover");
+    else if (consumed && /\b[a-z]\s+\d{1,2}\s*$/.test(clauses)) flag("leftover");
     // Só o corte de tempo deixa conector órfão: "comparar bit.ly/a e forms.gle/b" é o título.
     const timeless = normalized
       .split("")
@@ -304,6 +313,14 @@ export function unsureOf({
       .trim();
     const dangles = (text: string) => DANGLING_END_RE.test(text) || DANGLING_START_RE.test(text);
     if (consumed && dangles(title) && dangles(timeless)) flag("dangling");
+  }
+
+  // "dia 31" in November: the parser jumps to 31/12, the person may mean the month's last day.
+  const overflow = normalized.match(DAY_OVERFLOW_RE);
+  const monthDays = dateIn(now, now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  const newYear = /\b(?:reveillon|virada|ano\s+novo)\b/.test(normalized);
+  if (overflow && repeat === "Off" && !newYear && Number(overflow[1]) > monthDays) {
+    flag("ambiguous-number", spanOf(overflow));
   }
 
   if (date && repeat === "Off" && !ASKED_PAST_RE.test(normalized)) {
@@ -349,10 +366,12 @@ function ambiguousNumber(
   rest: string,
   consumed: boolean,
 ): Span | null {
-  const dotted = normalized.match(DOTTED_RE);
+  // The raw normalize: `slashDates` already read "17.11" as a date, which a clock reading still fits.
+  const dotted = normalize(input).match(DOTTED_RE);
   if (dotted) {
     const [a, b] = [Number(dotted[1]), Number(dotted[2])];
-    const asDate = (a <= 31 && b >= 1 && b <= 12) || (a >= 1 && a <= 12 && b <= 31);
+    // Month-first ("12.24") only off round minutes: "9.30" is a clock.
+    const asDate = (a <= 31 && b >= 1 && b <= 12) || (a >= 1 && a <= 12 && b <= 31 && b % 5 !== 0);
     if (asDate && a <= 23 && b < 60) return spanOf(dotted);
   }
   const military = rest.match(MILITARY_RE);

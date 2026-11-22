@@ -2,6 +2,7 @@ import type { TZDate } from "@date-fns/tz";
 import { TASK_LIMITS } from "../limits";
 import { parseLinks } from "../parse-links";
 import type { ParsedTaskWire } from "../types";
+import { slashDates } from "./dates";
 import { parseDuration } from "./durations";
 import {
   BOUNDED_REPEAT_RE,
@@ -80,7 +81,7 @@ export function parseTaskText(
   { ignore = [] }: { ignore?: Span[] } = {},
 ): ParsedTask {
   const keep = [...ignore, ...quotedSpans(input)];
-  const normalized = normalize(input);
+  const normalized = slashDates(input, normalize(input));
   const open = mask(input, keep);
   const links = parseLinks(open);
   const tags = parseTags(mask(open, links.spans));

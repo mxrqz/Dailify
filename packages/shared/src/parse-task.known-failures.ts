@@ -5,19 +5,18 @@
  */
 export const knownFailures: string[] = [
   // absolute-date (pt)
-  "exame de sangue 17.11", // day, time
-  "reunião condomínio 26-11", // title, day
+  "exame de sangue 17.11", // unsure
   "hoje 15/11 regar as plantas", // title
   // informal (pt)
   "pagar luz amanhã!!! 🙏", // title
   // out-of-scope (pt)
-  "tem reunião amanhã de manhã", // unsure
   "eu marquei o barbeiro pra sábado", // unsure
   "aula 5 amanhã", // unsure
   "ligar 11 98765 4321 amanhã", // unsure
   "sala 12 às 10", // unsure
-  "entregar dia 31", // unsure
   "levei o cachorro no veterinário hoje de manhã", // unsure
+  // past-edge (pt)
+  "pagar fatura dia 31", // unsure
   // period (en)
   "this evening 6 yoga", // title, time
   // recurrence (pt)
