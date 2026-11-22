@@ -10,8 +10,8 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
 - `src/index.ts`: `Env` (bindings + secrets), `AppEnv` and the app. Order: CORS (its `origin`
   callback is `isAllowedOrigin`: `ALLOWED_ORIGIN` plus `NATIVE_ORIGINS`), public `/health`,
   `AUTH_LIMITER` on `/auth/sign-in/*`, `/auth/magic-link/*`, `/auth/one-time-token/*`,
-  `/auth/oauth2/register`, sign-up, password reset and change, and `/auth/two-factor/*`, the
-  step-up guards (below), Better
+  `/auth/oauth2/register`, sign-up, password reset and change, `/auth/two-factor/*` and
+  the passkey ceremonies, the step-up guards (below), Better
   Auth on `/auth/*` and `GET /.well-known/*`, `/mcp`, the other route modules (voice before tasks:
   see `src/routes/CLAUDE.md`), `app.notFound` and `app.onError` ->
   `fail(c, 500, "Internal error")`. The default export is the app with `scheduled`
@@ -63,9 +63,19 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
   delete-user and oauth2 consent, and on `POST /integrations/:provider/connect` and
   `POST /security/password`. `stepUpLockout` counts step-up misses in the plugin's own lockout
   columns, which Better Auth only counts at sign-in.
+- Passkeys (`@better-auth/passkey`): rpID = the host of `WEB_URL` (first `ALLOWED_ORIGIN`:
+  mewki.mxrqz.com in prod, localhost in dev), origin = `WEB_URL` only. Browsers refuse that rpID
+  on the legacy dailify.mxrqz.com, so the web hides passkeys there (`lib/passkey.ts`, web) and in
+  the Tauri app (its page origin is `tauri.localhost`). Resident key and user verification are
+  required, so `/passkey/verify-authentication` counts as both factors: not in `FIRST_FACTOR`,
+  and `security` marks its session in `session_mfa` and sends `newSignIn`. Registration is
+  step-up (`requireRecentMfa`) plus Better Auth's own fresh-session check (`freshAge`, 1 day);
+  add and delete mail `passkeyAdded`/`passkeyRemoved`. The ceremonies (authenticate options,
+  both verifies) are under `AUTH_LIMITER`; list, rename and delete aren't, or opening /security
+  would spend the IP's sign-in budget.
 - Security e-mails (best-effort, `waitUntil`): `newSignIn` when no other live session shares the
-  browser/system/form factor (accounts older than 10 min), `securityChanged` for password, mfaOn
-  and mfaOff, `accountDeleted` in `afterDelete`.
+  browser/system/form factor (accounts older than 10 min), `securityChanged` for password, mfaOn,
+  mfaOff and passkeys, `accountDeleted` in `afterDelete`.
 - Better Auth's built-in rate limit stays off: it counts in isolate memory. `AUTH_LIMITER` (by
   `cf-connecting-ip`) is the real one.
 - `requireAuth` reads `plan` from D1, not from the session: the 5-minute `cookieCache` still holds
