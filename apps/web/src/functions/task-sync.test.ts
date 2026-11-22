@@ -7,6 +7,8 @@ import type { TaskState } from "./task-sync";
 import { upsertTaskWithRecurrence } from "./functions";
 import { setAppTimeZone, zonedAt } from "./zone";
 
+// The constants below are built at collection, before beforeEach: set the zone first.
+setAppTimeZone("America/Sao_Paulo");
 const NOV = zonedAt(2026, 10, 1);
 const DEC = zonedAt(2026, 11, 1);
 const months = [NOV, DEC];
