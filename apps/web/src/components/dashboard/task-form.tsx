@@ -50,7 +50,12 @@ import { rebaseLinks } from "@/functions/edit-input";
 import { fill } from "@/functions/functions";
 import { linkHost, linkLabel } from "@/functions/link-label";
 import { REPEAT_MODES, everyLabel, everyOptions, repeatLabel } from "@/functions/repeat-label";
-import { durationOptions } from "@/functions/task-options";
+import {
+  durationOptions,
+  isReminderOffset,
+  reminderBefore,
+  reminderOptions,
+} from "@/functions/task-options";
 import { cn } from "@/lib/utils";
 import type { Task } from "@dailify/shared";
 import { fromDateInput, zoned, zonedAt } from "@/functions/zone";
@@ -69,6 +74,8 @@ export interface TaskFormValues {
   undated: boolean;
   /** Dia do lembrete (às 09:00) de quem está em Sem data; ausente = sem lembrete. */
   reminder?: Date;
+  /** Agenda: minutes from the reminder to `date`; absent = no reminder. */
+  before?: number;
 }
 
 /**
@@ -275,6 +282,8 @@ export function TaskForm({
     const now = zoned();
     return undatedReminder(now, "Daily", now) ?? now;
   });
+  // Moving to the agenda starts on time, as a drop on a day does.
+  const [before, setBefore] = useState(() => (task?.undated ? 0 : task && reminderBefore(task)));
   const [duration, setDuration] = useState(task?.duration ?? DEFAULT_DURATION);
   const [priority, setPriority] = useState(task?.priority ?? 0);
   const [repeat, setRepeat] = useState<Repeat>(task?.repeat ?? "Off");
@@ -306,6 +315,7 @@ export function TaskForm({
     title,
     undated,
     reminder,
+    before,
     date,
     duration,
     priority,
@@ -329,6 +339,12 @@ export function TaskForm({
   // Mostra o que o salvar grava: 09:00 passado avança na série e some na avulsa.
   const shownReminder = reminder && undatedReminder(reminder, repeat, zoned());
   const clock = (at: Date) => clockAt(at, hour12);
+  // An alert off the list (set elsewhere) shows as its own day and time.
+  const beforeLabel = (n: number) => {
+    if (isReminderOffset(n)) return copy.form.reminderOffsets[n];
+    const at = addMinutes(date, -n);
+    return fill(copy.form.reminderValue, { day: dayComma(at), time: clock(at) });
+  };
   const now = zoned();
   // "Amanhã, 15:00 às 16:00": o fim sai da duração, como no evento do Google.
   const when = undated
@@ -393,6 +409,7 @@ export function TaskForm({
       links,
       undated,
       reminder: undated ? reminder : undefined,
+      before: undated ? undefined : before,
     });
   };
 
@@ -501,7 +518,32 @@ export function TaskForm({
           </ListGroup>
 
           <ListGroup compact>
-            {/* Lembrete à parte só em Sem data: na agenda o alerta é a própria hora da tarefa. */}
+            {/* Agenda: a distance from the task's time, so it follows a reschedule. */}
+            {!undated && (
+              <NativeRow
+                icon={<BellIcon />}
+                label={copy.form.reminder}
+                value={before === undefined ? copy.form.noReminder : beforeLabel(before)}
+                control={
+                  <select
+                    aria-label={copy.form.reminder}
+                    value={before === undefined ? "" : String(before)}
+                    onChange={(e) =>
+                      setBefore(e.target.value === "" ? undefined : Number(e.target.value))
+                    }
+                    className={nativeControlClass}
+                  >
+                    <option value="">{copy.form.noReminder}</option>
+                    {reminderOptions(before).map((n) => (
+                      <option key={n} value={String(n)}>
+                        {beforeLabel(n)}
+                      </option>
+                    ))}
+                  </select>
+                }
+              />
+            )}
+            {/* Sem data: o lembrete é um dia, às 09:00. */}
             {undated && (
               <NativeRow
                 icon={<BellIcon />}

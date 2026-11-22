@@ -17,7 +17,7 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { REPEAT_MODES, everyLabel, everyOptions } from "@/functions/repeat-label";
-import { durationOptions } from "@/functions/task-options";
+import { REMINDER_OFFSETS, durationOptions, type ReminderOffset } from "@/functions/task-options";
 import { zoned } from "@/functions/zone";
 
 /**
@@ -49,6 +49,38 @@ export function DurationMenu({
           {options.map((option) => (
             <DropdownMenuRadioItem key={option} value={option} className="font-mono">
               {option}
+            </DropdownMenuRadioItem>
+          ))}
+        </DropdownMenuRadioGroup>
+      </DropdownMenuContent>
+    </DropdownMenu>
+  );
+}
+
+const NO_REMINDER = "none";
+
+/** The reminder as minutes before the task; `undefined` = none. */
+export function ReminderMenu({
+  value,
+  onChange,
+  children,
+}: {
+  value: ReminderOffset | undefined;
+  onChange: (before: ReminderOffset | undefined) => void;
+  children: ReactNode;
+}): JSX.Element {
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger asChild>{children}</DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className={menuClass}>
+        <DropdownMenuRadioGroup
+          value={value === undefined ? NO_REMINDER : String(value)}
+          onValueChange={(next) => onChange(REMINDER_OFFSETS.find((n) => String(n) === next))}
+        >
+          <DropdownMenuRadioItem value={NO_REMINDER}>{copy.form.noReminder}</DropdownMenuRadioItem>
+          {REMINDER_OFFSETS.map((n) => (
+            <DropdownMenuRadioItem key={n} value={String(n)}>
+              {copy.form.reminderOffsets[n]}
             </DropdownMenuRadioItem>
           ))}
         </DropdownMenuRadioGroup>

@@ -84,7 +84,11 @@ export function useCreateTask() {
 
   const create = async (
     parsed: ParsedTask,
-    { undatedOnly, calendar }: { undatedOnly?: boolean; calendar?: CalendarPick } = {},
+    {
+      undatedOnly,
+      calendar,
+      before,
+    }: { undatedOnly?: boolean; calendar?: CalendarPick; before?: number } = {},
   ): Promise<boolean> => {
     setSubmitting(true);
 
@@ -93,11 +97,11 @@ export function useCreateTask() {
     // O id nasce aqui, não no servidor: sem rede a tarefa precisa existir na tela e na fila com
     // uma identidade estável, e o upsert do servidor aceita o id do cliente sem duplicar.
     const at = Date.now();
-    const input = {
-      ...composeTaskInput(parsed, zoned(at), { undatedOnly }),
-      id: newTaskId(),
-      updatedAt: at,
-    };
+    const composed = composeTaskInput(parsed, zoned(at), { undatedOnly });
+    // `before` is for the agenda only: an undated task keeps its day reminder.
+    const alert =
+      before === undefined || composed.undated ? composed.alert : composed.date - before * 60_000;
+    const input = { ...composed, alert, id: newTaskId(), updatedAt: at };
     const undated = input.undated === true;
     const optimistic = { ...input, repeatEvery: input.repeatEvery ?? undefined, completed: [] };
     saving.add(optimistic);

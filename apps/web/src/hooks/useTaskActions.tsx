@@ -227,9 +227,11 @@ export function useTaskActions(
     const previous = tasks ?? [];
     const wholeSeries = occurrence === undefined;
     const stamped = { ...patch, updatedAt: at };
-    // A series move shifts the anchor; the tapped occurrence's date would re-anchor it there.
-    if (wholeSeries && patch.date !== undefined)
-      stamped.date = seriesOf(task).date + patch.date - task.date;
+    // A series move shifts the anchor; the tapped occurrence's date would re-anchor it there. The
+    // alert is in the same frame and shifts with it.
+    const shift = seriesOf(task).date - task.date;
+    if (wholeSeries && patch.date !== undefined) stamped.date = patch.date + shift;
+    if (wholeSeries && patch.alert !== undefined) stamped.alert = patch.alert + shift;
     // `repeatEvery: null` é "volta a 1" no fio; na tarefa da tela é ausência.
     const repeatEvery =
       patch.repeatEvery === undefined ? task.repeatEvery : (patch.repeatEvery ?? undefined);

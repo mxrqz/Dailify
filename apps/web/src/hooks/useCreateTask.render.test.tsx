@@ -113,4 +113,20 @@ describe("useCreateTask", () => {
     expect(tasks).toHaveLength(1);
     expect(isSaving(tasks[0])).toBe(false);
   });
+
+  it("sets a dated task's alert from the reminder offset, and leaves an undated one's alone", async () => {
+    const { result } = renderHook(() => useCreateTask(), { wrapper });
+    api.createTask.mockResolvedValue({ error: { message: "nope", status: 500 } });
+    const create = (text: string) =>
+      result.current.create(parseTaskText(text, zoned()), { before: 30 });
+
+    await act(async () => void (await create("x amanhã às 10h")));
+    const dated = api.createTask.mock.lastCall?.[0];
+    expect(dated.alert).toBe(dated.date - 30 * 60_000);
+
+    await act(async () => void (await create("x amanhã")));
+    const day = api.createTask.mock.lastCall?.[0];
+    expect(day.undated).toBe(true);
+    expect(day.alert).toBe(day.date);
+  });
 });
