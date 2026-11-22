@@ -1,4 +1,4 @@
-import type { ReactNode } from "react";
+import { useSyncExternalStore, type ReactNode } from "react";
 import { CalendarIcon, UserIcon } from "lucide-react";
 import { Link, useMatch } from "react-router-dom";
 
@@ -11,6 +11,12 @@ import { useCalendarView } from "@/hooks/useCalendarView";
 import { useUser } from "@/hooks/useUser";
 import { cn } from "@/lib/utils";
 
+const onScroll = (notify: () => void) => {
+  window.addEventListener("scroll", notify, { passive: true });
+  return () => window.removeEventListener("scroll", notify);
+};
+const atTop = () => window.scrollY < 8;
+
 /**
  * Barra do app no mobile: a barra de material do iOS (52px, ☰ à esquerda; na Hoje, calendário e
  * perfil à direita). The desktop has none: brand and history live in the sidebar, the rest in each
@@ -20,6 +26,8 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
   const isSignedIn = Boolean(useUser());
   const dashboard = useMatch("/dashboard") !== null;
   const calendar = useCalendarView();
+  // The profile shows only at the top of the page; scrolled, the bar keeps to the agenda.
+  const top = useSyncExternalStore(onScroll, atTop);
   const calendarLabel = calendar.open ? copy.day.closeCalendar : copy.day.openCalendar;
 
   return (
@@ -55,7 +63,7 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
           </Tip>
         )}
 
-        {dashboard && isSignedIn && (
+        {dashboard && isSignedIn && top && (
           <Button asChild variant="ghost" size="bar">
             <Link to="/profile" aria-label={copy.header.profile}>
               <UserIcon aria-hidden="true" />

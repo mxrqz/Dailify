@@ -86,10 +86,13 @@ export function AnytimeItem({
 export function AnytimeCard({
   pending,
   busy,
+  empty,
   children,
 }: {
   pending?: number;
   busy?: boolean;
+  /** No rows: on mobile the capture field is hidden, so the header closes the card itself. */
+  empty?: boolean;
   children: ReactNode;
 }): JSX.Element {
   return (
@@ -98,7 +101,12 @@ export function AnytimeCard({
       aria-busy={busy}
       className="card mb-1 flex flex-col rounded-lg py-1"
     >
-      <div className="flex items-baseline justify-between px-4 pt-3 pb-1.5">
+      <div
+        className={cn(
+          "flex items-baseline justify-between px-4 pt-3 pb-1.5",
+          empty && "max-md:pb-3",
+        )}
+      >
         <h3 className="text-subhead font-medium text-ink-secondary">{copy.undated.title}</h3>
         {pending !== undefined && (
           <span className="text-footnote text-ink-secondary">{pendingLabel(pending)}</span>
@@ -223,6 +231,7 @@ export function AnytimeBlock(): JSX.Element {
   return (
     <AnytimeCard
       busy={undatedTasks === undefined}
+      empty={rows.length === 0}
       pending={undatedTasks && pendingUndated(undatedTasks, Date.now(), weekStart)}
     >
       {rows.map((task, i) => (
