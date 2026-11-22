@@ -133,7 +133,7 @@ describe("<Integrations>", () => {
     // Nothing read yet: every provider's card shows, all disabled.
     for (const button of screen.getAllByRole("button", { name: t.connect }))
       expect(button).toBeDisabled();
-    expect(screen.getAllByText(t.offlineHint)).toHaveLength(3);
+    expect(screen.getAllByText(t.offlineHint)).toHaveLength(4);
     expect(api.getIntegrations).not.toHaveBeenCalled();
   });
 
@@ -223,6 +223,33 @@ describe("<Integrations>", () => {
     expect(api.connectIntegration).toHaveBeenCalledWith("gmail");
     const soon = screen.getByRole("heading", { name: t.soon }).parentElement;
     expect(soon && within(soon).queryByText("Gmail")).toBeNull();
+    vi.unstubAllGlobals();
+  });
+
+  it("GitHub gets its own card with the scope hint, connects and left the Em breve list", async () => {
+    api.connectIntegration.mockResolvedValue({ url: "https://github.com/login/oauth/authorize" });
+    vi.stubGlobal("location", { ...window.location, assign: vi.fn() });
+    api.getIntegrations.mockResolvedValue({
+      integrations: [
+        { ...GCAL, connected: true, status: "active", account: "a@b.com" },
+        { ...GCAL, provider: "github" },
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <Integrations />
+      </MemoryRouter>,
+    );
+    const available = (await screen.findByRole("heading", { name: t.groupAvailable }))
+      .parentElement;
+    if (!available) throw new Error("no available group");
+    for (const line of t.apps.github.does)
+      expect(within(available).getByText(line)).toBeInTheDocument();
+    expect(within(available).getByText(t.githubScopeHint)).toBeInTheDocument();
+    await userEvent.click(within(available).getByRole("button", { name: t.connect }));
+    expect(api.connectIntegration).toHaveBeenCalledWith("github");
+    const soon = screen.getByRole("heading", { name: t.soon }).parentElement;
+    expect(soon && within(soon).queryByText("GitHub")).toBeNull();
     vi.unstubAllGlobals();
   });
 

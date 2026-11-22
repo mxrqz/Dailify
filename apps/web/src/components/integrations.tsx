@@ -144,11 +144,7 @@ export function IntegrationCard({
   );
 }
 
-const UPCOMING = [
-  { ...t.upcoming.notion, Logo: NotionLogo },
-  // O do GitHub é uma silhueta: vai na cor do texto pra não sumir no escuro.
-  { ...t.upcoming.github, Logo: GitHubLogo, fill: "currentColor" },
-];
+const UPCOMING = [{ ...t.upcoming.notion, Logo: NotionLogo }];
 
 /** O que ainda não existe, só pra mostrar o rumo. */
 export function UpcomingIntegrations(): JSX.Element {
@@ -171,6 +167,7 @@ const LOGOS = {
   "google-calendar": GoogleCalendarLogo,
   slack: SlackLogo,
   gmail: GmailLogo,
+  github: GitHubLogo,
 } satisfies Record<ProviderId, unknown>;
 
 /** O card de um provedor com conectar, desconectar e o "lê sem perguntar"; a Agenda leva os ajustes dela. */
@@ -314,7 +311,9 @@ function ProviderCard({
             ? skipped === 1
               ? copy.calendar.skippedOne
               : fill(copy.calendar.skippedMany, { n: skipped })
-            : undefined
+            : id === "github" && !connected && status?.allowed
+              ? t.githubScopeHint
+              : undefined
       }
     >
       {calendar && connected && <CalendarDefaultRow />}

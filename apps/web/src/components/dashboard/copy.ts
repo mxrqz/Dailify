@@ -360,6 +360,19 @@ export const copy = {
         disconnectDescription:
           "A Mew deixa de mandar e-mails pelo Gmail. Você pode conectar de novo quando quiser.",
       },
+      github: {
+        name: "GitHub",
+        does: [
+          "Issues e PRs atribuídos a você viram tarefas",
+          "A Mew lê issues e reviews quando você pedir",
+        ],
+        connected: "GitHub conectado",
+        disconnected: "GitHub desconectado",
+        denied: "Conexão com o GitHub cancelada",
+        missingScope: "Faltou permissão: aceite o acesso aos repositórios na tela do GitHub",
+        disconnectDescription:
+          "As tarefas que vieram do GitHub continuam na Mewki, só param de sincronizar. Você pode conectar de novo quando quiser.",
+      },
     } satisfies Record<
       ProviderId,
       {
@@ -378,8 +391,9 @@ export const copy = {
     never: "Nunca",
     upcoming: {
       notion: { name: "Notion", hint: "Lembra prazos das suas páginas" },
-      github: { name: "GitHub", hint: "Reviews e issues viram tarefas" },
     },
+    // GitHub has no read-only scope for private repos; said under its connect button.
+    githubScopeHint: "O GitHub pede acesso total aos repositórios; a Mewki só lê.",
     connect: "Conectar",
     reconnect: "Reconectar",
     disconnect: "Desconectar",
