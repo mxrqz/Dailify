@@ -24,7 +24,7 @@ vi.mock("@/functions/api", () => api);
 import { Toaster } from "@/components/ui/sonner";
 import { copy } from "@/components/dashboard/copy";
 import { getCompletionDate, upsertTaskWithRecurrence } from "@/functions/functions";
-import { readQueue } from "@/functions/offline";
+import { clearLocal, readQueue } from "@/functions/offline";
 import { zoned } from "@/functions/zone";
 import { useTaskActions } from "./useTaskActions";
 
@@ -52,7 +52,7 @@ beforeEach(() => {
   dailify.mockImplementation(() => ({ tasks: store, setTasks, loadedMonths: [AUG] }));
 });
 afterEach(() => {
-  localStorage.clear();
+  clearLocal("u1");
   toast.dismiss();
 });
 
