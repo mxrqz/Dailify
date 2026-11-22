@@ -140,14 +140,18 @@ export async function getMagicLinkChallenge(
   return row?.challenge ?? null;
 }
 
-/** Some só depois que o token foi consumido: se o verify falhou antes, o challenge continua valendo. */
+/**
+ * Some só depois que o token foi consumido: se o verify falhou antes, o challenge continua valendo.
+ * The table also binds the app's one-time tokens (Google sign-in), keyed the same way.
+ */
 export async function dropUsedMagicLinkChallenge(db: D1Database, tokenHash: string): Promise<void> {
   await db
     .prepare(
       `DELETE FROM magic_link_challenge WHERE token_hash=?
-       AND NOT EXISTS (SELECT 1 FROM verification WHERE identifier='magic-link:' || ?)`,
+       AND NOT EXISTS (SELECT 1 FROM verification
+         WHERE identifier IN ('magic-link:' || ?, 'one-time-token:' || ?))`,
     )
-    .bind(tokenHash, tokenHash)
+    .bind(tokenHash, tokenHash, tokenHash)
     .run();
 }
 

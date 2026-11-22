@@ -5,7 +5,7 @@ import { bearer, captcha, jwt, magicLink, oneTimeToken } from "better-auth/plugi
 import { mcp } from "@better-auth/mcp";
 import type { Env } from "./index";
 import { allowedOrigins, NATIVE_ORIGINS } from "./lib/origin";
-import { sha256b64url } from "./lib/encoding";
+import { bytesToBase64url, sha256b64url } from "./lib/encoding";
 import { sendEmail } from "./lib/email";
 import { magicLinkEmail } from "./lib/email/templates/magic-link";
 import { cancelSubscriptionsOf, stripeClient } from "./lib/stripe";
@@ -23,6 +23,8 @@ import {
 const LINK_TTL_S = 600;
 export const EMAIL_COOLDOWN_MS = 60_000;
 const VERIFY = "/magic-link/verify";
+const OTT_VERIFY = "/one-time-token/verify";
+const OTT_TTL_MIN = 3;
 
 /** `next` do link web: só path+search, e só se o callbackURL for da própria WEB_URL. */
 function nextOf(url: string, web: string): string {
@@ -61,30 +63,37 @@ async function sendMagicLink(
   await (ctx ? ctx.context.runInBackgroundOrAwait(send) : send);
 }
 
-const isChallenge = (v: unknown) => typeof v === "string" && /^[\w-]{43}$/.test(v);
+const isChallenge = (v: unknown): v is string => typeof v === "string" && /^[\w-]{43}$/.test(v);
 
 /**
  * Link pedido pelo app só vale com o `verifier` cujo S256 é o `challenge` do pedido — quem só tem
  * o e-mail não entra. Lança antes do endpoint, então o token não é consumido (e challenge
- * malformado no pedido nem chega a criar token).
+ * malformado no pedido nem chega a criar token). A one-time token always has a challenge, so a
+ * crafted `mewki://auth?ott=` can't sign the app into someone else's account.
  */
 const requireVerifier = (db: D1Database) =>
   createAuthMiddleware(async (ctx) => {
     const challenge: unknown = ctx.body?.metadata?.challenge;
     if (ctx.path === "/sign-in/magic-link" && challenge !== undefined && !isChallenge(challenge))
       throw new APIError("BAD_REQUEST", { message: "invalid challenge" });
-    if (ctx.path !== VERIFY || typeof ctx.query?.token !== "string") return;
-    const stored = await getMagicLinkChallenge(db, await sha256b64url(ctx.query.token));
-    if (!stored) return;
+    if (ctx.path === "/one-time-token/generate" && !isChallenge(ctx.query?.challenge))
+      throw new APIError("BAD_REQUEST", { message: "invalid challenge" });
+    const token: unknown =
+      ctx.path === VERIFY ? ctx.query?.token : ctx.path === OTT_VERIFY ? ctx.body?.token : null;
+    if (typeof token !== "string") return;
+    const stored = await getMagicLinkChallenge(db, await sha256b64url(token));
+    if (!stored && ctx.path === VERIFY) return;
     const verifier = ctx.headers?.get("x-mewki-verifier");
-    if (!verifier || (await sha256b64url(verifier)) !== stored)
+    if (!stored || !verifier || (await sha256b64url(verifier)) !== stored)
       throw new APIError("FORBIDDEN", { message: "invalid verifier" });
   });
 
 const dropChallenge = (db: D1Database) =>
   createAuthMiddleware(async (ctx) => {
-    if (ctx.path !== VERIFY || typeof ctx.query?.token !== "string") return;
-    await dropUsedMagicLinkChallenge(db, await sha256b64url(ctx.query.token));
+    const token: unknown =
+      ctx.path === VERIFY ? ctx.query?.token : ctx.path === OTT_VERIFY ? ctx.body?.token : null;
+    if (typeof token !== "string") return;
+    await dropUsedMagicLinkChallenge(db, await sha256b64url(token));
   });
 
 /** The audience of every MCP access token, served at `POST /mcp`. */
@@ -149,7 +158,29 @@ export function authOptions(env: Env, background?: (promise: Promise<unknown>) =
         secretKey: env.TURNSTILE_SECRET_KEY,
         endpoints: ["/sign-in/magic-link"],
       }),
-      oneTimeToken(),
+      // Google in the app: the web hands its session over as a token bound to the app's challenge.
+      // ponytail: the app shares the browser's session; mint its own in the verify hook if needed.
+      oneTimeToken({
+        expiresIn: OTT_TTL_MIN,
+        storeToken: "hashed",
+        generateToken: async (_session, ctx) => {
+          // Checked by `requireVerifier` already; this narrows it.
+          const challenge: unknown = ctx.query?.challenge;
+          if (!isChallenge(challenge))
+            throw new APIError("BAD_REQUEST", { message: "invalid challenge" });
+          const token = bytesToBase64url(crypto.getRandomValues(new Uint8Array(32)));
+          const now = Date.now();
+          const expiresAt = now + OTT_TTL_MIN * 60_000;
+          await saveMagicLinkChallenge(
+            env.DB,
+            await sha256b64url(token),
+            challenge,
+            now,
+            expiresAt,
+          );
+          return token;
+        },
+      }),
       // Signs the MCP access tokens; the header would hand every session a JWT it never uses.
       jwt({ disableSettingJwtHeader: true }),
       mcp({

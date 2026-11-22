@@ -3,14 +3,16 @@
  * sistema. Contrato em `docs/research/2026-11-17-better-auth.md` (Magic link). Nada de
  * `@tauri-apps/*` é importado estaticamente — na web este módulo não puxa o runtime do Tauri.
  */
-import { APP_HOST } from "@dailify/shared";
+import { APP_HOST, APP_URL } from "@dailify/shared";
 import { apiURL } from "@/consts/conts";
 import { forgetUser } from "@/functions/offline";
 import { authClient, setBearer } from "@/lib/auth";
+import { openExternal } from "@/lib/open-external";
 import { internalPath, isTauri, signedOutPath } from "@/lib/platform";
 import { clearReminders } from "@/lib/reminders";
 const SESSION_ACCOUNT = "mewki.session";
 const VERIFIER_ACCOUNT = "mewki.magic-link-verifier";
+const GOOGLE_VERIFIER_ACCOUNT = "mewki.google-verifier";
 // Token do magic link do Better Auth: 32 letras; a folga cobre mudança de tamanho sem abrir a porta.
 const TOKEN_RE = /^[A-Za-z0-9_-]{16,128}$/;
 
@@ -25,8 +27,11 @@ export const s256 = async (verifier: string): Promise<string> =>
     new Uint8Array(await crypto.subtle.digest("SHA-256", new TextEncoder().encode(verifier))),
   );
 
-/** Token de `mewki://auth?token=` ou `https://mewki.mxrqz.com/auth/app?token=`; qualquer outra coisa → null. */
-export function parseAuthLink(raw: string): string | null {
+/** `token` = the e-mailed magic link, `ott` = the one-time token of Google sign-in on the web. */
+export type AuthLink = { via: "token" | "ott"; token: string };
+
+/** `mewki://auth?token=|ott=` ou `https://mewki.mxrqz.com/auth/app?token=|ott=`; qualquer outra coisa → null. */
+export function parseAuthLink(raw: string): AuthLink | null {
   let url: URL;
   try {
     url = new URL(raw);
@@ -41,8 +46,10 @@ export function parseAuthLink(raw: string): string | null {
     url.host === APP_HOST &&
     ["/auth/app", "/auth/app/"].includes(url.pathname);
   if (!custom && !appLink) return null;
-  const tokens = url.searchParams.getAll("token");
-  return tokens.length === 1 && TOKEN_RE.test(tokens[0]) ? tokens[0] : null;
+  const params = [...url.searchParams];
+  if (params.length !== 1) return null;
+  const [[via, token]] = params;
+  return (via === "token" || via === "ott") && TOKEN_RE.test(token) ? { via, token } : null;
 }
 
 /** `mewki://open/<path>` or `https://mewki.mxrqz.com/app/<path>` (e.g. back from Stripe) → in-app path. */
@@ -96,6 +103,16 @@ export async function startNativeMagicLink(email: string, captchaToken: string) 
   });
 }
 
+/**
+ * Google in the app: the webview's OAuth redirect never returns, so the system browser signs in on
+ * the web (`/auth/google`), which sends back a one-time token bound to this verifier.
+ */
+export async function startNativeGoogle(): Promise<void> {
+  const verifier = base64url(crypto.getRandomValues(new Uint8Array(32)));
+  await vaultSet(GOOGLE_VERIFIER_ACCOUNT, verifier);
+  await openExternal(`${APP_URL}/auth/google?challenge=${await s256(verifier)}`);
+}
+
 // True while an e-mailed link is being verified, so the login screen can show it is signing in.
 let signingIn = false;
 const listeners = new Set<() => void>();
@@ -109,19 +126,28 @@ export const onSigningIn = (listener: () => void): (() => void) => {
   return () => listeners.delete(listener);
 };
 
-async function verifyLink(token: string): Promise<void> {
+async function verifyLink({ via, token }: AuthLink): Promise<void> {
   setSigningIn(true);
   try {
-    const verifier = await vaultGet(VERIFIER_ACCOUNT);
-    if (!verifier) throw new Error("magic link opened without a request from this device");
+    const account = via === "token" ? VERIFIER_ACCOUNT : GOOGLE_VERIFIER_ACCOUNT;
+    const verifier = await vaultGet(account);
+    if (!verifier) throw new Error(`${via} link opened without a request from this device`);
+    const headers = { "x-mewki-verifier": verifier };
     const url = new URL(`${apiURL}/auth/magic-link/verify`, window.location.origin);
     url.searchParams.set("token", token);
-    const res = await fetch(url, { headers: { "x-mewki-verifier": verifier } });
+    const res =
+      via === "token"
+        ? await fetch(url, { headers })
+        : await fetch(new URL(`${apiURL}/auth/one-time-token/verify`, window.location.origin), {
+            method: "POST",
+            headers: { ...headers, "content-type": "application/json" },
+            body: JSON.stringify({ token }),
+          });
     const session = res.headers.get("set-auth-token");
-    if (!res.ok || !session) throw new Error(`magic link verify failed (${res.status})`);
+    if (!res.ok || !session) throw new Error(`${via} verify failed (${res.status})`);
     await vaultSet(SESSION_ACCOUNT, session);
     setBearer(session);
-    await vaultDelete(VERIFIER_ACCOUNT);
+    await vaultDelete(account);
     authClient.$store.notify("$sessionSignal");
   } catch (error) {
     // On success it stays on until the session lands and the login screen navigates away.
@@ -152,10 +178,10 @@ export async function initNativeAuth(onError: (error: unknown) => void): Promise
         dispatchEvent(new PopStateEvent("popstate"));
         continue;
       }
-      const token = parseAuthLink(raw);
-      if (!token || seen.has(token)) continue;
-      seen.add(token);
-      verifyLink(token).catch(onError);
+      const link = parseAuthLink(raw);
+      if (!link || seen.has(link.token)) continue;
+      seen.add(link.token);
+      verifyLink(link).catch(onError);
     }
   };
 
@@ -170,7 +196,7 @@ async function signOutNative(): Promise<void> {
     await authClient.signOut();
   } finally {
     setBearer(null);
-    await vaultDelete(SESSION_ACCOUNT, VERIFIER_ACCOUNT);
+    await vaultDelete(SESSION_ACCOUNT, VERIFIER_ACCOUNT, GOOGLE_VERIFIER_ACCOUNT);
   }
 }
 

@@ -42,8 +42,9 @@ The `/login` and `/signup` screens, plus the shell the hand-off pages reuse. Rep
   on the web `from` becomes the `callbackURL`. In Tauri, `startNativeMagicLink`
   (`lib/native-auth.ts`) sends a device-bound link with no callback. While the app verifies an
   e-mailed link (`isSigningIn`/`onSigningIn`), `AuthPage` shows the `Splash` instead of the form.
-- Google is hidden in Tauri (bd `Dailify-rzz.8`: the webview redirect doesn't come back with the
-  session). A failure returns as `/login?error=<code>`, even from `/signup`, and shows as `generic`.
+- Google in Tauri is `startNativeGoogle` (system browser + one-time token, `lib/CLAUDE.md`): the
+  webview's redirect doesn't come back with the session. On the web a failure returns as
+  `/login?error=<code>`, even from `/signup`, and shows as `generic`.
 
 ## Turnstile (`turnstile.ts`)
 
