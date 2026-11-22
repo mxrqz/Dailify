@@ -28,6 +28,7 @@ import { clockAt } from "@/functions/date-label";
 import { fill, getCompletionDate } from "@/functions/functions";
 import { repeatLabel } from "@/functions/repeat-label";
 import { spanOf } from "@/functions/span";
+import { reminderBefore } from "@/functions/task-options";
 import { isSaving } from "@/hooks/useCreateTask";
 import { openPanel, usePanel } from "@/hooks/usePanel";
 import { useTaskActions } from "@/hooks/useTaskActions";
@@ -65,8 +66,7 @@ function taskMeta(task: Task, live: boolean, hour12: boolean): ReactNode {
   const calendar = task.links?.some(isCalendarEventLink);
   const repeat = repeatLabel(task.repeat, task.repeatEvery);
   const meet = videoLink(task.links);
-  const before =
-    task.alert === undefined ? undefined : Math.round((task.date - task.alert) / 60_000);
+  const before = reminderBefore(task);
   const end = task.date + durationMinutes(task.duration) * 60_000;
   const text = [
     live && fill(copy.day.until, { time: clockAt(end, hour12) }),
@@ -123,10 +123,13 @@ export function DayTaskRow({
     void onDelete();
   };
   const move = (to: Date, occurrence?: number) => {
-    const shift = to.getTime() - task.date;
     // O alerta anda junto: remarcar não pode deixar o lembrete no horário antigo.
+    const before = reminderBefore(task);
     void onPatch(
-      { date: to.getTime(), ...(task.alert === undefined ? {} : { alert: task.alert + shift }) },
+      {
+        date: to.getTime(),
+        ...(before === undefined ? {} : { alert: to.getTime() - before * 60_000 }),
+      },
       occurrence,
     );
   };

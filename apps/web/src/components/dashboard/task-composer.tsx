@@ -54,8 +54,10 @@ import {
   DayPopover,
   DurationMenu,
   LinksPopover,
+  ReminderMenu,
   RepeatMenu,
 } from "@/components/dashboard/task-meta-menus";
+import type { ReminderOffset } from "@/functions/task-options";
 import { useDailify } from "@/components/dailifyContext";
 import { clockAt, dayDot } from "@/functions/date-label";
 import { fill } from "@/functions/functions";
@@ -68,6 +70,8 @@ export interface ComposerValues {
   text: string;
   /** A etiqueta Google Agenda ligada: depois de criada, a tarefa vai pra lá. */
   calendar?: CalendarPick;
+  /** The reminder chip: minutes before a task with a time. */
+  before?: number;
 }
 
 interface TaskComposerProps {
@@ -109,6 +113,7 @@ export function TaskComposer({
   // Trechos de chips tirados: voltam pro título como texto. Valem pro texto atual (`remapSpans`).
   const [ignore, setIgnore] = useState<Span[]>([]);
   const [edits, setEdits] = useState<Edits>({});
+  const [before, setBefore] = useState<ReminderOffset>();
   const textRef = useRef<HTMLTextAreaElement>(null);
   const { hour12 } = useDailify();
   const online = useOnline();
@@ -161,6 +166,7 @@ export function TaskComposer({
     setInput("");
     setIgnore([]);
     setEdits({});
+    setBefore(undefined);
     mew.reset();
     calendar.reset();
   };
@@ -202,7 +208,8 @@ export function TaskComposer({
       return;
     }
     const text = input;
-    void onSubmit({ parsed, text, calendar: calendar.value(0, task) }, again).then((ok) => {
+    const values = { parsed, text, calendar: calendar.value(0, task), before };
+    void onSubmit(values, again).then((ok) => {
       if (!ok) setInput((current) => current || text);
     });
     clear();
@@ -441,13 +448,33 @@ export function TaskComposer({
         >
           {parsed.duration ?? copy.composer.addDuration}
         </MetaChip>
-        <MetaChip
-          {...size}
-          ghost={task.alert === undefined}
-          icon={task.alert !== undefined && <BellIcon aria-hidden="true" />}
-        >
-          {task.alert !== undefined ? alertLabel(task.alert) : copy.composer.addReminder}
-        </MetaChip>
+        {task.undated ? (
+          <MetaChip
+            {...size}
+            ghost={task.alert === undefined}
+            icon={task.alert !== undefined && <BellIcon aria-hidden="true" />}
+          >
+            {task.alert !== undefined ? alertLabel(task.alert) : copy.composer.addReminder}
+          </MetaChip>
+        ) : (
+          <MetaChip
+            {...size}
+            ghost={before === undefined}
+            icon={before !== undefined && <BellIcon aria-hidden="true" />}
+            editLabel={
+              before === undefined
+                ? undefined
+                : fill(copy.composer.editReminder, { value: copy.form.reminderOffsets[before] })
+            }
+            editor={(trigger) => (
+              <ReminderMenu value={before} onChange={setBefore}>
+                {trigger}
+              </ReminderMenu>
+            )}
+          >
+            {before === undefined ? copy.composer.addReminder : copy.form.reminderOffsets[before]}
+          </MetaChip>
+        )}
         {parsed.links.slice(0, 1).map((url) => (
           <MetaChip
             key={url}

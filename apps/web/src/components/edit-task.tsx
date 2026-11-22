@@ -202,8 +202,8 @@ export function useTaskEditor(task: Task, day: Date, onClose: () => void, formCl
     // The form shows the tapped occurrence: a whole-series edit shifts the anchor by the same
     // amount, or it would re-anchor the series there and drop every earlier occurrence.
     const shift = occurrence === undefined && !values.undated ? seriesOf(task).date - task.date : 0;
-    // An instance's own `alert` is already the anchor's; only one that fell back to `date` moves.
-    const seriesAlert = task.alert === undefined && alert !== undefined ? alert + shift : alert;
+    // The alert is in the form's frame too: it moves with the anchor, keeping its distance.
+    const seriesAlert = alert === undefined ? undefined : alert + shift;
     const patch = { ...input, date: date + shift, alert: seriesAlert ?? null, updatedAt: at };
     const result = await updateTask(task.id, patch, occurrence);
     const { series, error } = result;

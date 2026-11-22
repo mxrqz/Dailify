@@ -267,6 +267,21 @@ describe("<TaskComposer> chips", () => {
     expect(submitted(onSubmit)).toMatchObject({ text: "call", duration: "30m" });
   });
 
+  it("the reminder chip of a task with a time picks an offset and submits it", async () => {
+    const { user, onSubmit } = setup();
+    await user.type(screen.getByRole("textbox"), "dentista amanhã 15h");
+    await user.click(screen.getByRole("button", { name: copy.composer.addReminder }));
+    await user.click(
+      await screen.findByRole("menuitemradio", { name: copy.form.reminderOffsets[30] }),
+    );
+
+    const label = copy.composer.editReminder.replace("{value}", copy.form.reminderOffsets[30]);
+    expect(screen.getByRole("button", { name: label })).toBeInTheDocument();
+    screen.getByRole("textbox").focus();
+    await user.keyboard("{Enter}");
+    expect(onSubmit.mock.lastCall?.[0]).toMatchObject({ before: 30 });
+  });
+
   it("intervalo: o chip diz a cada quanto, e o menu troca o N", async () => {
     const { user, onSubmit } = setup();
     await user.type(screen.getByRole("textbox"), "faxina a cada 2 semanas na segunda");

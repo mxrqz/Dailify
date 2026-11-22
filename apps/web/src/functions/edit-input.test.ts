@@ -69,8 +69,33 @@ describe("buildEdit", () => {
 
   it("gives a task moved to the agenda an alert at its date", () => {
     const undated = { ...task, undated: true };
-    const { taskData } = buildEdit(undated, values, now);
+    const { taskData } = buildEdit(undated, { ...values, before: 0 }, now);
     expect(taskData).toMatchObject({ date: values.date.getTime(), alert: values.date.getTime() });
+  });
+
+  it("keeps the reminder's distance when the time changes", () => {
+    const reminded = { ...task, alert: task.date - 30 * 60_000 };
+    const later = new Date(2026, 9, 22, 18);
+    const { taskData, unchanged } = buildEdit(
+      reminded,
+      { ...values, date: later, before: 30 },
+      now,
+    );
+    expect(taskData.alert).toBe(later.getTime() - 30 * 60_000);
+    expect(unchanged).toBe(false);
+  });
+
+  it("reads a later instance with its series' reminder as unchanged", () => {
+    const anchor = task.date - 7 * 86_400_000;
+    const instance = { ...task, repeat: "Daily" as const, seriesStart: anchor, alert: anchor };
+    const form = { ...values, repeat: "Daily" as const, before: 0 };
+    expect(buildEdit(instance, form, now).unchanged).toBe(true);
+  });
+
+  it("sees a cleared on-time reminder as a change", () => {
+    const { taskData, unchanged } = buildEdit({ ...task, alert: task.date }, values, now);
+    expect(taskData.alert).toBeUndefined();
+    expect(unchanged).toBe(false);
   });
 });
 

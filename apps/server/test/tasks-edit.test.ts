@@ -233,6 +233,15 @@ describe("PATCH /tasks/:id?occurrence — editar só esta ocorrência", () => {
     expect(series?.exdates).toEqual([occurrence]);
   });
 
+  it("a detached day keeps the series' reminder distance, not the anchor's instant", async () => {
+    const before = 30 * 60 * 1000;
+    await insertTask(env.DB, "u3", { ...master, id: "lembrete", alert: master.date - before });
+    const moved = occurrence + 60 * 60 * 1000;
+    const res = await patchOccurrence("lembrete", occurrence, { date: moved });
+    const { task } = await res.json<{ task: Task }>();
+    expect(task.alert).toBe(moved - before);
+  });
+
   it("o mês não devolve a ocorrência destacada duas vezes", async () => {
     const res = await app.request("/tasks?month=2026-09", {}, env, createExecutionContext());
     const { tasks } = await res.json<{ tasks: Task[] }>();

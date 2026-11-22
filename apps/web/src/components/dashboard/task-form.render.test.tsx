@@ -121,6 +121,32 @@ describe("<TaskForm> raiz", () => {
   });
 });
 
+describe("<TaskForm> lembrete", () => {
+  const picker = () => screen.getByRole("combobox", { name: copy.form.reminder });
+
+  it("shows a matching alert as its offset and saves the picked one", () => {
+    const { submit } = setup({ ...task, alert: task.date - 30 * 60_000 });
+    expect(picker()).toHaveDisplayValue(copy.form.reminderOffsets[30]);
+    fireEvent.change(picker(), { target: { value: "60" } });
+    expect(submit()).toMatchObject({ before: 60 });
+  });
+
+  it("keeps the offset when the time changes", () => {
+    const { submit } = setup({ ...task, alert: task.date - 10 * 60_000 });
+    fireEvent.change(screen.getByLabelText(copy.form.time), { target: { value: "14:00" } });
+    const values = submit();
+    expect(values.before).toBe(10);
+    expect(values.date.getHours()).toBe(14);
+  });
+
+  it("shows an off-list alert as its clock time, and offers no reminder", () => {
+    const { submit } = setup({ ...task, alert: task.date - 45 * 60_000 });
+    expect(picker()).toHaveDisplayValue(/08:15/);
+    fireEvent.change(picker(), { target: { value: "" } });
+    expect(submit().before).toBeUndefined();
+  });
+});
+
 describe("<TaskForm> convite (readonly)", () => {
   it("trava título, data, hora, duração e repetição; prioridade segue editável", () => {
     render(<TaskForm id="f" task={task} view="root" onView={vi.fn()} onSubmit={vi.fn()} locked />);

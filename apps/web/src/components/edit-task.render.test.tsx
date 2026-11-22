@@ -51,7 +51,7 @@ const values = {
   undated: false,
 };
 // What the form submits on top of `values`: the real form starts from the tapped task.
-let form: Partial<typeof values> = {};
+let form: Partial<typeof values & { before: number }> = {};
 
 describe("<EditTaskContent> offline", () => {
   it("edição sem rede entra na fila e sobe como PATCH com a hora da edição", async () => {
@@ -114,14 +114,14 @@ describe("<EditTaskContent> preguiçosa", () => {
 });
 
 describe("<EditTaskContent> series", () => {
-  it("a whole-series edit from a later instance keeps the series anchor", async () => {
-    const anchor: Task = { ...task, repeat: "Daily" };
+  it("a whole-series edit from a later instance keeps the series anchor and its reminder", async () => {
+    const anchor: Task = { ...task, repeat: "Daily", alert: task.date - 30 * 60_000 };
     const month = new Date(2026, 9, 1);
     const instance = upsertTaskWithRecurrence([], anchor, [month]).find(
       (t) => new Date(t.date).getDate() === 30,
     );
     if (!instance) throw new Error("no instance");
-    form = { date: new Date(instance.date), repeat: "Daily" };
+    form = { date: new Date(instance.date), repeat: "Daily", before: 30 };
     dailify.mockReturnValue({
       tasks: [],
       setTasks: vi.fn(),
@@ -146,7 +146,7 @@ describe("<EditTaskContent> series", () => {
     await waitFor(() => expect(api.updateTask).toHaveBeenCalled());
     expect(api.updateTask.mock.lastCall?.[1]).toMatchObject({
       date: anchor.date,
-      alert: anchor.date,
+      alert: anchor.alert,
     });
     form = {};
   });

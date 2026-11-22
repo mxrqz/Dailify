@@ -1,5 +1,7 @@
 import type { ProviderId, QuotaKey, UnsureCode } from "@dailify/shared";
 
+import type { ReminderOffset } from "@/functions/task-options";
+
 /**
  * Dicionário de copy pt-BR do dashboard.
  *
@@ -128,6 +130,16 @@ export const copy = {
     reminder: "Lembrete",
     reminderValue: "{day} · {time}",
     noReminder: "Sem lembrete",
+    // A dated task's reminder, as minutes before its start.
+    reminderOffsets: {
+      0: "Na hora",
+      5: "5 min antes",
+      10: "10 min antes",
+      15: "15 min antes",
+      30: "30 min antes",
+      60: "1 h antes",
+      1440: "1 dia antes",
+    } satisfies Record<ReminderOffset, string>,
     duration: "Duração",
     links: "Links",
     linkOpen: "Abrir link",
@@ -406,6 +418,7 @@ export const copy = {
     editDuration: "Editar duração: {value}",
     editRepeat: "Editar repetição: {value}",
     editLinks: "Editar link: {value}",
+    editReminder: "Editar lembrete: {value}",
     removeDay: "Tirar o dia",
     removeTime: "Tirar o horário",
     removeDuration: "Tirar a duração",

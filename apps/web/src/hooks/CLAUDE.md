@@ -41,7 +41,8 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
   fresh one on queueing, replaces it; the agenda row reads "Salvando…" meanwhile.
 - `onPatch`: `repeatEvery: null` on the wire is back to 1 (locally `undefined`). Apply the reply's
   `series` before `updated`: re-expanding it drops the occurrence that became its own task.
-- A series-scope `onPatch` with a `date` shifts the anchor (`seriesOf(task).date + new - task.date`);
+- A series-scope `onPatch` with a `date` shifts the anchor (`seriesOf(task).date + new - task.date`),
+  and an `alert` by the same amount (both are in the tapped instance's frame);
   Undo of a series delete re-creates `seriesOf(task)` without completions (the server drops them).
 - Writes use functional updates; a rollback is `revertTask(cur, previous, id)`
   (`functions/revert-task.ts`), never `setTasks(previous)`.

@@ -386,11 +386,14 @@ export async function detachOccurrence(
   const master = await getTask(db, userId, id);
   if (!master || master.repeat === "Off") return null;
 
+  const date = fields.date ?? occurrence;
   const detached: Task = {
     ...master,
+    // The series' alert is the anchor's: the detached day keeps its distance, not its instant.
+    alert: master.alert === undefined ? undefined : master.alert - master.date + date,
     ...fields,
     id: newId,
-    date: fields.date ?? occurrence,
+    date,
     repeat: "Off",
     repeatEvery: undefined,
     repeatUntil: undefined,

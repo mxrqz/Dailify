@@ -3,6 +3,7 @@ import { undatedReminder, type Task, type TaskInput } from "@dailify/shared";
 
 import type { TaskFormValues } from "@/components/dashboard/task-form";
 import { isTaskModified } from "./functions";
+import { reminderBefore } from "./task-options";
 
 /**
  * O que o formulário de edição grava. Sem horário vai para Sem data: com lembrete às 09:00 do dia
@@ -37,8 +38,12 @@ export function buildEdit(task: Task, values: TaskFormValues, now: TZDate) {
   const input = editTaskInput(values, now);
   // An undated task without a reminder keeps its `date` (the list order): saving doesn't sink it.
   const date = values.undated && !input.alert && wasUndated ? task.date : (input.date ?? task.date);
-  // Agenda: the alert follows the task; the undated 09:00 reminder doesn't apply there.
-  const alert = values.undated ? input.alert : wasUndated ? date : (task.alert ?? date);
+  // Agenda: the alert keeps its distance from the form's date; the undated 09:00 one doesn't apply.
+  const alert = values.undated
+    ? input.alert
+    : values.before === undefined
+      ? undefined
+      : date - values.before * 60_000;
   const taskData = {
     ...task,
     ...input,
@@ -47,12 +52,12 @@ export function buildEdit(task: Task, values: TaskFormValues, now: TZDate) {
     alert,
     updatedAt: now.getTime(),
   };
-  // `isTaskModified` compares `alert ?? date`: clearing an undated reminder (date === alert) would
-  // read as unchanged.
+  // The alert is compared apart: `isTaskModified` reads `alert ?? date` (clearing an on-time one
+  // would look unchanged), and an instance's alert is its series'.
   const unchanged =
-    !isTaskModified(task, taskData) &&
+    !isTaskModified(task, { ...taskData, alert: task.alert }) &&
     wasUndated === values.undated &&
-    (!values.undated || task.alert === alert);
+    (values.undated ? task.alert === alert : reminderBefore(task) === values.before);
   return { input, taskData, unchanged };
 }
 

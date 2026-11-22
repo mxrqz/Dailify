@@ -176,7 +176,7 @@ export default function Home() {
             setExample(null);
           }}
           submitting={submitting}
-          onSubmit={({ parsed, calendar }) => create(parsed, { calendar })}
+          onSubmit={({ parsed, calendar, before }) => create(parsed, { calendar, before })}
           openSignal={createSignal}
           voiceSignal={voiceSignal}
         />

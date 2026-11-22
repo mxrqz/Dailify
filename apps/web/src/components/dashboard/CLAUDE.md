@@ -78,7 +78,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
   font and padding exactly. `text-base` is the minimum, or iOS zooms on focus.
 - Chip slots stay mounted in a fixed order (repeat or day, time, duration, reminder, first link), so
   the strip doesn't reflow per keystroke. `MetaChip` without `onRemove` only edits (`ghost` = the
-  empty "+ x" look); without `editor` it only displays (the reminder).
+  empty "+ x" look); without `editor` it only displays (an undated task's reminder). A task with a
+  time edits its reminder with `ReminderMenu`, sent as `ComposerValues.before` (minutes).
 - The textarea id is `COMPOSER_TEXT_ID` (`task-composer.tsx`), which `create-fab.tsx` focuses on
   open and after a calendar day pick.
 
@@ -107,6 +108,9 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
   (`functions/edit-input.ts`) replays the form's link edits over it.
 - Undated: `date` only orders the list; the reminder is a day fired at `DEFAULT_HOUR` (09:00), shown
   through `undatedReminder`. Toggling undated carries the chosen day across.
+- Agenda: the reminder is `before`, minutes from the alert to `date` (`reminderBefore`,
+  `REMINDER_OFFSETS` in `functions/task-options.ts`), so a date or time edit keeps the distance.
+  There is no wire field for it: every save and reschedule rebuilds `alert = date - before`.
 - `locked` (a Calendar invite you don't organize) disables title, date, time, duration, the undated
   switch, repeat, interval and weekdays. Priority, tags and links stay editable.
 - Weekly starts with the task's own weekday and `WeekdayToggle` won't drop the last day: an empty
