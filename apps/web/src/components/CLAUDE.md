@@ -15,7 +15,8 @@ motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hoo
 - Root, for what no single feature owns. Shell: `app-layout` (AppHeader, `nav/`,
   Outlet, Duplicates; no gutter on /dashboard; on mobile, account pages get `back-bar` instead of
   AppHeader, the legal pages' back + title bar), `app-header`, `protected-route`, `splash`,
-  `scroll-restoration`, `error-boundary`, `brand`. State: `dailifyContext`, `theme-provider`. Task
+  `scroll-restoration`, `transition-routes` (`<Routes>` whose page changes cross-fade through
+  `startViewTransition`; BrowserRouter ignores `viewTransition`), `error-boundary`, `brand`. State: `dailifyContext`, `theme-provider`. Task
   UI: `edit-task` (mobile sheet + `useTaskEditor`, also behind the desktop side panel),
   `add-to-calendar`, `duplicates-sheet`, `sync-badge`, `credits-tray`. Settings
   widgets for `pages/`: `hour-format-select`, `week-start-select`, `time-zone-select`,

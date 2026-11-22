@@ -1,6 +1,6 @@
 import { MotionConfig } from "motion/react";
 import { lazy, Suspense } from "react";
-import { BrowserRouter as Router, Navigate, Outlet, Routes, Route } from "react-router-dom";
+import { BrowserRouter as Router, Navigate, Outlet, Route } from "react-router-dom";
 import { ThemeProvider } from "@/components/theme-provider";
 import "./global.css";
 import Home from "@/pages/home";
@@ -13,6 +13,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { AppLayout } from "@/components/app-layout";
 import { Refraction } from "@/components/kit/refraction";
 import { ScrollRestoration } from "@/components/scroll-restoration";
+import { TransitionRoutes } from "@/components/transition-routes";
 import { StepUpDialog } from "@/components/auth/step-up-dialog";
 import { isTauri } from "@/lib/platform";
 
@@ -49,7 +50,7 @@ export default function App() {
                   {/* Fallback vazio: o body já é bg-canvas. O router navega em transição, então só
                       a primeira carga de uma rota cai aqui; trocar de rota mantém a tela atual. */}
                   <Suspense fallback={null}>
-                    <Routes>
+                    <TransitionRoutes>
                       {/* The app has no landing: "/" is its start URL and every in-app link to it. */}
                       <Route
                         path="/"
@@ -105,7 +106,7 @@ export default function App() {
 
                       {/* Sem isto, path inexistente renderiza tela branca — já custou o bug /prices. */}
                       <Route path="*" element={<Navigate to="/dashboard" replace />} />
-                    </Routes>
+                    </TransitionRoutes>
                   </Suspense>
                 </ErrorBoundary>
 

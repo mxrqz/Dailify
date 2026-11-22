@@ -463,6 +463,13 @@
 @utility scroll-mt-bar {
   scroll-margin-top: calc(--spacing(16) + env(safe-area-inset-top));
 }
+/* Page changes (`TransitionRoutes`): a short cross-fade; unchanged chrome stays put. */
+::view-transition-old(root),
+::view-transition-new(root) {
+  animation-duration: var(--motion-duration-base);
+  animation-timing-function: var(--motion-ease-out);
+}
+
 /*
  * The mobile week strip docking over the app bar (`WeekStrip`), driven by the scroll on the
  * compositor: no JS per frame. JS only measures `--dock-start` (the scroll where it reaches the bar,
