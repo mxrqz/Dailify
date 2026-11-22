@@ -9,10 +9,13 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
   (`DayTaskRow` container, `NowLine`), over kit `TaskRow`/`CheckCircle`.
 - Undated: `anytime-block.tsx` (today's card, `ScheduleDrop`), `check-history.tsx`;
 - Layout: `side-panel.tsx` is the desktop side panel (below, "Side panel").
-- Navigation: `week-strip.tsx` (`WeekDays`/`WeekStrip`), `month-calendar.tsx` (`MonthGrid`/
-  `MonthCalendar`, the `?view=calendar` overlay of `pages/home.tsx`; on `DESKTOP` it renders the
-  full-height `MonthBoard`, whose cells open `{ kind: "day" }` in the side panel and light while
-  it is open). Gesture: `swipe-actions.tsx`.
+- Navigation: `week-strip.tsx` (`WeekDays`/`WeekStrip`, sticky under the bar or toolbar; its
+  bottom is the reading line, and day sections scroll to `scroll-mt-agenda` just under it).
+  `?view=calendar` (`hooks/useCalendarView.ts`, the bar's calendar button toggles it): on mobile
+  the strip expands into `MonthPicker` (`MonthGrid` + arrows) and a pick collapses it before
+  `goToDay` scrolls; on `DESKTOP` `MonthCalendar` replaces the agenda with the full-height
+  `MonthBoard`, whose cells open `{ kind: "day" }` in the side panel and light while it is open.
+  Gesture: `swipe-actions.tsx`.
 - Creation: `create-fab.tsx`, `task-composer.tsx` (container), `composer-views.tsx` (views),
   `calendar-chip.tsx` (`useCalendarChip`). The mobile dock is `mew-chat/dock.tsx`.
 - Editing: `task-form.tsx` (sheet: `components/edit-task.tsx`), `task-meta-menus.tsx`, pickers

@@ -64,14 +64,7 @@ const instantExit = { opacity: 0, transition: { duration: 0 } };
 /**
  * Um dia: cabeçalho (rótulo + contagem) e as linhas embaixo — tarefas e, hoje, o fio do agora. É o bloco que a `DayList` empilha; o scroll é da página, não daqui.
  */
-export function DaySection({
-  day,
-  calendar,
-}: {
-  day: Date;
-  /** O dia escolhido no calendário: título "Terça, 17", sem o bloco A qualquer hora. */
-  calendar?: boolean;
-}): JSX.Element {
+export function DaySection({ day }: { day: Date }): JSX.Element {
   const { tasks, hour12, weekStart } = useDailify();
   const reduce = useReducedMotion();
   // The complement of `DESKTOP`, where `pages/home.tsx` mounts the side panel the rows open.
@@ -99,8 +92,7 @@ export function DaySection({
     row.at <= nowAt &&
     nowAt < row.at + durationMinutes(row.task.duration);
   const count = dayTasks.length;
-  const sub =
-    isTomorrow(day) && !calendar ? weekdayDate(day, "EEEE, d MMM") : count > 0 && itemCount(count);
+  const sub = isTomorrow(day) ? weekdayDate(day, "EEEE, d MMM") : count > 0 && itemCount(count);
 
   // One pulse when the last task gets done, never when a zeroed day mounts.
   const heading = useRef<HTMLHeadingElement>(null);
@@ -134,14 +126,14 @@ export function DaySection({
     <ScheduleDrop day={day}>
       {/* content-visibility só no mobile: no desktop cortaria o contorno de soltar (outline-offset). */}
       <section
-        id={calendar ? undefined : dayAnchorId(day)}
+        id={dayAnchorId(day)}
         // What the WeekStrip queries (`section[data-day]`), so it never re-types the id format.
-        data-day={calendar ? undefined : true}
-        className="flex scroll-mt-bar max-md:[contain-intrinsic-size:auto_20rem] max-md:[content-visibility:auto] flex-col gap-2 rounded-lg outline-offset-4 data-drop-over:outline-2 data-drop-over:outline-dashed data-drop-over:outline-brand"
+        data-day
+        className="flex scroll-mt-agenda max-md:[contain-intrinsic-size:auto_20rem] max-md:[content-visibility:auto] flex-col gap-2 rounded-lg outline-offset-4 data-drop-over:outline-2 data-drop-over:outline-dashed data-drop-over:outline-brand"
       >
         <header className="flex items-baseline justify-between gap-3 px-1 pb-1">
           <h2 ref={heading} className="origin-left text-title-3 font-semibold">
-            {calendar ? weekdayDate(day, "EEEE, d") : dayLabel(day, now, weekStart)}
+            {dayLabel(day, now, weekStart)}
           </h2>
           {zeroed ? (
             <span className="text-footnote font-semibold text-success transition-opacity duration-base starting:opacity-0">
@@ -152,9 +144,9 @@ export function DaySection({
           )}
         </header>
 
-        {isCurrentDay && !calendar && <AnytimeBlock />}
+        {isCurrentDay && <AnytimeBlock />}
 
-        {(!isCurrentDay || calendar) && rows.length === 0 && (
+        {!isCurrentDay && rows.length === 0 && (
           <p className="px-1 text-subhead text-ink-secondary">{copy.day.emptyDay}</p>
         )}
 
@@ -162,9 +154,8 @@ export function DaySection({
           <motion.ul
             className="flex flex-col gap-2"
             variants={listVariants}
-            // Só hoje (e o dia do calendário) entra escalonado: meses que chegam no meio da rolagem
-            // não animam linha por linha.
-            initial={reduce || (!isCurrentDay && !calendar) ? false : "hidden"}
+            // Só hoje entra escalonado: meses que chegam no meio da rolagem não animam linha por linha.
+            initial={reduce || !isCurrentDay ? false : "hidden"}
             animate="visible"
           >
             {/* No `initial={false}`: it would block the ul's stagger on mount. */}

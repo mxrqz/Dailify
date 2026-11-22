@@ -6,38 +6,24 @@ import {
   format,
   isBefore,
   isSameDay,
-  isSameMonth,
   isToday,
   startOfDay,
   startOfMonth,
 } from "date-fns";
 import { ptBR } from "date-fns/locale";
-import { AnimatePresence, motion, type Variants } from "motion/react";
-import { ChevronLeftIcon, ChevronRightIcon, PlusIcon } from "lucide-react";
+import { ChevronLeftIcon, ChevronRightIcon } from "lucide-react";
 import type { Task, WeekStart } from "@dailify/shared";
 
 import { useDailify } from "@/components/dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { DaySection } from "@/components/dashboard/day-section";
 import { Button } from "@/components/ui/button";
-import { DESKTOP } from "@/consts/media";
-import { duration, ease } from "@/consts/motion";
 import { clockAt, weekdayDate, weekdayInitials } from "@/functions/date-label";
 import { capitalize, fill, getCompletionDate, getTasksForDay } from "@/functions/functions";
 import { zoned } from "@/functions/zone";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
-import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { useNow } from "@/hooks/useNow";
 import { openPanel, usePanel } from "@/hooks/usePanel";
 import { cn } from "@/lib/utils";
-
-// Forward (dir 1) pushes the day out left and the next in from the right; dir 0 swaps instantly.
-const slide = { duration: duration.slow, ease: ease.out };
-const page = {
-  enter: (dir: number) => ({ x: `${dir * 100}%`, transition: dir ? slide : { duration: 0 } }),
-  center: (dir: number) => ({ x: "0%", transition: dir ? slide : { duration: 0 } }),
-  exit: (dir: number) => ({ x: `${-dir * 100}%`, transition: dir ? slide : { duration: 0 } }),
-} satisfies Variants;
 
 /**
  * O mês em grade (props → markup): passado apagado, hoje em `brand-text`, o escolhido num círculo
@@ -54,8 +40,7 @@ export function MonthGrid({
   selected: Date;
   weekStart: WeekStart;
   marked: (day: Date) => boolean;
-  /** `keyboard`: a click with no pointer, which swaps the day without the slide. */
-  onPick: (day: Date, keyboard: boolean) => void;
+  onPick: (day: Date) => void;
 }): JSX.Element {
   const days = eachDayOfInterval({ start: startOfMonth(month), end: endOfMonth(month) });
   const lead = (days[0].getDay() - weekStart + 7) % 7;
@@ -65,7 +50,7 @@ export function MonthGrid({
     <div
       role="group"
       aria-label={format(month, "MMMM 'de' yyyy", { locale: ptBR })}
-      className="grid grid-cols-7 gap-y-0.5 px-4 pt-3"
+      className="grid grid-cols-7 gap-y-0.5 pt-1"
     >
       {weekdayInitials(weekStart).map((initial, i) => (
         <div
@@ -90,7 +75,7 @@ export function MonthGrid({
             aria-pressed={on}
             aria-current={isToday(day) ? "date" : undefined}
             aria-label={has ? fill(copy.day.withTasks, { day: label }) : label}
-            onClick={(e) => onPick(day, e.detail === 0)}
+            onClick={() => onPick(day)}
             className="group/day flex h-13 cursor-pointer flex-col items-center gap-1 pt-0.5"
           >
             <span
@@ -216,23 +201,16 @@ export function MonthBoard({
   );
 }
 
-/**
- * O calendário da Hoje (o ícone da barra): o mês com setas, e embaixo o dia escolhido. Escolher um
- * dia é o `goToDay` — ao voltar, a lista já está nele. No mobile cobre a tela (barra própria, com
- * Voltar e Hoje); no desktop ocupa o lugar da agenda.
- */
-export function MonthCalendar({
-  onClose,
-  onCreateOn,
+/** The month the mobile week strip expands into: arrows page it, a day picks it. */
+export function MonthPicker({
+  selected,
+  onPick,
 }: {
-  onClose: () => void;
-  onCreateOn: (day: Date) => void;
+  selected: Date;
+  onPick: (day: Date) => void;
 }): JSX.Element {
-  const { tasks, selectedDay, goToDay, loadMonth, weekStart, hour12 } = useDailify();
-  const desktop = useMediaQuery(DESKTOP);
-  const panel = usePanel();
-  const today = useNow("day");
-  const [month, setMonth] = useState(() => startOfMonth(selectedDay));
+  const { tasks, loadMonth, weekStart } = useDailify();
+  const [month, setMonth] = useState(() => startOfMonth(selected));
   const monthKey = month.getTime();
 
   const loadMonthOf = useEffectEvent(loadMonth);
@@ -240,88 +218,13 @@ export function MonthCalendar({
     void loadMonthOf(zoned(monthKey));
   }, [monthKey]);
 
-  // The day lands after goToDay loads its months, so the input that picked it is kept until then.
-  const [keyboard, setKeyboard] = useState(false);
-  const dayKey = startOfDay(selectedDay).getTime();
-  const [shown, setShown] = useState(dayKey);
-  const [dir, setDir] = useState(0);
-  if (dayKey !== shown) {
-    setShown(dayKey);
-    setDir(keyboard ? 0 : Math.sign(dayKey - shown));
-  }
-
-  const pick = (day: Date) => void goToDay(day);
-  const marked = (day: Date) => (tasks ? getTasksForDay(tasks, day).length > 0 : false);
-  const title = format(month, "MMMM", { locale: ptBR });
-
-  if (desktop) {
-    // The sidebar is the way back, so there's no Voltar; a cell opens its day in the side panel.
-    return (
-      <div className="flex min-h-0 flex-1 flex-col px-8 pt-1 pb-8">
-        <header className="flex items-end justify-between gap-3 pb-5">
-          <h1 className="text-title-1">
-            {capitalize(title)}{" "}
-            <span className="font-normal text-ink-secondary">{format(month, "yyyy")}</span>
-          </h1>
-          <div className="flex items-center gap-1 pb-1">
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={copy.aside.prevMonth}
-              onClick={() => setMonth(addMonths(month, -1))}
-            >
-              <ChevronLeftIcon aria-hidden="true" />
-            </Button>
-            <Button variant="secondary" size="sm" onClick={() => setMonth(startOfMonth(today))}>
-              {copy.day.today}
-            </Button>
-            <Button
-              variant="ghost"
-              size="icon-sm"
-              aria-label={copy.aside.nextMonth}
-              onClick={() => setMonth(addMonths(month, 1))}
-            >
-              <ChevronRightIcon aria-hidden="true" />
-            </Button>
-          </div>
-        </header>
-        <MonthBoard
-          month={month}
-          today={today}
-          selected={panel?.kind === "day" ? panel.day : null}
-          weekStart={weekStart}
-          hour12={hour12}
-          tasksOf={(day) => (tasks ? getTasksForDay(tasks, day) : [])}
-          onPick={(day) => openPanel({ kind: "day", day: day.getTime() })}
-        />
-      </div>
-    );
-  }
-
   return (
-    <div className="fixed inset-0 z-float overflow-y-auto overscroll-contain bg-canvas pb-30 md:static md:z-auto md:overflow-visible md:pb-10">
-      {/* Not a landmark: two buttons, no links, and the Sidebar already owns "Navegação". */}
-      <div className="sticky top-0 z-10 flex h-bar items-center justify-between bg-material-bar-solid px-2 md:top-13">
-        <Button variant="ghost" size="bar" aria-label={copy.header.back} onClick={onClose}>
-          <ChevronLeftIcon aria-hidden="true" />
-        </Button>
-        <Button
-          variant="ghost"
-          onClick={(e) => {
-            setMonth(startOfMonth(zoned()));
-            setKeyboard(e.detail === 0);
-            pick(startOfDay(zoned()));
-          }}
-        >
-          {copy.day.today}
-        </Button>
-      </div>
-
-      <header className="flex items-end justify-between pt-1 pr-3 pl-5">
-        <h1 className="text-title-1">
-          {capitalize(title)}{" "}
+    <div>
+      <div className="flex items-center justify-between pl-1">
+        <h2 className="text-title-3 font-semibold">
+          {capitalize(format(month, "MMMM", { locale: ptBR }))}{" "}
           <span className="font-normal text-ink-secondary">{format(month, "yyyy")}</span>
-        </h1>
+        </h2>
         <div className="flex">
           <Button
             variant="ghost"
@@ -340,43 +243,69 @@ export function MonthCalendar({
             <ChevronRightIcon aria-hidden="true" />
           </Button>
         </div>
-      </header>
-
+      </div>
       <MonthGrid
         month={month}
-        selected={selectedDay}
+        selected={selected}
         weekStart={weekStart}
-        marked={marked}
-        onPick={(day, keyboard) => {
-          if (!isSameMonth(day, month)) setMonth(startOfMonth(day));
-          setKeyboard(keyboard);
-          pick(day);
-        }}
+        marked={(day) => (tasks ? getTasksForDay(tasks, day).length > 0 : false)}
+        onPick={onPick}
       />
+    </div>
+  );
+}
 
-      <hr className="mx-5 mt-3 border-separator" />
+/** The desktop month (`?view=calendar`), in place of the agenda; a cell opens its day in the side panel. */
+export function MonthCalendar(): JSX.Element {
+  const { tasks, selectedDay, loadMonth, weekStart, hour12 } = useDailify();
+  const panel = usePanel();
+  const today = useNow("day");
+  const [month, setMonth] = useState(() => startOfMonth(selectedDay));
+  const monthKey = month.getTime();
 
-      <div className="flex flex-col gap-3 px-4 pt-7">
-        {/* A pager: popLayout lifts the leaving day out of the flow, so both slide at once. */}
-        <div className="relative overflow-x-clip">
-          <AnimatePresence initial={false} mode="popLayout" custom={dir}>
-            <motion.div
-              key={dayKey}
-              custom={dir}
-              variants={page}
-              initial="enter"
-              animate="center"
-              exit="exit"
-            >
-              <DaySection calendar day={startOfDay(selectedDay)} />
-            </motion.div>
-          </AnimatePresence>
+  const loadMonthOf = useEffectEvent(loadMonth);
+  useEffect(() => {
+    void loadMonthOf(zoned(monthKey));
+  }, [monthKey]);
+
+  return (
+    <div className="flex min-h-0 flex-1 flex-col px-8 pt-1 pb-8">
+      <header className="flex items-end justify-between gap-3 pb-5">
+        <h1 className="text-title-1">
+          {capitalize(format(month, "MMMM", { locale: ptBR }))}{" "}
+          <span className="font-normal text-ink-secondary">{format(month, "yyyy")}</span>
+        </h1>
+        <div className="flex items-center gap-1 pb-1">
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={copy.aside.prevMonth}
+            onClick={() => setMonth(addMonths(month, -1))}
+          >
+            <ChevronLeftIcon aria-hidden="true" />
+          </Button>
+          <Button variant="secondary" size="sm" onClick={() => setMonth(startOfMonth(today))}>
+            {copy.day.today}
+          </Button>
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={copy.aside.nextMonth}
+            onClick={() => setMonth(addMonths(month, 1))}
+          >
+            <ChevronRightIcon aria-hidden="true" />
+          </Button>
         </div>
-        <Button variant="secondary" className="w-full" onClick={() => onCreateOn(selectedDay)}>
-          <PlusIcon aria-hidden="true" />
-          {fill(copy.day.createOn, { day: format(selectedDay, "EEE, d MMM", { locale: ptBR }) })}
-        </Button>
-      </div>
+      </header>
+      <MonthBoard
+        month={month}
+        today={today}
+        selected={panel?.kind === "day" ? panel.day : null}
+        weekStart={weekStart}
+        hour12={hour12}
+        tasksOf={(day) => (tasks ? getTasksForDay(tasks, day) : [])}
+        onPick={(day) => openPanel({ kind: "day", day: day.getTime() })}
+      />
     </div>
   );
 }

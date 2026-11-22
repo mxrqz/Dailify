@@ -25,6 +25,8 @@ describe("cn", () => {
     ["px-gutter", "px-4"],
     ["pr-gutter", "pr-0"],
     ["top-safe", "top-0"],
+    ["top-bar", "top-0"],
+    ["scroll-mt-agenda", "scroll-mt-0"],
     ["rounded-2xs", "rounded-xs"],
     ["shadow-raised", "shadow-none"],
     ["shadow-raised", "shadow-elevation-1"],

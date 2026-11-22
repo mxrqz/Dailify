@@ -56,6 +56,7 @@ export const copy = {
     today: "Hoje",
     tomorrow: "Amanhã",
     openCalendar: "Abrir calendário",
+    closeCalendar: "Fechar calendário",
     createOn: "Criar tarefa em {day}",
     expandMonth: "Mostrar o mês",
     collapseMonth: "Mostrar só a semana",

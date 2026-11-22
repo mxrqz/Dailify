@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { PanelRightIcon, PlusIcon } from "lucide-react";
 import { Helmet } from "react-helmet-async";
-import { useLocation, useNavigate, useSearchParams } from "react-router-dom";
+import { useSearchParams } from "react-router-dom";
 
 import { Toolbar } from "@/components/app-header";
 import { useDailify } from "@/components/dailifyContext";
@@ -15,12 +15,12 @@ import { PageHeader } from "@/components/kit/page-header";
 import { Onboarding } from "@/components/onboarding/onboarding";
 import { Tip } from "@/components/tip";
 import { Button } from "@/components/ui/button";
-import { CALENDAR_VIEW } from "@/consts/conts";
 import { DESKTOP } from "@/consts/media";
 import { ProgressRing } from "@/components/kit/progress-ring";
 import { weekdayDate } from "@/functions/date-label";
 import { fill, getCompletionDate, getTasksForDay } from "@/functions/functions";
 import { useCreateTask } from "@/hooks/useCreateTask";
+import { useCalendarView } from "@/hooks/useCalendarView";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
 import { closePanel, togglePanel, usePanel } from "@/hooks/usePanel";
@@ -71,9 +71,7 @@ export default function Home() {
   const [createOn, setCreateOn] = useState<Date | null>(null);
   const [example, setExample] = useState<string | null>(null);
   const [params, setParams] = useSearchParams();
-  const navigate = useNavigate();
-  const location = useLocation();
-  const calendarOpen = params.get("view") === CALENDAR_VIEW;
+  const { open: calendarOpen, close: closeCalendar } = useCalendarView();
   // A reminder notification opens `/dashboard?at=<epoch-ms>` (Android): land on that day, once.
   const at = Number(params.get("at"));
   const landOn = useEffectEvent((ms: number) => {
@@ -105,9 +103,6 @@ export default function Home() {
   useEffect(() => {
     if (mewVoice) startVoice();
   }, [mewVoice]);
-  // Entrou direto pelo link: não há o que voltar no histórico, então tira o parâmetro.
-  const closeCalendar = () =>
-    location.key === "default" ? setParams({}, { replace: true }) : navigate(-1);
 
   return (
     // Shell (md+): the agenda column and, when open, the side panel beside it.
@@ -151,22 +146,20 @@ export default function Home() {
         <div
           className={cn(
             "flex flex-col px-4 pb-30 md:mx-auto md:pb-6 md:w-full md:max-w-180 md:px-8 md:pt-1",
-            calendarOpen && "md:hidden",
+            calendarOpen && desktop && "hidden",
           )}
           id="main"
         >
           <TodayHeader date={today} done={done} total={todays.length} />
 
-          <div className="pt-4">
-            <WeekStrip />
-          </div>
+          <WeekStrip expanded={calendarOpen && !desktop} onCollapse={closeCalendar} />
 
-          <div className="mt-5">
+          <div className="mt-3">
             <DayList onTry={setExample} />
           </div>
         </div>
 
-        {calendarOpen && <MonthCalendar onClose={closeCalendar} onCreateOn={setCreateOn} />}
+        {calendarOpen && desktop && <MonthCalendar />}
 
         <CreateFab
           day={createOn}

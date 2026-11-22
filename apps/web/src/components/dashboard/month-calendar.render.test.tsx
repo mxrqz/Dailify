@@ -8,13 +8,8 @@ import { copy } from "./copy";
 
 const dailify = vi.hoisted(() => vi.fn());
 vi.mock("@/components/dailifyContext", () => ({ useDailify: dailify }));
-vi.mock("@/components/dashboard/day-section", async (original) => ({
-  ...(await original<typeof import("./day-section")>()),
-  DaySection: ({ day }: { day: Date }) => <section data-testid="day">{day.getDate()}</section>,
-}));
 
-import { MonthCalendar } from "./month-calendar";
-import { DESKTOP } from "@/consts/media";
+import { MonthCalendar, MonthPicker } from "./month-calendar";
 import { closePanel } from "@/hooks/usePanel";
 
 const day = new Date(2026, 10, 17);
@@ -28,22 +23,12 @@ const task: Task = {
   completed: [],
 };
 
-describe("<MonthCalendar>", () => {
-  it("o mês do dia escolhido, ponto onde há tarefa, setas carregam o mês, dia escolhe", () => {
-    const goToDay = vi.fn();
+describe("<MonthPicker> and <MonthCalendar>", () => {
+  it("expands to the picked day's month, dots days with tasks, pages and picks", () => {
     const loadMonth = vi.fn();
-    const onCreateOn = vi.fn();
-    dailify.mockReturnValue({
-      tasks: [task],
-      selectedDay: day,
-      goToDay,
-      loadMonth,
-      loadedMonths: [],
-      weekStart: 0,
-    });
-    render(<MonthCalendar onClose={() => {}} onCreateOn={onCreateOn} />);
-    // The back/Today bar is no landmark: the Sidebar's nav already has that name.
-    expect(screen.queryByRole("navigation")).not.toBeInTheDocument();
+    const onPick = vi.fn();
+    dailify.mockReturnValue({ tasks: [task], loadMonth, weekStart: 0 });
+    render(<MonthPicker selected={day} onPick={onPick} />);
 
     const grid = within(screen.getByRole("group", { name: "novembro de 2026" }));
     expect(grid.getAllByRole("button")).toHaveLength(30);
@@ -53,26 +38,13 @@ describe("<MonthCalendar>", () => {
 
     fireEvent.click(screen.getByRole("button", { name: copy.aside.nextMonth }));
     expect(loadMonth).toHaveBeenLastCalledWith(startOfMonth(addMonths(day, 1)));
-    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("Dezembro 2026");
+    expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Dezembro 2026");
 
     fireEvent.click(screen.getByRole("button", { name: /^Quinta, 3 de dezembro/ }));
-    expect(goToDay).toHaveBeenCalledWith(new Date(2026, 11, 3));
-
-    fireEvent.click(screen.getByRole("button", { name: /^Criar tarefa em/ }));
-    expect(onCreateOn).toHaveBeenCalledWith(day);
+    expect(onPick).toHaveBeenCalledWith(new Date(2026, 11, 3));
   });
 
-  it("on desktop lists up to three tasks per cell and opens the picked day in the panel", () => {
-    vi.spyOn(window, "matchMedia").mockImplementation((query) => ({
-      matches: query === DESKTOP,
-      media: query,
-      onchange: null,
-      addEventListener: () => {},
-      removeEventListener: () => {},
-      addListener: () => {},
-      removeListener: () => {},
-      dispatchEvent: () => false,
-    }));
+  it("lists up to three tasks per cell and opens the picked day in the panel", () => {
     const at = (h: number, id: string, completed: number[] = []): Task => ({
       ...task,
       id,
@@ -93,7 +65,7 @@ describe("<MonthCalendar>", () => {
       weekStart: 1,
       hour12: false,
     });
-    render(<MonthCalendar onClose={() => {}} onCreateOn={() => {}} />);
+    render(<MonthCalendar />);
 
     const grid = within(screen.getByRole("group", { name: "novembro de 2026" }));
     const cell = grid.getByRole("button", { name: /^Sexta, 20 .*com tarefas$/ });
@@ -102,18 +74,6 @@ describe("<MonthCalendar>", () => {
 
     fireEvent.click(cell);
     expect(grid.getByRole("button", { pressed: true })).toBe(cell);
-    expect(screen.queryByRole("button", { name: copy.header.back })).not.toBeInTheDocument();
     closePanel();
-  });
-
-  it("pages to the picked day once the context lands on it", () => {
-    const value = { tasks: [], goToDay: vi.fn(), loadMonth: vi.fn(), weekStart: 0 };
-    dailify.mockReturnValue({ ...value, selectedDay: day });
-    const view = render(<MonthCalendar onClose={() => {}} onCreateOn={() => {}} />);
-    expect(screen.getByTestId("day")).toHaveTextContent("17");
-
-    dailify.mockReturnValue({ ...value, selectedDay: new Date(2026, 10, 18) });
-    view.rerender(<MonthCalendar onClose={() => {}} onCreateOn={() => {}} />);
-    expect(screen.getAllByTestId("day").at(-1)).toHaveTextContent("18");
   });
 });

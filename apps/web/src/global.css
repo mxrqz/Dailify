@@ -463,6 +463,14 @@
 @utility scroll-mt-bar {
   scroll-margin-top: calc(--spacing(16) + env(safe-area-inset-top));
 }
+/* Under the app bar: the sticky week strip of the agenda. */
+@utility top-bar {
+  top: calc(--spacing(13) + env(safe-area-inset-top));
+}
+/* A day the agenda scrolls to lands just under the bar plus the sticky strip (~78px). */
+@utility scroll-mt-agenda {
+  scroll-margin-top: calc(--spacing(35) + env(safe-area-inset-top));
+}
 
 /* Bottom sheet (SheetContent side="bottom"): a sliver of the screen stays visible above it. */
 @utility max-h-sheet {

@@ -1,4 +1,4 @@
-import { useEffect, useId, useState, type ReactNode } from "react";
+import { useEffect, useId, useRef, useState, type ReactNode, type RefObject } from "react";
 import { motion } from "motion/react";
 import { format, isSameDay, isToday } from "date-fns";
 
@@ -7,17 +7,18 @@ import { duration, ease } from "@/consts/motion";
 import { copy } from "@/components/dashboard/copy";
 import { ScheduleDrop } from "@/components/dashboard/anytime-block";
 import { dayAnchorId } from "@/components/dashboard/day-section";
+import { MonthPicker } from "@/components/dashboard/month-calendar";
 import { weekdayDate, weekOf } from "@/functions/date-label";
 import { fill, getTasksForDay } from "@/functions/functions";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { useNow } from "@/hooks/useNow";
 import { cn } from "@/lib/utils";
 
-// Uma seção vira "o dia que se está vendo" quando o topo dela sobe até aqui (logo abaixo da barra).
-const READING_LINE_PX = 64;
+// A section is the day being read once its top rises this far below the sticky strip.
+const READING_GAP_PX = 16;
 
 /** O dia cuja seção está sendo lida no topo da lista; um clique fixa o dia até o próximo gesto. */
-function useVisibleDay(days: Date[]): string | undefined {
+function useVisibleDay(days: Date[], strip: RefObject<HTMLElement | null>): string | undefined {
   const { tasks, targetDay } = useDailify();
   const [visible, setVisible] = useState<string>();
   const [pinned, setPinned] = useState<string>();
@@ -31,10 +32,11 @@ function useVisibleDay(days: Date[]): string | undefined {
     // lido na rolagem, e não por observer, porque as seções nascem depois (cache, meses chegando).
     const update = () => {
       frame = 0;
+      const line = (strip.current?.getBoundingClientRect().bottom ?? 0) + READING_GAP_PX;
       const sections = document.querySelectorAll<HTMLElement>("section[data-day]");
       let current = sections[0];
       for (const section of sections) {
-        if (section.getBoundingClientRect().top > READING_LINE_PX) break;
+        if (section.getBoundingClientRect().top > line) break;
         current = section;
       }
       setVisible(current && inWeek(current.id) ? current.id : undefined);
@@ -51,7 +53,7 @@ function useVisibleDay(days: Date[]): string | undefined {
       window.removeEventListener("resize", schedule);
     };
     // Reavalia quando a lista muda; os dias da semana só mudam à meia-noite.
-  }, [tasks, firstDay]);
+  }, [tasks, firstDay, strip]);
 
   useEffect(() => {
     if (!targetDay) return;
@@ -159,19 +161,52 @@ export function useWeek(): Date[] {
   return weekOf(useNow("day"), weekStart);
 }
 
-/** A semana da Hoje: a pílula acompanha o dia que se está lendo na lista; tocar rola até ele. */
-export function WeekStrip(): JSX.Element {
-  const { tasks, goToDay } = useDailify();
+/**
+ * The Today week, sticky under the bar: the pill follows the day being read, a tap scrolls to it.
+ * `expanded` (mobile `?view=calendar`) swaps it for the month; a pick collapses, then scrolls.
+ */
+export function WeekStrip({
+  expanded = false,
+  onCollapse,
+}: {
+  expanded?: boolean;
+  onCollapse?: () => void;
+}): JSX.Element {
+  const { tasks, goToDay, selectedDay } = useDailify();
   const days = useWeek();
-  const visible = useVisibleDay(days);
+  const strip = useRef<HTMLDivElement>(null);
+  const visible = useVisibleDay(days, strip);
+  // Scrolled only once the strip is back to its week height, or the day lands under the month.
+  const [picked, setPicked] = useState<Date | null>(null);
+  const go = useEffectEvent((day: Date) => void goToDay(day));
+  useEffect(() => {
+    if (expanded || !picked) return;
+    go(picked);
+    setPicked(null);
+  }, [expanded, picked]);
 
   return (
-    <WeekDays
-      days={days}
-      selected={days.find((day) => dayAnchorId(day) === visible)}
-      marked={(day) => (tasks ? getTasksForDay(tasks, day).length > 0 : false)}
-      onPick={(day) => void goToDay(day)}
-      wrap={(day, node) => <ScheduleDrop day={day}>{node}</ScheduleDrop>}
-    />
+    <div
+      ref={strip}
+      className="sticky top-bar z-10 -mx-4 mt-2 bg-canvas px-4 py-2 md:top-13 md:-mx-8 md:px-8"
+    >
+      {expanded ? (
+        <MonthPicker
+          selected={selectedDay}
+          onPick={(day) => {
+            setPicked(day);
+            onCollapse?.();
+          }}
+        />
+      ) : (
+        <WeekDays
+          days={days}
+          selected={days.find((day) => dayAnchorId(day) === visible)}
+          marked={(day) => (tasks ? getTasksForDay(tasks, day).length > 0 : false)}
+          onPick={(day) => void goToDay(day)}
+          wrap={(day, node) => <ScheduleDrop day={day}>{node}</ScheduleDrop>}
+        />
+      )}
+    </div>
   );
 }

@@ -7,12 +7,9 @@ import { SyncBadge } from "@/components/sync-badge";
 import { Tip } from "@/components/tip";
 import { copy } from "@/components/dashboard/copy";
 import { Button } from "@/components/ui/button";
-import { CALENDAR_VIEW } from "@/consts/conts";
+import { useCalendarView } from "@/hooks/useCalendarView";
 import { useUser } from "@/hooks/useUser";
 import { cn } from "@/lib/utils";
-
-const barButton =
-  "grid size-11 shrink-0 place-items-center rounded-full text-ink transition-colors hover:bg-fill pointer-fine:active:bg-fill-pressed [&_svg]:size-5.5";
 
 /**
  * Barra do app no mobile: a barra de material do iOS (52px, ☰ à esquerda; na Hoje, calendário e
@@ -22,6 +19,8 @@ const barButton =
 export function AppHeader({ className }: { className?: string }): JSX.Element {
   const isSignedIn = Boolean(useUser());
   const dashboard = useMatch("/dashboard") !== null;
+  const calendar = useCalendarView();
+  const calendarLabel = calendar.open ? copy.day.closeCalendar : copy.day.openCalendar;
 
   return (
     <header
@@ -42,14 +41,17 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
         )}
 
         {dashboard && (
-          <Tip content={copy.day.openCalendar}>
-            <Link
-              to={{ search: `?view=${CALENDAR_VIEW}` }}
-              aria-label={copy.day.openCalendar}
-              className={barButton}
+          <Tip content={calendarLabel}>
+            <Button
+              variant="ghost"
+              size="bar"
+              aria-label={calendarLabel}
+              aria-expanded={calendar.open}
+              onClick={calendar.open ? calendar.close : calendar.show}
+              className="aria-expanded:bg-fill"
             >
               <CalendarIcon aria-hidden="true" />
-            </Link>
+            </Button>
           </Tip>
         )}
 

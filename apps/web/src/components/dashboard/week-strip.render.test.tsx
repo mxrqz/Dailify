@@ -37,12 +37,12 @@ describe("WeekStrip", () => {
   it("a semana de hoje: pílula no dia que se está lendo, ponto só onde há tarefa, tocar vai ao dia", () => {
     const goToDay = vi.fn();
     dailify.mockReturnValue({ tasks: [task(addDays(sunday, 3))], goToDay, weekStart: 0 });
-    // O 1º já passou da linha de leitura e o 2º também; o 4º ainda está abaixo.
+    // The reading line sits 16px under the strip (at 0 here): the 1st and 2nd passed it, the 4th not.
     const sections = [0, 2, 4].map((offset, i) => {
       const section = document.createElement("section");
       section.id = dayAnchorId(addDays(sunday, offset));
       section.dataset.day = "true";
-      const top = [-300, 20, 400][i];
+      const top = [-300, 10, 400][i];
       const rect = { x: 0, y: top, width: 0, height: 0, top, right: 0, bottom: top, left: 0 };
       section.getBoundingClientRect = () => ({ ...rect, toJSON: () => rect });
       document.body.append(section);
@@ -63,5 +63,26 @@ describe("WeekStrip", () => {
     fireEvent.click(days[5]);
     expect(goToDay).toHaveBeenCalledWith(addDays(sunday, 5));
     for (const section of sections) section.remove();
+  });
+
+  it("expanded, it shows the month; a pick collapses it and scrolls only once collapsed", () => {
+    const goToDay = vi.fn();
+    const onCollapse = vi.fn();
+    dailify.mockReturnValue({
+      tasks: [],
+      goToDay,
+      loadMonth: vi.fn(),
+      selectedDay: new Date(NOW),
+      weekStart: 0,
+    });
+    const view = render(<WeekStrip expanded onCollapse={onCollapse} />);
+
+    fireEvent.click(screen.getByRole("button", { name: /^Sexta, 30 de outubro/ }));
+    expect(onCollapse).toHaveBeenCalled();
+    expect(goToDay).not.toHaveBeenCalled();
+
+    view.rerender(<WeekStrip onCollapse={onCollapse} />);
+    expect(goToDay).toHaveBeenCalledWith(new Date(2026, 9, 30));
+    expect(screen.getAllByRole("button")).toHaveLength(7);
   });
 });
