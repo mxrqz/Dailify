@@ -16,6 +16,7 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   `cancelSubscriptionsOf`. The checkout and portal calls still sit in `routes/billing.ts`.
 - `push.ts`: Web Push written by hand (RFC 8291 payload, RFC 8292 VAPID) on WebCrypto, because the
   npm libraries are Node-only. On a 404/410 from `sendPush` the caller deletes the subscription.
+- `pwned.ts`: `isPwned`, the Have I Been Pwned range check (k-anonymity, 5 s timeout, throws).
 - `encoding.ts`: base64url and `sha256b64url` (PKCE S256, the magic-link verifier hash).
 - `email/`: `sendEmail` is the only entry point, with one file per vendor in `providers/` (today
   the Cloudflare `EMAIL` binding). `FROM` (`entrar@${APP_HOST}`) must be in wrangler.toml
@@ -80,7 +81,9 @@ order and best-effort side effects; not repeated here). `lib/` never imports `ro
   both only in `signIn`. A code never goes in the subject (lock-screen notifications).
 - Everything is HTML-escaped: detail values carry user agents. The plain-text part is built from
   the same parts.
-- `emails.ts` holds every template; only `signIn` is wired (`auth-options.ts`). Adding one: a
+- `emails.ts` holds every template, wired in `auth-options.ts`, `auth-security.ts` and
+  `routes/security.ts`; only the passkey and e-mail-change kinds wait for their features.
+  `whenAndDevice` builds the "Quando"/"Aparelho" rows (zone printed). Adding one: a
   function there that calls `layout` with pt-BR copy, a case in `test/email-templates.test.ts`.
   `securityChanged` reads its title and intro from `CHANGES`, keyed by `SecurityChange`.
 

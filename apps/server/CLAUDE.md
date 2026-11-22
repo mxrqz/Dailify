@@ -9,8 +9,9 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
 
 - `src/index.ts`: `Env` (bindings + secrets), `AppEnv` and the app. Order: CORS (its `origin`
   callback is `isAllowedOrigin`: `ALLOWED_ORIGIN` plus `NATIVE_ORIGINS`), public `/health`,
-  `AUTH_LIMITER` on `/auth/sign-in/*`, `/auth/magic-link/*`, `/auth/one-time-token/*` and
-  `/auth/oauth2/register`, Better
+  `AUTH_LIMITER` on `/auth/sign-in/*`, `/auth/magic-link/*`, `/auth/one-time-token/*`,
+  `/auth/oauth2/register`, sign-up, password reset and change, and `/auth/two-factor/*`, the
+  step-up guards (below), Better
   Auth on `/auth/*` and `GET /.well-known/*`, `/mcp`, the other route modules (voice before tasks:
   see `src/routes/CLAUDE.md`), `app.notFound` and `app.onError` ->
   `fail(c, 500, "Internal error")`. The default export is the app with `scheduled`
@@ -43,6 +44,28 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
   `sendMagicLink` and spent at `POST /sign-in/email-otp` (under `AUTH_LIMITER`). The `before` hook
   404s every other `/email-otp/*` route, so a code never goes out without the captcha and the
   cooldown. The code is not device-bound: it proves the inbox, like a web link.
+- E-mail and password (`emailAndPassword`): 10-128 chars, scrypt (Better Auth's default, native
+  in workerd via `nodejs_compat`), verified e-mail required. The verify and reset e-mails open the
+  web (`/verify#token=…&type=email`, `/reset-password#token=…`), never Better Auth's GET. A reset
+  ends every session. New passwords (sign-up, change, reset, `POST /security/password`) go through
+  `rejectPwned` (`auth-security.ts`, `lib/pwned.ts`): k-anonymity, 5 s timeout, fails closed (503),
+  because the `haveIBeenPwned` plugin sets no timeout. Captcha covers sign-in, sign-up and reset.
+- MFA (`auth-security.ts`): `mfa(env)` is `twoFactor` (TOTP, e-mailed code, recovery codes, trust
+  device 30 days) with its sign-in gate widened to every path in `FIRST_FACTOR` (the plugin alone
+  gates only `/sign-in/email`). The one-time token isn't gated: it hands over a browser session that
+  already passed. Plugin order is load-bearing: `mfa` before `bearer` (no `set-auth-token` for the
+  held-back session), `security(env)` last (it reads the gate's outcome). The app gets the
+  `two_factor` cookie as the `x-mewki-two-factor` header and sends it back the same way. Google's
+  callback is redirected to `${WEB_URL}/two-factor?next=`.
+- Step-up: `requireRecentMfa` (`middleware/auth.ts`) answers 403 `mfa_required` when MFA is on
+  and the session has no `session_mfa` row from the last `STEP_UP_MS` (10 min). Mounted in
+  `index.ts` on change-password, two-factor disable/get-totp-uri/generate-backup-codes,
+  delete-user and oauth2 consent, and on `POST /integrations/:provider/connect` and
+  `POST /security/password`. `stepUpLockout` counts step-up misses in the plugin's own lockout
+  columns, which Better Auth only counts at sign-in.
+- Security e-mails (best-effort, `waitUntil`): `newSignIn` when no other live session shares the
+  browser/system/form factor (accounts older than 10 min), `securityChanged` for password, mfaOn
+  and mfaOff, `accountDeleted` in `afterDelete`.
 - Better Auth's built-in rate limit stays off: it counts in isolate memory. `AUTH_LIMITER` (by
   `cf-connecting-ip`) is the real one.
 - `requireAuth` reads `plan` from D1, not from the session: the 5-minute `cookieCache` still holds

@@ -7,7 +7,14 @@ import type { Env } from "./index";
 import { allowedOrigins, NATIVE_ORIGINS } from "./lib/origin";
 import { bytesToBase64url, sha256b64url } from "./lib/encoding";
 import { sendEmail } from "./lib/email";
-import { signIn } from "./lib/email/templates/emails";
+import {
+  accountDeleted,
+  resetPassword,
+  securityChanged,
+  signIn,
+  verifyEmail,
+} from "./lib/email/templates/emails";
+import { mailLater, mfa, rowsFor, security } from "./auth-security";
 import { cancelSubscriptionsOf, stripeClient } from "./lib/stripe";
 import { revokeAll } from "./integrations/connection";
 import {
@@ -127,6 +134,42 @@ export function authOptions(env: Env, background?: (promise: Promise<unknown>) =
       google: { clientId: env.GOOGLE_CLIENT_ID, clientSecret: env.GOOGLE_CLIENT_SECRET },
     },
     account: { accountLinking: { trustedProviders: ["google"] } },
+    // Hashing is Better Auth's scrypt (N=16384, r=16, p=1), native in workerd via nodejs_compat.
+    emailAndPassword: {
+      enabled: true,
+      requireEmailVerification: true,
+      minPasswordLength: 10,
+      maxPasswordLength: 128,
+      revokeSessionsOnPasswordReset: true,
+      // Same rule as the magic link: the e-mail opens the web, never Better Auth's GET.
+      sendResetPassword: async ({ user, token }, request) => {
+        const rows = await rowsFor(env, user.id, request?.headers.get("user-agent"));
+        const url = `${allowedOrigins(env)[0]}/reset-password#token=${token}`;
+        await sendEmail(env, { to: user.email, ...resetPassword(url, rows) });
+      },
+      onPasswordReset: ({ user }, request) =>
+        mailLater(
+          undefined,
+          async () => ({
+            to: user.email,
+            mail: securityChanged(
+              "password",
+              await rowsFor(env, user.id, request?.headers.get("user-agent")),
+            ),
+          }),
+          env,
+        ),
+    },
+    emailVerification: {
+      sendOnSignUp: true,
+      sendOnSignIn: true,
+      autoSignInAfterVerification: true,
+      sendVerificationEmail: async ({ user, url, token }) => {
+        const web = allowedOrigins(env)[0];
+        const link = `${web}/verify#token=${token}&type=email${nextOf(url, web)}`;
+        await sendEmail(env, { to: user.email, ...verifyEmail(link) });
+      },
+    },
     user: {
       additionalFields: {
         plan: { type: "string", required: false, input: false },
@@ -150,6 +193,10 @@ export function authOptions(env: Env, background?: (promise: Promise<unknown>) =
         afterDelete: async (user) => {
           await deleteUserData(env.DB, user.id);
           await forgetEmail(env.DB, user.email);
+          const bye = sendEmail(env, { to: user.email, ...accountDeleted() }).catch(
+            (err: unknown) => console.error("Account deletion e-mail failed", err),
+          );
+          await (background ? background(bye) : bye);
         },
       },
     },
@@ -163,6 +210,8 @@ export function authOptions(env: Env, background?: (promise: Promise<unknown>) =
     },
     hooks: { before: requireVerifier(env.DB), after: dropChallenge(env.DB) },
     plugins: [
+      // Before `bearer`: its after hook then sees the session the gate held back as expired.
+      mfa(env),
       bearer(),
       magicLink({
         expiresIn: LINK_TTL_S,
@@ -173,7 +222,12 @@ export function authOptions(env: Env, background?: (promise: Promise<unknown>) =
       captcha({
         provider: "cloudflare-turnstile",
         secretKey: env.TURNSTILE_SECRET_KEY,
-        endpoints: ["/sign-in/magic-link"],
+        endpoints: [
+          "/sign-in/magic-link",
+          "/sign-in/email",
+          "/sign-up/email",
+          "/request-password-reset",
+        ],
       }),
       // Google in the app: the web hands its session over as a token bound to the app's challenge.
       // ponytail: the app shares the browser's session; mint its own in the verify hook if needed.
@@ -209,6 +263,8 @@ export function authOptions(env: Env, background?: (promise: Promise<unknown>) =
         allowUnauthenticatedClientRegistration: true,
         clientRegistrationDefaultApplicationType: "infer",
       }),
+      // Last: its after hook reads what the `twoFactor` gate decided.
+      security(env),
     ],
   } satisfies BetterAuthOptions;
 }

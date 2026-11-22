@@ -3,6 +3,9 @@ import { cors } from "hono/cors";
 import type { Role } from "@dailify/shared";
 import { auth } from "./auth";
 import { rateLimit } from "./middleware/rate-limit";
+import { requireAuth, requireRecentMfa, stepUpLockout } from "./middleware/auth";
+import { TWO_FACTOR_HEADER } from "./auth-security";
+import security from "./routes/security";
 import tasks from "./routes/tasks";
 import billing from "./routes/billing";
 import voice from "./routes/voice";
@@ -62,11 +65,18 @@ app.use(
   cors({
     origin: (origin, c) => (isAllowedOrigin(c.env, origin) ? origin : null),
     allowMethods: ["GET", "POST", "PUT", "PATCH", "DELETE"],
-    // Os dois `x-` são do login: captcha do Turnstile e o verifier do magic link do app.
-    allowHeaders: ["Authorization", "Content-Type", "x-captcha-response", "x-mewki-verifier"],
+    // Os `x-` são do login: captcha do Turnstile, o verifier do magic link do app e, no app, o
+    // desafio do segundo fator (o cookie `two_factor` não atravessa a origem da webview).
+    allowHeaders: [
+      "Authorization",
+      "Content-Type",
+      "x-captcha-response",
+      "x-mewki-verifier",
+      TWO_FACTOR_HEADER,
+    ],
     // Cookie de sessão na web; no app o token volta em `set-auth-token` (plugin bearer).
     credentials: true,
-    exposeHeaders: ["set-auth-token"],
+    exposeHeaders: ["set-auth-token", TWO_FACTOR_HEADER],
     // Sem isto cada request autenticado paga um preflight (o Bearer força). Chrome corta em 2h.
     maxAge: 86400,
   }),
@@ -79,6 +89,24 @@ app.get("/favicon.ico", (c) => c.redirect(MCP_ICON.src, 301));
 app.use("/auth/sign-in/*", rateLimit("AUTH_LIMITER"));
 app.use("/auth/magic-link/*", rateLimit("AUTH_LIMITER"));
 app.use("/auth/one-time-token/*", rateLimit("AUTH_LIMITER"));
+// Password and second-factor guesses, and e-mails sent to someone else's inbox.
+app.use("/auth/sign-up/*", rateLimit("AUTH_LIMITER"));
+app.use("/auth/request-password-reset", rateLimit("AUTH_LIMITER"));
+app.use("/auth/reset-password", rateLimit("AUTH_LIMITER"));
+app.use("/auth/change-password", rateLimit("AUTH_LIMITER"));
+app.use("/auth/two-factor/*", rateLimit("AUTH_LIMITER"));
+for (const factor of ["totp", "otp", "backup-code"])
+  app.use(`/auth/two-factor/verify-${factor}`, stepUpLockout);
+// Step-up: with MFA on, these need a second factor in the last 10 minutes (`requireRecentMfa`).
+for (const path of [
+  "/change-password",
+  "/two-factor/disable",
+  "/two-factor/get-totp-uri",
+  "/two-factor/generate-backup-codes",
+  "/delete-user",
+  "/oauth2/consent",
+])
+  app.use(`/auth${path}`, requireAuth, requireRecentMfa);
 // Open client registration for MCP clients: it writes a row per call.
 app.use("/auth/oauth2/register", rateLimit("AUTH_LIMITER"));
 app.on(["GET", "POST"], "/auth/*", (c) => auth.handler(c.req.raw));
@@ -95,6 +123,7 @@ app.route("/", settings);
 app.route("/", integrations);
 app.route("/mew", mew);
 app.route("/reminders", reminders);
+app.route("/security", security);
 
 app.notFound((c) => fail(c, 404, "Not found"));
 app.onError((err, c) => {

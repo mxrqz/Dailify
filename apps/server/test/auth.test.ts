@@ -31,6 +31,7 @@ const AUTHENTICATED: [method: string, path: string][] = [
   ["DELETE", "/push/subscription"],
   ["GET", "/settings"],
   ["PUT", "/settings"],
+  ["POST", "/security/password"],
   ["GET", "/integrations"],
   ["POST", "/integrations/google-calendar/connect"],
   ["POST", "/integrations/google-calendar/callback"],

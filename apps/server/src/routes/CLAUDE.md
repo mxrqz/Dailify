@@ -24,6 +24,8 @@ provider work in `lib/` and `integrations/`.
   dispatched by `lib/mcp.ts`; `GET|DELETE` answer 405. Its tools write through
   `tasks.request(path, init, c.env, c.executionCtx)` with the same token (`requireTaskAuth`), so
   each write counts twice against `API_LIMITER`.
+- `security.ts` at `/security`: `POST /password` (a first password for a link/Google account:
+  step-up, breach check, `setPassword`, other sessions end, 204).
 - `integrations.ts` at `/`: `GET /integrations`, `POST /:provider/{connect,callback}`,
   `DELETE /:provider`, `DELETE /:provider/grants/read` (the Mew's "always read" switch),
   `POST google-calendar/{events,events/:taskId/meet|sync,duplicates/:id}`.

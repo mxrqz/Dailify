@@ -8,6 +8,27 @@ const SECURITY_FOOTER =
   "Avisos de segurança não podem ser desligados: são como a Mew protege a sua conta.";
 const NOT_ME = button("Não fui eu", `${APP_URL}/security`);
 
+/** "Quando" and "Aparelho", the rows of every security e-mail. The zone is printed beside the time. */
+export function whenAndDevice(
+  at: number,
+  timeZone: string,
+  { browser, os }: { browser?: string; os?: string },
+): Details {
+  const when = new Intl.DateTimeFormat("pt-BR", {
+    timeZone,
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZoneName: "short",
+  }).format(at);
+  const device = browser && os ? `${browser} no ${os}` : (browser ?? os ?? "Aparelho desconhecido");
+  return [
+    ["Quando", when],
+    ["Aparelho", device],
+  ];
+}
+
 export function signIn(url: string, ttlMinutes: number, otp?: string): Email {
   return layout({
     subject: "Seu link para entrar na Mewki",
@@ -46,7 +67,8 @@ export function resetPassword(url: string, rows: Details): Email {
     title: "Redefinir sua senha",
     intro:
       "Alguém pediu pra trocar a senha da sua conta. Se foi você, toque no botão e escolha uma nova.",
-    parts: [button("Escolher nova senha", url), details(rows)],
+    // 1 hora = Better Auth's default `resetPasswordTokenExpiresIn` (3600 s).
+    parts: [button("Escolher nova senha", url), details([...rows, ["Vale por", "1 hora"]])],
     notYou: [
       "Não foi você? Sua senha continua a mesma. Se isso se repetir, ative a verificação em duas etapas em Segurança.",
       "Trocar a senha encerra a sessão nos outros aparelhos.",
@@ -56,11 +78,11 @@ export function resetPassword(url: string, rows: Details): Email {
   });
 }
 
-export function mfaCode(otp: string, rows: Details): Email {
+export function mfaCode(otp: string, ttlMinutes: number, rows: Details): Email {
   return layout({
     subject: "Seu código de verificação da Mewki",
     title: "Seu código de verificação",
-    intro: "Use este código pra confirmar que é você. Ele vale por 10 minutos.",
+    intro: `Use este código pra confirmar que é você. Ele vale por ${ttlMinutes} minutos.`,
     parts: [
       code(otp),
       details(rows),
@@ -144,7 +166,7 @@ export function accountDeleted(): Email {
       para("Se mudar de ideia, é só criar uma conta nova quando quiser."),
     ],
     notYou: [
-      "Não pediu isso? Responda este e-mail agora: guardamos registros de segurança por 30 dias.",
+      `Não pediu isso? Fale com a gente pelo contato em ${APP_URL}/privacidade: guardamos registros de segurança por 30 dias.`,
     ],
     reason: "Este é o último e-mail que você recebe da Mewki.",
   });

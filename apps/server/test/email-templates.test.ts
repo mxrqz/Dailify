@@ -31,7 +31,7 @@ describe("email templates", () => {
     signIn(url, 10, "482913"),
     verifyEmail(url),
     resetPassword(url, rows),
-    mfaCode("715204", rows),
+    mfaCode("715204", 5, rows),
     newSignIn(rows),
     ...KINDS.map((k) => securityChanged(k, rows)),
     accountDeleted(),
@@ -59,7 +59,7 @@ describe("email templates", () => {
   });
 
   it("the MFA code is the only action and stays out of the subject", () => {
-    const mail = mfaCode("715204", rows);
+    const mail = mfaCode("715204", 5, rows);
     expect(mail.subject).not.toContain("715204");
     expect(count(mail.html, RED_BUTTON)).toBe(0);
     expect(mail.html).toContain(">715204<");

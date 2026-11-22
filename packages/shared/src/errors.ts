@@ -9,6 +9,10 @@ export const API_ERROR = {
   reconnect: "reconnect",
   alreadyLinked: "already_linked",
   missingScope: "missing_scope",
+  /** 403: a sensitive action needs a second factor from the last 10 minutes (`STEP_UP_MS`). */
+  mfaRequired: "mfa_required",
+  /** 400: the new password is in Have I Been Pwned. */
+  passwordCompromised: "password_compromised",
 } as const;
 
 export type ApiErrorCode = (typeof API_ERROR)[keyof typeof API_ERROR];
