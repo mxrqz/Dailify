@@ -376,6 +376,7 @@ export const copy = {
     pro: "Pro",
     lockedHint: "Disponível no plano Pro",
     revokedHint: "O acesso foi revogado. Reconecte para voltar a usar.",
+    tasksMissing: "Reconecte para trazer suas tarefas do Google Tasks.",
     offlineHint: "Sem conexão",
     disconnectTitle: "Desconectar {name}?",
     connecting: "Conectando {name}…",

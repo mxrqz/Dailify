@@ -242,29 +242,36 @@ function ProviderCard({
     );
   } else if (connected) {
     action = (
-      <Dialog>
-        <DialogTrigger asChild>
-          <Button variant="secondary" disabled={disabled} loading={busy}>
-            {t.disconnect}
+      <>
+        {status?.tasksMissing && (
+          <Button disabled={disabled} loading={busy} onClick={() => void connect()}>
+            {t.reconnect}
           </Button>
-        </DialogTrigger>
-        <DialogContent>
-          <DialogHeader>
-            <DialogTitle>{named(t.disconnectTitle)}</DialogTitle>
-            <DialogDescription>{app.disconnectDescription}</DialogDescription>
-          </DialogHeader>
-          <DialogFooter className="gap-2">
-            <DialogClose asChild>
-              <Button variant="secondary">{copy.form.cancel}</Button>
-            </DialogClose>
-            <DialogClose asChild>
-              <Button variant="soft-danger" onClick={() => void disconnect()}>
-                {t.disconnect}
-              </Button>
-            </DialogClose>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        )}
+        <Dialog>
+          <DialogTrigger asChild>
+            <Button variant="secondary" disabled={disabled} loading={busy}>
+              {t.disconnect}
+            </Button>
+          </DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>{named(t.disconnectTitle)}</DialogTitle>
+              <DialogDescription>{app.disconnectDescription}</DialogDescription>
+            </DialogHeader>
+            <DialogFooter className="gap-2">
+              <DialogClose asChild>
+                <Button variant="secondary">{copy.form.cancel}</Button>
+              </DialogClose>
+              <DialogClose asChild>
+                <Button variant="soft-danger" onClick={() => void disconnect()}>
+                  {t.disconnect}
+                </Button>
+              </DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </>
     );
   } else if (status && !status.allowed) {
     account = t.lockedHint;
@@ -301,11 +308,13 @@ function ProviderCard({
       does={app.does}
       action={action}
       note={
-        calendar && connected && skipped > 0
-          ? skipped === 1
-            ? copy.calendar.skippedOne
-            : fill(copy.calendar.skippedMany, { n: skipped })
-          : undefined
+        calendar && connected && status?.tasksMissing
+          ? t.tasksMissing
+          : calendar && connected && skipped > 0
+            ? skipped === 1
+              ? copy.calendar.skippedOne
+              : fill(copy.calendar.skippedMany, { n: skipped })
+            : undefined
       }
     >
       {calendar && connected && <CalendarDefaultRow />}
