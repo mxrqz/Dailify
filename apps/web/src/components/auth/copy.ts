@@ -52,7 +52,6 @@ export const copy = {
     // 10 minutos é o `expiresIn` do magicLink no servidor (apps/server). Se mudar lá, mude aqui.
     hint: "Toque no link ou digite o código do e-mail. Os dois valem por 10 minutos.",
     codeLabel: "Código de 6 dígitos",
-    codePlaceholder: "000000",
     codeSubmit: "Entrar com o código",
     resend: "Reenviar link",
     resendIn: "Reenviar em {seconds}s",
