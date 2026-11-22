@@ -22,7 +22,7 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
 - `src/auth-options.ts` + `src/auth.ts`: Better Auth (below). `src/env.d.ts` mirrors `Env` onto the
   `cloudflare:workers` env.
 - `migrations/` D1 schema · `test/` the worker test suite · `scripts/`: `vapid.ts` (`bun run vapid`),
-  `auth-schema.ts` (Better Auth CLI input for 0015). Each script's header has its exact command.
+  `seed.ts` (`bun run seed`: the local dev account, tasks relative to today), `auth-schema.ts` (Better Auth CLI input for 0015). Each script's header has its exact command.
 - Every Hono app, `Context` and `MiddlewareHandler` uses `AppEnv` from `../index` (type-only), as
   does `Env`; never redeclare either.
 

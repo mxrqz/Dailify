@@ -10,6 +10,7 @@
     "dev": "bun --filter '*' dev",
     "dev:frontend": "bun --filter @dailify/web dev",
     "dev:api": "bun --filter @dailify/server dev",
+    "seed": "bun --filter @dailify/server seed",
     "build": "bun --filter @dailify/web build",
     "test": "bun --filter '*' test",
     "format": "prettier --write package.json eslint.config.js .github && bun --filter '*' format",

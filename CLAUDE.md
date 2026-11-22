@@ -14,6 +14,7 @@ bun install
 bun run dev            # API (wrangler :8787, local migrations first) + web (https://localhost:1420)
 bun run dev:frontend   # web only
 bun run dev:api        # API only
+bun run seed           # local D1: migrations + a dev account with tasks around today
 bun run build          # web: tsc + vite build -> apps/web/dist
 bun run test           # vitest, every package (one file: `bun run test <path>` in the package dir)
 bun run lint           # eslint, every package
