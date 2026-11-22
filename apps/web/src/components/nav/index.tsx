@@ -347,7 +347,7 @@ export function SidebarMenu({
             <div
               className={cn(
                 "flex flex-col gap-0.5 pt-0.5",
-                !collapsed && "ml-5.5 border-l border-separator pl-1.5",
+                !collapsed && "ml-5.5 border-l border-ink-tertiary/40 pl-1.5",
               )}
             >
               {SETTINGS_ITEMS.map((item) => (
