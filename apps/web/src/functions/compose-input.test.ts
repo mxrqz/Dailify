@@ -62,7 +62,7 @@ describe("markSegments", () => {
   const marked = (text: string) =>
     markSegments(text, parse(text), []).filter((s) => s.field || s.unsure);
   const doubt = (start: number, end: number): Pick<ParsedTask, "fields" | "unsure"> => ({
-    fields: { day: [], time: [], duration: [], repeat: [], links: [] },
+    fields: { day: [], time: [], duration: [], repeat: [], links: [], tags: [] },
     unsure: [{ code: "ambiguous-number", span: [start, end] }],
   });
 

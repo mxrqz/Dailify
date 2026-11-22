@@ -11,7 +11,7 @@ export function onDay(parsed: ParsedTask, day: Date | null | undefined): ParsedT
   return { ...parsed, date, hasDay: true };
 }
 
-const FIELDS: Field[] = ["day", "time", "duration", "repeat", "links"];
+const FIELDS: Field[] = ["day", "time", "duration", "repeat", "links", "tags"];
 
 export interface Segment {
   text: string;

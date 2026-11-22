@@ -790,3 +790,34 @@ describe("remapSpans", () => {
     expect(remapSpans(SPANS, before, after)).toEqual(expected);
   });
 });
+
+describe("tags", () => {
+  it.each([
+    ["relatório #trabalho", "relatório", ["trabalho"]],
+    ["#saúde academia amanhã", "academia", ["saúde"]],
+    ["#Casa limpar #pai a sala #casa", "limpar a sala", ["Casa", "pai"]],
+    ["usar o # do teclado", "usar o # do teclado", []],
+    ["revisar PR #23", "revisar PR #23", []],
+    ["ler https://site.com/doc#intro #estudo", "ler", ["estudo"]],
+    ["mail@site#x", "mail@site#x", []],
+  ])("reads %s", (input, title, tags) => {
+    const r = parseTaskText(input, NOW);
+    expect(r.text).toBe(title);
+    expect(r.tags).toEqual(tags);
+  });
+
+  it("keeps a tagged day word out of the date", () => {
+    expect(parseTaskText("planejar #amanhã", NOW).date).toBeNull();
+  });
+
+  it("caps the tag count and length", () => {
+    const many = Array.from({ length: 25 }, (_, i) => `#t${String.fromCharCode(97 + i)}`).join(" ");
+    expect(parseTaskText(`x ${many}`, NOW).tags).toHaveLength(20);
+    expect(parseTaskText(`x #${"a".repeat(51)}`, NOW).tags).toEqual([]);
+  });
+
+  it("puts an ignored tag back in the title", () => {
+    const r = parseTaskText("ler #livro", NOW, { ignore: [[4, 10]] });
+    expect(r).toMatchObject({ text: "ler #livro", tags: [] });
+  });
+});

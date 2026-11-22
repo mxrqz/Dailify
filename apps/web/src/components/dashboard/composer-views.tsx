@@ -51,6 +51,7 @@ const UNDERLINE: Record<Field, string> = {
   repeat: "decoration-meta-repeat",
   duration: "decoration-ink-secondary",
   links: "decoration-ink-secondary",
+  tags: "decoration-ink-secondary",
 };
 
 /**
@@ -140,7 +141,8 @@ export function ChipStrip({
 
 /**
  * Um chip da faixa: tocar abre o `editor` do campo; o × (ou Backspace no chip) tira o campo. Sem
- * `onRemove` é o fantasma ("+ dia"), que só edita; sem `editor`, só mostra (o lembrete).
+ * `onRemove` é o fantasma ("+ dia"), que só edita; sem `editor`, só mostra (o lembrete) ou só
+ * tira (a tag).
  */
 export function MetaChip({
   large,
@@ -168,7 +170,7 @@ export function MetaChip({
         ? "text-ink-secondary"
         : "bg-transparent text-ink-secondary ring-1 ring-separator ring-inset"),
   );
-  if (!editor)
+  if (!editor && !onRemove)
     return (
       <span
         className={cn(
@@ -182,7 +184,7 @@ export function MetaChip({
       </span>
     );
 
-  return editor(
+  const chip = (
     <Chip
       size={large ? "default" : "sm"}
       icon={icon}
@@ -197,8 +199,9 @@ export function MetaChip({
       className={look}
     >
       {children}
-    </Chip>,
+    </Chip>
   );
+  return editor ? editor(chip) : chip;
 }
 
 /**

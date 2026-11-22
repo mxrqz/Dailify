@@ -77,7 +77,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
 - `ComposerField`: a mirror div (height, `UNDERLINE` marks) under a transparent textarea, sharing
   font and padding exactly. `text-base` is the minimum, or iOS zooms on focus.
 - Chip slots stay mounted in a fixed order (repeat or day, time, duration, reminder, first link), so
-  the strip doesn't reflow per keystroke. `MetaChip` without `onRemove` only edits (`ghost` = the
+  the strip doesn't reflow per keystroke; `#tag` chips follow, remove-only (no `Edits` key: the ×
+  ignores the tag's spans). `MetaChip` without `onRemove` only edits (`ghost` = the
   empty "+ x" look); without `editor` it only displays (an undated task's reminder). A task with a
   time edits its reminder with `ReminderMenu`, sent as `ComposerValues.before` (minutes).
 - The textarea id is `COMPOSER_TEXT_ID` (`task-composer.tsx`), which `create-fab.tsx` focuses on
