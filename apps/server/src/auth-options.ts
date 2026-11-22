@@ -1,7 +1,7 @@
 import type { BetterAuthOptions } from "better-auth";
 import { APIError, createAuthMiddleware } from "better-auth/api";
 import type { GenericEndpointContext } from "better-auth";
-import { bearer, captcha, jwt, magicLink, oneTimeToken } from "better-auth/plugins";
+import { bearer, captcha, emailOTP, jwt, magicLink, oneTimeToken } from "better-auth/plugins";
 import { mcp } from "@better-auth/mcp";
 import type { Env } from "./index";
 import { allowedOrigins, NATIVE_ORIGINS } from "./lib/origin";
@@ -35,6 +35,7 @@ function nextOf(url: string, web: string): string {
 
 async function sendMagicLink(
   env: Env,
+  codes: ReturnType<typeof emailOTP>,
   data: { email: string; url: string; token: string; metadata?: Record<string, unknown> },
   ctx: GenericEndpointContext | undefined,
 ): Promise<void> {
@@ -51,13 +52,19 @@ async function sendMagicLink(
     await saveMagicLinkChallenge(env.DB, hash, challenge, sentAt, sentAt + LINK_TTL_S * 1000);
     url = `${web}/auth/app?token=${data.token}`;
   }
+  // The same e-mail carries a code for `/sign-in/email-otp`; each send replaces the last one.
+  const code = ctx
+    ? await codes.endpoints.createVerificationOTP({
+        body: { email, type: "sign-in" },
+        context: ctx.context,
+      })
+    : undefined;
 
-  const send = sendEmail(env, { to: data.email, ...magicLinkEmail(url, LINK_TTL_S / 60) }).catch(
-    async (err) => {
-      await releaseMagicLinkSend(env.DB, email, sentAt);
-      throw err;
-    },
-  );
+  const mail = magicLinkEmail(url, LINK_TTL_S / 60, code);
+  const send = sendEmail(env, { to: data.email, ...mail }).catch(async (err) => {
+    await releaseMagicLinkSend(env.DB, email, sentAt);
+    throw err;
+  });
   await (ctx ? ctx.context.runInBackgroundOrAwait(send) : send);
 }
 
@@ -71,6 +78,9 @@ const isChallenge = (v: unknown) => typeof v === "string" && /^[\w-]{43}$/.test(
 const requireVerifier = (db: D1Database) =>
   createAuthMiddleware(async (ctx) => {
     const challenge: unknown = ctx.body?.metadata?.challenge;
+    // Codes only go out inside the magic-link e-mail: the plugin's other routes send or burn one.
+    if (ctx.path.startsWith("/email-otp/") || ctx.path === "/forget-password/email-otp")
+      throw new APIError("NOT_FOUND");
     if (ctx.path === "/sign-in/magic-link" && challenge !== undefined && !isChallenge(challenge))
       throw new APIError("BAD_REQUEST", { message: "invalid challenge" });
     if (ctx.path !== VERIFY || typeof ctx.query?.token !== "string") return;
@@ -92,6 +102,12 @@ export const mcpResource = (env: Env) => `${env.BETTER_AUTH_URL}/mcp`;
 
 /** Pura (sem `cloudflare:workers`): a CLI do schema e os testes montam a instância a partir dela. */
 export function authOptions(env: Env, background?: (promise: Promise<unknown>) => void) {
+  const codes = emailOTP({
+    expiresIn: LINK_TTL_S,
+    storeOTP: "hashed",
+    allowedAttempts: 3,
+    sendVerificationOTP: () => Promise.reject(new Error("codes are sent by sendMagicLink")),
+  });
   return {
     basePath: "/auth",
     baseURL: env.BETTER_AUTH_URL,
@@ -142,8 +158,9 @@ export function authOptions(env: Env, background?: (promise: Promise<unknown>) =
       magicLink({
         expiresIn: LINK_TTL_S,
         storeToken: "hashed",
-        sendMagicLink: (data, ctx) => sendMagicLink(env, data, ctx),
+        sendMagicLink: (data, ctx) => sendMagicLink(env, codes, data, ctx),
       }),
+      codes,
       captcha({
         provider: "cloudflare-turnstile",
         secretKey: env.TURNSTILE_SECRET_KEY,

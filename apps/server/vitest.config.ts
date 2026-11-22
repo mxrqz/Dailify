@@ -55,6 +55,9 @@ export default defineConfig({
     clearMocks: true,
     restoreMocks: true,
     unstubGlobals: true,
+    // Under workerd, Better Auth also reports each APIError a handler throws (bad OTP, invalid
+    // link) as an unhandled rejection, though the caller gets the 4xx. Any other error still fails.
+    onUnhandledError: (error) => error.name !== "APIError",
   },
   plugins: [
     cloudflareTest(async () => {

@@ -35,6 +35,10 @@ server invariants; each folder below has its own `CLAUDE.md` for the rest.
   hashes (S256) to it, before the token is consumed.
 - `LINK_TTL_S` (600) is mirrored by `copy.inbox.hint` in `apps/web/src/components/auth/copy.ts`;
   change both. Sends are capped at one per e-mail per minute in `magic_link_sent`.
+- The same e-mail carries a 6-digit code (`emailOTP`, hashed, 3 attempts, `LINK_TTL_S`), minted in
+  `sendMagicLink` and spent at `POST /sign-in/email-otp` (under `AUTH_LIMITER`). The `before` hook
+  404s every other `/email-otp/*` route, so a code never goes out without the captcha and the
+  cooldown. The code is not device-bound: it proves the inbox, like a web link.
 - Better Auth's built-in rate limit stays off: it counts in isolate memory. `AUTH_LIMITER` (by
   `cf-connecting-ip`) is the real one.
 - `requireAuth` reads `plan` from D1, not from the session: the 5-minute `cookieCache` still holds
