@@ -97,3 +97,6 @@ export interface Invoice {
   walletType?: string;
   paymentMethodType?: string;
 }
+
+/** `POST /security/password`: a first password for an account that has none. */
+export type SetPasswordBody = { newPassword: string };

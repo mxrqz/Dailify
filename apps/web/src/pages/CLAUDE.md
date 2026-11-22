@@ -27,6 +27,7 @@ One file per route. `src/App.tsx` declares the routes; each page owns its own I/
 | `/login`, `/signup`                                   | `login.tsx`, `signup.tsx`                      | public; `AuthPage mode` (`components/auth/CLAUDE.md`)                                                                                                                           |
 | `/verify`, `/auth/app`, `/app/*`                      | `verify.tsx`, `auth-app.tsx`, `app-return.tsx` | public hand-off pages (below)                                                                                                                                                   |
 | `/auth/google`                                        | `auth-google.tsx`                              | public hand-off page (below)                                                                                                                                                    |
+| `/two-factor`, `/reset-password`                      | `two-factor.tsx`, `reset-password.tsx`         | public; the second factor after any first one (`?next=`, through `internalPath`), and the forgot/new password form (`#token=`)                                                  |
 | `/oauth/consent`                                      | `oauth-consent.tsx`                            | full screen; gates on the session itself (signed out -> `/login` with the same query)                                                                                           |
 | `/privacidade`, `/termos`                             | `privacy.tsx`, `terms.tsx`                     | public; `components/legal-page.tsx`                                                                                                                                             |
 
@@ -64,7 +65,8 @@ One file per route. `src/App.tsx` declares the routes; each page owns its own I/
   `refetch({ query: { disableCookieCache: true } })`: the plan arrives by webhook, and the 5-minute
   session cookie cache still holds the old one.
 - Hand-off pages render `<AuthShell>` with every prop omitted.
-  - `/verify#token=…&next=…` spends the token only on the button click (mail scanners open links
+  - `/verify#token=…&next=…` (`&type=email`: the sign-up confirmation, `verifyEmail`) spends the
+    token only on the button click (mail scanners open links
     but don't click), strips the hash on mount, and passes `next` through `internalPath`.
   - `/auth/app?token=…` never calls verify: the token is bound to the requesting device's
     verifier. On desktop it tries `mewki://auth` once; the browser restarts at `/login`.

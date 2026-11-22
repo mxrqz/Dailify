@@ -10,7 +10,15 @@ The `/login` and `/signup` screens, plus the shell the hand-off pages reuse. Rep
   already signed in is sent to `from`.
 - `auth-shell.tsx` owns the layout (back, Mew bubble, title, cross-link, legal or spam footer).
   `/verify`, `/auth/app` and `/app/*` render it with every prop omitted.
-- `email-form.tsx`, `check-inbox.tsx`, `oauth-buttons.tsx`: props-only bodies.
+- `email-form.tsx`, `check-inbox.tsx`, `oauth-buttons.tsx`: props-only bodies. `EmailForm`
+  takes `password` (`current-password` | `new-password`) and `forgotTo`.
+- Password is the default method on both pages; "Receber link por e-mail" switches to the magic
+  link. Sign-up never signs in (`verifySent` state): the confirmation link on `/verify` does.
+- Second factor: `mfa-challenge.tsx` (`MfaChallenge` View + `useSecondFactor`) serves
+  `pages/two-factor.tsx` and `step-up-dialog.tsx` (mounted in App, driven by
+  `hooks/useStepUp.ts`). Any first factor answering `twoFactorRedirect` (`needsSecondFactor`)
+  navigates to `secondFactorPath(from)`. `mfa-setup.tsx`: `MfaSetup` (phone = `otpauth://` link,
+  computer = kit `QrCode`, manual key always) and `RecoveryCodes`, for `pages/security.tsx`.
 - `auth-state.ts`: the pure reducer, `classifyAuthError`, `canResend`, `redirectTarget` (on top of
   `internalPath` from `lib/platform.ts`). `use-email-link-auth.ts` only wires Better Auth to it. `turnstile.ts` is the
   captcha hook.
@@ -20,13 +28,15 @@ The `/login` and `/signup` screens, plus the shell the hand-off pages reuse. Rep
 
 ## State machine (`auth-state.ts`)
 
-- `idle -> sending(resendOf?) -> awaitingLink | error(email?)`, and `reset` returns to `idle`.
+- `idle -> sending(resendOf?) -> awaitingLink | verifySent | error(email?)`, and `reset` returns
+  to `idle`.
   `resendOf` keeps the inbox on screen during a resend. `error.email` refills the form after a
   failed resend. Any `if` that isn't about the Better Auth API goes here, with a test.
 - `classifyAuthError`: 429 -> `tooManyRequests`, `VALIDATION_ERROR`/`INVALID_EMAIL` ->
   `invalidEmail`, `MISSING_RESPONSE`/`VERIFICATION_FAILED` -> `captcha`, `INVALID_OTP` ->
-  `invalidCode`, `OTP_EXPIRED`/`TOO_MANY_ATTEMPTS` -> `staleCode`, `null` (fetch threw) ->
-  `network`. Anything else is `generic`, with the code (or status) shown in mono for bug reports.
+  `invalidCode`, `OTP_EXPIRED`/`TOO_MANY_ATTEMPTS` -> `staleCode` (the 2FA codes map the same),
+  `INVALID_TWO_FACTOR_COOKIE` -> `staleChallenge`, the password codes, `password_compromised`
+  and `EMAIL_NOT_VERIFIED`, `null` (fetch threw) -> `network`. Anything else is `generic`, with the code (or status) shown in mono for bug reports.
 - `internalPath`/`redirectTarget` are the repo's open-redirect guard
   ([RULES.md, Security and privacy](../../../../../RULES.md#security-and-privacy)). Keep the `//`
   and `/\` cases in `auth-state.test.ts`.

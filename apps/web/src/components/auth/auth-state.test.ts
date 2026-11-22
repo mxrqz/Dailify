@@ -185,6 +185,44 @@ describe("classifyAuthError", () => {
       key: "staleCode",
     });
   });
+
+  it("maps the second factor's codes, including a sign-in left too long", () => {
+    for (const code of ["INVALID_CODE", "INVALID_BACKUP_CODE"])
+      expect(classifyAuthError({ status: 401, code })).toEqual({ key: "invalidCode" });
+    for (const code of ["OTP_HAS_EXPIRED", "TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE"])
+      expect(classifyAuthError({ status: 400, code })).toEqual({ key: "staleCode" });
+    expect(classifyAuthError({ status: 401, code: "INVALID_TWO_FACTOR_COOKIE" })).toEqual({
+      key: "staleChallenge",
+    });
+  });
+
+  it("maps the password answers, the breach check and an unconfirmed e-mail", () => {
+    expect(classifyAuthError({ status: 401, code: "INVALID_EMAIL_OR_PASSWORD" })).toEqual({
+      key: "wrongPassword",
+    });
+    expect(classifyAuthError({ status: 400, code: "PASSWORD_TOO_SHORT" })).toEqual({
+      key: "passwordRules",
+    });
+    expect(classifyAuthError({ status: 400, code: "password_compromised" })).toEqual({
+      key: "passwordCompromised",
+    });
+    expect(classifyAuthError({ status: 403, code: "EMAIL_NOT_VERIFIED" })).toEqual({
+      key: "emailNotVerified",
+    });
+  });
+});
+
+describe("authReducer verifySent", () => {
+  it("shows the confirmation inbox only after a send in flight", () => {
+    const sending = authReducer(initialAuthState, { type: "submit" });
+    expect(authReducer(sending, { type: "verifySent", email: "a@b.c" })).toEqual({
+      status: "verifySent",
+      email: "a@b.c",
+    });
+    expect(authReducer(initialAuthState, { type: "verifySent", email: "a@b.c" })).toBe(
+      initialAuthState,
+    );
+  });
 });
 
 describe("redirectTarget", () => {

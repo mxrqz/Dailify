@@ -6,7 +6,7 @@
 import { APP_HOST, APP_URL } from "@dailify/shared";
 import { apiURL } from "@/consts/conts";
 import { forgetUser } from "@/functions/offline";
-import { authClient, setBearer } from "@/lib/auth";
+import { authClient, onBearerRotated, setBearer } from "@/lib/auth";
 import { openExternal } from "@/lib/open-external";
 import { internalPath, isTauri, signedOutPath } from "@/lib/platform";
 import { clearReminders } from "@/lib/reminders";
@@ -156,19 +156,86 @@ async function landSession(session: string, verifier = VERIFIER_ACCOUNT): Promis
   authClient.$store.notify("$sessionSignal");
 }
 
+// The server's `two_factor` cookie never crosses the webview origin: in the app it rides in this
+// header both ways, held in memory (an app restart means signing in again).
+const TWO_FACTOR_HEADER = "x-mewki-two-factor";
+let pendingTwoFactor: string | null = null;
+const twoFactorHeaders = (): Record<string, string> =>
+  pendingTwoFactor ? { [TWO_FACTOR_HEADER]: pendingTwoFactor } : {};
+
+/** Lands the bearer, or keeps the challenge when a second factor is due (then true). */
+async function land(res: Response, verifier = VERIFIER_ACCOUNT): Promise<boolean> {
+  const challenge = res.headers.get(TWO_FACTOR_HEADER);
+  if (challenge) {
+    pendingTwoFactor = challenge;
+    await vaultDelete(verifier);
+    return true;
+  }
+  const session = res.headers.get("set-auth-token");
+  if (!session) throw new Error("sign-in returned no bearer");
+  await landSession(session, verifier);
+  return false;
+}
+
+const onLand = {
+  onSuccess: async ({ response }: { response: Response }) => {
+    await land(response);
+  },
+};
+
 /** Signs in with the e-mailed code; the bearer comes back in `set-auth-token`, like a link's. */
 export const verifyNativeCode = (email: string, otp: string) =>
-  authClient.signIn.emailOtp({
+  authClient.signIn.emailOtp({ email, otp, fetchOptions: onLand });
+
+/** Password sign-in in the app: the same landing as a code. */
+export const signInNativePassword = (email: string, password: string, captchaToken: string) =>
+  authClient.signIn.email({
     email,
-    otp,
-    fetchOptions: {
-      onSuccess: async ({ response }: { response: Response }) => {
-        const session = response.headers.get("set-auth-token");
-        if (!session) throw new Error("code sign-in returned no bearer");
-        await landSession(session);
-      },
+    password,
+    fetchOptions: { ...onLand, headers: { "x-captcha-response": captchaToken } },
+  });
+
+/** `totp` = authenticator app, `otp` = the e-mailed code, `backup` = a recovery code. */
+export type SecondFactor = "totp" | "otp" | "backup";
+const VERIFY_PATH = {
+  totp: "/two-factor/verify-totp",
+  otp: "/two-factor/verify-otp",
+  backup: "/two-factor/verify-backup-code",
+} satisfies Record<SecondFactor, string>;
+
+/**
+ * The second factor, at sign-in (after a first factor) or as a step-up (with a session). In the
+ * app a sign-in's bearer lands like a link's.
+ */
+export async function verifySecondFactor(kind: SecondFactor, code: string, trustDevice: boolean) {
+  const result = await authClient.$fetch(VERIFY_PATH[kind], {
+    method: "POST",
+    body: { code, ...(trustDevice && { trustDevice }) },
+    headers: twoFactorHeaders(),
+    onSuccess: async ({ response }: { response: Response }) => {
+      const session = response.headers.get("set-auth-token");
+      if (!pendingTwoFactor || !session) return;
+      pendingTwoFactor = null;
+      await landSession(session);
     },
   });
+  if (!result.error) authClient.$store.notify("$sessionSignal");
+  return result;
+}
+
+/** E-mails a code for `verifySecondFactor("otp", ...)`. */
+export const sendSecondFactorEmail = () =>
+  authClient.$fetch("/two-factor/send-otp", {
+    method: "POST",
+    body: {},
+    headers: twoFactorHeaders(),
+  });
+
+// BrowserRouter follows popstate, so this is a navigation from outside React.
+function navigateOutside(path: string): void {
+  history.pushState(null, "", path);
+  dispatchEvent(new PopStateEvent("popstate"));
+}
 
 async function verifyLink({ via, token }: AuthLink): Promise<void> {
   setSigningIn(true);
@@ -190,9 +257,14 @@ async function verifyLink({ via, token }: AuthLink): Promise<void> {
     ).catch(() => {
       throw new LinkError("network");
     });
-    const session = res.headers.get("set-auth-token");
-    if (!res.ok || !session) throw new LinkError(linkFailure(res.status));
-    await landSession(session, account);
+    if (!res.ok) throw new LinkError(linkFailure(res.status));
+    const secondFactorDue = await land(res, account).catch(() => {
+      throw new LinkError("generic");
+    });
+    if (secondFactorDue) {
+      setSigningIn(false);
+      navigateOutside("/two-factor");
+    }
   } catch (error) {
     // On success it stays on until the session lands and the login screen navigates away.
     setSigningIn(false);
@@ -210,6 +282,10 @@ export async function initNativeAuth(onError: (error: unknown) => void): Promise
     setBearer(session);
     authClient.$store.notify("$sessionSignal");
   }
+  onBearerRotated((next) => {
+    setBearer(next);
+    vaultSet(SESSION_ACCOUNT, next).catch(onError);
+  });
 
   // O mesmo link pode chegar por `getCurrent` e por `onOpenUrl`; o segundo verify queimaria à toa.
   const seen = new Set<string>();
@@ -217,9 +293,7 @@ export async function initNativeAuth(onError: (error: unknown) => void): Promise
     for (const raw of urls ?? []) {
       const path = parseOpenLink(raw);
       if (path) {
-        // BrowserRouter follows popstate, so this is a navigation from outside React.
-        history.pushState(null, "", path);
-        dispatchEvent(new PopStateEvent("popstate"));
+        navigateOutside(path);
         continue;
       }
       const link = parseAuthLink(raw);
@@ -240,6 +314,7 @@ async function signOutNative(): Promise<void> {
     await authClient.signOut();
   } finally {
     setBearer(null);
+    pendingTwoFactor = null;
     await vaultDelete(SESSION_ACCOUNT, VERIFIER_ACCOUNT, GOOGLE_VERIFIER_ACCOUNT);
   }
 }

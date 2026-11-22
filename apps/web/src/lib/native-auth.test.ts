@@ -4,6 +4,7 @@ import { describe, expect, it, vi } from "vitest";
 const auth = vi.hoisted(() => ({
   authClient: { signOut: vi.fn(), $store: { notify: vi.fn() } },
   setBearer: vi.fn(),
+  onBearerRotated: vi.fn(),
 }));
 vi.mock("@/lib/auth", () => auth);
 const tauri = vi.hoisted(() => ({
@@ -148,6 +149,32 @@ describe("initNativeAuth: Google hand-off", () => {
     expect(tauri.invoke).toHaveBeenCalledWith("plugin:keyring-store|delete_passwords", {
       accounts: ["mewki.google-verifier"],
     });
+  });
+
+  it("lands no bearer when a second factor is due, and opens the challenge", async () => {
+    vi.stubGlobal("window", { location: { origin: "tauri://localhost" } });
+    const pushState = vi.fn();
+    vi.stubGlobal("history", { pushState });
+    vi.stubGlobal("dispatchEvent", vi.fn());
+    const vault: Record<string, string | null> = { "mewki.magic-link-verifier": "v" };
+    tauri.invoke.mockImplementation(async (cmd: string, args: { accounts?: string[] }) =>
+      cmd.endsWith("get_passwords") ? args.accounts?.map((a) => vault[a] ?? null) : undefined,
+    );
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(
+        async () =>
+          new Response('{"twoFactorRedirect":true}', {
+            headers: { "x-mewki-two-factor": "2fa-abc.sig" },
+          }),
+      ),
+    );
+    tauri.getCurrent.mockResolvedValue([`mewki://auth?token=${TOKEN}`]);
+
+    await initNativeAuth(vi.fn());
+
+    await vi.waitFor(() => expect(pushState).toHaveBeenCalledWith(null, "", "/two-factor"));
+    expect(auth.setBearer).not.toHaveBeenCalled();
   });
 
   it("never calls the server without a Google request from this device", async () => {

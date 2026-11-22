@@ -1,5 +1,10 @@
 import { createAuthClient } from "better-auth/react";
-import { emailOTPClient, inferAdditionalFields, magicLinkClient } from "better-auth/client/plugins";
+import {
+  emailOTPClient,
+  inferAdditionalFields,
+  magicLinkClient,
+  twoFactorClient,
+} from "better-auth/client/plugins";
 import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import { PLAN_ID } from "@dailify/shared";
 import { apiURL } from "@/consts/conts";
@@ -14,6 +19,28 @@ export const setBearer = (token: string | null) => {
 export const authHeaders = (): Record<string, string> =>
   bearer ? { Authorization: `Bearer ${bearer}` } : {};
 
+// Enabling or disabling MFA and changing the password swap the session for a new one, whose token
+// comes back in `set-auth-token`: the app must keep it, or the old bearer signs it out.
+let onRotate: ((token: string) => void) | undefined;
+export const onBearerRotated = (listener: (token: string) => void) => {
+  onRotate = listener;
+};
+const bearerRotation = {
+  id: "bearer-rotation",
+  fetchPlugins: [
+    {
+      id: "bearer-rotation",
+      name: "bearer-rotation",
+      hooks: {
+        onSuccess: ({ response }: { response: Response }) => {
+          const next = response.headers.get("set-auth-token");
+          if (bearer && next && next !== bearer) onRotate?.(next);
+        },
+      },
+    },
+  ],
+};
+
 export const authClient = createAuthClient({
   // Sem `window` só nos testes de ambiente node que importam `api.ts` de tabela.
   baseURL: new URL(`${apiURL}/auth`, globalThis.location?.origin ?? "http://localhost").href,
@@ -21,10 +48,13 @@ export const authClient = createAuthClient({
   plugins: [
     magicLinkClient(),
     emailOTPClient(),
+    // No redirect hook: each sign-in reads `twoFactorRedirect` and opens `/two-factor` itself.
+    twoFactorClient(),
     // Sends the page's signed authorize query with each POST, so Google sign-in and consent
     // resume an MCP client's OAuth flow.
     oauthProviderClient(),
     inferAdditionalFields({ user: { plan: { type: "string", required: false } } }),
+    bearerRotation,
   ],
 });
 

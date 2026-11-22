@@ -13,6 +13,7 @@ import { ErrorBoundary } from "@/components/error-boundary";
 import { AppLayout } from "@/components/app-layout";
 import { Refraction } from "@/components/kit/refraction";
 import { ScrollRestoration } from "@/components/scroll-restoration";
+import { StepUpDialog } from "@/components/auth/step-up-dialog";
 import { isTauri } from "@/lib/platform";
 
 // Só o dashboard (start_url do PWA) vai no bundle de entrada; o resto baixa quando a rota abre.
@@ -20,6 +21,8 @@ const LandingPage = lazy(() => import("@/pages/landingPage"));
 const Login = lazy(() => import("@/pages/login"));
 const SignUp = lazy(() => import("@/pages/signup"));
 const Verify = lazy(() => import("@/pages/verify"));
+const TwoFactor = lazy(() => import("@/pages/two-factor"));
+const ResetPassword = lazy(() => import("@/pages/reset-password"));
 const AuthApp = lazy(() => import("@/pages/auth-app"));
 const AuthGoogle = lazy(() => import("@/pages/auth-google"));
 const AppReturn = lazy(() => import("@/pages/app-return"));
@@ -84,6 +87,10 @@ export default function App() {
 
                       <Route path="/verify" element={<Verify />} />
 
+                      <Route path="/two-factor" element={<TwoFactor />} />
+
+                      <Route path="/reset-password" element={<ResetPassword />} />
+
                       <Route path="/auth/app" element={<AuthApp />} />
 
                       <Route path="/auth/google" element={<AuthGoogle />} />
@@ -104,6 +111,7 @@ export default function App() {
 
                 <ScrollRestoration />
                 <Toaster />
+                <StepUpDialog />
                 <Refraction />
               </MotionConfig>
             </TooltipProvider>

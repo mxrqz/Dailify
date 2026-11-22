@@ -3,7 +3,11 @@ import { useEffect, useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { Link, useNavigate } from "react-router-dom";
 
-import type { AuthErrorKey } from "@/components/auth/auth-state";
+import {
+  needsSecondFactor,
+  secondFactorPath,
+  type AuthErrorKey,
+} from "@/components/auth/auth-state";
 import { AuthShell } from "@/components/auth/auth-shell";
 import { copy } from "@/components/auth/copy";
 import { Button } from "@/components/ui/button";
@@ -19,9 +23,14 @@ type Status = "ready" | "verifying" | "invalid" | AuthErrorKey;
 export default function Verify() {
   const navigate = useNavigate();
   // `next` vem do servidor (a página que pediu o login); só vale caminho deste site.
-  const [{ token, next }] = useState(() => {
+  // `type=email`: the sign-up's confirmation link, which also signs in.
+  const [{ token, next, email }] = useState(() => {
     const params = new URLSearchParams(window.location.hash.slice(1));
-    return { token: params.get("token"), next: internalPath(params.get("next")) };
+    return {
+      token: params.get("token"),
+      next: internalPath(params.get("next")),
+      email: params.get("type") === "email",
+    };
   });
   const [status, setStatus] = useState<Status>(token ? "ready" : "invalid");
 
@@ -38,10 +47,13 @@ export default function Verify() {
     try {
       // `manual`: sem `callbackURL`, sucesso é 200 com JSON; token ruim é um 302 pro
       // `errorCallbackURL`, que aqui vira resposta opaca (status 0) em vez de seguir pra API.
-      const { error } = await authClient.magicLink.verify({
-        query: { token },
-        fetchOptions: { redirect: "manual" },
-      });
+      const { data, error } = await (email
+        ? authClient.verifyEmail({ query: { token } })
+        : authClient.magicLink.verify({ query: { token }, fetchOptions: { redirect: "manual" } }));
+      if (!error && needsSecondFactor(data)) {
+        navigate(secondFactorPath(next), { replace: true });
+        return;
+      }
       if (!error) {
         // O verify não está entre as rotas que avisam o átomo da sessão: avisa na mão.
         authClient.$store.notify("$sessionSignal");

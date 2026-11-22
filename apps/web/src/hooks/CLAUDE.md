@@ -68,6 +68,10 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
 - `useIntegrations`: `undefined` until read; fetches only when nothing is cached or in flight and
   online (`useOnline`, so reconnecting retries), a failure retries on the next mount. Writers: `setIntegrations`/`patchIntegration`. One provider:
   `useIntegration(id)`; `isActive(status)` = connected and `status === "active"`.
+- `withStepUp(run)` (`useStepUp.ts`): wrap every sensitive call (delete account, consent,
+  integration connect, password, MFA off, new recovery codes). On `mfa_required` it opens the
+  step-up dialog (`useStepUp`, `components/auth/step-up-dialog.tsx`) and runs again once verified;
+  a closed dialog returns the first answer.
 - `usePanel` + `openPanel`/`closePanel`/`togglePanel`: what the desktop side panel shows
   (`components/dashboard/CLAUDE.md`, "Side panel").
 - `useOnline` lies upward (connected, no internet): use it to warn; `error.offline` decides.

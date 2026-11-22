@@ -2,6 +2,8 @@
  * Lógica pura das telas de auth. Fica fora do React de propósito: o que merece teste precisa ser
  * função pura. `use-email-link-auth.ts` é só o fio que liga o Better Auth a este reducer.
  */
+import { API_ERROR, isRecord } from "@dailify/shared";
+
 import { internalPath } from "@/lib/platform";
 
 export type AuthMode = "signIn" | "signUp";
@@ -14,6 +16,11 @@ export type AuthErrorKey =
   | "reauth"
   | "invalidCode"
   | "staleCode"
+  | "wrongPassword"
+  | "passwordRules"
+  | "passwordCompromised"
+  | "emailNotVerified"
+  | "staleChallenge"
   | "generic";
 
 /** `code` só no genérico: a tela mostra em mono pra virar relato de bug. */
@@ -28,12 +35,15 @@ export type AuthState =
   // entrada durante o round-trip, em vez de piscar de volta pro formulário.
   | { status: "sending"; resendOf?: SentLink }
   | ({ status: "awaitingLink" } & SentLink)
+  // Sign-up with a password: the confirmation link is in the inbox, and no session exists yet.
+  | { status: "verifySent"; email: string }
   // `email` só existe quando a falha veio depois de um link já enviado (reenvio).
   | { status: "error"; failure: AuthFailure; email?: string };
 
 export type AuthAction =
   | { type: "submit" }
   | { type: "linkSent"; email: string; at: number }
+  | { type: "verifySent"; email: string }
   | { type: "failed"; failure: AuthFailure }
   | { type: "reset" };
 
@@ -53,6 +63,8 @@ export function authReducer(state: AuthState, action: AuthAction): AuthState {
       return state.status === "sending"
         ? { status: "awaitingLink", email: action.email, sentAt: action.at }
         : state;
+    case "verifySent":
+      return state.status === "sending" ? { status: "verifySent", email: action.email } : state;
     case "failed": {
       // Um reenvio que falha desmonta a CheckInbox e devolve o formulário: sem carregar o e-mail,
       // ele volta em branco e o usuário perde o endereço — e o link válido que ainda está na caixa.
@@ -92,6 +104,24 @@ export function classifyAuthError(error: BetterAuthError | null): AuthFailure {
   if (error.code === "OTP_EXPIRED" || error.code === "TOO_MANY_ATTEMPTS") {
     return { key: "staleCode" };
   }
+  // Second factor (`twoFactor`): a typo, a code past its time, or a sign-in left too long.
+  if (error.code === "INVALID_CODE" || error.code === "INVALID_BACKUP_CODE") {
+    return { key: "invalidCode" };
+  }
+  if (error.code === "OTP_HAS_EXPIRED" || error.code === "TOO_MANY_ATTEMPTS_REQUEST_NEW_CODE") {
+    return { key: "staleCode" };
+  }
+  if (error.code === "INVALID_TWO_FACTOR_COOKIE") return { key: "staleChallenge" };
+  // Password. The server never says which half of e-mail + password was wrong.
+  if (error.code === "INVALID_EMAIL_OR_PASSWORD" || error.code === "INVALID_PASSWORD") {
+    return { key: "wrongPassword" };
+  }
+  if (error.code === "PASSWORD_TOO_SHORT" || error.code === "PASSWORD_TOO_LONG") {
+    return { key: "passwordRules" };
+  }
+  if (error.code === API_ERROR.passwordCompromised) return { key: "passwordCompromised" };
+  // Better Auth mails a fresh confirmation link along with this answer.
+  if (error.code === "EMAIL_NOT_VERIFIED") return { key: "emailNotVerified" };
   return { key: "generic", code: error.code ?? String(error.status) };
 }
 
@@ -119,6 +149,14 @@ export function carriedEmail(state: unknown): string {
   if (state === null || typeof state !== "object" || !("email" in state)) return "";
   return typeof state.email === "string" ? state.email : "";
 }
+
+/** A first factor that passed but holds the session back until the second (`twoFactor`). */
+export const needsSecondFactor = (data: unknown): boolean =>
+  isRecord(data) && data.twoFactorRedirect === true;
+
+/** `/two-factor`, carrying where the sign-in was headed. */
+export const secondFactorPath = (from: string): string =>
+  `/two-factor?next=${encodeURIComponent(from)}`;
 
 export function canResend(sentAt: number, now: number): boolean {
   return now - sentAt >= RESEND_COOLDOWN_MS;
