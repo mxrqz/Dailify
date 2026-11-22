@@ -40,6 +40,8 @@ export type MewProps = {
   enter?: boolean;
   /** Deslocamento horizontal da cabeça em px, a cada frame — pra `<Tail>` seguir sem re-render. */
   onHeadMove?: (px: number) => void;
+  /** Frozen in its current pose: a still layer moves on the compositor without repainting. */
+  paused?: boolean;
 };
 
 type Live = {
@@ -470,6 +472,7 @@ export const Mew = forwardRef<MewHandle, MewProps>(function Mew(
     mood = "idle",
     enter = false,
     onHeadMove,
+    paused = false,
   },
   ref,
 ) {
@@ -511,10 +514,10 @@ export const Mew = forwardRef<MewHandle, MewProps>(function Mew(
 
   useEffect(() => {
     const c = ctl.current;
-    if (!c || !inView || reduce) return;
+    if (!c || !inView || reduce || paused) return;
     c.start();
     return () => c.stop();
-  }, [inView, reduce]);
+  }, [inView, reduce, paused]);
 
   useEffect(() => ctl.current?.setHappy(happy), [happy]);
   useEffect(() => ctl.current?.sync(), [mood]);

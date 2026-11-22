@@ -33,12 +33,17 @@ export function Splash(): JSX.Element {
       reduce || !to?.width || !from.width
         ? animate(scope.current, { opacity: 0 }, fade)
         : Promise.all([
+            // One `transform`, not x/y/scale: motion runs that on the compositor (WAAPI), so the
+            // dashboard mounting underneath can't stall the flight.
             animate(
               mew.current,
               {
-                x: to.left + to.width / 2 - (from.left + from.width / 2),
-                y: to.top + to.height / 2 - (from.top + from.height / 2),
-                scale: to.width / from.width,
+                transform: [
+                  "translate(0px, 0px) scale(1)",
+                  `translate(${to.left + to.width / 2 - (from.left + from.width / 2)}px, ${
+                    to.top + to.height / 2 - (from.top + from.height / 2)
+                  }px) scale(${to.width / from.width})`,
+                ],
               },
               { duration: duration.open, ease: ease.outQuint },
             ),
@@ -52,8 +57,8 @@ export function Splash(): JSX.Element {
       {/* The backdrop fades on its own so the flying Mew stays opaque over the dashboard. */}
       <div data-splash-fade className="absolute inset-0 bg-canvas" />
       <div className="relative flex flex-col items-center gap-10">
-        <div ref={mew}>
-          <Mew mood="loading" enter className="w-42" />
+        <div ref={mew} className="will-change-transform">
+          <Mew mood="loading" enter paused={!isPresent} className="w-42" />
         </div>
         {/* With the Mew from the start: shown late, it landed on top of the exit flight. */}
         <p
