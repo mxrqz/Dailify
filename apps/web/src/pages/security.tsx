@@ -4,6 +4,7 @@ import { ptBR } from "date-fns/locale";
 import { MonitorIcon, SmartphoneIcon } from "lucide-react";
 import { Helmet } from "react-helmet-async";
 import { toast } from "sonner";
+import { parseUserAgent } from "@dailify/shared";
 
 import { copy } from "@/components/dashboard/copy";
 import { ListGroup, ListRow } from "@/components/kit/list";
@@ -11,7 +12,6 @@ import { PageHeader } from "@/components/kit/page-header";
 import { accountGroups, accountPage } from "@/components/settings-list";
 import { Button } from "@/components/ui/button";
 import { fill } from "@/functions/functions";
-import { parseUserAgent } from "@/functions/user-agent";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { authClient, settle, useSession } from "@/lib/auth";
 

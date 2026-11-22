@@ -16,7 +16,7 @@ Each has a colocated `<module>.test.ts`, except `push.ts`.
 - One concept each: `repeat-label` (+ `REPEAT_MODES`), `link-label` (+ `linkHost`,
   `normalizeUrl`), `quota-label` (+ `creditsLabel`), `count-label`, `date-label` (day and clock
   labels), `task-options` (editor choice lists), `task-lists` (`swapTasks`/`swapUndated`),
-  `undated`, `user-agent`, `span` (the days a task crossing midnight covers, "dia k de n"),
+  `undated`, `span` (the days a task crossing midnight covers, "dia k de n"),
   `compose-input` (composer chip state: `onDay`, `markSegments`, `withEdits`; `fromWire` and
   `composeTaskInput` are shared's), `edit-input` (edit form to `TaskInput`, `buildEdit`), `billing-sections`,
   `revert-task`.

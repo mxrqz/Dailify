@@ -1,10 +1,10 @@
 import { useState } from "react";
 import { Helmet } from "react-helmet-async";
 import { useSearchParams } from "react-router-dom";
+import { parseUserAgent } from "@dailify/shared";
 
 import { copy } from "@/components/auth/copy";
 import { HandoffNotice, useOpenOnce } from "@/components/auth/handoff";
-import { parseUserAgent } from "@/functions/user-agent";
 
 /**
  * `/auth/app?token=…`: o link do e-mail pedido pelo app. No celular com o app, o sistema abre o
