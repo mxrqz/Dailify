@@ -152,6 +152,20 @@ describe("MewChat", () => {
     expect(await within(chat).findByText(t.box.undone)).toBeInTheDocument();
   });
 
+  it("takes several lines: Shift+Enter breaks one, Enter sends", async () => {
+    api.mewChat.mockResolvedValue({ reply: proposal });
+    mount();
+    const field = screen.getByRole("textbox", { name: t.placeholder });
+    fireEvent.change(field, { target: { value: "pão\nleite" } });
+    fireEvent.keyDown(field, { key: "Enter", shiftKey: true });
+    expect(api.mewChat).not.toHaveBeenCalled();
+
+    fireEvent.keyDown(field, { key: "Enter" });
+    await waitFor(() =>
+      expect(api.mewChat).toHaveBeenCalledWith(expect.objectContaining({ text: "pão\nleite" })),
+    );
+  });
+
   it("editing one draft in the task sheet writes nothing until the box is confirmed", async () => {
     api.mewChat.mockResolvedValue({ reply: proposal });
     const { chat } = mount();

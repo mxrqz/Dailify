@@ -40,7 +40,7 @@ import { useMewApply } from "./apply";
 import { copy as t } from "./copy";
 import { ChatDrawer, ChatLog } from "./chat-drawer";
 import { ChatInput, INPUT_ID } from "./chat-input";
-import { CreateDock, DOCK_PILL } from "./dock";
+import { CHAT_PILL, CreateDock, DOCK_PILL } from "./dock";
 import type { Photo } from "./photo";
 import {
   type BoxBlock,
@@ -324,7 +324,7 @@ export function MewChat({
                   </Button>
                 </>
               }
-              footer={<div className={cn(DOCK_PILL, "flex-1 pl-1")}>{input()}</div>}
+              footer={<div className={cn(DOCK_PILL, CHAT_PILL, "flex-1")}>{input()}</div>}
             >
               <ChatLog {...log} panel />
             </SidePanel>,

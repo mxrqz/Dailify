@@ -9,6 +9,9 @@ import { cn } from "@/lib/utils";
 import { copy as mewChatCopy } from "./copy";
 
 /** The dock's pill; also the Mew panel's input on desktop. */
+/** The pill as the Mew input: grows with a multi-line message, corners staying round. */
+export const CHAT_PILL = "h-auto min-h-13 rounded-sheet pl-1";
+
 export const DOCK_PILL =
   "pointer-events-auto relative flex h-13 items-center gap-2.5 rounded-full bg-surface-raised pr-1 pl-2.5 shadow-raised outline-1 -outline-offset-1 outline-card-edge dark:bg-fill dark:outline-fill-pressed";
 
@@ -51,7 +54,7 @@ export function CreateDock({
   className?: string;
 }): JSX.Element {
   const pill = (
-    <div data-slot="create-dock" className={cn(DOCK_PILL, chat && "pl-1")}>
+    <div data-slot="create-dock" className={cn(DOCK_PILL, chat && CHAT_PILL)}>
       {chat || (
         <>
           <button

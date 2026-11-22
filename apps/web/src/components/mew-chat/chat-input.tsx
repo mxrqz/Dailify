@@ -7,6 +7,7 @@ import { MEW_IMAGE_MAX, MEW_TEXT_MAX } from "@dailify/shared";
 import { copy } from "@/components/dashboard/copy";
 import { MewStatic } from "@/components/mew/mew-static";
 import { Button } from "@/components/ui/button";
+import { TOUCH } from "@/consts/media";
 import { spring } from "@/consts/motion";
 import { cn } from "@/lib/utils";
 
@@ -85,7 +86,7 @@ export function ChatInput({
   };
 
   return (
-    <form onSubmit={submit} className="flex h-full min-w-0 flex-1 items-center gap-1">
+    <form onSubmit={submit} className="flex min-w-0 flex-1 items-end gap-1 self-stretch py-1">
       {image && (
         <motion.div
           initial={{ opacity: 0, scale: 0.9 }}
@@ -123,7 +124,7 @@ export function ChatInput({
         }}
       />
       {dock ? (
-        <MewStatic className="ml-2 w-7 flex-none" />
+        <MewStatic className="mb-2 ml-2 w-7 flex-none" />
       ) : (
         <Button
           variant="ghost"
@@ -135,23 +136,29 @@ export function ChatInput({
           <ImagePlusIcon aria-hidden="true" />
         </Button>
       )}
-      {/* text-body: below 16px iOS zooms the page on focus. */}
-      <input
+      {/* text-body: below 16px iOS zooms the page on focus. Grows with its text (field-sizing). */}
+      <textarea
         id={INPUT_ID}
+        rows={1}
         value={text}
         onChange={(event) => setText(event.target.value)}
         placeholder={offline ? t.offline : dock ? copy.composer.dock : t.placeholder}
         aria-label={dock ? t.open : t.placeholder}
         aria-keyshortcuts={dock ? "/" : undefined}
         maxLength={MEW_TEXT_MAX}
-        enterKeyHint="send"
+        onKeyDown={(event) => {
+          if (event.key !== "Enter" || event.shiftKey || event.nativeEvent.isComposing) return;
+          if (window.matchMedia(TOUCH).matches) return;
+          event.preventDefault();
+          event.currentTarget.form?.requestSubmit();
+        }}
         autoComplete="off"
-        className="h-full min-w-0 flex-1 bg-transparent text-body text-ink outline-none placeholder:text-ink-secondary"
+        className="max-h-40 min-h-11 min-w-0 flex-1 resize-none bg-transparent py-2.5 text-body text-ink outline-none field-sizing-content placeholder:text-ink-secondary"
       />
       {dock && !filled && (
         <kbd
           aria-hidden="true"
-          className="grid h-5 min-w-5 place-items-center rounded-xs bg-fill-pressed px-1 text-xs font-medium text-ink-secondary"
+          className="mb-3 grid h-5 min-w-5 place-items-center rounded-xs bg-fill-pressed px-1 text-xs font-medium text-ink-secondary"
         >
           /
         </kbd>
