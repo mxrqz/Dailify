@@ -24,6 +24,7 @@ export function EmailForm({
   onEmailChange,
   password,
   forgotTo,
+  webauthn,
 }: {
   onSubmit: (email: string, password: string) => void;
   onEmailChange?: (email: string) => void;
@@ -36,6 +37,8 @@ export function EmailForm({
   password?: "current-password" | "new-password";
   /** The "Esqueci a senha" link, beside a current password. */
   forgotTo?: string;
+  /** The browser offers saved passkeys on the e-mail field (conditional UI). */
+  webauthn?: boolean;
 }): JSX.Element {
   // Só erro sobre o VALOR marca o campo como inválido; rede, captcha e rate limit não são problema
   // do que foi digitado. Descrever o erro (aria-describedby) segue valendo pra todos.
@@ -61,7 +64,7 @@ export function EmailForm({
           name="email"
           type="email"
           required
-          autoComplete={password ? "username" : "email"}
+          autoComplete={webauthn ? "username webauthn" : password ? "username" : "email"}
           defaultValue={defaultEmail}
           onChange={(e) => onEmailChange?.(e.target.value)}
           placeholder={copy.shell.emailPlaceholder}

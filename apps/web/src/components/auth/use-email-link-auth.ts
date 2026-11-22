@@ -130,6 +130,14 @@ export function useEmailLinkAuth() {
       },
       [from, navigate],
     ),
+    // Both factors in one, so no `/two-factor`: the session lands and AuthPage leaves for `from`.
+    // `autoFill` is the conditional request behind the e-mail field; it fails silently.
+    signInWithPasskey: useCallback(async (autoFill = false) => {
+      if (autoFill && !(await PublicKeyCredential.isConditionalMediationAvailable?.())) return;
+      const result = await authClient.signIn.passkey({ autoFill }).catch(() => null);
+      if (!autoFill && (!result || result.error))
+        dispatch({ type: "failed", failure: classifyAuthError(result?.error ?? null) });
+    }, []),
     reset: useCallback(() => {
       runId.current++;
       dispatch({ type: "reset" });

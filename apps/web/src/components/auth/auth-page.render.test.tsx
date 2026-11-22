@@ -6,7 +6,7 @@ import { HelmetProvider } from "react-helmet-async";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 
 const client = vi.hoisted(() => ({
-  signIn: { magicLink: vi.fn(), social: vi.fn(), email: vi.fn() },
+  signIn: { magicLink: vi.fn(), social: vi.fn(), email: vi.fn(), passkey: vi.fn() },
   signUp: { email: vi.fn() },
 }));
 vi.mock("@/lib/auth", () => ({ authClient: client, useSession: () => ({ data: null }) }));
@@ -152,5 +152,51 @@ describe("<AuthPage> app sign-in link", () => {
     );
     expect(screen.getByRole("status")).toBeInTheDocument();
     expect(screen.queryByLabelText(copy.shell.emailLabel)).toBeNull();
+  });
+});
+
+describe("<AuthPage> passkey", () => {
+  const mount = () =>
+    render(
+      <HelmetProvider>
+        <MemoryRouter initialEntries={["/login"]}>
+          <Login />
+        </MemoryRouter>
+      </HelmetProvider>,
+    );
+
+  it("hides the passkey button where the browser has no WebAuthn", () => {
+    mount();
+    expect(screen.queryByRole("button", { name: copy.shell.passkey })).toBeNull();
+    expect(screen.getByLabelText(copy.shell.emailLabel)).toHaveAttribute(
+      "autocomplete",
+      "username",
+    );
+  });
+
+  it("signs in with a passkey, offering saved ones on the e-mail field, and shows a failed ceremony", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "PublicKeyCredential",
+      Object.assign(function PublicKeyCredential() {}, {
+        isConditionalMediationAvailable: () => Promise.resolve(true),
+      }),
+    );
+    client.signIn.passkey.mockResolvedValue({
+      data: null,
+      error: { status: 400, code: "ERROR_CEREMONY_ABORTED" },
+    });
+    mount();
+
+    expect(screen.getByLabelText(copy.shell.emailLabel)).toHaveAttribute(
+      "autocomplete",
+      "username webauthn",
+    );
+    await vi.waitFor(() => expect(client.signIn.passkey).toHaveBeenCalledWith({ autoFill: true }));
+    expect(screen.queryByText(copy.errors.passkeyFailed)).toBeNull();
+
+    await user.click(screen.getByRole("button", { name: copy.shell.passkey }));
+    expect(client.signIn.passkey).toHaveBeenLastCalledWith({ autoFill: false });
+    expect(await screen.findByText(copy.errors.passkeyFailed)).toBeInTheDocument();
   });
 });

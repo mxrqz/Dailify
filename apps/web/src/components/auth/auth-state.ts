@@ -21,6 +21,7 @@ export type AuthErrorKey =
   | "passwordCompromised"
   | "emailNotVerified"
   | "staleChallenge"
+  | "passkeyFailed"
   | "generic";
 
 /** `code` só no genérico: a tela mostra em mono pra virar relato de bug. */
@@ -88,6 +89,12 @@ export type BetterAuthError = { status: number; code?: string };
  * Traduz o erro do envio do link numa falha que a tela sabe renderizar. `null` = a requisição nem
  * saiu (o fetch lançou): rede.
  */
+const PASSKEY_ERRORS: readonly string[] = [
+  "AUTH_CANCELLED",
+  "PASSKEY_NOT_FOUND",
+  "AUTHENTICATION_FAILED",
+];
+
 export function classifyAuthError(error: BetterAuthError | null): AuthFailure {
   if (!error) return { key: "network" };
   if (error.status === 429) return { key: "tooManyRequests" };
@@ -122,6 +129,10 @@ export function classifyAuthError(error: BetterAuthError | null): AuthFailure {
   if (error.code === API_ERROR.passwordCompromised) return { key: "passwordCompromised" };
   // Better Auth mails a fresh confirmation link along with this answer.
   if (error.code === "EMAIL_NOT_VERIFIED") return { key: "emailNotVerified" };
+  // The browser's ceremony (cancelled, timed out: `ERROR_*`) or a passkey the server no longer has.
+  if (error.code?.startsWith("ERROR_") || PASSKEY_ERRORS.includes(error.code ?? "")) {
+    return { key: "passkeyFailed" };
+  }
   return { key: "generic", code: error.code ?? String(error.status) };
 }
 

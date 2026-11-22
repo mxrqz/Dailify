@@ -4,17 +4,23 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { HelmetProvider } from "react-helmet-async";
 
-const { useSession, listSessions, listAccounts, twoFactor } = vi.hoisted(() => ({
+const { useSession, listSessions, listAccounts, twoFactor, passkey } = vi.hoisted(() => ({
   useSession: vi.fn(() => ({
     data: { session: { id: "s1" }, user: { twoFactorEnabled: false } },
   })),
   listSessions: vi.fn(),
   listAccounts: vi.fn(),
   twoFactor: { enable: vi.fn(), disable: vi.fn(), generateBackupCodes: vi.fn() },
+  passkey: {
+    listUserPasskeys: vi.fn(),
+    addPasskey: vi.fn(),
+    deletePasskey: vi.fn(),
+    updatePasskey: vi.fn(),
+  },
 }));
 vi.mock("@/lib/auth", async (importOriginal) => {
   const real = await importOriginal<typeof import("@/lib/auth")>();
-  return { ...real, useSession, authClient: { listSessions, listAccounts, twoFactor } };
+  return { ...real, useSession, authClient: { listSessions, listAccounts, twoFactor, passkey } };
 });
 vi.mock("@/lib/native-auth", () => ({ verifySecondFactor: vi.fn() }));
 vi.mock("@/functions/api", () => ({ setPassword: vi.fn() }));
@@ -101,5 +107,61 @@ describe("<SecurityPage>", () => {
     await user.click(await enabled("switch", copy.profile.mfaApp));
     expect(twoFactor.enable).not.toHaveBeenCalled();
     expect(screen.getByText(authCopy.mfaSetup.password)).toBeInTheDocument();
+  });
+});
+
+describe("<SecurityPage> passkeys", () => {
+  const pixel = { id: "pk1", name: "Pixel", createdAt: new Date(0) };
+
+  it("has no passkey row where the browser has no WebAuthn", async () => {
+    listSessions.mockResolvedValue({ data: [row("s1")], error: null });
+    mount();
+
+    expect(await screen.findByText(copy.profile.thisDevice)).toBeInTheDocument();
+    expect(screen.queryByText(copy.profile.passkeys)).toBeNull();
+    expect(passkey.listUserPasskeys).not.toHaveBeenCalled();
+  });
+
+  it("lists, adds and removes passkeys", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("PublicKeyCredential", function PublicKeyCredential() {});
+    listSessions.mockResolvedValue({ data: [row("s1")], error: null });
+    passkey.listUserPasskeys.mockResolvedValue({ data: [pixel], error: null });
+    passkey.addPasskey.mockResolvedValue({ data: {}, error: null });
+    passkey.deletePasskey.mockResolvedValue({ data: { status: true }, error: null });
+    mount();
+
+    await user.click(await screen.findByRole("button", { name: /Passkeys.*1/ }));
+    expect(screen.getByText("Pixel")).toBeInTheDocument();
+
+    passkey.listUserPasskeys.mockResolvedValue({
+      data: [pixel, { id: "pk2", name: null, createdAt: new Date(0) }],
+      error: null,
+    });
+    await user.click(screen.getByRole("button", { name: copy.profile.passkeyAdd }));
+    expect(passkey.addPasskey).toHaveBeenCalled();
+    expect(await screen.findByText(copy.profile.passkeyUnnamed)).toBeInTheDocument();
+
+    passkey.listUserPasskeys.mockResolvedValue({ data: [], error: null });
+    await user.click(screen.getByRole("button", { name: "Remover Pixel" }));
+    expect(passkey.deletePasskey).toHaveBeenCalledWith({ id: "pk1" });
+    expect(await screen.findByText(copy.profile.passkeysEmpty)).toBeInTheDocument();
+  });
+
+  it("renames a passkey", async () => {
+    const user = userEvent.setup();
+    vi.stubGlobal("PublicKeyCredential", function PublicKeyCredential() {});
+    listSessions.mockResolvedValue({ data: [row("s1")], error: null });
+    passkey.listUserPasskeys.mockResolvedValue({ data: [pixel], error: null });
+    passkey.updatePasskey.mockResolvedValue({ data: {}, error: null });
+    mount();
+
+    await user.click(await screen.findByRole("button", { name: /Passkeys/ }));
+    await user.click(screen.getByRole("button", { name: "Renomear Pixel" }));
+    const field = screen.getByRole("textbox", { name: copy.profile.passkeyName });
+    await user.clear(field);
+    await user.type(field, "Notebook");
+    await user.click(screen.getByRole("button", { name: copy.profile.passkeySave }));
+    expect(passkey.updatePasskey).toHaveBeenCalledWith({ id: "pk1", name: "Notebook" });
   });
 });

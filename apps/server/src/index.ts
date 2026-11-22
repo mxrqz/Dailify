@@ -95,6 +95,13 @@ app.use("/auth/request-password-reset", rateLimit("AUTH_LIMITER"));
 app.use("/auth/reset-password", rateLimit("AUTH_LIMITER"));
 app.use("/auth/change-password", rateLimit("AUTH_LIMITER"));
 app.use("/auth/two-factor/*", rateLimit("AUTH_LIMITER"));
+// The ceremonies only: listing on /security would spend the sign-in budget of the whole IP.
+for (const step of [
+  "generate-authenticate-options",
+  "verify-authentication",
+  "verify-registration",
+])
+  app.use(`/auth/passkey/${step}`, rateLimit("AUTH_LIMITER"));
 for (const factor of ["totp", "otp", "backup-code"])
   app.use(`/auth/two-factor/verify-${factor}`, stepUpLockout);
 // Step-up: with MFA on, these need a second factor in the last 10 minutes (`requireRecentMfa`).
@@ -105,6 +112,8 @@ for (const path of [
   "/two-factor/generate-backup-codes",
   "/delete-user",
   "/oauth2/consent",
+  "/passkey/generate-register-options",
+  "/passkey/verify-registration",
 ])
   app.use(`/auth${path}`, requireAuth, requireRecentMfa);
 // Open client registration for MCP clients: it writes a row per call.

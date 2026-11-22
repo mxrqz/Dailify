@@ -45,6 +45,12 @@ const VERIFY_2FA = new Set([
   "/two-factor/verify-otp",
   "/two-factor/verify-backup-code",
 ]);
+// Possession plus user verification (`passkey` requires it): both factors, so never gated.
+const PASSKEY_SIGN_IN = "/passkey/verify-authentication";
+const PASSKEY_CHANGE: Record<string, SecurityChange> = {
+  "/passkey/verify-registration": "passkeyAdded",
+  "/passkey/delete-passkey": "passkeyRemoved",
+};
 // Where a new password arrives, and the body key it comes in.
 const NEW_PASSWORD: Record<string, string> = {
   "/sign-up/email": "password",
@@ -211,9 +217,15 @@ export function security(env: Env) {
               const session = fresh ?? ctx.context.session ?? (await getSessionFromCtx(ctx));
               if (session) await markMfa(env.DB, session.session.id, Date.now());
             }
+            if (Object.hasOwn(PASSKEY_CHANGE, path) && !(returned instanceof Error)) {
+              const owner = (ctx.context.session ?? (await getSessionFromCtx(ctx)))?.user;
+              if (owner) await securityMail(env, ctx, owner, PASSKEY_CHANGE[path]);
+            }
             if (!fresh) return;
 
-            if (FIRST_FACTOR.has(path) || signIn)
+            const passkey = path === PASSKEY_SIGN_IN;
+            if (passkey) await markMfa(env.DB, fresh.session.id, Date.now());
+            if (FIRST_FACTOR.has(path) || signIn || passkey)
               await mailLater(ctx, () => newDeviceMail(env, fresh), env);
             // The enabling verify swaps the session; a step-up verify keeps it.
             else if (verified) await securityMail(env, ctx, fresh.user, "mfaOn");

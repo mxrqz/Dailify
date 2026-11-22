@@ -6,6 +6,7 @@ import {
   twoFactorClient,
 } from "better-auth/client/plugins";
 import { oauthProviderClient } from "@better-auth/oauth-provider/client";
+import { passkeyClient } from "@better-auth/passkey/client";
 import { PLAN_ID } from "@dailify/shared";
 import { apiURL } from "@/consts/conts";
 
@@ -53,6 +54,7 @@ export const authClient = createAuthClient({
     // Sends the page's signed authorize query with each POST, so Google sign-in and consent
     // resume an MCP client's OAuth flow.
     oauthProviderClient(),
+    passkeyClient(),
     inferAdditionalFields({ user: { plan: { type: "string", required: false } } }),
     bearerRotation,
   ],

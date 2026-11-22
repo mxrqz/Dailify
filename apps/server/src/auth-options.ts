@@ -3,6 +3,7 @@ import { APIError, createAuthMiddleware } from "better-auth/api";
 import type { GenericEndpointContext } from "better-auth";
 import { bearer, captcha, emailOTP, jwt, magicLink, oneTimeToken } from "better-auth/plugins";
 import { mcp } from "@better-auth/mcp";
+import { getAuthenticatorName, passkey } from "@better-auth/passkey";
 import type { Env } from "./index";
 import { allowedOrigins, NATIVE_ORIGINS } from "./lib/origin";
 import { bytesToBase64url, sha256b64url } from "./lib/encoding";
@@ -250,6 +251,20 @@ export function authOptions(env: Env, background?: (promise: Promise<unknown>) =
             expiresAt,
           );
           return token;
+        },
+      }),
+      // The RP is the web's host (WEB_URL): browsers refuse the legacy host, and the web hides it there.
+      passkey({
+        rpID: new URL(allowedOrigins(env)[0]).hostname,
+        rpName: "Mewki",
+        origin: allowedOrigins(env)[0],
+        // Discoverable and user-verified: a passkey sign-in counts as both factors (`security`).
+        authenticatorSelection: { residentKey: "required", userVerification: "required" },
+        // "Google Password Manager" etc. until renamed; Apple's zeroed AAGUID stays unnamed.
+        registration: {
+          afterVerification: ({ verification }) => ({
+            name: getAuthenticatorName(verification.registrationInfo?.aaguid),
+          }),
         },
       }),
       // Signs the MCP access tokens; the header would hand every session a JWT it never uses.

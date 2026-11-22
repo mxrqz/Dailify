@@ -58,6 +58,13 @@ Flow and keyring accounts: `apps/web/src/lib/CLAUDE.md`; contract:
 - The server accepts the webview origins (`tauri://localhost`, `http(s)://tauri.localhost`) from
   `NATIVE_ORIGINS` in `apps/server/src/lib/origin.ts`; its CORS allows `x-mewki-verifier` and
   exposes `set-auth-token` (`apps/server/src/index.ts`).
+- No passkeys in the app (`lib/passkey.ts` hides them). androidx.webkit 1.12+
+  `WebSettingsCompat.setWebAuthenticationSupport(..., WEB_AUTHENTICATION_SUPPORT_FOR_APP)`
+  (hookable in `onWebViewCreate`, which wry's `WryActivity` exposes) only serves pages from a
+  domain the app is asset-linked to, and ours come from `tauri.localhost`; the challenge cookie
+  wouldn't cross either. The path is a Credential Manager plugin: native WebAuthn with origin
+  `android:apk-key-hash:<hash>` (added to the server's `origin`) and
+  `delegate_permission/common.get_login_creds` in `assetlinks.json`.
 
 ## App Links and Universal Links (files in `apps/web/public/`)
 
