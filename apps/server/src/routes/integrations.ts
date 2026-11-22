@@ -64,6 +64,19 @@ const planBlocked = (c: Context<AppEnv>) => fail(c, 403, "Seu plano não inclui 
 const redirectUri = (c: Context<AppEnv>, id: ProviderId) =>
   `${returnBase(c.env, c.req.header("origin"))}/integrations/${id}/callback`;
 
+// ponytail: Gmail and the Calendar share one Google client, and Google's revoke drops the whole
+// grant, so while the other stays connected the revoke waits for it (gmail.send stays granted at
+// Google meanwhile). A Gmail-only OAuth client lifts this.
+async function sharesGrant(env: Env, userId: string, id: ProviderId): Promise<boolean> {
+  const client = PROVIDERS[id].oauth.credentials(env).id;
+  return (await listConnections(env.DB, userId)).some(
+    (r) =>
+      r.provider !== id &&
+      isProviderId(r.provider) &&
+      PROVIDERS[r.provider].oauth.credentials(env).id === client,
+  );
+}
+
 function statusOf(
   env: Env,
   id: ProviderId,
@@ -172,7 +185,9 @@ integrations.post("/integrations/:provider/callback", async (c) => {
     return fail(c, 400, "Não deu pra concluir a conexão; tente de novo");
   }
   if (!hasScopes(provider.oauth, tokens.scope)) {
-    await revoke(provider.oauth, tokens).catch(() => {}); // grant inútil não fica na conta da pessoa
+    // grant inútil não fica na conta da pessoa
+    if (!(await sharesGrant(c.env, userId, id)))
+      await revoke(provider.oauth, tokens).catch(() => {});
     return fail(c, 400, MISSING_SCOPE_ERROR, { code: API_ERROR.missingScope });
   }
 
@@ -291,7 +306,8 @@ integrations.delete("/integrations/:provider", async (c) => {
   if (!isProviderId(id)) return fail(c, 404, "Integração desconhecida");
   const userId = c.get("userId");
   const row = await getConnection(c.env.DB, userId, id);
-  if (row) await revokeSealed(c.env, userId, id, row.tokens);
+  if (row && !(await sharesGrant(c.env, userId, id)))
+    await revokeSealed(c.env, userId, id, row.tokens);
   await deleteConnection(c.env.DB, userId, id);
   return c.body(null, 204);
 });
