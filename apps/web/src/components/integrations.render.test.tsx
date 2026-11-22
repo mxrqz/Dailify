@@ -124,7 +124,7 @@ describe("<Integrations>", () => {
     // Nothing read yet: every provider's card shows, all disabled.
     for (const button of screen.getAllByRole("button", { name: t.connect }))
       expect(button).toBeDisabled();
-    expect(screen.getAllByText(t.offlineHint)).toHaveLength(2);
+    expect(screen.getAllByText(t.offlineHint)).toHaveLength(3);
     expect(api.getIntegrations).not.toHaveBeenCalled();
   });
 
@@ -189,6 +189,32 @@ describe("<Integrations>", () => {
     );
     expect(await screen.findByRole("link", { name: t.pro })).toHaveAttribute("href", "/premium");
     expect(screen.getAllByRole("button", { name: t.connect })).toHaveLength(1);
+  });
+
+  it("Gmail gets its own card, connects on its own and left the Em breve list", async () => {
+    api.connectIntegration.mockResolvedValue({ url: "https://accounts.google.com/gmail" });
+    vi.stubGlobal("location", { ...window.location, assign: vi.fn() });
+    api.getIntegrations.mockResolvedValue({
+      integrations: [
+        { ...GCAL, connected: true, status: "active", account: "a@b.com" },
+        { ...GCAL, provider: "gmail" },
+      ],
+    });
+    render(
+      <MemoryRouter>
+        <Integrations />
+      </MemoryRouter>,
+    );
+    const available = (await screen.findByRole("heading", { name: t.groupAvailable }))
+      .parentElement;
+    if (!available) throw new Error("no available group");
+    for (const line of t.apps.gmail.does)
+      expect(within(available).getByText(line)).toBeInTheDocument();
+    await userEvent.click(within(available).getByRole("button", { name: t.connect }));
+    expect(api.connectIntegration).toHaveBeenCalledWith("gmail");
+    const soon = screen.getByRole("heading", { name: t.soon }).parentElement;
+    expect(soon && within(soon).queryByText("Gmail")).toBeNull();
+    vi.unstubAllGlobals();
   });
 
   it("desconectado não mostra os ajustes da agenda", async () => {

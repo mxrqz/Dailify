@@ -82,6 +82,8 @@ export const copy = {
   sendBox: {
     title: "Enviar para {to}",
     source: "{app} · confira antes de sair",
+    // Gmail's text carries the subject in its first line (`gmail.send`, server).
+    sourceMail: "{app} · a primeira linha é o assunto",
     text: "Texto da mensagem",
     send: "Enviar",
     edit: "Editar",

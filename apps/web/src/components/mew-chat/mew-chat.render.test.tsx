@@ -283,6 +283,27 @@ describe("MewChat", () => {
     expect(await within(chat).findByRole("button", { name: t.sendBox.send })).toBeInTheDocument();
   });
 
+  it("a Gmail draft says its first line is the subject", async () => {
+    const mail: MewReply = {
+      ...drafted,
+      blocks: [
+        {
+          kind: "send",
+          id: "d2",
+          provider: "gmail",
+          target: "ana@x.com",
+          to: "ana@x.com",
+          text: "Reunião\nOi, Ana",
+        },
+      ],
+    };
+    api.mewChat.mockResolvedValue({ reply: mail });
+    const { chat } = mount();
+    say("manda um e-mail pra Ana");
+    expect(await within(chat).findByText("Enviar para ana@x.com")).toBeInTheDocument();
+    expect(within(chat).getByText("Gmail · a primeira linha é o assunto")).toBeInTheDocument();
+  });
+
   it("Cancelar on a send box sends nothing", async () => {
     api.mewChat.mockResolvedValue({ reply: drafted });
     const { chat } = mount();

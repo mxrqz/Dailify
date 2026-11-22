@@ -145,7 +145,6 @@ export function IntegrationCard({
 }
 
 const UPCOMING = [
-  { ...t.upcoming.gmail, Logo: GmailLogo },
   { ...t.upcoming.notion, Logo: NotionLogo },
   // O do GitHub é uma silhueta: vai na cor do texto pra não sumir no escuro.
   { ...t.upcoming.github, Logo: GitHubLogo, fill: "currentColor" },
@@ -168,10 +167,11 @@ export function UpcomingIntegrations(): JSX.Element {
   );
 }
 
-const LOGOS = { "google-calendar": GoogleCalendarLogo, slack: SlackLogo } satisfies Record<
-  ProviderId,
-  unknown
->;
+const LOGOS = {
+  "google-calendar": GoogleCalendarLogo,
+  slack: SlackLogo,
+  gmail: GmailLogo,
+} satisfies Record<ProviderId, unknown>;
 
 /** O card de um provedor com conectar, desconectar e o "lê sem perguntar"; a Agenda leva os ajustes dela. */
 function ProviderCard({

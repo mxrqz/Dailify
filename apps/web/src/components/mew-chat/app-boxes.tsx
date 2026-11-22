@@ -92,7 +92,10 @@ export function SendBody({
     );
   return (
     <>
-      <Head title={fill(t.sendBox.title, values)} source={fill(t.sendBox.source, values)} />
+      <Head
+        title={fill(t.sendBox.title, values)}
+        source={fill(block.provider === "gmail" ? t.sendBox.sourceMail : t.sendBox.source, values)}
+      />
       {editing ? (
         <textarea
           value={block.text}
