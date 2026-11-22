@@ -1,13 +1,13 @@
-// Local dev data: `bun run seed` (here or at the root) applies the local migrations, then replaces
-// the seed account and its tasks in the same D1 `wrangler dev` uses. Sign in with SEED_EMAIL and
-// SEED_PASSWORD. Dates are relative to today, so the agenda always has something to show.
+// Local dev data: `bun run seed` (here or at the root) applies the local migrations, then upserts
+// the seed account and replaces its `seed-*` tasks in the same D1 `wrangler dev` uses; sessions,
+// integrations and other tasks survive. Sign in with SEED_EMAIL and SEED_PASSWORD. Dates are
+// relative to today, so the agenda always has something to show.
 import { TZDate } from "@date-fns/tz";
 import { hashPassword } from "better-auth/crypto";
 import type { Repeat, Task } from "@dailify/shared";
 import { getPlatformProxy } from "wrangler";
 
 import { insertStatement } from "../src/db/tasks";
-import { deleteUserData } from "../src/db/user";
 
 const SEED_EMAIL = "dev@mewki.local";
 const SEED_PASSWORD = "mewki-dev-local";
@@ -69,26 +69,30 @@ const tasks: Task[] = [
 ];
 
 const iso = new Date(now).toISOString();
-await deleteUserData(db, USER_ID);
+// Upserts, never DELETE + INSERT: deleting the user cascades to its sessions and integrations.
 await db.batch([
-  db.prepare(`DELETE FROM "user" WHERE id=? OR email=?`).bind(USER_ID, SEED_EMAIL),
   db
     .prepare(
       `INSERT INTO "user" (id,name,email,emailVerified,createdAt,updatedAt,plan,twoFactorEnabled)
-       VALUES (?,?,?,1,?,?,'max',0)`,
+       VALUES (?,?,?,1,?,?,'max',0)
+       ON CONFLICT(id) DO UPDATE SET emailVerified=1, plan='max', updatedAt=excluded.updatedAt`,
     )
     .bind(USER_ID, "Dev", SEED_EMAIL, iso, iso),
   db
     .prepare(
       `INSERT INTO account (id,accountId,providerId,userId,password,createdAt,updatedAt)
-       VALUES (?,?,'credential',?,?,?,?)`,
+       VALUES (?,?,'credential',?,?,?,?)
+       ON CONFLICT(id) DO UPDATE SET password=excluded.password, updatedAt=excluded.updatedAt`,
     )
     .bind(`${USER_ID}-credential`, USER_ID, USER_ID, await hashPassword(SEED_PASSWORD), iso, iso),
   db
     .prepare(
-      `INSERT INTO user_settings (user_id,week_start,time_zone,hour12,mew_consent_at) VALUES (?,1,?,0,?)`,
+      `INSERT INTO user_settings (user_id,week_start,time_zone,hour12,mew_consent_at) VALUES (?,1,?,0,?)
+       ON CONFLICT(user_id) DO UPDATE SET time_zone=excluded.time_zone,
+         mew_consent_at=COALESCE(user_settings.mew_consent_at, excluded.mew_consent_at)`,
     )
     .bind(USER_ID, ZONE, now),
+  db.prepare(`DELETE FROM tasks WHERE user_id=? AND id LIKE 'seed-%'`).bind(USER_ID),
   ...tasks.map((t) => insertStatement(db, USER_ID, t)),
 ]);
 await dispose();

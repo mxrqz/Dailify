@@ -1,5 +1,5 @@
-import { motion, useAnimate, usePresence, useReducedMotion } from "motion/react";
-import { useEffect, useRef, useState } from "react";
+import { useAnimate, usePresence, useReducedMotion } from "motion/react";
+import { useEffect, useRef } from "react";
 
 import { copy } from "@/components/dashboard/copy";
 import { Mew } from "@/components/mew/mew";
@@ -7,25 +7,17 @@ import { duration, ease } from "@/consts/motion";
 
 /** Piso do splash: menos que isso parece um piscar, mesmo com os dados já em mãos. */
 export const SPLASH_MIN_MS = 1500;
-/** A legenda só aparece se a carga demorar: antes disso a Mew caçando o laser já basta. */
-const SLOW_AFTER_MS = 2000;
 
 /**
  * Abertura do app enquanto o `ProtectedRoute` carrega: a Mew caçando o pontinho de laser, no
  * centro. Ao sair (é filho de um `AnimatePresence`) a Mew voa até a do dock do mobile; sem dock
- * ou com movimento reduzido, fade. `slow` força a legenda (preview).
+ * ou com movimento reduzido, fade.
  */
-export function Splash({ slow: forceSlow = false }: { slow?: boolean }): JSX.Element {
-  const [slow, setSlow] = useState(forceSlow);
+export function Splash(): JSX.Element {
   const [scope, animate] = useAnimate<HTMLDivElement>();
   const mew = useRef<HTMLDivElement>(null);
   const [isPresent, safeToRemove] = usePresence();
   const reduce = useReducedMotion();
-
-  useEffect(() => {
-    const id = setTimeout(() => setSlow(true), SLOW_AFTER_MS);
-    return () => clearTimeout(id);
-  }, []);
 
   useEffect(() => {
     if (isPresent || !mew.current) return;
@@ -63,17 +55,14 @@ export function Splash({ slow: forceSlow = false }: { slow?: boolean }): JSX.Ele
         <div ref={mew}>
           <Mew mood="loading" enter className="w-42" />
         </div>
-        <motion.p
+        {/* With the Mew from the start: shown late, it landed on top of the exit flight. */}
+        <p
           data-splash-fade
           role="status"
-          initial={false}
-          animate={slow ? { opacity: 1, y: 0 } : { opacity: 0, y: 6 }}
-          transition={{ duration: duration.slow, ease: ease.out }}
-          className="min-h-5 text-subhead font-medium text-ink-secondary"
+          className="min-h-5 text-subhead font-medium text-ink-secondary transition-opacity duration-slow starting:opacity-0"
         >
-          {/* o texto só entra com o `slow`: invisível no `status`, o leitor de tela anunciaria já */}
-          {slow && copy.loading.slow}
-        </motion.p>
+          {copy.loading.slow}
+        </p>
       </div>
     </div>
   );
