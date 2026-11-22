@@ -463,6 +463,10 @@
 @utility scroll-mt-bar {
   scroll-margin-top: calc(--spacing(16) + env(safe-area-inset-top));
 }
+/* Sticky right under the status bar: the mobile week strip docking over the app bar. */
+@utility top-inset {
+  top: env(safe-area-inset-top);
+}
 /* Desktop: a day the agenda scrolls to lands under the toolbar plus the sticky strip (~78px). */
 @utility scroll-mt-agenda {
   scroll-margin-top: calc(--spacing(35) + env(safe-area-inset-top));

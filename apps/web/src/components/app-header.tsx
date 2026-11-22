@@ -11,8 +11,8 @@ import { useCalendarView } from "@/hooks/useCalendarView";
 import { useUser } from "@/hooks/useUser";
 import { cn } from "@/lib/utils";
 
-/** Where the Today week strip docks once scrolled under the bar (`WeekStrip`). */
-export const BAR_STRIP_ID = "bar-strip";
+/** The Today week strip docks over this bar as it scrolls (`WeekStrip`). */
+export const APP_BAR_ID = "app-bar";
 
 /**
  * Barra do app no mobile: a barra de material do iOS (52px, ☰ à esquerda; na Hoje, calendário e
@@ -27,16 +27,15 @@ export function AppHeader({ className }: { className?: string }): JSX.Element {
 
   return (
     <header
+      id={APP_BAR_ID}
       className={cn(
-        "group/bar sticky top-0 z-bar flex h-bar w-full shrink-0 items-center gap-3 bg-material-bar-solid md:hidden",
+        "sticky top-0 z-bar flex h-bar w-full shrink-0 items-center gap-3 bg-material-bar-solid md:hidden",
         className,
       )}
     >
       <MobileNav />
-      {dashboard && <div id={BAR_STRIP_ID} className="min-w-0 flex-1 pr-2 empty:hidden" />}
-
-      {/* A docked week strip takes the bar's place, all but the menu. */}
-      <div className="ml-auto inline-flex items-center group-has-[[data-docked]]/bar:hidden">
+      {/* `--undock` (1 → 0) fades them as the week strip docks over the bar, all but the menu. */}
+      <div className="ml-auto inline-flex items-center opacity-(--undock)">
         <SyncBadge />
 
         {!isSignedIn && (
