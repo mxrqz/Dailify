@@ -55,6 +55,8 @@ export interface IntegrationStatus {
   readAlways?: boolean;
   /** Eventos que a Mewki não sabe representar (recorrência exótica, dia inteiro repetido). */
   skipped?: number;
+  /** Google connected without the Tasks scope (older connections): reconnecting imports them. */
+  tasksMissing?: true;
 }
 
 /** Tarefa <-> objeto externo (`integration_links`). */

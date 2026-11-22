@@ -88,6 +88,15 @@ describe("<Integrations>", () => {
     expect(await screen.findByText("3 eventos ficaram só na Agenda")).toBeInTheDocument();
   });
 
+  it("connected without the Tasks scope offers a reconnect beside disconnect", async () => {
+    api.connectIntegration.mockResolvedValue({});
+    renderWith({ connected: true, status: "active", tasksMissing: true });
+    expect(await screen.findByText(t.tasksMissing)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: t.disconnect })).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: t.reconnect }));
+    expect(api.connectIntegration).toHaveBeenCalledWith("google-calendar");
+  });
+
   it("revogado pede pra reconectar", async () => {
     renderWith({ connected: true, status: "revoked", account: "a@b.com" });
     expect(await screen.findByRole("button", { name: t.reconnect })).toBeEnabled();

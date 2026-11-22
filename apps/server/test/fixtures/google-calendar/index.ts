@@ -1,5 +1,6 @@
 // Respostas reais do Google, reduzidas ao que o servidor lê.
 export const EVENTS_SCOPE = "https://www.googleapis.com/auth/calendar.events.owned";
+export const TASKS_SCOPE = "https://www.googleapis.com/auth/tasks";
 
 export const token = {
   access_token: "ya29.access-1",
@@ -105,4 +106,20 @@ export const existing = {
   end: { dateTime: "2026-11-16T11:00:00-03:00" },
   hangoutLink: "https://meet.google.com/abc-defg-hij",
   extendedProperties: { private: { other: "app" } },
+};
+
+export const TASKS = "https://tasks.googleapis.com/tasks/v1";
+
+export const tasklists = {
+  kind: "tasks#taskLists",
+  items: [{ kind: "tasks#taskList", id: "MDk4NzY1", title: "Minhas tarefas" }],
+};
+
+// `due` keeps only the day: Google always answers it at UTC midnight.
+export const gtask = {
+  kind: "tasks#task",
+  id: "dGFzay0x",
+  title: "Comprar pão",
+  status: "needsAction",
+  webViewLink: "https://tasks.google.com/task/dGFzay0x",
 };

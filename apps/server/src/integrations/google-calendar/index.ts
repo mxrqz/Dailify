@@ -21,6 +21,7 @@ import { ActionError, type Ctx, type Provider } from "../types";
 import { EVENTS_API, field, json, text, updatedOf } from "./api";
 import { eventId, newMeet, toEvent, type GoogleEvent } from "./event";
 import { syncCalendar } from "./sync";
+import { TASKS_SCOPE, isGoogleTask, pushTask } from "./tasks";
 
 const NO_DAY = "Tarefa sem dia não vira evento: escolha um dia antes";
 
@@ -215,6 +216,7 @@ async function syncEvent(
   before: Task | null,
   after: Task | null,
 ): Promise<"unlink" | void> {
+  if (isGoogleTask(link)) return pushTask(ctx, link, before, after);
   const url = `${EVENTS_API}/${link.externalId}`;
   const tz = link.timeZone;
   if (!tz) throw new Error("vínculo sem fuso");
@@ -274,7 +276,8 @@ export const googleCalendar: Provider = {
     tokenUrl: "https://oauth2.googleapis.com/token",
     revokeUrl: "https://oauth2.googleapis.com/revoke",
     credentials: (env) => ({ id: env.GOOGLE_CLIENT_ID, secret: env.GOOGLE_CLIENT_SECRET }),
-    scopes: ["openid", "email", EVENTS],
+    // Tasks is optional: a connection without it (older ones, or unticked) syncs only the Calendar.
+    scopes: ["openid", "email", EVENTS, TASKS_SCOPE],
     required: [EVENTS],
     // offline + consent: sem eles o Google não devolve refresh_token na reconexão.
     extraParams: { access_type: "offline", prompt: "consent", include_granted_scopes: "true" },

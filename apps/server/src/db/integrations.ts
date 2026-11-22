@@ -91,7 +91,8 @@ export async function upsertConnection(
          ON CONFLICT(user_id, provider) DO UPDATE SET account_id=excluded.account_id,
            account_email=excluded.account_email, scopes=excluded.scopes, tokens=excluded.tokens,
            status='active', updated_at=excluded.updated_at,
-           sync_token=CASE WHEN account_id=excluded.account_id THEN sync_token END`,
+           sync_token=CASE WHEN account_id=excluded.account_id THEN sync_token END,
+           tasks_synced_at=CASE WHEN account_id=excluded.account_id THEN tasks_synced_at END`,
       )
       .bind(userId, provider, conn.accountId, conn.email, conn.scopes, conn.tokens, now, now),
   ]);

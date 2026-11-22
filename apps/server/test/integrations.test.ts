@@ -112,7 +112,7 @@ describe("POST /integrations/:provider/connect", () => {
     expect(url.origin + url.pathname).toBe("https://accounts.google.com/o/oauth2/v2/auth");
     expect(q.get("client_id")).toBe(env.GOOGLE_CLIENT_ID);
     expect(q.get("redirect_uri")).toBe(`${ORIGIN}/integrations/google-calendar/callback`);
-    expect(q.get("scope")).toBe(`openid email ${google.EVENTS_SCOPE}`);
+    expect(q.get("scope")).toBe(`openid email ${google.EVENTS_SCOPE} ${google.TASKS_SCOPE}`);
     expect(q.get("response_type")).toBe("code");
     expect(q.get("code_challenge_method")).toBe("S256");
     expect(q.get("access_type")).toBe("offline");
@@ -174,6 +174,8 @@ describe("POST /integrations/:provider/callback", () => {
       connected: true,
       status: "active",
       account: "pessoa@gmail.com",
+      // The fixture grant predates the Tasks scope, like every existing connection.
+      tasksMissing: true,
       imported: 0,
     });
     const body = new URLSearchParams(callsTo(TOKEN)[0].body);

@@ -45,6 +45,7 @@ import { loadCtx, makeCtx, revokeSealed, sealTokens } from "../integrations/conn
 import { pushLink } from "../integrations/propagate";
 import { getTask } from "../db/tasks";
 import { createEvent, replaceMeet } from "../integrations/google-calendar";
+import { TASKS_SCOPE } from "../integrations/google-calendar/tasks";
 import { ActionError, type Ctx } from "../integrations/types";
 
 const STATE_TTL = 10 * 60 * 1000;
@@ -85,6 +86,8 @@ function statusOf(
     ...(flags.readonly?.length && { readonly: flags.readonly }),
     ...(flags.readAlways && { readAlways: true }),
     ...(row.skipped > 0 && { skipped: row.skipped }),
+    ...(id === "google-calendar" &&
+      !row.scopes.split(/\s+/).includes(TASKS_SCOPE) && { tasksMissing: true }),
   };
 }
 

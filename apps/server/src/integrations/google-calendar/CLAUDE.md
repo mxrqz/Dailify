@@ -68,11 +68,27 @@ tokens, `propagate`) is in `../CLAUDE.md`.
 - A lost link (account switch, restored D1) is rebuilt from
   `extendedProperties.private.mewkiTaskId`.
 
+## Google Tasks (`tasks.ts`, bd `Dailify-psjm`)
+
+- Rides on this connection and provider id: links are `google-calendar` rows whose `external_id`
+  is the API path `lists/<list>/tasks/<task>` (`isGoogleTask`; event ids never contain `/`).
+  `syncEvent` hands those to `pushTask`.
+- Pulled at the end of every `syncCalendar` pass when the connection's `scopes` hold `TASKS_SCOPE`
+  (older ones don't: `GET /integrations` says `tasksMissing` and the web offers a reconnect). A
+  Tasks failure is logged and never undoes the Calendar pass.
+- Every list, `showCompleted` + `showHidden`; full while `tasks_synced_at` is NULL, else
+  `updatedMin` + `showDeleted`. The cursor is saved after a whole pass, a minute back.
+- Mapping: always Sem data; a due day = the 09:00 anchor alert on it (an all-day item, as all-day
+  events), no due = "A qualquer hora". Completed tasks import as done, except those completed over
+  30 days ago. `deleted` drops the task. LWW and echoes as events (`remote_updated`, `stale`).
+- Push: title and completion only (`POST|DELETE /tasks/:id/complete` propagate for these links).
+  Deleting in Mewki drops the link and leaves the Google task.
+
 ## OAuth and errors
 
-- Scope `calendar.events.owned` (+ `openid email`): sensitive but verified without a CASA audit
-  (bd `Dailify-zpq`). Don't widen it. `access_type=offline` + `prompt=consent` are what make a
-  reconnect return a refresh_token.
+- Scopes `calendar.events.owned` and `tasks` (+ `openid email`); only events is `required`.
+  Events is sensitive but verified without a CASA audit (bd `Dailify-zpq`). `access_type=offline`
+  and `prompt=consent` are what make a reconnect return a refresh_token.
 - Uncoded `ActionError` messages here are pt-BR because `components/add-to-calendar.tsx` (web)
   toasts `error.message`. Legacy against RULES.md "Backend and API": a new error gets a `code`
   from `API_ERROR` (shared) and an English message, like the 409 `already_linked`.

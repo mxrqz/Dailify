@@ -1,6 +1,7 @@
 import { isRecord } from "@dailify/shared";
 
 export const EVENTS_API = "https://www.googleapis.com/calendar/v3/calendars/primary/events";
+export const TASKS_API = "https://tasks.googleapis.com/tasks/v1";
 
 export const field = (v: unknown, key: string): unknown => (isRecord(v) ? v[key] : undefined);
 export const text = (v: unknown, key: string): string | undefined => {
