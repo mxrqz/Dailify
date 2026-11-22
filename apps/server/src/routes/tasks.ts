@@ -32,6 +32,7 @@ import { fail } from "../lib/errors";
 import { linkedTask, propagate } from "../integrations/propagate";
 import { linkInstance } from "../integrations/google-calendar";
 import { syncIfDue } from "../integrations/google-calendar/sync";
+import { pollGithub } from "../integrations/github";
 import { isGoogleTask } from "../integrations/google-calendar/tasks";
 
 const tasks = new Hono<AppEnv>();
@@ -48,6 +49,7 @@ tasks.get("/", async (c) => {
   const timeZone = validZone(c.req.query("tz"));
   // A Agenda entra no fundo (throttle de 60 s): o que ela trouxer aparece na próxima leitura.
   c.executionCtx.waitUntil(syncIfDue(c.env, userId));
+  c.executionCtx.waitUntil(pollGithub(c.env, userId));
 
   return c.json({ tasks: await readMonth(c.env.DB, userId, month, timeZone) });
 });
@@ -56,6 +58,7 @@ tasks.get("/sync", async (c) => {
   const userId = c.get("userId");
   const zone = validZone(c.req.query("tz")) ?? "UTC";
   c.executionCtx.waitUntil(syncIfDue(c.env, userId));
+  c.executionCtx.waitUntil(pollGithub(c.env, userId));
   const { next, ...pull } = await pullTasks(
     c.env.DB,
     userId,

@@ -102,6 +102,30 @@ those routed through `PROVIDERS[id]` first.
   `${web origin}/integrations/gmail/callback` and `${APP_URL}/app/integrations/gmail/callback`.
   Tests: `test/integrations-gmail.test.ts`.
 
+## GitHub (`github/index.ts`, bd `Dailify-g4j`)
+
+- OAuth App, not a GitHub App (an App's user token can't read notifications and sees only
+  installed repos). Scopes `repo` (required: no read-only scope covers private repos, which the web
+  card says) and `read:user`. Tokens never expire, so no refresh. Every call sends `HEADERS`
+  (`User-Agent` is mandatory); a 401 marks the connection revoked. Revoke is `oauth.revoke`:
+  `DELETE /applications/{client_id}/grant` with basic auth.
+- Import, zero AI: `syncGithub` lists `GET /issues?filter=assigned&state=open` (issues and PRs)
+  with `If-None-Match` (the ETag lives in `sync_token`; a 304 is free and ends the pass). New items
+  become undated tasks, plain title + `html_url` in `links`, linked as `owner/repo#n`. A linked,
+  not-done task missing from the list is fetched once: closed = completed at `closed_at`,
+  otherwise (unassigned, deleted, out of reach) the link is dropped and the task stays. Done or
+  deleted tasks keep their link, so nothing comes back twice; a reopened issue stays done.
+  One-way: no `onTaskChanged`, and `propagate` skips such links (never `stale`).
+- Cadence: `claimPoll` (5 min, `synced_at`), from `GET /tasks` and `/tasks/sync` (`pollGithub`,
+  plan-gated), the cron (`pollOldestGithub`, 25 a tick) and the connect import (no throttle).
+  `/issues` sends no `X-Poll-Interval`. One page of 100 (the `ponytail:`).
+- `read`: `*` = open assigned + `is:open is:pr review-requested:@me`; `owner/repo#n` or its URL =
+  title, state, body (2000 chars) and the last page of 10 comments. 404 and 403/429 read back as a
+  note. No `send`.
+- Callback: an OAuth App takes one URL and accepts any `redirect_uri` under it, so register the
+  web origin root (covers `/integrations/github/callback` and `/app/integrations/github/callback`);
+  localhost needs its own OAuth App. Tests: `test/integrations-github.test.ts`.
+
 ## Propagation and sync
 
 - Task routes read `linkedTask` BEFORE the write, then run `propagate` in `waitUntil`. It never

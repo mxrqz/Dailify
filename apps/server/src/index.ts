@@ -19,6 +19,7 @@ import { dispatchAlerts } from "./alerts";
 import { EMAIL_COOLDOWN_MS } from "./auth-options";
 import { sweepMagicLinks } from "./db/user";
 import { sweepTombstones } from "./db/tasks";
+import { pollOldestGithub } from "./integrations/github";
 import { syncOldest } from "./integrations/google-calendar/sync";
 import { fail } from "./lib/errors";
 import { MCP_ICON } from "./lib/mcp";
@@ -50,6 +51,8 @@ export interface Env {
   GOOGLE_CLIENT_SECRET: string;
   SLACK_CLIENT_ID: string;
   SLACK_CLIENT_SECRET: string;
+  GITHUB_CLIENT_ID: string;
+  GITHUB_CLIENT_SECRET: string;
   // Cifra os tokens de integração em repouso (integrations/crypto.ts): base64 de 32 bytes.
   TOKEN_KEY_V1: string;
 }
@@ -147,6 +150,7 @@ export default Object.assign(app, {
   scheduled: async (_controller: ScheduledController, env: Env, ctx: ExecutionContext) => {
     ctx.waitUntil(dispatchAlerts(env));
     ctx.waitUntil(syncOldest(env));
+    ctx.waitUntil(pollOldestGithub(env));
     // Its own waitUntil: a failed sweep never holds back alerts or sync.
     ctx.waitUntil(sweepMagicLinks(env.DB, Date.now(), EMAIL_COOLDOWN_MS));
     ctx.waitUntil(sweepTombstones(env.DB));

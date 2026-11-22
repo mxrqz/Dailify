@@ -53,8 +53,10 @@ export async function propagate(
   before: Task | null,
   after: Task | null,
 ): Promise<void> {
+  // A provider that takes no edits (GitHub's import) has nothing to push and never goes stale.
+  const pushed = links.filter((l) => PROVIDERS[l.provider].onTaskChanged);
   await Promise.all(
-    links.map(async (link) => {
+    pushed.map(async (link) => {
       try {
         const ctx = await loadCtx(env, userId, link.provider);
         if (ctx) return await pushLink(env, ctx, link, before, after);
