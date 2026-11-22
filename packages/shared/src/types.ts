@@ -44,6 +44,18 @@ export interface OccurrenceEdit {
 }
 
 /**
+ * `GET /tasks/sync`: stored rows, series unexpanded. `full` = replace the local store with `tasks`;
+ * otherwise upsert `tasks`, then drop `deleted`. `cursor` is opaque: send it back as `?since=`.
+ */
+export interface TaskSync {
+  full: boolean;
+  tasks: Task[];
+  /** Ids deleted since the cursor; always empty on a full pull. */
+  deleted: string[];
+  cursor: string;
+}
+
+/**
  * A task draft read from a sentence: `ParsedTask` (`parse-task/index.ts`) without `unsure`/`fields`,
  * dated in epoch-ms, so the AI reply fills the same composer chips.
  */
