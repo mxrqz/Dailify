@@ -17,8 +17,27 @@ vi.mock("@tauri-apps/plugin-deep-link", () => ({
   onOpenUrl: tauri.onOpenUrl,
 }));
 
-const { base64url, initNativeAuth, parseAuthLink, parseOpenLink, s256, signOutAndReload } =
-  await import("./native-auth");
+const {
+  base64url,
+  initNativeAuth,
+  linkFailure,
+  parseAuthLink,
+  parseOpenLink,
+  s256,
+  signOutAndReload,
+} = await import("./native-auth");
+
+describe("linkFailure", () => {
+  it("names why a link verify failed, by status", () => {
+    expect(linkFailure(403)).toBe("otherDevice");
+    expect(linkFailure(429)).toBe("tooManyRequests");
+    expect(linkFailure(503)).toBe("generic");
+    // An invalid or used token redirects: followed it lands on a 404, unfollowed it is opaque (0).
+    expect(linkFailure(404)).toBe("expired");
+    expect(linkFailure(0)).toBe("expired");
+    expect(linkFailure(200)).toBe("expired");
+  });
+});
 
 const TOKEN = "aBcDeFgHiJkLmNoPqRsTuVwXyZaBcDeF";
 

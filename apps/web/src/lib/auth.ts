@@ -1,5 +1,5 @@
 import { createAuthClient } from "better-auth/react";
-import { inferAdditionalFields, magicLinkClient } from "better-auth/client/plugins";
+import { emailOTPClient, inferAdditionalFields, magicLinkClient } from "better-auth/client/plugins";
 import { oauthProviderClient } from "@better-auth/oauth-provider/client";
 import { PLAN_ID } from "@dailify/shared";
 import { apiURL } from "@/consts/conts";
@@ -20,6 +20,7 @@ export const authClient = createAuthClient({
   fetchOptions: { credentials: "include", auth: { type: "Bearer", token: () => bearer ?? "" } },
   plugins: [
     magicLinkClient(),
+    emailOTPClient(),
     // Sends the page's signed authorize query with each POST, so Google sign-in and consent
     // resume an MCP client's OAuth flow.
     oauthProviderClient(),

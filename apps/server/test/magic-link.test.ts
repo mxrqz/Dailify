@@ -151,6 +151,76 @@ describe("one-time token (Google in the app)", () => {
   });
 });
 
+describe("e-mailed code (emailOTP)", () => {
+  const codeOf = (to: string) => {
+    const mail = sendEmail.mock.calls.findLast((c) => c[1].to === to)?.[1];
+    return /entrada: (\d{6})$/m.exec(mail?.text ?? "")?.[1] ?? "";
+  };
+  // Through the HTTP handler, as the clients call it, so the bearer header shows up.
+  const post = (path: string, body: object) =>
+    auth.handler(
+      new Request(`${env.BETTER_AUTH_URL}/auth${path}`, {
+        method: "POST",
+        headers: { "content-type": "application/json", origin: web },
+        body: JSON.stringify(body),
+      }),
+    );
+  const signIn = async (email: string, otp: string) => {
+    const res = await post("/sign-in/email-otp", { email, otp });
+    const body: unknown = await res.json();
+    return { status: res.status, body, session: res.headers.get("set-auth-token") };
+  };
+  const wrong = (otp: string) => (otp === "000000" ? "111111" : "000000");
+  const failed = (code: string) => ({ status: expect.any(Number), body: { code } });
+
+  it("the link e-mail carries a 6-digit code, in the text and the html, that signs in once", async () => {
+    await requestLink("code@test.local");
+    const otp = codeOf("code@test.local");
+    expect(otp).toMatch(/^\d{6}$/);
+    expect(sendEmail.mock.calls.at(-1)?.[1]).toMatchObject({
+      html: expect.stringContaining(`>${otp}</p>`),
+    });
+    const ok = await signIn("CODE@test.local", otp);
+    expect(ok).toMatchObject({ status: 200, body: { user: { email: "code@test.local" } } });
+    // The app's bearer, read the same way as after a link verify.
+    expect(ok.session).toBeTruthy();
+    expect(await signIn("code@test.local", otp)).toMatchObject(failed("INVALID_OTP"));
+  });
+
+  it("three wrong codes burn it, even for the right one after", async () => {
+    await requestLink("guess@test.local");
+    const otp = codeOf("guess@test.local");
+    for (let i = 0; i < 3; i++)
+      expect(await signIn("guess@test.local", wrong(otp))).toMatchObject(failed("INVALID_OTP"));
+    expect(await signIn("guess@test.local", otp)).toMatchObject(failed("TOO_MANY_ATTEMPTS"));
+  });
+
+  it("expires with the link, and a send suppressed by the cooldown keeps the code", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      const t0 = Date.now();
+      await requestLink("late@test.local");
+      const otp = codeOf("late@test.local");
+      vi.setSystemTime(t0 + 30_000);
+      await requestLink("late@test.local");
+      expect(sendEmail).toHaveBeenCalledTimes(1);
+      expect(codeOf("late@test.local")).toBe(otp);
+      vi.setSystemTime(t0 + 601_000);
+      expect(await signIn("late@test.local", otp)).toMatchObject(failed("OTP_EXPIRED"));
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("the plugin's own send and check routes answer 404", async () => {
+    for (const path of ["/email-otp/send-verification-otp", "/email-otp/check-verification-otp"]) {
+      const res = await post(path, { email: "x@test.local", type: "sign-in", otp: "123456" });
+      expect(res.status, path).toBe(404);
+    }
+    expect(sendEmail).not.toHaveBeenCalled();
+  });
+});
+
 describe("sweepMagicLinks", () => {
   it("drops expired challenges and sends past the cooldown, keeping live ones", async () => {
     const now = 1_000_000;

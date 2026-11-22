@@ -175,6 +175,16 @@ describe("classifyAuthError", () => {
     });
     expect(classifyAuthError({ status: 502 })).toEqual({ key: "generic", code: "502" });
   });
+
+  it("tells a mistyped code from one only a new e-mail replaces", () => {
+    expect(classifyAuthError({ status: 400, code: "INVALID_OTP" })).toEqual({
+      key: "invalidCode",
+    });
+    expect(classifyAuthError({ status: 400, code: "OTP_EXPIRED" })).toEqual({ key: "staleCode" });
+    expect(classifyAuthError({ status: 403, code: "TOO_MANY_ATTEMPTS" })).toEqual({
+      key: "staleCode",
+    });
+  });
 });
 
 describe("redirectTarget", () => {

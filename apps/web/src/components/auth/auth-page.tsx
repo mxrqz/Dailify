@@ -20,7 +20,8 @@ import { isSigningIn, onSigningIn } from "@/lib/native-auth";
 export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
   const { data: session } = useSession();
   const signingIn = useSyncExternalStore(onSigningIn, isSigningIn);
-  const { state, from, captchaRef, submit, resend, reset, signInWithGoogle } = useEmailLinkAuth();
+  const { state, from, captchaRef, submit, resend, reset, verifyCode, signInWithGoogle } =
+    useEmailLinkAuth();
   // O Google que falha volta pra cá via `errorCallbackURL` com `?error=<código>`; a exclusão de
   // conta, com `?error=SESSION_EXPIRED`.
   const oauthError = useSearchParams()[0].get("error");
@@ -81,6 +82,7 @@ export function AuthPage({ mode }: { mode: AuthMode }): JSX.Element {
           busy={state.status === "sending"}
           onResend={resend}
           onBack={reset}
+          onCode={(code) => verifyCode(inbox.email, code)}
         />
       ) : (
         <>

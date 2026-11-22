@@ -24,7 +24,8 @@ The `/login` and `/signup` screens, plus the shell the hand-off pages reuse. Rep
   `resendOf` keeps the inbox on screen during a resend. `error.email` refills the form after a
   failed resend. Any `if` that isn't about the Better Auth API goes here, with a test.
 - `classifyAuthError`: 429 -> `tooManyRequests`, `VALIDATION_ERROR`/`INVALID_EMAIL` ->
-  `invalidEmail`, `MISSING_RESPONSE`/`VERIFICATION_FAILED` -> `captcha`, `null` (fetch threw) ->
+  `invalidEmail`, `MISSING_RESPONSE`/`VERIFICATION_FAILED` -> `captcha`, `INVALID_OTP` ->
+  `invalidCode`, `OTP_EXPIRED`/`TOO_MANY_ATTEMPTS` -> `staleCode`, `null` (fetch threw) ->
   `network`. Anything else is `generic`, with the code (or status) shown in mono for bug reports.
 - `internalPath`/`redirectTarget` are the repo's open-redirect guard
   ([RULES.md, Security and privacy](../../../../../RULES.md#security-and-privacy)). Keep the `//`
@@ -42,6 +43,10 @@ The `/login` and `/signup` screens, plus the shell the hand-off pages reuse. Rep
   on the web `from` becomes the `callbackURL`. In Tauri, `startNativeMagicLink`
   (`lib/native-auth.ts`) sends a device-bound link with no callback. While the app verifies an
   e-mailed link (`isSigningIn`/`onSigningIn`), `AuthPage` shows the `Splash` instead of the form.
+- The same e-mail carries a 6-digit code: `CheckInbox` sends it through `verifyCode`
+  (`signIn.emailOtp` on the web, `verifyNativeCode` in Tauri, which lands the bearer like a link)
+  and keeps its own busy/error state, since success leaves the page as soon as the session lands.
+- A link that fails in the app toasts `copy.linkErrors[LinkError.kind]` (`main.tsx`).
 - Google in Tauri is `startNativeGoogle` (system browser + one-time token, `lib/CLAUDE.md`): the
   webview's redirect doesn't come back with the session. On the web a failure returns as
   `/login?error=<code>`, even from `/signup`, and shows as `generic`.
@@ -75,6 +80,5 @@ The `/login` and `/signup` screens, plus the shell the hand-off pages reuse. Rep
 ## Tests
 
 - `bun run test src/components/auth` from `apps/web` runs `auth-state.test.ts` and `copy.test.ts`.
-- `auth-page.render.test.tsx` covers the cross-link; `CheckInbox` has no render test yet
-  ([RULES.md, Testing](../../../../../RULES.md#testing)). The hand-off pages have theirs in
-  `pages/`.
+- `auth-page.render.test.tsx` covers the cross-link, `check-inbox.render.test.tsx` the code entry.
+  The hand-off pages have theirs in `pages/`.
