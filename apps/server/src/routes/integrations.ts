@@ -190,7 +190,7 @@ integrations.post("/integrations/:provider/callback", async (c) => {
   if (!hasScopes(provider.oauth, tokens.scope)) {
     // grant inútil não fica na conta da pessoa
     if (!(await sharesGrant(c.env, userId, id)))
-      await revoke(provider.oauth, tokens).catch(() => {});
+      await revoke(provider.oauth, c.env, tokens).catch(() => {});
     return fail(c, 400, MISSING_SCOPE_ERROR, { code: API_ERROR.missingScope });
   }
 

@@ -461,3 +461,55 @@ export async function deleteLink(
     .bind(userId, provider, taskId)
     .run();
 }
+
+/**
+ * A polled provider's throttle and lock, like `claimSync`: moves `synced_at` or answers null. Its
+ * `sync_token` column holds the ETag of the last listing.
+ */
+export async function claimPoll(
+  db: D1Database,
+  userId: string,
+  provider: ProviderId,
+  now: number,
+  minGap: number,
+): Promise<{ etag: string | null } | null> {
+  const row = await db
+    .prepare(
+      `UPDATE integration_connections SET synced_at=?1
+       WHERE user_id=?2 AND provider=?3 AND status='active' AND COALESCE(synced_at,0)<?4
+       RETURNING sync_token`,
+    )
+    .bind(now, userId, provider, now - minGap)
+    .first<{ sync_token: string | null }>();
+  return row && { etag: row.sync_token };
+}
+
+export async function saveEtag(
+  db: D1Database,
+  userId: string,
+  provider: ProviderId,
+  etag: string | null,
+): Promise<void> {
+  await db
+    .prepare(`UPDATE integration_connections SET sync_token=? WHERE user_id=? AND provider=?`)
+    .bind(etag, userId, provider)
+    .run();
+}
+
+/** Every link of a provider; `done` = its task is completed or gone. */
+export async function listProviderLinks(
+  db: D1Database,
+  userId: string,
+  provider: ProviderId,
+): Promise<{ taskId: string; externalId: string; done: boolean }[]> {
+  const { results } = await db
+    .prepare(
+      `SELECT l.task_id, l.external_id, (t.id IS NULL OR json_array_length(
+         CASE WHEN json_valid(t.completed) THEN t.completed ELSE '[]' END) > 0) AS done
+       FROM integration_links l LEFT JOIN tasks t ON t.user_id=l.user_id AND t.id=l.task_id
+       WHERE l.user_id=? AND l.provider=?`,
+    )
+    .bind(userId, provider)
+    .all<{ task_id: string; external_id: string; done: number }>();
+  return results.map((r) => ({ taskId: r.task_id, externalId: r.external_id, done: r.done === 1 }));
+}

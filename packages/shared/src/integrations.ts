@@ -6,7 +6,7 @@ import { videoLink, isCalendarEventLink } from "./parse-links";
 import { dayMap, seriesEvery, seriesOf } from "./recurrence";
 import { civilDay, zonedParts, type ZonedParts } from "./timezone";
 
-export type ProviderId = "google-calendar" | "slack" | "gmail";
+export type ProviderId = "google-calendar" | "slack" | "gmail" | "github";
 
 /** An integration the AI may put a task in; `meet` asks for a Meet room. */
 export type CalendarTarget = { provider: ProviderId; meet?: boolean };
@@ -23,6 +23,7 @@ export const INTEGRATIONS: Record<ProviderId, { name: string; roles: Role[]; tas
   },
   slack: { name: sharedCopy.providers.slack, roles: ["pro", "max"], tasks: false },
   gmail: { name: sharedCopy.providers.gmail, roles: ["pro", "max"], tasks: false },
+  github: { name: sharedCopy.providers.github, roles: ["pro", "max"], tasks: false },
 };
 
 export function isProviderId(value: unknown): value is ProviderId {

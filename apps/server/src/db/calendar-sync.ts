@@ -1,4 +1,4 @@
-import type { Task } from "@dailify/shared";
+import type { ProviderId, Task } from "@dailify/shared";
 import { insertStatement, rowToTask, setExdatesStatement, type TaskRow } from "./tasks";
 
 const P = "google-calendar";
@@ -53,13 +53,17 @@ export async function saveSyncState(
 }
 
 /** As conexões que o cron varre: as ativas que esperam há mais tempo. */
-export async function listOldestSyncs(db: D1Database, limit: number): Promise<string[]> {
+export async function listOldestSyncs(
+  db: D1Database,
+  limit: number,
+  provider: ProviderId = P,
+): Promise<string[]> {
   const { results } = await db
     .prepare(
       `SELECT user_id FROM integration_connections WHERE provider=? AND status='active'
        ORDER BY COALESCE(synced_at,0) LIMIT ?`,
     )
-    .bind(P, limit)
+    .bind(provider, limit)
     .all<{ user_id: string }>();
   return results.map((r) => r.user_id);
 }
@@ -138,6 +142,8 @@ export async function listUnlinkedTasks(db: D1Database, userId: string): Promise
 }
 
 export interface LinkWrite {
+  /** Absent = the Calendar. */
+  provider?: ProviderId;
   taskId: string;
   externalId: string;
   url: string;
@@ -167,7 +173,7 @@ export function linkStatement(
     )
     .bind(
       userId,
-      P,
+      l.provider ?? P,
       l.taskId,
       l.externalId,
       l.url,

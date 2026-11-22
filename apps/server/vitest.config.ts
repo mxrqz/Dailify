@@ -93,6 +93,8 @@ export default defineConfig({
             GOOGLE_CLIENT_SECRET: "test-google-secret",
             SLACK_CLIENT_ID: "test-slack-client",
             SLACK_CLIENT_SECRET: "test-slack-secret",
+            GITHUB_CLIENT_ID: "test-github-client",
+            GITHUB_CLIENT_SECRET: "test-github-secret",
             TOKEN_KEY_V1: "AAECAwQFBgcICQoLDA0ODxAREhMUFRYXGBkaGxwdHh8=",
             // Credenciais REAIS, quando existirem no ambiente (bun carrega o .env daqui), em
             // bindings separadas: `pricing-stripe.test.ts` compara o preço anunciado com o cobrado,

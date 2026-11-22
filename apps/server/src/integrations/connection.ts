@@ -74,7 +74,7 @@ export async function revokeSealed(
   sealed: string,
 ): Promise<void> {
   try {
-    await revoke(PROVIDERS[id].oauth, await openTokens(env, userId, id, sealed));
+    await revoke(PROVIDERS[id].oauth, env, await openTokens(env, userId, id, sealed));
   } catch (err) {
     console.error(`Falha ao revogar ${id} de ${userId}`, err);
   }

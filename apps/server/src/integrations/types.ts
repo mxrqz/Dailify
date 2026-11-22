@@ -16,6 +16,8 @@ export interface OAuthConfig {
    * `authed_user`, and no PKCE (turning it on makes the Slack app a public client for good).
    */
   userToken?: true;
+  /** Replaces the RFC 7009 POST to `revokeUrl` (GitHub: DELETE the grant with basic auth). */
+  revoke?(env: Env, tokens: Tokens): Promise<void>;
 }
 
 export interface Tokens {

@@ -46,7 +46,12 @@ async function tokenRequest(
   const { id, secret } = cfg.credentials(env);
   const res = await fetch(cfg.tokenUrl, {
     method: "POST",
-    headers: { "content-type": "application/x-www-form-urlencoded", accept: "application/json" },
+    // GitHub refuses requests without a User-Agent, and Workers' fetch sends none.
+    headers: {
+      "content-type": "application/x-www-form-urlencoded",
+      accept: "application/json",
+      "user-agent": "Mewki",
+    },
     body: new URLSearchParams({ ...params, client_id: id, client_secret: secret }),
     signal: AbortSignal.timeout(15_000),
   });
@@ -97,7 +102,8 @@ export async function refresh(cfg: OAuthConfig, env: Env, tokens: Tokens): Promi
   );
 }
 
-export async function revoke(cfg: OAuthConfig, tokens: Tokens): Promise<void> {
+export async function revoke(cfg: OAuthConfig, env: Env, tokens: Tokens): Promise<void> {
+  if (cfg.revoke) return cfg.revoke(env, tokens);
   const res = await fetch(cfg.revokeUrl, {
     method: "POST",
     headers: { "content-type": "application/x-www-form-urlencoded" },
