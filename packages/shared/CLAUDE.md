@@ -59,6 +59,8 @@ are in [Shared model](../../RULES.md#shared-model); required zones are in
 - `reminders.ts`: `Reminder`/`ReminderFeed`/`ReminderToken`, the Android reminder feed wire
   (the Kotlin plugin in `apps/web/src-tauri/plugins/reminders` reads the same JSON).
 - `app-url.ts`: `APP_HOST`/`APP_URL`. Domain change steps are in the root `CLAUDE.md`.
+- `user-agent.ts`: `parseUserAgent`, the device a session shows on /security and in the server's
+  security e-mails (also its "new device" rule).
 
 ## Recurrence (bites if ignored)
 

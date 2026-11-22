@@ -12,8 +12,9 @@ The Worker's SQL, hand-written over the raw `D1Database` binding (no ORM). Repo-
   at `SEARCH_DAYS_MAX`, series expanded month by month into it, at most `SEARCH_MAX` hits.
 - `user.ts`: the Better Auth `"user"` row (`planOf`, `billingProfile`, `updateUserRole`; `roleOf`
   maps an absent or unknown plan to `free`), the magic-link tables (`magic_link_sent`,
-  `magic_link_challenge`, `verification`) for `auth-options.ts`, and `USER_TABLES` +
-  `deleteUserData`.
+  `magic_link_challenge`, `verification`) for `auth-options.ts`, `USER_TABLES` +
+  `deleteUserData`, and MFA: `markMfa`/`mfaStale` (`session_mfa`, step-up), the step-up lockout on
+  `"twoFactor"`'s own columns, `otherUserAgents` (the new-device e-mail).
 - `integrations.ts`: `integration_connections`, `oauth_states`, `integration_links` for the
   propagation and the web.
 - `calendar-sync.ts`: Google-only sync (claim, sync token, import batch), provider hardcoded as `P`.

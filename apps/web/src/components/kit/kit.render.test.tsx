@@ -8,6 +8,7 @@ import { Chip } from "./chip";
 import { copy as kitCopy } from "./copy";
 import { ListGroup, ListRow } from "./list";
 import { OtpInput } from "./otp-input";
+import { QrCode } from "./qr-code";
 import { Refraction } from "./refraction";
 import { SegmentedControl } from "./segmented-control";
 import { Switch } from "./switch";
@@ -174,5 +175,13 @@ describe("OtpInput", () => {
     expect(field).toHaveValue("");
     expect(field).toHaveAttribute("aria-invalid", "true");
     expect(field).toHaveFocus();
+  });
+});
+
+describe("QrCode", () => {
+  it("is a labelled image whose modules arrive with the lazy encoder", async () => {
+    const { container } = render(<QrCode value="otpauth://totp/x?secret=ABC" label="QR" />);
+    expect(screen.getByRole("img", { name: "QR" })).toBeInTheDocument();
+    await vi.waitFor(() => expect(container.querySelectorAll("rect").length).toBeGreaterThan(50));
   });
 });

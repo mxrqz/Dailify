@@ -17,6 +17,7 @@ import type {
   IntegrationStatus,
   ProviderId,
   ReminderToken,
+  SetPasswordBody,
 } from "@dailify/shared";
 import { apiURL } from "@/consts/conts";
 import { authClient, authHeaders } from "@/lib/auth";
@@ -363,6 +364,15 @@ export async function connectIntegration(
     method: "POST",
   });
   return { url: data?.url, error };
+}
+
+/** A first password for a link/Google account; 403 `mfa_required` asks for a step-up. */
+export async function setPassword(newPassword: string): Promise<{ error?: ApiError }> {
+  const { error } = await request<never>("/security/password", {
+    method: "POST",
+    body: JSON.stringify({ newPassword } satisfies SetPasswordBody),
+  });
+  return { error };
 }
 
 /** O `state` é de uso único no servidor: um segundo POST com ele volta 400. */

@@ -18,6 +18,12 @@ export const copy = {
     emailLabel: "E-mail",
     emailPlaceholder: "voce@exemplo.com",
     continueWithGoogle: "Continuar com Google",
+    passwordLabel: "Senha",
+    // 10 and 128 = `minPasswordLength`/`maxPasswordLength` in apps/server/src/auth-options.ts.
+    newPasswordHint: "Pelo menos 10 caracteres.",
+    forgotPassword: "Esqueci a senha",
+    emailLink: "Receber link por e-mail",
+    usePassword: "Entrar com senha",
     terms: "Termos de Serviço",
     privacy: "Política de Privacidade",
     legalAnd: " e a ",
@@ -26,9 +32,11 @@ export const copy = {
   signIn: {
     pageTitle: "Mewki — Entrar",
     title: "Entrar",
-    subtitle: "Mandamos um link de acesso. Sem senha.",
+    subtitle: "Bom te ver de novo.",
+    linkSubtitle: "Mandamos um link de acesso. Sem senha.",
     bubble: "Oi! Qual é o seu e-mail?",
     submit: "Continuar com e-mail",
+    passwordSubmit: "Entrar",
     crossLinkPrefix: "Novo por aqui?",
     crossLinkAction: "Criar conta",
     legalPrefix: "Ao continuar, você concorda com os ",
@@ -37,9 +45,11 @@ export const copy = {
   signUp: {
     pageTitle: "Mewki — Criar conta",
     title: "Criar conta",
-    subtitle: "Só o e-mail. Mandamos um link de acesso, sem senha.",
+    subtitle: "Com e-mail e senha. Ou só o e-mail, com um link de acesso.",
+    linkSubtitle: "Só o e-mail. Mandamos um link de acesso, sem senha.",
     bubble: "Oi! Vamos começar?",
     submit: "Continuar com e-mail",
+    passwordSubmit: "Criar conta",
     crossLinkPrefix: "Já tem conta?",
     crossLinkAction: "Entrar",
     legalPrefix: "Ao criar uma conta, você concorda com os ",
@@ -57,6 +67,72 @@ export const copy = {
     resendIn: "Reenviar em {seconds}s",
     back: "Usar outro e-mail",
     spam: "Não chegou? Olhe a caixa de spam ou promoções.",
+  },
+
+  // Sign-up with a password: no session until the e-mail is confirmed.
+  verifySent: {
+    bubble: "Falta só confirmar!",
+    title: "Confirme seu e-mail",
+    sentTo: "Mandamos um link de confirmação para",
+    hint: "Toque no link do e-mail e você já entra.",
+    back: "Usar outro e-mail",
+  },
+
+  // /reset-password: ask for the link, then pick the new password from it.
+  reset: {
+    pageTitle: "Mewki — Redefinir senha",
+    title: "Redefinir senha",
+    subtitle: "Mandamos um link para você escolher uma senha nova.",
+    request: "Enviar link",
+    sent: "Se existir uma conta com este e-mail, o link chega em instantes. Ele vale por 1 hora.",
+    newTitle: "Escolha uma senha nova",
+    newLabel: "Senha nova",
+    submit: "Salvar senha",
+    done: "Senha alterada. Entre com a senha nova.",
+    invalid: "Este link expirou ou já foi usado. Peça outro.",
+    toLogin: "Ir para o login",
+  },
+
+  // The second factor: at sign-in (/two-factor) and before a sensitive action (step-up dialog).
+  mfa: {
+    pageTitle: "Mewki — Verificação em duas etapas",
+    title: "Confirme que é você",
+    totp: "Digite o código de 6 números do seu app autenticador.",
+    otp: "Digite o código de 6 números que mandamos para o seu e-mail.",
+    backup: "Digite um dos seus códigos de recuperação.",
+    backupLabel: "Código de recuperação",
+    submit: "Confirmar",
+    trust: "Confiar neste aparelho por 30 dias",
+    useEmail: "Receber um código por e-mail",
+    useBackup: "Usar um código de recuperação",
+    useApp: "Usar o app autenticador",
+    emailSent: "Código enviado. Confira seu e-mail.",
+    stepUp: "Para continuar, confirme com o seu segundo fator.",
+    cancel: "Cancelar",
+  },
+
+  // Turning MFA on (/security).
+  mfaSetup: {
+    title: "Duas etapas",
+    step1: "1. Adicione a Mewki no seu app de códigos",
+    addAuto: "Adicionar automaticamente",
+    addAutoHint:
+      "Abre o app de códigos do celular: Senhas do iPhone, Google Authenticator, Microsoft Authenticator, 1Password…",
+    scan: "Aponte a câmera do celular para o código, no seu app de códigos.",
+    qrLabel: "QR code para o app de códigos",
+    addManual: "Adicionar manualmente",
+    copyKey: "Copiar chave",
+    step2: "2. Digite o código que apareceu",
+    activate: "Ativar",
+    codesTitle: "Guarde seus códigos de recuperação",
+    codesHint: "Se perder o celular, cada código entra uma vez. Guarde num lugar seguro.",
+    copy: "Copiar",
+    download: "Baixar .txt",
+    copied: "Copiado.",
+    fileName: "mewki-codigos-de-recuperacao.txt",
+    done: "Pronto",
+    password: "Confirme sua senha para continuar.",
+    continue: "Continuar",
   },
 
   verify: {
@@ -105,6 +181,11 @@ export const copy = {
     invalidCode: "Código incorreto. Confira o e-mail e tente de novo.",
     // Expired, or burned by too many wrong tries: either way only a new e-mail helps.
     staleCode: "Este código não vale mais. Reenvie para receber outro.",
+    wrongPassword: "E-mail ou senha incorretos.",
+    passwordRules: "A senha precisa ter de 10 a 128 caracteres.",
+    passwordCompromised: "Esta senha apareceu num vazamento de dados. Escolha outra.",
+    emailNotVerified: "Confirme seu e-mail primeiro. Mandamos um link novo.",
+    staleChallenge: "Passou tempo demais. Entre de novo.",
     generic: "Algo deu errado. Tente de novo.",
   } satisfies Record<AuthErrorKey, string>,
 

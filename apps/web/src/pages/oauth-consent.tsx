@@ -7,6 +7,7 @@ import { AuthShell } from "@/components/auth/auth-shell";
 import { copy } from "@/components/auth/copy";
 import { Button } from "@/components/ui/button";
 import { fill } from "@/functions/functions";
+import { withStepUp } from "@/hooks/useStepUp";
 import { authClient, settle, useSession } from "@/lib/auth";
 
 interface Client {
@@ -104,8 +105,9 @@ export default function OAuthConsent() {
   const decide = async (accept: boolean) => {
     setBusy(true);
     setFailed(false);
-    const { data } = await settle(
-      authClient.$fetch("/oauth2/consent", { method: "POST", body: { accept } }),
+    // Granting reach to an assistant is a sensitive action: with MFA on, a recent second factor.
+    const { data } = await withStepUp(() =>
+      settle(authClient.$fetch("/oauth2/consent", { method: "POST", body: { accept } })),
     );
     // The client's redirect_uri (with the code, or access_denied): a full navigation off the app.
     if (isRecord(data) && typeof data.url === "string") return window.location.assign(data.url);

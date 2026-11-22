@@ -10,7 +10,7 @@ import {
   type ProviderId,
 } from "@dailify/shared";
 import type { AppEnv, Env } from "../index";
-import { requireAuth } from "../middleware/auth";
+import { requireAuth, requireRecentMfa } from "../middleware/auth";
 import { rateLimit } from "../middleware/rate-limit";
 import { fail } from "../lib/errors";
 import { readJson, validZone } from "../lib/task-input";
@@ -118,7 +118,8 @@ integrations.get("/integrations", async (c) => {
   );
 });
 
-integrations.post("/integrations/:provider/connect", async (c) => {
+// Connecting hands an app the Mew's reach: with MFA on, a recent second factor first.
+integrations.post("/integrations/:provider/connect", requireRecentMfa, async (c) => {
   const id = c.req.param("provider");
   if (!isProviderId(id)) return fail(c, 404, "Integração desconhecida");
   const userId = c.get("userId");

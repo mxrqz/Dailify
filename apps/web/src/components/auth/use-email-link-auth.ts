@@ -1,15 +1,23 @@
 import { useCallback, useReducer, useRef } from "react";
-import { useLocation } from "react-router-dom";
+import { useLocation, useNavigate } from "react-router-dom";
 
 import {
   authReducer,
   classifyAuthError,
   initialAuthState,
+  needsSecondFactor,
   redirectTarget,
+  secondFactorPath,
+  type AuthMode,
 } from "@/components/auth/auth-state";
 import { useTurnstile } from "@/components/auth/turnstile";
 import { authClient } from "@/lib/auth";
-import { startNativeGoogle, startNativeMagicLink, verifyNativeCode } from "@/lib/native-auth";
+import {
+  signInNativePassword,
+  startNativeGoogle,
+  startNativeMagicLink,
+  verifyNativeCode,
+} from "@/lib/native-auth";
 import { isTauri } from "@/lib/platform";
 
 /**
@@ -24,6 +32,7 @@ import { isTauri } from "@/lib/platform";
  */
 export function useEmailLinkAuth() {
   const location = useLocation();
+  const navigate = useNavigate();
   const from = redirectTarget(location.state, location.search);
   const { ref: captchaRef, token: captchaToken } = useTurnstile();
 
@@ -67,23 +76,60 @@ export function useEmailLinkAuth() {
     [captchaToken, from],
   );
 
+  // E-mail + password. Sign-up never signs in: the confirmation link does (`autoSignIn...`).
+  const submitPassword = useCallback(
+    async (mode: AuthMode, email: string, password: string) => {
+      const run = ++runId.current;
+      dispatch({ type: "submit" });
+      try {
+        const headers = { "x-captcha-response": await captchaToken() };
+        const { data, error } = await (mode === "signUp"
+          ? authClient.signUp.email({
+              email,
+              password,
+              name: "",
+              ...(!isTauri() && { callbackURL: window.location.origin + from }),
+              fetchOptions: { headers },
+            })
+          : isTauri()
+            ? signInNativePassword(email, password, headers["x-captcha-response"])
+            : authClient.signIn.email({ email, password, fetchOptions: { headers } }));
+        if (run !== runId.current) return;
+        if (error) return dispatch({ type: "failed", failure: classifyAuthError(error) });
+        if (mode === "signUp") return dispatch({ type: "verifySent", email });
+        // Otherwise the session lands and AuthPage leaves for `from`.
+        if (needsSecondFactor(data)) navigate(secondFactorPath(from));
+      } catch {
+        if (run !== runId.current) return;
+        dispatch({ type: "failed", failure: classifyAuthError(null) });
+      }
+    },
+    [captchaToken, from, navigate],
+  );
+
   return {
     state,
     from,
     captchaRef,
     submit: start,
+    submitPassword,
     resend: useCallback(() => start(lastEmail.current), [start]),
     // The code from the same e-mail. In the app the bearer lands in the keyring like a link's.
-    verifyCode: useCallback(async (email: string, otp: string) => {
-      try {
-        const { error } = await (isTauri()
-          ? verifyNativeCode(email, otp)
-          : authClient.signIn.emailOtp({ email, otp }));
-        return error ? classifyAuthError(error) : null;
-      } catch {
-        return classifyAuthError(null);
-      }
-    }, []),
+    verifyCode: useCallback(
+      async (email: string, otp: string) => {
+        try {
+          const { data, error } = await (isTauri()
+            ? verifyNativeCode(email, otp)
+            : authClient.signIn.emailOtp({ email, otp }));
+          if (error) return classifyAuthError(error);
+          if (needsSecondFactor(data)) navigate(secondFactorPath(from));
+          return null;
+        } catch {
+          return classifyAuthError(null);
+        }
+      },
+      [from, navigate],
+    ),
     reset: useCallback(() => {
       runId.current++;
       dispatch({ type: "reset" });

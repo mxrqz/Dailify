@@ -42,6 +42,13 @@ rules: [/RULES.md](../../../../RULES.md).
   `x-mewki-verifier`, then the same as a magic link. The server refuses any one-time token without
   its challenge, so a crafted link can't sign the app into another account. The app then shares the
   browser's session (signing out of one ends the other).
+- Password and second factor in the app: `signInNativePassword` and `verifyNativeCode` land like a
+  link (`land`). When a second factor is due the server sends the `two_factor` challenge as
+  `x-mewki-two-factor` (the cookie never crosses the webview); it is kept in memory and sent back by
+  `verifySecondFactor`/`sendSecondFactorEmail`, and a link opens `/two-factor` via `navigateOutside`.
+  No trust-device in the app. Enabling/disabling MFA and changing the password replace the session:
+  the `bearer-rotation` fetch plugin (`auth.ts`) hands the new `set-auth-token` to
+  `onBearerRotated`, which `initNativeAuth` points at the keyring.
 - After a session change Better Auth doesn't signal itself (magic-link verify, bearer restore),
   call `authClient.$store.notify("$sessionSignal")`, or `useSession` keeps the stale atom.
 

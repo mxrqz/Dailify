@@ -45,6 +45,76 @@ export async function updateUserRole(
     .run();
 }
 
+/** This session just passed a second factor (sign-in or step-up); the row cascades with it. */
+export async function markMfa(db: D1Database, sessionId: string, now: number): Promise<void> {
+  await db
+    .prepare(
+      `INSERT INTO session_mfa (session_id, verified_at) VALUES (?, ?)
+       ON CONFLICT(session_id) DO UPDATE SET verified_at=excluded.verified_at`,
+    )
+    .bind(sessionId, now)
+    .run();
+}
+
+/** True when the user has MFA on and this session passed no second factor since `since`. */
+export async function mfaStale(db: D1Database, sessionId: string, since: number): Promise<boolean> {
+  const row = await db
+    .prepare(
+      `SELECT u.twoFactorEnabled AS mfa, m.verified_at FROM session s
+       JOIN "user" u ON u.id=s.userId LEFT JOIN session_mfa m ON m.session_id=s.id WHERE s.id=?`,
+    )
+    .bind(sessionId)
+    .first<{ mfa: number | null; verified_at: number | null }>();
+  return row?.mfa === 1 && (row.verified_at ?? 0) < since;
+}
+
+// The `twoFactor` plugin's own lockout columns and limits (10 misses, 15 min), reused by step-up.
+const LOCK_AFTER = 10;
+const LOCK_MS = 15 * 60_000;
+
+export async function stepUpLocked(db: D1Database, userId: string, now: number): Promise<boolean> {
+  const row = await db
+    .prepare(`SELECT lockedUntil FROM "twoFactor" WHERE userId=?`)
+    .bind(userId)
+    .first<{ lockedUntil: string | null }>();
+  return Date.parse(row?.lockedUntil ?? "") > now;
+}
+
+export async function recordStepUpFailure(
+  db: D1Database,
+  userId: string,
+  now: number,
+): Promise<void> {
+  await db
+    .prepare(
+      `UPDATE "twoFactor" SET failedVerificationCount=COALESCE(failedVerificationCount, 0) + 1,
+       lockedUntil=CASE WHEN COALESCE(failedVerificationCount, 0) + 1 >= ? THEN ? ELSE lockedUntil END
+       WHERE userId=?`,
+    )
+    .bind(LOCK_AFTER, new Date(now + LOCK_MS).toISOString(), userId)
+    .run();
+}
+
+export async function clearStepUpFailures(db: D1Database, userId: string): Promise<void> {
+  await db
+    .prepare(`UPDATE "twoFactor" SET failedVerificationCount=0, lockedUntil=NULL WHERE userId=?`)
+    .bind(userId)
+    .run();
+}
+
+/** The user agents of the user's other live sessions, for the new-device e-mail. */
+export async function otherUserAgents(
+  db: D1Database,
+  userId: string,
+  sessionId: string,
+): Promise<string[]> {
+  const { results } = await db
+    .prepare(`SELECT userAgent FROM session WHERE userId=? AND id<>? AND expiresAt>?`)
+    .bind(userId, sessionId, new Date().toISOString())
+    .all<{ userAgent: string | null }>();
+  return results.map((r) => r.userAgent ?? "");
+}
+
 /** Every app table keyed by `user_id`; `account-delete.test.ts` fails when the schema adds one. */
 export const USER_TABLES = [
   "tasks",

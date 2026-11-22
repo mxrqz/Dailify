@@ -37,6 +37,9 @@ Repo-wide rules: [/RULES.md](../../../../../RULES.md). This file adds only what 
   is read whole, spaces stripped. `onComplete` fires once on the 6th digit; `error` rings every
   box in `brand-text`, clears the field and refocuses it. The ring follows the next empty box.
   `aria-label` defaults to `copy.code`; `name` makes it post with a form (`auth/check-inbox.tsx`).
+- `QrCode({ value, label })` (`qr-code.tsx`): `role="img"` SVG in `ink` on `canvas`; the `uqr`
+  encoder (~8 KB gzip, no deps, picked over hand-rolling ~300 lines of Reed-Solomon) loads on
+  first render. Only desktop MFA setup uses it.
 - `Refraction({ strength = 24, edge = 10 })`: the SVG `<filter id="refract">`, plus
   `<html class="refract">` on Chromium only.
 

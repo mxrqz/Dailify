@@ -49,6 +49,7 @@ import {
   useIntegrations,
 } from "@/hooks/useIntegrations";
 import { useOnline } from "@/hooks/useOnline";
+import { withStepUp } from "@/hooks/useStepUp";
 import { isTauri } from "@/lib/platform";
 import { openExternal } from "@/lib/open-external";
 
@@ -191,7 +192,7 @@ function ProviderCard({
 
   const connect = async () => {
     setBusy(true);
-    const { url, error } = await connectIntegration(id);
+    const { url, error } = await withStepUp(() => connectIntegration(id));
     // Na web, sem `setBusy(false)`: a página vai embora pro consentimento do provedor.
     if (url) {
       await openExternal(url);

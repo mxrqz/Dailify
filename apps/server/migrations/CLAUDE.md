@@ -54,6 +54,8 @@ The schema of the `dailify` D1 database, one numbered file per change. Repo-wide
   new file.
 - `0019_mcp_oauth.sql` adds the `jwt` and `@better-auth/mcp` tables the same way. Their owner
   column is `"userId"` with `ON DELETE CASCADE`, so they stay out of `deleteUserData`.
+- `0021_two_factor.sql` adds `twoFactor` and `"user".twoFactorEnabled` the same way, plus the app
+  table `session_mfa`, which cascades with `session`.
 - Never rebuild `"user"`: `session` and `account` reference it `ON DELETE CASCADE`, D1 enforces
   foreign keys, and `DROP TABLE` deletes the rows first, which signs everyone out and unlinks
   Google. `PRAGMA defer_foreign_keys` doesn't stop cascades.
