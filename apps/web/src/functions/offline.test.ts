@@ -1,4 +1,5 @@
 /** @vitest-environment jsdom */
+import "fake-indexeddb/auto";
 import { describe, test, expect, vi, afterEach } from "vitest";
 
 const api = vi.hoisted(() => ({
@@ -12,9 +13,8 @@ const api = vi.hoisted(() => ({
 vi.mock("./api", () => api);
 
 import { saveChat } from "@/components/mew-chat/thread";
+import { loadLocal, updateQueue } from "./local-db";
 import {
-  cacheTasks,
-  cacheUndated,
   clearLocal,
   collapseQueue,
   dequeue,
@@ -174,7 +174,7 @@ describe("delete-occurrence", () => {
 
 describe("flushQueue", () => {
   afterEach(() => {
-    localStorage.clear();
+    clearLocal("u");
     vi.resetAllMocks();
   });
 
@@ -237,18 +237,16 @@ describe("flushQueue", () => {
     expect(readQueue("u")).toEqual([]);
   });
 
-  test("servidor recusa a cabeça enquanto outra aba já a tirou: não leva a seguinte", async () => {
-    api.completeTask
-      .mockImplementationOnce(async () => {
-        localStorage.setItem("dailify:outbox:u", JSON.stringify([readQueue("u")[1]]));
-        return { error: { message: "não existe", offline: false } };
-      })
-      .mockResolvedValueOnce({ error: { message: "rede", offline: true } });
+  test("persists by value: another tab's stored entry survives this tab's drain", async () => {
+    api.completeTask.mockResolvedValue({});
+    const other: Mutation = { op: "complete", taskId: "b", at: 2 };
     enqueue("u", { op: "complete", taskId: "a", at: 1 });
-    enqueue("u", { op: "complete", taskId: "b", at: 2 });
+    await updateQueue("u", (queue) => [...queue, other]);
 
     await flushQueue("u");
-    expect(readQueue("u").map((m) => m.taskId)).toEqual(["b"]);
+    expect(api.completeTask).toHaveBeenCalledTimes(1);
+    expect(readQueue("u")).toEqual([]);
+    expect((await loadLocal("u"))?.queue).toEqual([other]);
   });
 
   test("rede cai no meio da subida: o que não subiu continua na fila", async () => {
@@ -287,15 +285,22 @@ describe("flushQueue", () => {
 describe("clearLocal", () => {
   test("não deixa no aparelho nenhuma chave do usuário excluído", () => {
     localStorage.clear();
-    cacheTasks("u-gone", []);
-    cacheUndated("u-gone", []);
+    for (const key of ["tasks", "undated", "outbox"])
+      localStorage.setItem(`dailify:${key}:u-gone`, "[]");
     enqueue("u-gone", create("t1"));
     rememberUser({ id: "u-gone", name: "", email: "a@b.c" });
     saveChat("u-gone", [{ id: "m1", from: "me", text: "oi" }]);
-    cacheTasks("u-other", []);
+    localStorage.setItem("dailify:tasks:u-other", "[]");
     clearLocal("u-gone");
     const keys = Object.keys(localStorage);
     expect(keys.filter((k) => k.includes("u-gone") || k === "dailify:last-user")).toEqual([]);
     expect(keys).toContain("dailify:tasks:u-other");
+    expect(readQueue("u-gone")).toEqual([]);
+  });
+
+  test("deletes the user's IndexedDB database", async () => {
+    await updateQueue("u-db", () => [create("t1")]);
+    clearLocal("u-db");
+    expect(await loadLocal("u-db")).toEqual({ rows: [], queue: undefined, cursor: undefined });
   });
 });

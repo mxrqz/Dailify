@@ -18,7 +18,8 @@ are in [Shared model](../../RULES.md#shared-model); required zones are in
 
 ## Module map (`src/`)
 
-- `types.ts`: `Task`, `TaskInput` (PATCH: `null` resets, absent keeps), `OccurrenceEdit`, `TaskSync` (`GET /tasks/sync`), `Repeat`, `Role`, `PLAN_ID`,
+- `types.ts`: `Task`, `TaskInput` (PATCH: `null` resets, absent keeps), `OccurrenceEdit`, `TaskSync` (`GET /tasks/sync`) and `SYNC_WINDOW_DAYS` (its full pull's reach, also the web's
+  store window), `Repeat`, `Role`, `PLAN_ID`,
   `ParsedTaskWire`, `AiIntent`/`AiParse`, Stripe `Invoice`/`PaymentDetails` (Unix seconds).
 - `errors.ts`: `API_ERROR`, the `code` registry of every error the web reacts to, and
   `isApiErrorCode`.

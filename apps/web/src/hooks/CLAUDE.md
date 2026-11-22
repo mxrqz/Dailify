@@ -103,6 +103,7 @@ functional updates, series anchors and effect deps). Test harness: `apps/web/CLA
   `useDailify` mocked; only `dashboard/create-fab.render.test.tsx` mocks a write hook.
 - Queue and rollback branches need a direct `renderHook` test. Reference: the `useUndatedActions`
   block in `dashboard/anytime-block.render.test.tsx` (real `offline.ts`, asserted with
-  `readQueue("u1")`; render `<Toaster />` to click Undo). `useTaskActions.render.test.tsx` mocks
+  `readQueue("u1")` and reset with `clearLocal("u1")` in `afterEach`, since the queue lives in
+  memory; render `<Toaster />` to click Undo). `useTaskActions.render.test.tsx` mocks
   `setTasks` as a stateful setter, so a functional update reads the list of the moment.
 - `useNow.render.test.tsx` pins the single interval and the midnight-only `"day"` render.

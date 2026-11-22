@@ -55,6 +55,9 @@ export interface TaskSync {
   cursor: string;
 }
 
+/** How far back a full pull reaches for one-off dated tasks (~6 months); older months come by month. */
+export const SYNC_WINDOW_DAYS = 183;
+
 /**
  * A task draft read from a sentence: `ParsedTask` (`parse-task/index.ts`) without `unsure`/`fields`,
  * dated in epoch-ms, so the AI reply fills the same composer chips.

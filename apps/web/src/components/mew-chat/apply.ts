@@ -4,6 +4,7 @@ import type { Task } from "@dailify/shared";
 import { useDailify } from "@/components/dailifyContext";
 import { createTask, deleteTask, setMewAction, updateTask } from "@/functions/api";
 import { swapTasks, swapUndated } from "@/functions/task-lists";
+import { pullTasks } from "@/functions/task-store";
 import { useCalendarPush } from "@/hooks/useCalendarPush";
 
 import { copy } from "./copy";
@@ -50,9 +51,9 @@ export function useMewApply() {
     ]);
     const error = results.find((r) => r.error)?.error;
     if (error) {
-      // ponytail: a partial failure rolls back writes that did land too (until the next reload);
-      // a batch route applying a box atomically would fix it.
+      // A partial failure rolls back writes that did land too; the pull brings those back.
       show(into, out);
+      void pullTasks();
       toast.error(copy.applyError, { description: error.message });
       return false;
     }

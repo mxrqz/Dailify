@@ -41,7 +41,7 @@ vi.mock("@/components/dailifyContext", () => ({
 }));
 
 import { copy } from "@/components/dashboard/copy";
-import { readQueue } from "@/functions/offline";
+import { clearLocal, readQueue } from "@/functions/offline";
 import { zoned } from "@/functions/zone";
 import { isSaving, useCreateTask, useShowCreated } from "./useCreateTask";
 
@@ -58,7 +58,7 @@ const task = (id: string): Task => ({
 });
 
 afterEach(() => {
-  localStorage.clear();
+  clearLocal("u1");
   tasks = [];
   undated = [];
 });

@@ -2,30 +2,21 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { Navigate, useLocation } from "react-router-dom";
 import { reportLoadError, useDailify } from "./dailifyContext";
 import { copy } from "@/components/dashboard/copy";
-import { getQuotas, getUndatedTasks, getSettings } from "@/functions/api";
-import {
-  cacheTasks,
-  cacheUndated,
-  flushQueue,
-  readCachedTasks,
-  readCachedUndated,
-  rememberUser,
-} from "@/functions/offline";
-import { fill, initialMonths } from "@/functions/functions";
+import { getQuotas, getSettings } from "@/functions/api";
+import { flushQueue, rememberUser } from "@/functions/offline";
+import { openTasks, pullTasks, tasksSnapshot } from "@/functions/task-store";
+import { fill } from "@/functions/functions";
 import { useNow } from "@/hooks/useNow";
 import { useUser } from "@/hooks/useUser";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { AnimatePresence } from "motion/react";
 import { Splash, SPLASH_MIN_MS } from "@/components/splash";
 import { toast } from "sonner";
-import { zoned } from "@/functions/zone";
 import { useSession } from "@/lib/auth";
 import { refreshReminders } from "@/lib/reminders";
 
 /** Piso entre revalidações: alternar de aba não pode virar rajada de fetch. */
 const REVALIDATE_AFTER_MS = 30_000;
-/** Cada `setTasks` serializava a agenda inteira na hora; agora só a última de uma rajada grava. */
-const CACHE_AFTER_MS = 1_000;
 
 export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const session = useSession();
@@ -36,15 +27,10 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
   const userId = useUser()?.id;
   const {
     tasks,
-    selectedDay,
     setTasks,
     setIsLoading,
     isLoading,
-    loadedMonths,
-    loadMonth,
-    reloadMonths,
     setQuotas,
-    undatedTasks,
     setUndatedTasks,
     setWeekStart,
     setTimeZone,
@@ -57,23 +43,13 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     if (user) rememberUser(user);
   }, [user]);
 
-  // Sem dependência de mês: Sem data e preferências valem para a conta toda.
-  const loadUndated = async () => {
-    if (!userId) return;
-    try {
-      const [undated, settings] = await Promise.allSettled([getUndatedTasks(), getSettings()]);
-      if (undated.status === "fulfilled" && !undated.value.error) {
-        setUndatedTasks(undated.value.tasks);
-      }
-      const saved = settings.status === "fulfilled" ? settings.value.settings : undefined;
-      if (saved) {
-        setWeekStart(saved.weekStart);
-        setTimeZone(saved.timeZone);
-        setHour12(saved.hour12);
-      }
-    } catch {
-      /* sem sessão utilizável */
-    }
+  // Preferências valem para a conta toda; as tarefas vêm do pull.
+  const loadSettings = async () => {
+    const { settings } = await getSettings();
+    if (!settings) return;
+    setWeekStart(settings.weekStart);
+    setTimeZone(settings.timeZone);
+    setHour12(settings.hour12);
   };
 
   // Its own effect because the AI credits reset with TODAY's month; the other data doesn't.
@@ -96,104 +72,52 @@ export default function ProtectedRoute({ children }: { children: ReactNode }) {
     };
   }, [isLoaded, userId, setQuotas, quotaYear, quotaMonth, quotaNonce]);
 
-  // O boot pinta o que estava salvo antes de tocar na rede: sem isso, abrir sem conexão dá tela
-  // vazia mesmo com a agenda inteira em mãos.
   useEffect(() => {
-    if (!userId || undatedTasks) return;
-    const cached = readCachedUndated(userId);
-    if (cached) setUndatedTasks(cached);
-  }, [userId, undatedTasks, setUndatedTasks]);
-
-  useEffect(() => {
-    if (userId && undatedTasks) cacheUndated(userId, undatedTasks);
-  }, [userId, undatedTasks]);
-
-  useEffect(() => {
-    if (!userId || tasks) return;
-    const cached = readCachedTasks(userId);
-    if (cached?.length) {
-      setTasks(cached);
-      setIsLoading(false);
-    }
-  }, [userId, tasks, setTasks, setIsLoading]);
-
-  // O cache acompanha a TELA, não só o que veio do servidor: uma tarefa criada offline vive no
-  // estado e na fila, e sem isto ela sumia ao fechar o app — só voltava depois do sync.
-  // Adiado: o stringify síncrono da agenda inteira travava o quadro de cada toque. Sair da aba ou
-  // fechar grava o que estiver pendente, então o cache não perde a última escrita.
-  const pendingCache = useRef<(() => void) | null>(null);
-  useEffect(() => {
-    if (!userId || !tasks) return;
-    const write = () => {
-      pendingCache.current = null;
-      cacheTasks(userId, tasks);
-    };
-    pendingCache.current = write;
-    const id = setTimeout(write, CACHE_AFTER_MS);
-    return () => clearTimeout(id);
-  }, [userId, tasks]);
-  useEffect(() => {
-    const flush = () => pendingCache.current?.();
     const onHidden = () => {
-      if (document.visibilityState !== "hidden") return;
-      flush();
       // Leaving the app is when its alarms must match the server: the worker runs only hourly.
-      refreshReminders();
+      if (document.visibilityState === "hidden") refreshReminders();
     };
-    window.addEventListener("pagehide", flush);
     document.addEventListener("visibilitychange", onHidden);
-    return () => {
-      window.removeEventListener("pagehide", flush);
-      document.removeEventListener("visibilitychange", onHidden);
-      flush();
-    };
+    return () => document.removeEventListener("visibilitychange", onHidden);
   }, []);
 
+  // Paint what IndexedDB holds before touching the network (opening offline still shows the
+  // agenda), then send the outbox, then pull: read before the queue, the server would hand back
+  // the old state and the screen would step back for a moment.
   const getTasks = useEffectEvent(async () => {
     if (!userId) return;
 
     setIsLoading(true);
     try {
-      // A fila sobe ANTES da leitura: sem isso o servidor devolveria o estado velho e a tela
-      // andaria pra trás por um instante.
+      await openTasks(userId);
       const { dropped } = await flushQueue(userId);
       // Descartada = o servidor recusou (quota, tarefa que já não existe). A tarefa vai sumir da
-      // tela no fetch logo abaixo, e sumir sem explicação parece perda de dado.
+      // tela no pull logo abaixo, e sumir sem explicação parece perda de dado.
       if (dropped) toast.error(fill(copy.sync.dropped, { n: dropped }));
-      // Depois da fila, nunca junto: lida antes, a Sem data voltava sem o que foi feito offline.
-      void loadUndated();
-
-      // Hoje e o seguinte já no boot: a lista contínua não pode esperar a rolagem chegar no fim.
-      const error = await reloadMonths([...loadedMonths, ...initialMonths(zoned()), selectedDay]);
-      if (error) reportLoadError(error, Boolean(tasks?.length));
+      void loadSettings();
+      const error = await pullTasks();
+      if (error) reportLoadError(error, Boolean(tasksSnapshot().dated?.length));
     } catch {
-      // Sem isto o app trava no spinner para sempre: a exceção pulava o `setIsLoading(false)` e o
-      // gate lá embaixo (`isLoading && !tasks`) nunca liberava. `setTasks([])` é o que destrava.
-      // Mas só quando NÃO há nada na tela: zerar ali apagaria a agenda que o cache tinha acabado de
-      // pintar.
-      if (!tasks?.length) setTasks([]);
       reportLoadError(undefined, false);
     } finally {
+      // Without a cache or a pull the lists stay undefined and the splash would hold forever.
+      setTasks((cur) => cur ?? []);
+      setUndatedTasks((cur) => cur ?? []);
       setIsLoading(false);
     }
   });
-  const loadMonthOf = useEffectEvent(loadMonth);
 
-  // O boot passa pela fila (`getTasks`); depois, dia em outro mês só soma aquele mês à lista.
-  const booted = useRef(false);
+  // Once per user: an account switch opens the other user's store, which drops the previous lists.
+  const booted = useRef<string>();
   useEffect(() => {
-    if (!isLoaded || !userId) return;
-    if (booted.current) {
-      void loadMonthOf(selectedDay);
-      return;
-    }
-    booted.current = true;
+    if (!isLoaded || !userId || booted.current === userId) return;
+    booted.current = userId;
     void getTasks();
-  }, [selectedDay, isLoaded, userId]);
+  }, [isLoaded, userId]);
 
   // O celular passa horas em segundo plano e volta com a lista de antes; tarefa criada no desktop
-  // não aparecia. Revalida ao voltar pra aba e ao reconectar, com um piso de tempo pra alternar
-  // de aba não virar rajada de fetch.
+  // não aparecia. Sobe a fila e puxa ao voltar pra aba e ao reconectar, com um piso de tempo pra
+  // alternar de aba não virar rajada de fetch.
   const lastFetch = useRef(Date.now());
   useEffect(() => {
     if (!isLoaded || !userId) return;

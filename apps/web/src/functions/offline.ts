@@ -10,6 +10,7 @@ import {
   updateTask,
 } from "./api";
 import type { ApiError } from "./api";
+import { deleteLocal, updateQueue } from "./local-db";
 import { zoned } from "./zone";
 
 /** O corpo do PATCH: `alert: null` limpa o lembrete. */
@@ -31,6 +32,7 @@ export type Mutation =
   // como exclusão da tarefa (o colapso do `delete` engole o create e os patches pendentes dela).
   | { op: "delete-occurrence"; taskId: string; occurrence: number; at: number };
 
+// localStorage keys from before IndexedDB: read once by the migration, removed by `clearLocal`.
 const key = (userId: string, what: "tasks" | "outbox" | "undated") => `dailify:${what}:${userId}`;
 
 /** A conversa com a Mew (`components/mew-chat/thread.ts`); mora aqui pro `clearLocal` não esquecê-la. */
@@ -45,11 +47,8 @@ export const newTaskId = (): string =>
   `t${Date.now().toString(36)}${Math.random().toString(36).slice(2, 10)}`;
 
 /**
- * `localStorage` e não IndexedDB: a agenda de um mês são dezenas de KB, muito abaixo dos 5MB, e o
- * síncrono aqui custa ~1ms. Se um dia isso virar histórico inteiro, aí sim vale a mudança.
- *
- * Tudo em try/catch porque em aba privada e com cookies de terceiros bloqueados o próprio acesso
- * lança — e o cache é conveniência: ele não pode derrubar a escrita que estava sendo feita.
+ * Só o que é do aparelho mora no `localStorage` (último usuário). Tudo em try/catch porque em aba
+ * privada e com cookies de terceiros bloqueados o próprio acesso lança.
  */
 function read<T>(storageKey: string): T | undefined {
   try {
@@ -68,17 +67,21 @@ function write(storageKey: string, value: unknown): void {
   }
 }
 
-export const readCachedTasks = (userId: string): Task[] | undefined =>
-  read<Task[]>(key(userId, "tasks"));
+/** The pre-IndexedDB copies (expanded agenda, undated list, outbox), for the one-shot migration. */
+export const readLegacy = (userId: string) => ({
+  tasks: read<Task[]>(key(userId, "tasks")),
+  undated: read<Task[]>(key(userId, "undated")),
+  outbox: read<Mutation[]>(key(userId, "outbox")),
+});
 
-export const cacheTasks = (userId: string, tasks: Task[]): void =>
-  write(key(userId, "tasks"), tasks);
-
-export const readCachedUndated = (userId: string): Task[] | undefined =>
-  read<Task[]>(key(userId, "undated"));
-
-export const cacheUndated = (userId: string, tasks: Task[]): void =>
-  write(key(userId, "undated"), tasks);
+export function dropLegacy(userId: string): void {
+  try {
+    for (const what of ["tasks", "outbox", "undated"] as const)
+      localStorage.removeItem(key(userId, what));
+  } catch {
+    /* sem acesso ao storage: não havia o que limpar */
+  }
+}
 
 /** Quem estava logado: offline o get-session falha e, sem isto, o gate não sabe de quem é o cache. */
 export interface LastUser {
@@ -109,10 +112,31 @@ export function forgetUser(): void {
   }
 }
 
-export const readQueue = (userId: string): Mutation[] =>
-  read<Mutation[]>(key(userId, "outbox")) ?? [];
+// The tab's copy of the outbox, read synchronously; IndexedDB gets the same change atomically, so
+// another tab's entries survive there (and replay idempotently if both tabs send them).
+const queues = new Map<string, Mutation[]>();
 
-const writeQueue = (userId: string, queue: Mutation[]): void => write(key(userId, "outbox"), queue);
+export const readQueue = (userId: string): Mutation[] => queues.get(userId) ?? [];
+
+/** The outbox as stored, once the task store opened this user's database. */
+export const restoreQueue = (userId: string, queue: Mutation[]): void => {
+  queues.set(userId, queue);
+};
+
+function writeQueue(userId: string, update: (queue: Mutation[]) => Mutation[]): void {
+  queues.set(userId, update(readQueue(userId)));
+  void updateQueue(userId, update);
+}
+
+const sameMutation = (a: Mutation) => {
+  const key = JSON.stringify(a);
+  return (b: Mutation) => JSON.stringify(b) === key;
+};
+
+const without = (mutation: Mutation) => (queue: Mutation[]) => {
+  const index = queue.findIndex(sameMutation(mutation));
+  return index < 0 ? queue : queue.filter((_, i) => i !== index);
+};
 
 /**
  * Colapsa o que é redundante antes de guardar. Um dia offline mexendo na mesma tarefa não deve
@@ -195,19 +219,17 @@ export function collapseQueue(queue: Mutation[]): Mutation[] {
 }
 
 export function enqueue(userId: string, mutation: Mutation): void {
-  const queue = [...readQueue(userId), mutation];
   // Com a cabeça no ar, colapsar com ela apagaria o que o servidor já recebeu (criar + excluir).
-  writeQueue(userId, flushing.has(userId) ? queue : collapseQueue(queue));
+  const collapse = !flushing.has(userId);
+  writeQueue(userId, (queue) =>
+    collapse ? collapseQueue([...queue, mutation]) : [...queue, mutation],
+  );
 }
 
 /** Takes back an entry not sent yet; `false` once a flush (here or in another tab) has it. */
 export function dequeue(userId: string, mutation: Mutation): boolean {
-  if (flushing.has(userId)) return false;
-  const queue = readQueue(userId);
-  const index = queue.findIndex((m) => JSON.stringify(m) === JSON.stringify(mutation));
-  if (index < 0) return false;
-  queue.splice(index, 1);
-  writeQueue(userId, queue);
+  if (flushing.has(userId) || !readQueue(userId).some(sameMutation(mutation))) return false;
+  writeQueue(userId, without(mutation));
   return true;
 }
 
@@ -220,10 +242,10 @@ export const pendingCount = (userId: string): number => readQueue(userId).length
 
 /** Apaga o rastro local do usuário. A conta some do servidor; o aparelho não pode ficar com cópia. */
 export function clearLocal(userId: string): void {
+  queues.delete(userId);
+  deleteLocal(userId);
+  dropLegacy(userId);
   try {
-    localStorage.removeItem(key(userId, "tasks"));
-    localStorage.removeItem(key(userId, "outbox"));
-    localStorage.removeItem(key(userId, "undated"));
     localStorage.removeItem(chatKey(userId));
     localStorage.removeItem(LAST_USER);
   } catch {
@@ -252,7 +274,7 @@ export function flushQueue(userId: string): Promise<FlushResult> {
 export const shouldQueue = (error?: ApiError): boolean =>
   !!error && (error.offline || error.status === 401);
 
-// Lê a fila guardada a cada passo, não um retrato do começo: o que entra durante a subida não se perde.
+// Lê a fila a cada passo, não um retrato do começo: o que entra durante a subida não se perde.
 async function drainQueue(userId: string): Promise<FlushResult> {
   let sent = 0;
   let dropped = 0;
@@ -261,17 +283,13 @@ async function drainQueue(userId: string): Promise<FlushResult> {
     const error = await send(mutation);
 
     if (shouldQueue(error)) {
-      writeQueue(userId, collapseQueue(readQueue(userId)));
+      writeQueue(userId, collapseQueue);
       return { sent, dropped, offline: true };
     }
 
-    // Pela entrada, não pela posição: outra aba pode ter subido (e tirado) a cabeça nesse meio-tempo,
-    // e um `slice(1)` levaria junto a entrada seguinte, que ninguém enviou.
-    const sentKey = JSON.stringify(mutation);
-    const queue = readQueue(userId);
-    const index = queue.findIndex((m) => JSON.stringify(m) === sentKey);
-    if (index >= 0) queue.splice(index, 1);
-    writeQueue(userId, queue);
+    // Pela entrada, não pela posição: no IndexedDB outra aba pode ter subido (e tirado) a cabeça, e
+    // tirar a primeira levaria junto a entrada seguinte, que ninguém enviou.
+    writeQueue(userId, without(mutation));
     if (error) dropped++;
     else sent++;
   }

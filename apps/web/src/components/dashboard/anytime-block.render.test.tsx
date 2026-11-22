@@ -28,7 +28,7 @@ import { AnytimeBlock, DRAG_TYPE } from "./anytime-block";
 import { DayList } from "./day-list";
 import { DaySection, dayAnchorId } from "./day-section";
 import { useUndatedActions } from "@/hooks/useUndatedActions";
-import { readQueue } from "@/functions/offline";
+import { clearLocal, readQueue } from "@/functions/offline";
 import { PanelHost } from "./side-panel";
 import { MOBILE } from "@/consts/media";
 import { closePanel } from "@/hooks/usePanel";
@@ -112,7 +112,7 @@ afterEach(() => {
   closePanel();
   vi.useRealTimers();
   toast.dismiss();
-  localStorage.clear();
+  clearLocal("u1");
 });
 
 describe("<AnytimeBlock>", () => {

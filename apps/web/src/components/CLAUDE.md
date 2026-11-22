@@ -28,44 +28,44 @@ motion: `apps/web/src/CLAUDE.md`. Tests: `apps/web/CLAUDE.md`. Task writes: `hoo
 
 ## DailifyContext (`dailifyContext.tsx:DailifyContextType`)
 
-- `tasks`, `undatedTasks`: `undefined` until fetched or hydrated from the cache. `isLoading` is true
-  while the boot's task load runs; load errors toast through `reportLoadError`.
-- `loadedMonths`; `loadMonth(month)` waits on a loaded or in-flight month instead of refetching;
-  `reloadMonths(months)` forces a refetch and returns the first error; `goToDay(day)` loads every
-  month between today and `day`, then sets `selectedDay` and a fresh `targetDay`.
+- `tasks`, `undatedTasks`, `loadedMonths` come from the task store (`functions/task-store.ts`,
+  read with `useSyncExternalStore`): `undefined` until this user's IndexedDB rows or first pull
+  arrive. `isLoading` is true while the boot's sync runs; load errors toast through
+  `reportLoadError`.
+- `loadMonth(month)`: a month inside the synced window expands locally; an older one is fetched
+  once (`GET /tasks?month=`) and kept in memory only. `goToDay(day)` loads every month between
+  today and `day`, then sets `selectedDay` and a fresh `targetDay`.
 - `quotas`/`setQuotas`/`bumpUsage(key)` (optimistic +1). `invoices`/`paymentDetails`: only
   `pages/billing.tsx` loads or reads them.
-- `weekStart`, `hour12`, `timeZone`/`setTimeZone`, which calls `setAppTimeZone`, clears
-  `monthRequests` and refetches every loaded month by its mid-month date in the new zone.
+- `weekStart`, `hour12`, `timeZone`/`setTimeZone`, which calls `setAppTimeZone` and
+  `rezoneTasks` (the loaded months re-expanded from the stored rows in the new zone).
 - The provider sits above the Router (`App.tsx`): state survives route changes, and only a full page
-  load resets it.
-- `monthRequests`: a key stays while its month is loaded or in flight, a failed request removes
-  itself, and a newer request for the same key turns older responses into no-ops (`isCurrent`).
-  `reloadMonths` prunes tasks outside the map's months only when no request errored. Pinned by
-  `dailifyContext.render.test.tsx`.
-- `setTasks`/`setUndatedTasks` are the raw `useState` setters, typed `Dispatch<SetStateAction>`:
-  after an await or from an Undo, update functionally.
+  load or another account (`openTasks`) resets the tasks.
+- `setTasks`/`setUndatedTasks` are the store's `setDated`/`setUndated`, typed
+  `Dispatch<SetStateAction>` and applied at once: every id the update touched gets its stored row
+  back from the list (`applyWrite`). After an await or from an Undo, update functionally.
 
 ## Boot: `protected-route.tsx`
 
-It owns the task boot. Other code only re-triggers loads (`pages/integration-callback.tsx` calls
-`reloadMonths` after an import), and page-specific data loads in its page (`pages/billing.tsx`).
+It owns the task boot. Other code only asks for a pull (`pullTasks()`: the Calendar import in
+`pages/integration-callback.tsx`, a refused Mew box in `mew-chat/apply.ts`), and page-specific
+data loads in its page (`pages/billing.tsx`).
 
 - Session gate: a network/5xx get-session error falls back to `readLastUser()` and paints the cache;
   only a 401 or an empty session redirects to /login. That fallback is `useUser()`
   (`hooks/useUser.ts`), which every identity read uses (nav, profile, writers), not
   `useSession().data?.user`.
-- Hydrates tasks and undated from the cache; writes the cache debounced (1s), flushed on `pagehide`
-  and when the page goes hidden, which also refreshes the Android local alarms (`lib/reminders.ts`).
-- `getTasks`: `flushQueue` first, then undated + settings, and `reloadMonths` for the loaded months,
-  today, next month and `selectedDay`. After boot, a `selectedDay` in another month loads only it.
-- Revalidates on `visibilitychange` at most every 30s and at once on `online`; both refetch quotas,
-  which are keyed by today's month (`useNow("day")`).
+- `getTasks`, once per userId: `openTasks` (paints IndexedDB), `flushQueue`, settings, then
+  `pullTasks`; it fills both lists with `[]` when neither arrived, or the splash would hold.
+  Going hidden refreshes the Android local alarms (`lib/reminders.ts`).
+- Runs again on `visibilitychange` at most every 30s and at once on `online`, so the outbox drains
+  before each pull; both refetch quotas, which are keyed by today's month (`useNow("day")`).
 - The splash holds for `SPLASH_MIN_MS` only when the route mounted while loading. On exit its Mew
   flies to `[data-slot="onboarding"] .mew` (the first-run intro) or else
   `[data-slot="create-dock"] .mew` (the mobile dock); neither, or reduced motion, it fades.
-- `protected-route.render.test.tsx` pins loads-once, queue-before-undated, the deferred cache, the
-  splash and the session fallback; extend it when the boot changes.
+- `protected-route.render.test.tsx` pins open-flush-pull order, boot-once, the online re-sync, the
+  empty fill, the account switch, the splash and the session fallback; extend it when the boot
+  changes.
 
 ## Overlays and widgets
 
@@ -77,7 +77,7 @@ It owns the task boot. Other code only re-triggers loads (`pages/integration-cal
 - `Duplicates` shows at most once per app load (module `shown` flag), mounted once in `AppLayout`.
 - View/container splits here: `DuplicatesSheet`, `CalendarRows`, `IntegrationCard` are the Views.
 - New setting: a `UserSettings` field (shared `period.ts`) and its server side, a context field set in
-  protected-route `loadUndated`, a widget that applies it, calls `saveSettings` and restores it with
+  protected-route `loadSettings`, a widget that applies it, calls `saveSettings` and restores it with
   `toast.error` on failure (`week-start-select.tsx`), and a row in `pages/settings.tsx`.
 - `theme-provider`: the key `vite-ui-theme` must match the pre-paint script in
   `apps/web/index.html`. The `transition:none` style injected on each switch is deliberate.

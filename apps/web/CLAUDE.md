@@ -53,7 +53,8 @@ Values are inlined at build time, so a missing one ships a silently broken bundl
 Naming, pragma, clock, mocking and query rules: RULES.md "Testing". The harness on top of them:
 
 - The default environment is `node`; vitest 4 dropped `environmentMatchGlobs`, so jsdom is opted in
-  per file. Two `.test.ts` files need it too: `functions/offline.test.ts` (localStorage) and
+  per file. Three `.test.ts` files need it too: `functions/offline.test.ts` and
+  `functions/task-store.test.ts` (localStorage, plus `fake-indexeddb/auto`) and
   `components/mew-chat/thread.test.ts`.
 - `setup.ts` runs in every file, guarded by `typeof window`. Under jsdom it adds RTL `cleanup`,
   jest-dom matchers, no-op `IntersectionObserver`/`ResizeObserver`/`Element.animate`, and a
