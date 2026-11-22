@@ -304,10 +304,11 @@ export function SidebarMenu({
         />
       </div>
 
+      <hr className="mx-3.5 mt-4 border-separator" />
       <p
         ref={folded}
         className={cn(
-          "px-3.5 pt-5 pb-1.5 text-footnote font-medium whitespace-nowrap text-ink-secondary",
+          "px-3.5 pt-3 pb-1.5 text-footnote font-medium whitespace-nowrap text-ink-secondary",
           FADE,
           fade,
         )}
