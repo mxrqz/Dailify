@@ -18,6 +18,7 @@ const AUTHENTICATED: [method: string, path: string][] = [
   ["POST", "/tasks/parse"],
   ["POST", "/tasks/voice"],
   ["POST", "/mew/chat"],
+  ["POST", "/mew/transcribe"],
   ["PATCH", "/mew/actions/a1"],
   ["POST", "/mew/actions/a1/send"],
   ["GET", "/permissions"],

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
+import { useMemo, useRef, useState, type FormEvent } from "react";
 import { format } from "date-fns";
 import { ptBR } from "date-fns/locale";
 import { BellIcon, CalendarIcon, ClockIcon, LinkIcon, Loader2Icon, RepeatIcon } from "lucide-react";
@@ -44,7 +44,6 @@ import { Label } from "@/components/ui/label";
 import { markSegments, onDay, withEdits, type Edits } from "@/functions/compose-input";
 import type { CalendarPick } from "@/hooks/useCalendarPush";
 import { useCreateTask } from "@/hooks/useCreateTask";
-import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { useMewParse } from "@/hooks/useMewParse";
 import { useOnline } from "@/hooks/useOnline";
 import { MAX_RECORDING_MS, useVoiceCreate, voiceSupported } from "@/hooks/useVoiceCreate";
@@ -88,8 +87,6 @@ interface TaskComposerProps {
   onCreated?: () => void;
   /** O "Cancelar" do topo da folha. */
   onCancel?: () => void;
-  /** Montou pelo mic do dock: já começa gravando. */
-  listen?: boolean;
 }
 
 /** O campo da frase; `create-fab` o foca pelo id (atalhos `n` e `/`, dia escolhido no calendário). */
@@ -107,7 +104,6 @@ export function TaskComposer({
   day,
   onCreated,
   onCancel,
-  listen,
 }: TaskComposerProps): JSX.Element {
   const [input, setInput] = useState(initialText);
   // Trechos de chips tirados: voltam pro título como texto. Valem pro texto atual (`remapSpans`).
@@ -152,13 +148,6 @@ export function TaskComposer({
   const canSubmit = Boolean(parsed.text) && !busy;
   const canAsk = Boolean(input.trim()) && !mew.result && !busy;
   const unsure = online && local.unsure.length > 0 && Boolean(input.trim()) && !mew.result;
-
-  const startListening = useEffectEvent(() => {
-    if (canVoice) void voice.start();
-  });
-  useEffect(() => {
-    if (listen) startListening();
-  }, [listen]);
 
   const destination = !task.undated
     ? copy.composer.toAgenda

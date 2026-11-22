@@ -60,8 +60,9 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
 ## Composer
 
 - `TaskComposer` mounts only inside `CreateFab` (`pages/home.tsx`), which also mounts `MewChat` (the
-  dock). The dock's mic and `voiceSignal` (home's `?mew=voice`, the Android assistant) open the
-  composer already recording (`listen`). Mobile: a bottom `Sheet`.
+  dock). The dock's mic and `voiceSignal` (home's `?mew=voice`, the Android assistant, passed on
+  as `MewChat listenSignal`) record a Mew chat turn; only the composer's own mic creates by voice.
+  Mobile: a bottom `Sheet`.
   Desktop: a centered glass `Dialog`, opened by the toolbar's "Nova tarefa" (`openSignal`), `n`, a
   calendar day (`day`) or the first-run example or intro suggestion (`text`); `/` focuses the Mew
   input (`INPUT_ID`).

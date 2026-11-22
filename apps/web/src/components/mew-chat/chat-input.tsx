@@ -1,5 +1,5 @@
 import { type FormEvent, type RefObject, useState } from "react";
-import { ArrowUpIcon, ImagePlusIcon, MicIcon, XIcon } from "lucide-react";
+import { ArrowUpIcon, ImagePlusIcon, MicIcon, SquareIcon, XIcon } from "lucide-react";
 import { motion } from "motion/react";
 import { toast } from "sonner";
 import { MEW_IMAGE_MAX, MEW_TEXT_MAX } from "@dailify/shared";
@@ -18,14 +18,18 @@ export const INPUT_ID = "mew-input";
 
 /**
  * The dock's pill while the chat is open (`CreateDock chat={…}`): attach, field and one round
- * button that is the mic when empty (opens the voice composer) and send with text. `dock`: the
- * desktop agenda dock, where the cat leads instead of attach and `/` is the shortcut.
+ * button that is the mic when empty (records a spoken turn) and send with text. `dock`: the
+ * desktop agenda dock, where the cat leads instead of attach and `/` is the shortcut. `listening`:
+ * the mic is recording; the round button stops and sends, the leading one cancels.
  */
 export function ChatInput({
   busy,
   offline,
   onSend,
   onVoice,
+  listening,
+  onStop,
+  onCancel,
   file,
   dock,
 }: {
@@ -33,6 +37,9 @@ export function ChatInput({
   offline: boolean;
   onSend: (text: string, image?: Photo) => void;
   onVoice?: () => void;
+  listening?: boolean;
+  onStop?: () => void;
+  onCancel?: () => void;
   file: RefObject<HTMLInputElement>;
   dock?: boolean;
 }) {
@@ -40,6 +47,27 @@ export function ChatInput({
   const [image, setImage] = useState<Photo>();
   const filled = !!text.trim() || !!image;
   const mic = !filled && !!onVoice;
+
+  if (listening)
+    return (
+      <div className="flex h-full min-w-0 flex-1 items-center gap-1">
+        <Button
+          variant="ghost"
+          size="icon"
+          aria-label={copy.voice.cancel}
+          onClick={onCancel}
+          className="rounded-full text-ink-secondary hover:text-ink"
+        >
+          <XIcon aria-hidden="true" />
+        </Button>
+        <p aria-live="polite" className="min-w-0 flex-1 truncate text-body text-ink-secondary">
+          {copy.voice.listening}
+        </p>
+        <DockButton aria-label={t.micStop} onClick={onStop} className="bg-brand text-on-brand">
+          <SquareIcon aria-hidden="true" className="size-4 fill-current" />
+        </DockButton>
+      </div>
+    );
 
   const submit = (event: FormEvent) => {
     event.preventDefault();
@@ -131,7 +159,7 @@ export function ChatInput({
       <DockButton
         type={mic ? "button" : "submit"}
         aria-label={mic ? t.mic : t.send}
-        disabled={!mic && (busy || offline || !filled)}
+        disabled={busy || (!mic && (offline || !filled))}
         onClick={mic ? onVoice : undefined}
         className={cn(filled && "bg-brand text-on-brand")}
       >

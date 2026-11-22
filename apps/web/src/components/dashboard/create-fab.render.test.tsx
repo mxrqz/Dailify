@@ -1,6 +1,6 @@
 /** @vitest-environment jsdom */
 import { beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, render, screen } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 
 const env = vi.hoisted(() => ({ desktop: true, voice: false, start: vi.fn() }));
@@ -26,12 +26,12 @@ vi.mock("@/hooks/useCreateTask", () => ({
   useCreateTask: () => ({ createMany: vi.fn(), submitting: false }),
 }));
 vi.mock("@/hooks/useIntegrations", () => ({ useCalendarReady: () => false }));
-// The chat has its own render test; here only its two ways into the composer matter.
+// The chat has its own render test; here only its way into the composer and the signal matter.
 vi.mock("@/components/mew-chat/mew-chat", () => ({
-  MewChat: ({ onCompose, onVoice }: { onCompose: () => void; onVoice?: () => void }) => (
+  MewChat: ({ onCompose, listenSignal }: { onCompose: () => void; listenSignal?: number }) => (
     <>
       <button onClick={onCompose}>Nova tarefa</button>
-      {onVoice && <button onClick={onVoice}>Falar com a Mewki</button>}
+      <output aria-label="listen signal">{listenSignal ?? 0}</output>
     </>
   ),
 }));
@@ -98,33 +98,11 @@ describe("<CreateFab> mobile", () => {
     expect(screen.getByRole("textbox")).toHaveValue("dentista amanhã");
   });
 
-  it("o mic do dock abre a folha já gravando; sem voz, ele nem aparece", async () => {
+  it("the voice signal (Android assistant) goes to the Mew chat, not the composer", () => {
     env.voice = true;
-    const { user } = setup();
-
-    await user.click(screen.getByRole("button", { name: copy.composer.dockVoice }));
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(env.start).toHaveBeenCalledTimes(1);
-
-    cleanup();
-    env.voice = false;
-    setup();
-    expect(screen.queryByRole("button", { name: copy.composer.dockVoice })).not.toBeInTheDocument();
-  });
-
-  it("the voice signal (Android assistant) opens the sheet already recording", () => {
-    env.voice = true;
-    const { rerender } = render(<CreateFab onSubmit={vi.fn()} voiceSignal={0} />);
-    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
-
-    rerender(<CreateFab onSubmit={vi.fn()} voiceSignal={1} />);
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
-    expect(env.start).toHaveBeenCalledTimes(1);
-  });
-
-  it("without voice, the voice signal opens the sheet for typing", () => {
     render(<CreateFab onSubmit={vi.fn()} voiceSignal={1} />);
-    expect(screen.getByRole("dialog")).toBeInTheDocument();
+    expect(screen.getByLabelText("listen signal")).toHaveTextContent("1");
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
     expect(env.start).not.toHaveBeenCalled();
   });
 });

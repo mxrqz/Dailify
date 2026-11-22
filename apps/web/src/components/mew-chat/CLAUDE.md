@@ -46,6 +46,10 @@ foot whose input sends and opens the side panel `{ kind: "mew" }`; the thread re
 - mew-chat.tsx branches on the error `code` (`API_ERROR` from `@dailify/shared`):
   `mewConsentRequired`, `aiExhausted`, `rateLimited`. A send refused for consent is dropped, kept in `pending` and resent after accept: nothing
   reaches OpenAI before consent (LGPD).
+- Voice: the input's mic (and `listenSignal`, `?mew=voice`) opens the chat and records through
+  `useVoiceCreate(undefined, onAudio)`; stop posts the audio to `/mew/transcribe` (no debit) and
+  the text goes out through `send`, so the turn's reply is its one credit. A failure or an empty
+  transcript is a Mew line (`say`), never a turn. Closing the drawer cancels the recording.
 - Caps come from `@dailify/shared` (`MEW_HISTORY_MAX`, `MEW_TEXT_MAX`, `MEW_IMAGE_MAX`). Photos are
   stored as a 320px thumb (localStorage quota) and uploaded at 1024px (`THUMB_PX`/`UPLOAD_PX`).
 - The drawer is a non-modal bottom `Sheet` so the dock stays usable; the scrim is rendered by
@@ -76,5 +80,6 @@ foot whose input sends and opens the side panel `{ kind: "mew" }`; the thread re
 - `thread.test.ts` (jsdom, for localStorage), `apply.test.ts` (node, pure half), `mood.test.ts`
   (node, `moodOf`).
 - `mew-chat.render.test.tsx` mocks `@/functions/api`, `dailifyContext` and `@/lib/auth`, and covers
-  send, confirm, undo, refused write, consent and out of credits; on desktop it mounts `PanelHost`
+  send, confirm, undo, refused write, consent, out of credits and voice (a fake `MediaRecorder`);
+  on desktop it mounts `PanelHost`
   beside `MewChat panel` (dock send opens the panel, the thread survives closing it).

@@ -10,10 +10,7 @@ import { INPUT_ID } from "@/components/mew-chat/chat-input";
 import { MewChat } from "@/components/mew-chat/mew-chat";
 import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet";
-import { useEffectEvent } from "@/hooks/useEffectEvent";
 import { useMediaQuery } from "@/hooks/useMediaQuery";
-import { useOnline } from "@/hooks/useOnline";
-import { voiceSupported } from "@/hooks/useVoiceCreate";
 import { DESKTOP } from "@/consts/media";
 
 interface CreateFabProps {
@@ -28,13 +25,13 @@ interface CreateFabProps {
   onDayDone?: () => void;
   /** Bumped by the desktop toolbar's "Nova tarefa": each new value opens the composer. */
   openSignal?: number;
-  /** Bumped by `?mew=voice` (the Android assistant): each new value opens the composer listening. */
+  /** Bumped by `?mew=voice` (the Android assistant): each new value opens the Mew chat listening. */
   voiceSignal?: number;
 }
 
 /**
- * A criação. O dock da Mew abre o chat (mobile: a gaveta; desktop: o painel lateral) e o mic abre a
- * folha já gravando. A folha é uma bottom sheet no mobile e um Dialog centrado no desktop, aberto
+ * A criação. O dock da Mew abre o chat (mobile: a gaveta; desktop: o painel lateral); its mic
+ * records a chat turn. A folha é uma bottom sheet no mobile e um Dialog centrado no desktop, aberto
  * pelo "Nova tarefa" da toolbar ou pelo `n`.
  */
 export function CreateFab({
@@ -48,9 +45,6 @@ export function CreateFab({
 }: CreateFabProps): JSX.Element {
   const [open, setOpen] = useState(false);
   const desktop = useMediaQuery(DESKTOP);
-  // Aberta pelo mic do dock: a folha já nasce gravando.
-  const [listen, setListen] = useState(false);
-  const online = useOnline();
   // A folha fecha no ⏎ (a tarefa já entrou otimista); se o servidor recusar, reabre com o texto.
   const [retry, setRetry] = useState<string>();
   const label = copy.composer.open;
@@ -92,15 +86,6 @@ export function CreateFab({
     if (openSignal) setOpen(true);
   }, [openSignal]);
 
-  // Offline or without a mic API it still opens, for typing.
-  const openListening = useEffectEvent(() => {
-    setListen(online && voiceSupported());
-    setOpen(true);
-  });
-  useEffect(() => {
-    if (voiceSignal) openListening();
-  }, [voiceSignal]);
-
   useEffect(() => {
     if (!text) return;
     setRetry(text);
@@ -113,7 +98,6 @@ export function CreateFab({
     setOpen(next);
     if (!next) {
       setRetry(undefined);
-      setListen(false);
       onDayDone?.();
     }
   };
@@ -122,7 +106,6 @@ export function CreateFab({
   const composer = (
     <TaskComposer
       large={!desktop}
-      listen={listen}
       initialText={retry}
       day={day}
       onCreated={() => changeOpen(false)}
@@ -143,27 +126,14 @@ export function CreateFab({
     />
   );
 
-  // Pelo mic, sem teclado: o foco fica na folha. Senão, direto no campo.
   const focusField = (event: Event) => {
     event.preventDefault();
-    if (!listen) document.getElementById(COMPOSER_TEXT_ID)?.focus();
+    document.getElementById(COMPOSER_TEXT_ID)?.focus();
   };
 
   return (
     <>
-      {/* ponytail: the chat has no transcription route, so the mic still opens the voice composer. */}
-      <MewChat
-        panel={desktop}
-        onCompose={() => changeOpen(true)}
-        onVoice={
-          online && voiceSupported()
-            ? () => {
-                setListen(true);
-                setOpen(true);
-              }
-            : undefined
-        }
-      />
+      <MewChat panel={desktop} onCompose={() => changeOpen(true)} listenSignal={voiceSignal} />
       {desktop ? (
         <Dialog open={open} onOpenChange={changeOpen}>
           <DialogContent

@@ -11,6 +11,7 @@ import {
   type MewActionStatus,
   type MewReply,
   type MewRequest,
+  type MewTranscript,
   type ProviderId,
 } from "@dailify/shared";
 import type { AppEnv, Env } from "../index";
@@ -24,7 +25,8 @@ import { claimAction, hasGrant, logProposals, saveGrant, setActionStatus } from 
 import { PROVIDERS } from "../integrations/registry";
 import { WINDOW_DAYS, agendaOf, askMew, type MewApp } from "../lib/mew";
 import { monthsTouching } from "../lib/occurrence-alert";
-import { readJson, validZone } from "../lib/task-input";
+import { transcribe } from "../lib/openai";
+import { parseAudio, readJson, validZone } from "../lib/task-input";
 import { fail } from "../lib/errors";
 
 const STATUSES: readonly MewActionStatus[] = ["proposed", "done", "cancelled", "undone"];
@@ -141,6 +143,26 @@ mew.post("/chat", rateLimit("AI_LIMITER"), async (c) => {
   if (!answer) await debitAi(db, userId);
   await logProposals(db, userId, reply.blocks, now);
   return c.json(reply);
+});
+
+// The chat's mic: the transcript comes back and goes out as a normal `/chat` turn, which debits.
+// ponytail: transcription alone is free, bounded by AI_LIMITER (6/min) and a non-empty quota;
+// fold the audio into `/chat` if that ever shows up in the OpenAI bill.
+mew.post("/transcribe", rateLimit("AI_LIMITER"), async (c) => {
+  const userId = c.get("userId");
+  if (!(await getSettings(c.env.DB, userId)).mewConsent)
+    return fail(c, 403, MEW_CONSENT_REQUIRED, { code: API_ERROR.mewConsentRequired });
+  const quota = await aiQuota(c.env.DB, userId, c.get("plan"));
+  if (quota) return fail(c, quota.status, quota.error, { code: quota.code });
+  const audio = parseAudio((await c.req.parseBody())["audio"]);
+  if ("error" in audio) return fail(c, audio.status, audio.error);
+  try {
+    const text = (await transcribe(c.env, audio)).trim().slice(0, MEW_TEXT_MAX);
+    return c.json({ text } satisfies MewTranscript);
+  } catch (err) {
+    console.error(err);
+    return fail(c, 502, "AI request failed");
+  }
 });
 
 // A confirmed `send` box: the text may be the user's edit, the address is the stored one.
