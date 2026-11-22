@@ -49,7 +49,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
   recurring one (instances share the series id), none otherwise; the open row is `selected`
   (`aria-current`). Dated rows show hover/focus chips (`TaskRow actions`): time (the
   `DateTimePopover` wheel), day (`DayPopover`, keeps the clock) and a "more" menu (Abrir, Excluir).
-  Undated rows have no chips.
+  A read-only invite (`readonly` in the Calendar status) gets only "more": Google owns its time and
+  day. Undated rows have no chips.
 - The editor is `useTaskEditor` (`components/edit-task.tsx`), laid out by the sheet and by
   `PanelHost`'s `TaskPanel` (footer = Salvar/Concluir/Excluir). The panel looks the task up in
   `tasks`/`undatedTasks` and closes when it is gone (deleted, or a save that detached it).
@@ -113,7 +114,8 @@ Task writes and their hooks: `hooks/CLAUDE.md`.
   `REMINDER_OFFSETS` in `functions/task-options.ts`), so a date or time edit keeps the distance.
   There is no wire field for it: every save and reschedule rebuilds `alert = date - before`.
 - `locked` (a Calendar invite you don't organize) disables title, date, time, duration, the undated
-  switch, repeat, interval and weekdays. Priority, tags and links stay editable.
+  switch, repeat, interval and weekdays. Priority, tags and links stay editable. `useTaskEditor`
+  computes it, so the sheet and the side panel lock alike.
 - Weekly starts with the task's own weekday and `WeekdayToggle` won't drop the last day: an empty
   `Weekly` never fires (shared `normalizeRepeat` turns it into "Off"). `copy.form.repeatDays` and `copy.aside.weekDayInitials` are Sunday-first,
   aligned with shared `weekDays`/`dayMap`.

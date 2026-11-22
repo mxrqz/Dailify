@@ -30,6 +30,7 @@ import { repeatLabel } from "@/functions/repeat-label";
 import { spanOf } from "@/functions/span";
 import { reminderBefore } from "@/functions/task-options";
 import { isSaving } from "@/hooks/useCreateTask";
+import { useIntegration } from "@/hooks/useIntegrations";
 import { openPanel, usePanel } from "@/hooks/usePanel";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import type { Task } from "@dailify/shared";
@@ -148,11 +149,13 @@ export function DayTaskRow({
   const title = { title: task.title };
 
   const span = spanOf(task, +day, appTimeZone());
+  // An invite you don't organize: Google owns its time and day, like the editor's `locked`.
+  const locked = useIntegration("google-calendar")?.readonly?.includes(task.id) ?? false;
   const spanLabel = span && fill(copy.day.spanDay, span);
 
   const actions = sheetEditing ? undefined : (
     <>
-      {!span && (
+      {!span && !locked && (
         <DateTimePopover timeOnly value={at} onChange={reschedule}>
           <Chip
             variant="select"
@@ -164,21 +167,23 @@ export function DayTaskRow({
           </Chip>
         </DateTimePopover>
       )}
-      <DayPopover
-        value={at}
-        onChange={(picked) => {
-          const to = zoned(picked);
-          to.setHours(at.getHours(), at.getMinutes(), 0, 0);
-          reschedule(to);
-        }}
-      >
-        <Chip
-          variant="select"
-          size="sm"
-          icon={<CalendarIcon aria-hidden="true" />}
-          aria-label={fill(copy.task.editDay, title)}
-        />
-      </DayPopover>
+      {!locked && (
+        <DayPopover
+          value={at}
+          onChange={(picked) => {
+            const to = zoned(picked);
+            to.setHours(at.getHours(), at.getMinutes(), 0, 0);
+            reschedule(to);
+          }}
+        >
+          <Chip
+            variant="select"
+            size="sm"
+            icon={<CalendarIcon aria-hidden="true" />}
+            aria-label={fill(copy.task.editDay, title)}
+          />
+        </DayPopover>
+      )}
       <DropdownMenu>
         <DropdownMenuTrigger asChild>
           <Chip

@@ -20,6 +20,7 @@ import { copy } from "./copy";
 import { MEW_PANEL_SLOT, PanelHost } from "./side-panel";
 import { setAppTimeZone, zonedAt } from "@/functions/zone";
 import { closePanel, openPanel, togglePanel, usePanel } from "@/hooks/usePanel";
+import { setIntegrations } from "@/hooks/useIntegrations";
 
 const ZONE = "America/Sao_Paulo";
 const task = (id: string, title: string, hour: number, completed: number[] = []): Task => ({
@@ -107,6 +108,26 @@ describe("<PanelHost>", () => {
     context([series]);
     rerender(<MemoryRouter>{host()}</MemoryRouter>);
     expect(panel()).toBeNull();
+  });
+
+  it("locks the editor of a read-only invite like the sheet does", () => {
+    const invite = task("t1", "Reunião", 9);
+    dailify.mockReturnValue({ tasks: [invite], undatedTasks: [], setTasks, loadedMonths: [] });
+    setIntegrations([
+      {
+        provider: "google-calendar",
+        allowed: true,
+        configured: true,
+        connected: true,
+        readonly: ["t1"],
+      },
+    ]);
+    render(<MemoryRouter>{host()}</MemoryRouter>);
+
+    act(() => openPanel({ kind: "task", id: "t1" }));
+    expect(within(panel() ?? document.body).getByDisplayValue("2026-11-16")).toBeDisabled();
+    expect(within(panel() ?? document.body).getByText(copy.calendar.readonly)).toBeVisible();
+    act(() => setIntegrations(undefined));
   });
 
   it("leaves Esc to an open dialog above it", async () => {

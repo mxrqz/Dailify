@@ -22,6 +22,7 @@ import { DayTaskRow, durationText } from "./day-task-row";
 import { copy } from "./copy";
 import { useTaskActions } from "@/hooks/useTaskActions";
 import { closePanel, usePanel } from "@/hooks/usePanel";
+import { setIntegrations } from "@/hooks/useIntegrations";
 import { fill } from "@/functions/functions";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { MemoryRouter } from "react-router-dom";
@@ -105,6 +106,26 @@ describe("DayTaskRow", () => {
     // A series asks the scope first.
     expect(await screen.findByRole("alertdialog")).toBeInTheDocument();
     act(() => closePanel());
+  });
+
+  it("on desktop, a read-only invite offers no time or day chip", () => {
+    dailify.mockReturnValue({ tasks: [task], setTasks: vi.fn(), loadedMonths: [day] });
+    setIntegrations([
+      {
+        provider: "google-calendar",
+        allowed: true,
+        configured: true,
+        connected: true,
+        readonly: ["t"],
+      },
+    ]);
+    render(<DayTaskRow task={task} day={day} sheetEditing={false} />);
+
+    const title = { title: task.title };
+    expect(screen.queryByRole("button", { name: fill(copy.task.editTime, title) })).toBeNull();
+    expect(screen.queryByRole("button", { name: fill(copy.task.editDay, title) })).toBeNull();
+    expect(screen.getByRole("button", { name: fill(copy.task.more, title) })).toBeVisible();
+    act(() => setIntegrations(undefined));
   });
 
   it.each([true, false])("a multi-day task shows its day count instead of the clock", (sheet) => {
