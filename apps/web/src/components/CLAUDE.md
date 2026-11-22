@@ -90,8 +90,9 @@ data loads in its page (`pages/billing.tsx`).
   52px, SyncBadge first); `AppLayout` mounts an empty one, `/dashboard` its own with actions.
 - Desktop: `SidebarMenu` (props) / `Sidebar` (wired): brand and history, Hoje (today's open count),
   Calendário (`?view=calendar`), "Conversar com a Mew" (`openPanel({ kind: "mew" })`), the "Conta"
-  pages, then credits, "Assinar Pro" (Free) and the account `DropdownMenu` (Perfil, Segurança,
-  Sair); signed out, "Entrar". Mobile: `NavMenu` (props, the `NAV_ITEMS` list) / `NavItems`. The
+  pages with Perfil and Segurança nested under Configurações (`SETTINGS_ITEMS`, open on those
+  routes), then credits, "Assinar Pro" (Free) and the account `DropdownMenu` (Sair); signed out,
+  "Entrar". It folds to icons (`collapsed`, stored per device): text stays mounted and fades. Mobile: `NavMenu` (props, the `NAV_ITEMS` list) / `NavItems`. The
   meter (`CreditsMeter`) draws `QuotaState.ratio`. `/premium` shares the layout without
   `ProtectedRoute`, so account, credits and sign-out appear only when logged in.
 - `SidebarItem` lights on path plus search (`to` may carry `?view=calendar`); an item with

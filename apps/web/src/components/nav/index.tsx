@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { animate, motion, useMotionValue, useReducedMotion, useTransform } from "motion/react";
 import { useEffect, type CSSProperties } from "react";
-import { Link, useNavigate } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import type { QuotaState } from "@dailify/shared";
 
 import { Brand } from "@/components/brand";
@@ -29,7 +29,6 @@ import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { CALENDAR_VIEW, PLAN_ID, planMap } from "@/consts/conts";
@@ -202,13 +201,22 @@ const ACCOUNT_ITEMS = [
   { icon: SettingsIcon, label: copy.profile.navSettings, to: "/settings" },
 ];
 
-/**
- * The desktop column, props only: brand and history on top, the app, then the account pages; at
- * the bottom credits, the Free upsell and the account menu (Perfil, Segurança, Sair).
- */
+// Nested under Configurações, like a subfolder: open on any of the three routes.
+const SETTINGS_ITEMS = [
+  { icon: UserIcon, label: copy.profile.navPersonal, to: "/profile" },
+  { icon: ShieldIcon, label: copy.profile.navSecurity, to: "/security" },
+];
+const SETTINGS_ROUTES = ["/settings", ...SETTINGS_ITEMS.map((item) => item.to)];
+
 // The grid-rows reveal (an allowed layout animation): a row that opens or closes its height.
 const REVEAL =
   "grid transition-[grid-template-rows] duration-base ease-out motion-reduce:transition-none";
+
+/**
+ * The desktop column, props only: brand and history on top, the app, then the account pages with
+ * Perfil and Segurança nested under Configurações; at the bottom credits, the Free upsell and the
+ * account menu (Sair).
+ */
 
 export function SidebarMenu({
   account,
@@ -230,6 +238,9 @@ export function SidebarMenu({
   onCollapse?: (collapsed: boolean) => void;
 }): JSX.Element {
   const navigate = useNavigate();
+  const inSettings = SETTINGS_ROUTES.includes(useLocation().pathname);
+  // A closed subfolder keeps its links mounted (for the animation) but out of reach.
+  const shut = (el: HTMLElement | null) => el?.toggleAttribute("inert", !inSettings);
   const toggleLabel = collapsed ? copy.profile.expandNav : copy.profile.collapseNav;
   const ToggleIcon = collapsed ? PanelLeftOpenIcon : PanelLeftCloseIcon;
   // Folded, what fades stays mounted (no jump) but leaves the tab order and the a11y tree.
@@ -331,6 +342,20 @@ export function SidebarMenu({
         {ACCOUNT_ITEMS.map((item) => (
           <SidebarItem key={item.to} {...item} collapsed={collapsed} />
         ))}
+        <div className={cn(REVEAL, inSettings ? "grid-rows-[1fr]" : "grid-rows-[0fr]")}>
+          <div ref={shut} className="overflow-hidden">
+            <div
+              className={cn(
+                "flex flex-col gap-0.5 pt-0.5",
+                !collapsed && "ml-5.5 border-l border-separator pl-1.5",
+              )}
+            >
+              {SETTINGS_ITEMS.map((item) => (
+                <SidebarItem key={item.to} {...item} collapsed={collapsed} />
+              ))}
+            </div>
+          </div>
+        </div>
       </div>
 
       <div className="mt-auto flex flex-col gap-2 pt-4">
@@ -380,19 +405,6 @@ export function SidebarMenu({
               </button>
             </DropdownMenuTrigger>
             <DropdownMenuContent side="top" align="start" className="w-56">
-              <DropdownMenuItem asChild>
-                <Link to="/profile">
-                  <UserIcon aria-hidden="true" />
-                  {copy.profile.navPersonal}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuItem asChild>
-                <Link to="/security">
-                  <ShieldIcon aria-hidden="true" />
-                  {copy.profile.navSecurity}
-                </Link>
-              </DropdownMenuItem>
-              <DropdownMenuSeparator />
               <DropdownMenuItem onSelect={onSignOut}>
                 <LogOutIcon aria-hidden="true" />
                 {copy.profile.signOut}

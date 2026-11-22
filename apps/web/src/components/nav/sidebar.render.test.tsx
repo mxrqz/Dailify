@@ -86,21 +86,23 @@ describe("<Sidebar>", () => {
     expect(current()).toBeNull();
   });
 
-  it("keeps Perfil, Segurança and Sair in the account menu", async () => {
+  it("nests Perfil and Segurança under Configurações, open only on its routes", () => {
+    const view = renderAt("/dashboard");
+    const security = () => screen.getByRole("link", { name: copy.profile.navSecurity });
+    expect(security().closest("[inert]")).not.toBeNull();
+
+    view.unmount();
+    renderAt("/security");
+    expect(security()).toHaveAttribute("aria-current", "page");
+    expect(security().closest("[inert]")).toBeNull();
+  });
+
+  it("leaves only Sair in the account menu", async () => {
     const user = userEvent.setup();
     renderAt("/dashboard");
-    expect(screen.queryByRole("link", { name: copy.profile.navPersonal })).not.toBeInTheDocument();
-
     await user.click(screen.getByRole("button", { name: /Conta de Seu/ }));
 
-    expect(screen.getByRole("menuitem", { name: copy.profile.navPersonal })).toHaveAttribute(
-      "href",
-      "/profile",
-    );
-    expect(screen.getByRole("menuitem", { name: copy.profile.navSecurity })).toHaveAttribute(
-      "href",
-      "/security",
-    );
+    expect(screen.getAllByRole("menuitem")).toHaveLength(1);
     expect(screen.getByRole("menuitem", { name: copy.profile.signOut })).toBeInTheDocument();
   });
 
