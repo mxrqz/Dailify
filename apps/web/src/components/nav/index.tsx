@@ -347,7 +347,9 @@ export function SidebarMenu({
             <div
               className={cn(
                 "flex flex-col gap-0.5 pt-0.5",
-                !collapsed && "ml-5.5 border-l border-ink-tertiary/40 pl-1.5",
+                // The guide line stops short of both ends, so it reads as a group, not a rail.
+                !collapsed &&
+                  "relative ml-5.5 pl-1.5 before:absolute before:inset-y-2 before:left-0 before:w-px before:bg-ink-tertiary/40",
               )}
             >
               {SETTINGS_ITEMS.map((item) => (
