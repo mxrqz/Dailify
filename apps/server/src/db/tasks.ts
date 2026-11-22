@@ -1,5 +1,6 @@
 import type { Task, Repeat } from "@dailify/shared";
 import {
+  SYNC_WINDOW_DAYS,
   TASK_LIMITS,
   durationMinutes,
   endOfMonthMs,
@@ -15,8 +16,6 @@ const DAY = 86_400_000;
 
 // D1's clock in epoch-ms: the one the 0023 triggers stamp `changed_at` and tombstones with.
 const NOW_MS = `CAST((julianday('now') - 2440587.5) * 86400000 AS INTEGER)`;
-/** How far back a full pull reaches for one-off dated tasks (~6 months). */
-export const SYNC_WINDOW_DAYS = 183;
 /** Tombstone lifetime; a `since` older than this answers a full pull. */
 export const TOMBSTONE_TTL_MS = 90 * DAY;
 // The next cursor trails the read: covers same-ms writes and a D1 clock step. Re-sent rows are harmless.
