@@ -121,7 +121,7 @@ function AnytimeRow({
   first: boolean;
 }): JSX.Element {
   const { weekStart, hour12 } = useDailify();
-  const { done, toggle, remove } = useUndatedActions(task);
+  const { done, toggle, remove, deleteDialog } = useUndatedActions(task);
   const [open, setOpen] = useState(false);
   const panel = usePanel();
 
@@ -172,6 +172,7 @@ function AnytimeRow({
         open={open}
         onClose={() => setOpen(false)}
       />
+      {deleteDialog}
     </EditTask>
   );
 }

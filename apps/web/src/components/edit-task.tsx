@@ -63,14 +63,12 @@ function UndatedFooterButtons({
   completeButton: (done: boolean, toggle: () => Promise<unknown>) => JSX.Element;
   deleteButton: (onClick: () => void) => JSX.Element;
 }): JSX.Element {
-  const { done, toggle, remove } = useUndatedActions(task);
+  const { done, toggle, remove, deleteDialog } = useUndatedActions(task, { onDeleted: onClose });
   return (
     <>
       {completeButton(done, toggle)}
-      {deleteButton(() => {
-        void remove();
-        onClose();
-      })}
+      {deleteButton(() => void remove())}
+      {deleteDialog}
     </>
   );
 }
