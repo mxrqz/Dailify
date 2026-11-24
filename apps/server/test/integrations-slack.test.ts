@@ -247,30 +247,41 @@ describe("Slack read", () => {
 describe("Slack send and disconnect", () => {
   beforeEach(seed);
 
-  it("posts as the user to a channel", async () => {
-    await slack.send?.(env, userId, "#geral", "oi");
-    const sent = callsTo("chat.postMessage")[0];
-    expect(sent.auth).toBe("Bearer xoxp-1");
-    expect(JSON.parse(sent.body)).toEqual({ channel: "C100GERAL", text: "oi" });
+  it("posts as the user to a channel and answers the message's permalink", async () => {
+    const sent = await slack.send?.(env, userId, "#geral", { text: "oi" });
+    const post = callsTo("chat.postMessage")[0];
+    expect(post.auth).toBe("Bearer xoxp-1");
+    expect(JSON.parse(post.body)).toEqual({ channel: "C100GERAL", text: "oi" });
+    expect(sent).toEqual({ url: "https://acme.slack.com/archives/C100GERAL/p1763740900000300" });
   });
 
   it("replies in the thread of a permalink", async () => {
-    await slack.send?.(
+    const sent = await slack.send?.(
       env,
       userId,
       "https://acme.slack.com/archives/C100GERAL/p1763737200000100",
-      "ok",
+      { text: "ok" },
     );
     expect(JSON.parse(callsTo("chat.postMessage")[0].body)).toEqual({
       channel: "C100GERAL",
       text: "ok",
       thread_ts: "1763737200.000100",
     });
+    expect(sent?.url).toBe(
+      "https://acme.slack.com/archives/C100GERAL/p1763740900000300?thread_ts=1763737200.000100",
+    );
+  });
+
+  it("a failed permalink lookup after posting still counts as sent", async () => {
+    routes[`${API}/auth.test`] = () => Response.json({ ok: false, error: "ratelimited" });
+    expect(await slack.send?.(env, userId, "C100GERAL", { text: "oi" })).toEqual({});
   });
 
   it("a revoked token marks the connection revoked", async () => {
     routes[`${API}/chat.postMessage`] = () => Response.json({ ok: false, error: "token_revoked" });
-    await expect(slack.send?.(env, userId, "C100GERAL", "oi")).rejects.toThrow(/token_revoked/);
+    await expect(slack.send?.(env, userId, "C100GERAL", { text: "oi" })).rejects.toThrow(
+      /token_revoked/,
+    );
     expect((await getConnection(env.DB, userId, "slack"))?.status).toBe("revoked");
   });
 

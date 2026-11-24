@@ -1,3 +1,4 @@
+import { isRecord, type MewSendRequest } from "@dailify/shared";
 import { markRevoked } from "../../db/integrations";
 import { bytesToBase64url } from "../../lib/encoding";
 import { loadCtx } from "../connection";
@@ -16,10 +17,12 @@ const base64 = (text: string) => btoa(String.fromCharCode(...new TextEncoder().e
 const encodeHeader = (text: string) =>
   (text.match(/.{1,10}/gsu) ?? []).map((w) => `=?UTF-8?B?${base64(w)}?=`).join("\r\n ");
 
-/** The first line of `text` is the subject, the rest the plain-text body. */
-function message(to: string, text: string): string {
-  const [subject = "", ...rest] = text.split("\n");
-  const body = rest.join("\n").trim().replace(/\r?\n/g, "\r\n");
+/** A draft without `subject` (older chats) carries it as the first line of `text`. */
+function message(to: string, draft: MewSendRequest): string {
+  const [first = "", ...rest] = draft.text.split("\n");
+  const subject = draft.subject ?? first;
+  const text = draft.subject === undefined ? rest.join("\n") : draft.text;
+  const body = text.trim().replace(/\r?\n/g, "\r\n");
   return [
     `To: ${to}`,
     `Subject: ${encodeHeader(subject.trim())}`,
@@ -41,8 +44,8 @@ export const gmail: Provider = {
     extraParams: { access_type: "offline", prompt: "consent" },
   },
   identify: googleCalendar.identify,
-  target: `o e-mail do destinatário, um só ("ana@exemplo.com"); em "text", a 1ª linha é o assunto e o resto, o corpo`,
-  async send(env, userId, target, text) {
+  target: `o e-mail do destinatário, um só ("ana@exemplo.com"); o assunto vai em "subject" e o corpo em "text"`,
+  async send(env, userId, target, draft) {
     const to = target.trim();
     if (to.length > 254 || !ADDRESS.test(to)) throw new Error("Gmail: not one e-mail address");
     const ctx = await loadCtx(env, userId, "gmail");
@@ -50,10 +53,14 @@ export const gmail: Provider = {
     const res = await ctx.api(API, {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ raw: bytesToBase64url(new TextEncoder().encode(message(to, text))) }),
+      body: JSON.stringify({ raw: bytesToBase64url(new TextEncoder().encode(message(to, draft))) }),
     });
     // ctx.api refreshes before expiry, so a 401 is a grant revoked at Google.
     if (res.status === 401) await markRevoked(env.DB, userId, "gmail", Date.now());
     if (!res.ok) throw new Error(`Gmail send ${res.status}`);
+    // Sent already: an odd body only loses the link.
+    const sent: unknown = await res.json().catch(() => null);
+    const id = isRecord(sent) && typeof sent.id === "string" ? sent.id : "";
+    return /^\w+$/.test(id) ? { url: `https://mail.google.com/mail/u/0/#sent/${id}` } : {};
   },
 };

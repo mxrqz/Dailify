@@ -122,32 +122,51 @@ describe("Gmail connect and callback", () => {
 describe("Gmail send", () => {
   beforeEach(() => seed());
 
-  it("posts a base64url message: first line as the UTF-8 subject, the rest as the body", async () => {
+  const subjectOf = (headers: Map<string, string>) =>
+    [...(headers.get("Subject") ?? "").matchAll(/=\?UTF-8\?B\?([^?]+)\?=/g)]
+      .map((w) => utf8(w[1]))
+      .join("");
+
+  it("posts a base64url message: the UTF-8 subject, the text as the body, and its sent link", async () => {
     const subject = "Reunião amanhã às 15h com a equipe toda, confirmada 🎉";
-    await gmail.send?.(env, userId, " ana@exemplo.com ", `${subject}\nOi Ana,\n\nAté lá.`);
+    const sent = await gmail.send?.(env, userId, " ana@exemplo.com ", {
+      subject,
+      text: "Oi Ana,\n\nAté lá.",
+    });
+    expect(sent).toEqual({ url: `https://mail.google.com/mail/u/0/#sent/${fixture.sent.id}` });
     expect(callsTo(fixture.SEND)[0].auth).toBe("Bearer ya29.gmail");
 
     const { head, headers, body } = sentMessage();
     expect(headers.get("To")).toBe("ana@exemplo.com");
     expect(headers.get("Content-Type")).toBe("text/plain; charset=UTF-8");
     expect(headers.has("Bcc")).toBe(false);
-    const words = [...(headers.get("Subject") ?? "").matchAll(/=\?UTF-8\?B\?([^?]+)\?=/g)];
-    expect(words.map((w) => utf8(w[1])).join("")).toBe(subject);
+    expect(subjectOf(headers)).toBe(subject);
     for (const line of head.split("\r\n")) expect(line.length).toBeLessThanOrEqual(78);
+    expect(body).toBe("Oi Ana,\r\n\r\nAté lá.");
+  });
+
+  it("an older draft without a subject still takes it from the first line", async () => {
+    await gmail.send?.(env, userId, "ana@exemplo.com", { text: "Reunião\nOi Ana,\n\nAté lá." });
+    const { headers, body } = sentMessage();
+    expect(subjectOf(headers)).toBe("Reunião");
     expect(body).toBe("Oi Ana,\r\n\r\nAté lá.");
   });
 
   it.each(["Ana", "ana@exemplo.com, eu@x.com", "ana@exemplo.com\r\nBcc: eu@x.com", "<a@b.co>"])(
     "refuses %j before calling Gmail",
     async (target) => {
-      await expect(gmail.send?.(env, userId, target, "Oi\ncorpo")).rejects.toThrow(/address/);
+      await expect(gmail.send?.(env, userId, target, { text: "Oi\ncorpo" })).rejects.toThrow(
+        /address/,
+      );
       expect(callsTo(fixture.SEND)).toHaveLength(0);
     },
   );
 
   it("a 401 marks the connection revoked", async () => {
     routes[fixture.SEND] = () => Response.json(fixture.unauthorized, { status: 401 });
-    await expect(gmail.send?.(env, userId, "ana@exemplo.com", "Oi\ncorpo")).rejects.toThrow(/401/);
+    await expect(
+      gmail.send?.(env, userId, "ana@exemplo.com", { text: "Oi\ncorpo" }),
+    ).rejects.toThrow(/401/);
     expect((await getConnection(env.DB, userId, "gmail"))?.status).toBe("revoked");
   });
 

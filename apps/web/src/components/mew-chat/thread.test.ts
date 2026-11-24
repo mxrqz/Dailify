@@ -131,6 +131,51 @@ describe("chatReducer", () => {
     expect(loadChat("u3")).toEqual(s);
   });
 
+  it("a send goes out, lands with its url and ref that survive a reload, or comes back failed", () => {
+    const s = asked({
+      reply: "Rascunho.",
+      intent: "answer",
+      blocks: [
+        {
+          kind: "send",
+          id: "i",
+          provider: "github",
+          target: "acme/app",
+          to: "acme/app",
+          text: "",
+          subject: "Crash",
+          assign: true,
+        },
+      ],
+    });
+    const send = (m: Message[]) => m.flatMap((x) => (x.from === "mew" ? x.blocks : [])).at(-1);
+    let t = chatReducer(s, {
+      type: "draft",
+      block: "i",
+      subject: "Crash ao salvar",
+      assign: false,
+    });
+    expect(send(t)).toMatchObject({ subject: "Crash ao salvar", assign: false, text: "" });
+
+    const failed = chatReducer(chatReducer(t, { type: "deliver", block: "i" }), {
+      type: "unsent",
+      block: "i",
+    });
+    expect(send(failed)).toMatchObject({ step: "draft", sending: false, failed: true });
+
+    t = chatReducer(failed, { type: "deliver", block: "i" });
+    expect(send(t)).toMatchObject({ step: "done", sending: true, failed: false });
+    // A reload while it was out: it may have gone, so it stays sent, without the spinner.
+    saveChat("u4", t);
+    expect(send(loadChat("u4"))).toMatchObject({ step: "done", sending: false });
+
+    const url = "https://github.com/acme/app/issues/3";
+    t = chatReducer(t, { type: "sent", block: "i", url, ref: "acme/app#3" });
+    expect(send(t)).toMatchObject({ step: "done", sending: false, url, ref: "acme/app#3" });
+    saveChat("u4", t);
+    expect(loadChat("u4")).toEqual(t);
+  });
+
   it("drop takes back a refused send", () => {
     expect(
       chatReducer(chatReducer([], { type: "send", id: "s", text: "oi" }), {

@@ -33,9 +33,12 @@ export function ChatInput({
   onCancel,
   file,
   dock,
+  quiet,
 }: {
   busy: boolean;
   offline: boolean;
+  /** A send draft is open in the thread: the round button stays neutral, its Enviar is the red. */
+  quiet?: boolean;
   onSend: (text: string, image?: Photo) => void;
   onVoice?: () => void;
   listening?: boolean;
@@ -168,7 +171,7 @@ export function ChatInput({
         aria-label={mic ? t.mic : t.send}
         disabled={busy || (!mic && (offline || !filled))}
         onClick={mic ? onVoice : undefined}
-        className={cn(filled && "bg-brand text-on-brand")}
+        className={cn(quiet ? "bg-fill text-ink" : filled && "bg-brand text-on-brand")}
       >
         <MicIcon
           aria-hidden="true"

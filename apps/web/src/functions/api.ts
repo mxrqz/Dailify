@@ -5,6 +5,8 @@ import type {
   MewActionStatus,
   MewReply,
   MewRequest,
+  MewSendRequest,
+  MewSent,
   MewTranscript,
   OccurrenceEdit,
   Task,
@@ -269,12 +271,15 @@ export async function setMewAction(id: string, status: MewActionStatus): Promise
 }
 
 /** A confirmed send box; 404 = already sent or not yours, 409 `reconnect`, 502 = the app failed. */
-export async function sendMewAction(id: string, text: string): Promise<{ error?: ApiError }> {
-  const { error } = await request<never>(`/mew/actions/${encodeURIComponent(id)}/send`, {
+export async function sendMewAction(
+  id: string,
+  draft: MewSendRequest,
+): Promise<{ sent?: MewSent; error?: ApiError }> {
+  const { data, error } = await request<MewSent>(`/mew/actions/${encodeURIComponent(id)}/send`, {
     method: "POST",
-    body: JSON.stringify({ text }),
+    body: JSON.stringify(draft),
   });
-  return { error };
+  return error ? { error } : { sent: data ?? {} };
 }
 
 export async function createTaskVoice(

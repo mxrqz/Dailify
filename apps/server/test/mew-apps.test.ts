@@ -5,7 +5,9 @@ const fake = vi.hoisted(() => ({
   read: vi.fn<
     (env: unknown, userId: string, target: string) => Promise<{ text: string; card?: MewCard }>
   >(),
-  send: vi.fn<(env: unknown, userId: string, target: string, text: string) => Promise<void>>(),
+  send: vi.fn<
+    (env: unknown, userId: string, target: string, draft: MewSendRequest) => Promise<MewSent>
+  >(),
 }));
 vi.mock("../src/integrations/registry", async (importOriginal) => {
   const { PROVIDERS } = await importOriginal<typeof import("../src/integrations/registry")>();
@@ -31,7 +33,16 @@ let userId = "";
 mockSession(() => ({ id: userId, plan: "free" }));
 
 import { env } from "cloudflare:workers";
-import type { IntegrationStatus, MewBlock, MewCard, MewReply } from "@dailify/shared";
+import type {
+  IntegrationStatus,
+  MewBlock,
+  MewCard,
+  MewReply,
+  MewSendRequest,
+  MewSent,
+} from "@dailify/shared";
+import { ActionError } from "../src/integrations/types";
+import { toBlocks } from "../src/lib/mew";
 import app from "../src/index";
 import { upsertConnection } from "../src/db/integrations";
 import { saveSettings } from "../src/db/settings";
@@ -100,7 +111,7 @@ beforeEach(async () => {
     Date.now(),
   );
   fake.read.mockResolvedValue({ text: "João: pode revisar o PR?" });
-  fake.send.mockResolvedValue();
+  fake.send.mockResolvedValue({ url: "https://acme.slack.com/archives/C1/p1" });
 });
 
 describe("POST /mew/chat — reading an app", () => {
@@ -247,13 +258,84 @@ describe("POST /mew/actions/:id/send", () => {
 
     expect((await req(`/mew/actions/${block.id}/send`, "POST", { text: " " })).status).toBe(400);
     const res = await req(`/mew/actions/${block.id}/send`, "POST", { text: "Revisado ✅" });
-    expect(res.status).toBe(204);
-    expect(fake.send).toHaveBeenCalledWith(expect.anything(), userId, "C1", "Revisado ✅");
+    expect(res.status).toBe(200);
+    expect(await res.json()).toEqual({ url: "https://acme.slack.com/archives/C1/p1" });
+    expect(fake.send).toHaveBeenCalledWith(expect.anything(), userId, "C1", {
+      text: "Revisado ✅",
+    });
     expect(await statusOf(block.id)).toBe("done");
     expect((await req(`/mew/actions/${block.id}/send`, "POST", { text: "de novo" })).status).toBe(
       404,
     );
     expect(fake.send).toHaveBeenCalledTimes(1);
+  });
+
+  it("passes the edited subject, labels and assign, and checks them first", async () => {
+    aiReturns(draft);
+    const block = sendBlock((await (await chat()).json<MewReply>()).blocks);
+    const send = (body: object) => req(`/mew/actions/${block.id}/send`, "POST", body);
+    for (const bad of [
+      { text: "x", subject: "a\nb" },
+      { text: "x", subject: "s".repeat(257) },
+      { text: "x", labels: ["a", "b", "c", "d"] },
+      { text: "x", labels: [" "] },
+      { text: "x", assign: "yes" },
+      { text: "", subject: "" },
+    ])
+      expect((await send(bad)).status).toBe(400);
+    fake.send.mockResolvedValueOnce({ url: "https://github.com/acme/app/issues/3", ref: "a#3" });
+    const res = await send({ text: "", subject: " Crash ", labels: [" bug "], assign: true });
+    expect(await res.json()).toEqual({ url: "https://github.com/acme/app/issues/3", ref: "a#3" });
+    expect(fake.send).toHaveBeenCalledWith(expect.anything(), userId, "C1", {
+      text: "",
+      subject: "Crash",
+      labels: ["bug"],
+      assign: true,
+    });
+  });
+
+  it("a provider's ActionError keeps its status and the draft can be sent again", async () => {
+    aiReturns(draft);
+    const block = sendBlock((await (await chat()).json<MewReply>()).blocks);
+    fake.send.mockRejectedValueOnce(new ActionError(404, "no access to acme/app"));
+    const res = await req(`/mew/actions/${block.id}/send`, "POST", { text: "oi" });
+    expect(res.status).toBe(404);
+    expect(await res.json()).toMatchObject({ error: "no access to acme/app" });
+    expect(await statusOf(block.id)).toBe("proposed");
+    expect((await req(`/mew/actions/${block.id}/send`, "POST", { text: "oi" })).status).toBe(200);
+  });
+
+  it("an issue draft carries its title, labels and assign, addressed to the repo", () => {
+    const reply = toBlocks(
+      {
+        intent: "answer",
+        reply: "Rascunho.",
+        show: [],
+        proposals: [],
+        send: {
+          provider: "github",
+          target: "acme/app",
+          to: "Acme",
+          text: "Steps",
+          subject: "Crash\non save",
+          labels: ["bug", " ", "ui", "a", "b"],
+        },
+      },
+      new Map(),
+      TZ,
+      [],
+      Date.now(),
+      [{ provider: "github", target: "repo", read: true, send: true }],
+    );
+    expect(reply.blocks).toEqual([
+      expect.objectContaining({
+        kind: "send",
+        to: "acme/app",
+        subject: "Crash on save",
+        labels: ["bug", "ui", "a"],
+        assign: true,
+      }),
+    ]);
   });
 
   it("another user's draft is a 404 and sends nothing", async () => {

@@ -3,14 +3,19 @@ import {
   API_ERROR,
   INTEGRATIONS,
   isRecord,
+  isStringArray,
   MEW_CONSENT_REQUIRED,
   MEW_HISTORY_MAX,
   MEW_IMAGE_MAX,
+  MEW_LABELS_MAX,
   MEW_SEND_MAX,
+  MEW_SUBJECT_MAX,
   MEW_TEXT_MAX,
   type MewActionStatus,
   type MewReply,
   type MewRequest,
+  type MewSendRequest,
+  type MewSent,
   type MewTranscript,
   type ProviderId,
 } from "@dailify/shared";
@@ -23,6 +28,7 @@ import { aiQuota, debitAi } from "../db/limits";
 import { activeIntegrations } from "../db/integrations";
 import { claimAction, hasGrant, logProposals, saveGrant, setActionStatus } from "../db/mew";
 import { PROVIDERS } from "../integrations/registry";
+import { ActionError } from "../integrations/types";
 import { WINDOW_DAYS, agendaOf, askMew, type MewApp } from "../lib/mew";
 import { monthsTouching } from "../lib/occurrence-alert";
 import { transcribe } from "../lib/openai";
@@ -169,11 +175,38 @@ mew.post("/transcribe", rateLimit("AI_LIMITER"), async (c) => {
   }
 });
 
-// A confirmed `send` box: the text may be the user's edit, the address is the stored one.
+const trimmed = (v: unknown) => (v === undefined ? "" : typeof v === "string" ? v.trim() : null);
+
+/** The confirmed draft, maybe edited. Either a text or a subject; each provider checks its own. */
+function parseSend(body: unknown): MewSendRequest | { error: string } {
+  if (!isRecord(body)) return { error: "invalid body" };
+  const text = trimmed(body.text);
+  const subject = trimmed(body.subject);
+  const labels = isStringArray(body.labels) ? body.labels.map((l) => l.trim()) : [];
+  const { assign } = body;
+  if (text === null || text.length > MEW_SEND_MAX) return { error: "invalid text" };
+  if (subject === null || subject.length > MEW_SUBJECT_MAX || /[\r\n]/.test(subject))
+    return { error: "invalid subject" };
+  if (!text && !subject) return { error: "invalid text" };
+  if (
+    (body.labels !== undefined && !isStringArray(body.labels)) ||
+    labels.length > MEW_LABELS_MAX ||
+    !labels.every((l) => l && l.length <= 50)
+  )
+    return { error: "invalid labels" };
+  if (assign !== undefined && typeof assign !== "boolean") return { error: "invalid assign" };
+  return {
+    text,
+    ...(body.subject !== undefined && { subject }),
+    ...(labels.length > 0 && { labels }),
+    ...(assign !== undefined && { assign }),
+  };
+}
+
+// A confirmed `send` box: the draft may be the user's edit, the address is the stored one.
 mew.post("/actions/:id/send", rateLimit("API_LIMITER"), async (c) => {
-  const body = await readJson(c);
-  const text = isRecord(body) && typeof body.text === "string" ? body.text.trim() : "";
-  if (!text || text.length > MEW_SEND_MAX) return fail(c, 400, "invalid text");
+  const draft = parseSend(await readJson(c));
+  if ("error" in draft) return fail(c, 400, draft.error);
   const db = c.env.DB;
   const userId = c.get("userId");
   const id = c.req.param("id");
@@ -186,13 +219,14 @@ mew.post("/actions/:id/send", rateLimit("API_LIMITER"), async (c) => {
     return fail(c, 409, "Reconnect the app", { code: API_ERROR.reconnect });
   }
   try {
-    await send(c.env, userId, claimed.target, text);
+    const sent = await send(c.env, userId, claimed.target, draft);
+    return c.json({ ...sent } satisfies MewSent);
   } catch (err) {
-    console.error(err);
     await setActionStatus(db, userId, id, "proposed");
+    if (err instanceof ActionError) return fail(c, err.status, err.message, err.extra);
+    console.error(err);
     return fail(c, 502, "Send failed");
   }
-  return c.body(null, 204);
 });
 
 mew.patch("/actions/:id", rateLimit("API_LIMITER"), async (c) => {

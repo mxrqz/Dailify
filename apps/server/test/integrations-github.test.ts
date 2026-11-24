@@ -44,6 +44,8 @@ beforeEach(() => {
       Response.json({ access_token: "gho_1", token_type: "bearer", scope: SCOPE }),
     [`${API}/user`]: () => Response.json({ id: 42, login: "octo" }),
     [`${API}/issues`]: () => Response.json([ISSUE, PR], { headers: { etag: 'W/"v1"' } }),
+    [`${API}/user/repos`]: () =>
+      Response.json([{ full_name: "acme/app" }, { full_name: "octo/x" }]),
     [`${API}/applications/test-github-client/grant`]: () => new Response(null, { status: 204 }),
   };
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
@@ -184,7 +186,7 @@ describe("GitHub import", () => {
 describe("GitHub read", () => {
   beforeEach(seed);
 
-  it("*: open assigned items and review requests", async () => {
+  it("*: open assigned items, review requests and the repos, last pushed first", async () => {
     routes[`${API}/search/issues`] = () =>
       Response.json({ items: [issue("acme/api", 7, { pull_request: {}, title: "Bump" })] });
     const { text } = (await github.read?.(env, userId, "*")) ?? {};
@@ -195,8 +197,10 @@ describe("GitHub read", () => {
       [
         "Assigned to the user, open:\n- acme/app#1: Item 1\n- acme/app#2 (PR): Item 2",
         "Pull requests waiting for the user's review:\n- acme/api#7 (PR): Bump",
+        "The user's repositories, last pushed first: acme/app, octo/x",
       ].join("\n\n"),
     );
+    expect(new URL(callsTo(`${API}/user/repos`)[0].url).searchParams.get("sort")).toBe("pushed");
   });
 
   it("*: imports first, then a card of assigned and review rows, deduped and linked", async () => {
@@ -281,6 +285,75 @@ describe("GitHub read", () => {
     routes[`${API}/repos/acme/app/issues/9`] = () => new Response("", { status: 404 });
     expect(await github.read?.(env, userId, "https://github.com/acme/app/pull/9")).toEqual({
       text: expect.stringMatching(/Nothing on GitHub/),
+    });
+  });
+});
+
+describe("GitHub send (create an issue)", () => {
+  const CREATE = `${API}/repos/acme/app/issues`;
+  const draft = { subject: "Crash on save", text: "Steps", labels: ["bug", "nope"] };
+  const created = issue("acme/app", 3, { title: "Crash on save" });
+
+  beforeEach(async () => {
+    await seed();
+    routes[CREATE] = () => Response.json(created, { status: 201 });
+  });
+
+  it("posts title, body and labels, unassigned, and answers the issue's url and ref", async () => {
+    const sent = await github.send?.(env, userId, " acme/app ", { ...draft, assign: false });
+    const post = callsTo(CREATE)[0];
+    expect(post.method).toBe("POST");
+    expect(post.headers.get("user-agent")).toBe("Mewki");
+    expect(JSON.parse(post.body)).toEqual({
+      title: "Crash on save",
+      body: "Steps",
+      labels: ["bug", "nope"],
+      assignees: [],
+    });
+    expect(sent).toEqual({ url: created.html_url, ref: "acme/app#3" });
+    expect(callsTo(`${API}/user`)).toHaveLength(0);
+    expect(callsTo(`${API}/issues`)).toHaveLength(0);
+  });
+
+  it("assigned to the user's login, it imports the issue as a task at once", async () => {
+    routes[`${API}/issues`] = () => Response.json([created]);
+    await github.send?.(env, userId, "acme/app", { ...draft, assign: true });
+    expect(JSON.parse(callsTo(CREATE)[0].body).assignees).toEqual(["octo"]);
+    expect((await tasksOf()).map((g) => g.ref)).toEqual(["acme/app#3"]);
+  });
+
+  it("a 422 on labels retries once without them", async () => {
+    let n = 0;
+    routes[CREATE] = () =>
+      n++ ? Response.json(created, { status: 201 }) : new Response("{}", { status: 422 });
+    expect(await github.send?.(env, userId, "acme/app", draft)).toMatchObject({
+      ref: "acme/app#3",
+    });
+    expect(callsTo(CREATE).map((c) => JSON.parse(c.body).labels)).toEqual([["bug", "nope"], []]);
+  });
+
+  it("a repo out of reach is a clear 404, sent once", async () => {
+    routes[CREATE] = () => new Response("", { status: 404 });
+    await expect(github.send?.(env, userId, "acme/app", draft)).rejects.toMatchObject({
+      status: 404,
+      message: expect.stringMatching(/can't open issues in acme\/app/),
+    });
+    expect(callsTo(CREATE)).toHaveLength(1);
+  });
+
+  it.each(["acme", "acme/app#3", "../..", "acme/..", "a/b/c"])(
+    "refuses the target %j",
+    async (target) => {
+      await expect(github.send?.(env, userId, target, draft)).rejects.toMatchObject({
+        status: 400,
+      });
+      expect(calls).toHaveLength(0);
+    },
+  );
+
+  it("refuses a draft without a title", async () => {
+    await expect(github.send?.(env, userId, "acme/app", { text: "x" })).rejects.toMatchObject({
+      status: 400,
     });
   });
 });

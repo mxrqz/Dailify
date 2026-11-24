@@ -34,6 +34,11 @@ const api = vi.hoisted(() => ({
   createTaskVoice: vi.fn(),
 }));
 vi.mock("@/functions/api", () => api);
+const store = vi.hoisted(() => ({ pullTasks: vi.fn() }));
+vi.mock("@/functions/task-store", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@/functions/task-store")>()),
+  pullTasks: store.pullTasks,
+}));
 
 // The setters apply functional updates, as the real useState setters do.
 const ctx = vi.hoisted(() => ({
@@ -274,7 +279,7 @@ describe("MewChat", () => {
 
   it("a send box sends the draft, or the edited text, only on Enviar", async () => {
     api.mewChat.mockResolvedValue({ reply: drafted });
-    api.sendMewAction.mockResolvedValue({});
+    api.sendMewAction.mockResolvedValue({ sent: { url: "https://acme.slack.com/archives/C1/p1" } });
     const { chat } = mount();
     say("responde o João");
     fireEvent.click(await within(chat).findByRole("button", { name: t.sendBox.edit }));
@@ -283,39 +288,75 @@ describe("MewChat", () => {
     });
     expect(api.sendMewAction).not.toHaveBeenCalled();
     fireEvent.click(within(chat).getByRole("button", { name: t.sendBox.send }));
-    await waitFor(() => expect(api.sendMewAction).toHaveBeenCalledWith("d1", "Revisado!"));
-    expect(await within(chat).findByText("Enviado para #geral")).toBeInTheDocument();
+    await waitFor(() =>
+      expect(api.sendMewAction).toHaveBeenCalledWith("d1", { text: "Revisado!" }),
+    );
+    expect(await within(chat).findByText("Enviado pra #geral")).toBeInTheDocument();
+    expect(store.pullTasks).not.toHaveBeenCalled();
   });
 
-  it("a refused send puts the box back with its text", async () => {
+  it("a refused send keeps the draft with a warning line, and Enviar retries", async () => {
     api.mewChat.mockResolvedValue({ reply: drafted });
     api.sendMewAction.mockResolvedValue({ error: { message: "x", offline: false, status: 502 } });
     const { chat } = mount();
     say("responde o João");
     fireEvent.click(await within(chat).findByRole("button", { name: t.sendBox.send }));
-    await waitFor(() => expect(api.sendMewAction).toHaveBeenCalledWith("d1", "Já vi!"));
-    expect(await within(chat).findByRole("button", { name: t.sendBox.send })).toBeInTheDocument();
+    await waitFor(() => expect(api.sendMewAction).toHaveBeenCalledWith("d1", { text: "Já vi!" }));
+    expect(await within(chat).findByRole("alert")).toHaveTextContent(t.sendBox.failed);
+    api.sendMewAction.mockResolvedValue({ sent: {} });
+    fireEvent.click(within(chat).getByRole("button", { name: t.sendBox.send }));
+    expect(await within(chat).findByText("Enviado pra #geral")).toBeInTheDocument();
+    expect(api.sendMewAction).toHaveBeenCalledTimes(2);
   });
 
-  it("a Gmail draft says its first line is the subject", async () => {
-    const mail: MewReply = {
+  it("an issue assigned to me sends its fields and pulls the imported task", async () => {
+    const issue: MewReply = {
       ...drafted,
       blocks: [
         {
           kind: "send",
-          id: "d2",
-          provider: "gmail",
-          target: "ana@x.com",
-          to: "ana@x.com",
-          text: "Reunião\nOi, Ana",
+          id: "d3",
+          provider: "github",
+          target: "acme/app",
+          to: "acme/app",
+          text: "Passos",
+          subject: "Crash",
+          labels: ["bug"],
+          assign: true,
         },
       ],
     };
-    api.mewChat.mockResolvedValue({ reply: mail });
+    api.mewChat.mockResolvedValue({ reply: issue });
+    api.sendMewAction.mockResolvedValue({
+      sent: { url: "https://github.com/acme/app/issues/3", ref: "acme/app#3" },
+    });
     const { chat } = mount();
-    say("manda um e-mail pra Ana");
-    expect(await within(chat).findByText("Enviar para ana@x.com")).toBeInTheDocument();
-    expect(within(chat).getByText("Gmail · a primeira linha é o assunto")).toBeInTheDocument();
+    say("abre uma issue");
+    fireEvent.click(await within(chat).findByRole("button", { name: t.sendBox.create }));
+    await waitFor(() =>
+      expect(api.sendMewAction).toHaveBeenCalledWith("d3", {
+        text: "Passos",
+        subject: "Crash",
+        labels: ["bug"],
+        assign: true,
+      }),
+    );
+    expect(await within(chat).findByText("Issue #3 criada")).toBeInTheDocument();
+    expect(store.pullTasks).toHaveBeenCalled();
+  });
+
+  it("an open send draft keeps the chat's round button neutral", async () => {
+    api.mewChat.mockResolvedValue({ reply: drafted });
+    const { chat } = mount();
+    say("responde o João");
+    await within(chat).findByRole("button", { name: t.sendBox.send });
+    const input = screen.getByRole("textbox", { name: t.placeholder });
+    fireEvent.change(input, { target: { value: "oi" } });
+    const form = input.closest("form");
+    if (!form) throw new Error("no form");
+    const round = within(form).getByRole("button", { name: t.send });
+    expect(round).toHaveClass("bg-fill");
+    expect(round).not.toHaveClass("bg-brand");
   });
 
   it("Cancelar on a send box sends nothing", async () => {

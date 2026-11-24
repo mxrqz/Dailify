@@ -225,14 +225,24 @@ export const slack: Provider = {
       throw err;
     }
   },
-  async send(env, userId, target, text) {
+  async send(env, userId, target, { text }) {
     const ctx = await connected(env, userId);
     const to = await resolve(ctx, target, () => people(ctx));
-    await call(
+    const posted = await call(
       ctx,
       "chat.postMessage",
       { channel: to.channel, text, ...(to.thread && { thread_ts: to.thread }) },
       true,
     );
+    // Posted already: a failed lookup only loses the link.
+    const base = await call(ctx, "auth.test", {}).then(
+      (me) => str(me.url),
+      () => "",
+    );
+    const ts = str(posted.ts);
+    if (!URL.canParse(base) || !/^\d+\.\d+$/.test(ts)) return {};
+    const url = new URL(`archives/${to.channel}/p${ts.replace(".", "")}`, base);
+    if (to.thread) url.searchParams.set("thread_ts", to.thread);
+    return { url: url.href };
   },
 };

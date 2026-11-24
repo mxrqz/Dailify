@@ -1,4 +1,4 @@
-import type { MewBlock, MewIntent, MewReply, Task } from "@dailify/shared";
+import type { MewBlock, MewIntent, MewReply, MewSent, Task } from "@dailify/shared";
 
 import { chatKey } from "@/functions/offline";
 
@@ -9,8 +9,15 @@ export type Step = "draft" | "done" | "cancelled" | "undone";
 export type ConfirmBlock = Extract<MewBlock, { kind: "confirm" }> & { step: Step; off: string[] };
 /** `done` = allowed (the turn was re-sent), `cancelled` = denied. */
 export type PermissionBlock = Extract<MewBlock, { kind: "permission" }> & { step: Step };
-/** `text` is the draft as the person edited it; `done` = sent. */
-export type SendBlock = Extract<MewBlock, { kind: "send" }> & { step: Step };
+/**
+ * `text`, `subject` and `assign` are the draft as the person edited it; `done` = sent, `sending`
+ * while the request is out, then `url`/`ref` of what it made. `failed`: the last try didn't go.
+ */
+export type SendBlock = Extract<MewBlock, { kind: "send" }> & {
+  step: Step;
+  sending?: boolean;
+  failed?: boolean;
+} & MewSent;
 export type ItemsBlock = Extract<MewBlock, { kind: "items" }>;
 export type Block =
   Extract<MewBlock, { kind: "tasks" }> | ItemsBlock | ConfirmBlock | PermissionBlock | SendBlock;
@@ -43,9 +50,11 @@ export type ChatAction =
   | { type: "allow"; block: string; always: boolean }
   /** The Mew's continuation after an allow: a typing reply with no new message of mine. */
   | { type: "wait"; id: string }
-  /** A send box: its edited text, then the confirmed send. */
-  | { type: "draft"; block: string; text: string }
+  /** A send box: its edits, the confirmed send, then where it landed or that it didn't go. */
+  | { type: "draft"; block: string; text?: string; subject?: string; assign?: boolean }
   | { type: "deliver"; block: string }
+  | ({ type: "sent"; block: string } & MewSent)
+  | { type: "unsent"; block: string }
   /** Rollback when the writes behind a confirm or undo failed. */
   | { type: "settle"; block: string; step: Step }
   | { type: "clear" };
@@ -71,6 +80,9 @@ const mapConfirm = (
   id: string,
   fn: (block: ConfirmBlock) => ConfirmBlock,
 ): Message[] => mapBox(messages, id, (b) => (b.kind === "confirm" ? fn(b) : b));
+
+const mapSend = (messages: Message[], id: string, fn: (block: SendBlock) => SendBlock): Message[] =>
+  mapBox(messages, id, (b) => (b.kind === "send" ? fn(b) : b));
 
 const from = (step: Step, to: Step) => (b: BoxBlock) => (b.step === step ? { ...b, step: to } : b);
 
@@ -125,17 +137,37 @@ export function chatReducer(messages: Message[], action: ChatAction): Message[] 
         b.step === "done" ? { ...b, step: "undone" } : b,
       );
     case "allow":
-    case "deliver":
       return mapBox(messages, action.block, from("draft", "done"));
+    case "deliver":
+      return mapSend(messages, action.block, (b) =>
+        b.step === "draft" ? { ...b, step: "done", sending: true, failed: false } : b,
+      );
+    case "sent":
+      return mapSend(messages, action.block, (b) => ({
+        ...b,
+        sending: false,
+        ...(action.url && { url: action.url }),
+        ...(action.ref && { ref: action.ref }),
+      }));
+    case "unsent":
+      return mapSend(messages, action.block, (b) => ({
+        ...b,
+        step: "draft",
+        sending: false,
+        failed: true,
+      }));
     case "wait":
       return [
         ...messages,
         { id: mewId(action.id), from: "mew", text: "", typing: true, blocks: [] },
       ];
     case "draft":
-      return mapBox(messages, action.block, (b) =>
-        b.kind === "send" ? { ...b, text: action.text } : b,
-      );
+      return mapSend(messages, action.block, (b) => ({
+        ...b,
+        ...(action.text !== undefined && { text: action.text }),
+        ...(action.subject !== undefined && { subject: action.subject }),
+        ...(action.assign !== undefined && { assign: action.assign }),
+      }));
     case "settle":
       return mapBox(messages, action.block, (b) => ({ ...b, step: action.step }));
     case "clear":
@@ -147,12 +179,18 @@ const KEEP = 50;
 
 const isMessages = (value: unknown): value is Message[] => Array.isArray(value);
 
+/** A send still out when the page went away: the server may have sent it, so it stays sent. */
+const landed = (m: Message): Message =>
+  m.from === "mew"
+    ? { ...m, blocks: m.blocks.map((b) => (b.kind === "send" ? { ...b, sending: false } : b)) }
+    : m;
+
 /** A reload mid-request leaves a reply typing forever: drop it. */
 export function loadChat(userId: string | undefined): Message[] {
   if (!userId) return [];
   try {
     const raw: unknown = JSON.parse(localStorage.getItem(chatKey(userId)) ?? "null");
-    return isMessages(raw) ? raw.filter((m) => !(m.from === "mew" && m.typing)) : [];
+    return isMessages(raw) ? raw.filter((m) => !(m.from === "mew" && m.typing)).map(landed) : [];
   } catch {
     return [];
   }

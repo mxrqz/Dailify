@@ -1,7 +1,7 @@
 # apps/server/src/integrations — provider integrations
 
 OAuth providers: connecting, sealing the tokens, pushing task edits out (`google-calendar`, whose
-objects mirror tasks) and the Mew's on-demand reads and sends (`slack`, `gmail`). Repo-wide rules:
+objects mirror tasks) and the Mew's on-demand reads and sends (`slack`, `gmail`, `github`). Repo-wide rules:
 `/RULES.md` ("Backend and API"). Google's event mapping and sync: `google-calendar/CLAUDE.md`.
 
 ## Layout
@@ -30,8 +30,10 @@ objects mirror tasks) and the Mew's on-demand reads and sends (`slack`, `gmail`)
 6. Mew capabilities, optional: `read(env, userId, target)` returns `{ text, card? }`: `text` is
    what the Mew may read, `card` a `MewCard` built from the same data (no AI) that `routes/mew.ts`
    appends as an `items` block; notices return text only. Also
-   `send(env, userId, target, text)` delivers a confirmed draft, and `target` says what a target
-   is for the prompt ("channel id"). Only connected providers that implement one are offered to
+   `send(env, userId, target, draft)` delivers a confirmed draft (`MewSendRequest`: text, optional
+   subject, labels, assign) and answers `MewSent` (`url`, `ref`), which the route returns as is;
+   once the thing went out, a failed link lookup returns `{}`, never a throw. `target` says what
+   a target is for the prompt ("channel id"). Only connected providers that implement one are offered to
    the model (`appsOf`, `routes/mew.ts`). A read runs after a `permission` box or an "always"
    grant (`mew_grants`, deleted on disconnect); a send only from `POST /mew/actions/:id/send`,
    never automatic. Test with a fake on the mocked registry (`test/mew-apps.test.ts`).
@@ -78,7 +80,8 @@ those routed through `PROVIDERS[id]` first.
   `channels:history`, `im:history`, `chat:write`. Revoke is `auth.revoke` with the token.
 - Slack answers HTTP 200 with `ok: false`; `token_revoked`/`invalid_auth`/`account_inactive` mark
   the connection revoked. A 429 or an unknown target comes back from `read` as a plain note for
-  the Mew (`Notice`), never a 502; `send` throws.
+  the Mew (`Notice`), never a 502; `send` throws. A sent message answers its permalink
+  (`auth.test` url + channel + ts, `thread_ts` for a reply).
 - `target`: `#canal`, `@pessoa` (an existing DM, matched on display, real or handle name), a raw
   `C…/D…/G…` id, or a message permalink (its thread: `thread_ts` from the query, else the `p…` ts).
   Names resolve with one `conversations.list` and one `users.list` page of 200 (the `ponytail:`).
@@ -97,9 +100,10 @@ those routed through `PROVIDERS[id]` first.
   scope is restricted (yearly CASA audit), so don't add one. Reuses the Calendar's OAuth config
   and `identify` (same `GOOGLE_CLIENT_*`) with its own scopes and no `include_granted_scopes`.
 - `target` = one bare address (`ADDRESS`; no name, list or CR/LF), checked again in `send`. The
-  send box's `to` is that address, never the model's label (`toBlocks`, `lib/mew.ts`). The first
-  line of `text` is the subject (RFC 2047 words), the rest a base64 `text/plain` body; Gmail fills
-  `From`. A 401 marks the connection revoked.
+  send box's `to` is that address, never the model's label (`toBlocks`, `lib/mew.ts`). `subject`
+  goes out as RFC 2047 words and `text` as a base64 `text/plain` body; a draft without `subject`
+  (chats from before it) uses the first line of `text`. Gmail fills `From`. Answers
+  `https://mail.google.com/mail/u/0/#sent/<id>`. A 401 marks the connection revoked.
 - One Google client means one grant, and Google's revoke drops all of it: disconnect and the
   missing-scope callback skip the revoke while the other Google app stays connected (`sharesGrant`,
   `routes/integrations.ts`, the `ponytail:`). Redirect URIs on the Google client:
@@ -124,9 +128,15 @@ those routed through `PROVIDERS[id]` first.
   plan-gated), the cron (`pollOldestGithub`, 25 a tick) and the connect import (no throttle).
   `/issues` sends no `X-Poll-Interval`. One page of 100 (the `ponytail:`).
 - `read`: `*` = open assigned + `is:open is:pr review-requested:@me`; `owner/repo#n` or its URL =
-  title, state, body (2000 chars) and the last page of 10 comments. 404 and 403/429 read back as a
-  note. No `send`. Card: `*` runs `syncGithub(…, 0)` first (errors logged) so assigned rows read
+  title, state, body (2000 chars) and the last page of 10 comments. `*` also lists the user's 30
+  last-pushed repos (text only), so the Mew can name one for an issue. 404 and 403/429 read back
+  as a note. Card: `*` runs `syncGithub(…, 0)` first (errors logged) so assigned rows read
   `linked`, then up to 5 rows deduped by ref; `owner/repo#n` is one row plus `detail`.
+- `send` creates an issue (`createIssue`): target `owner/repo` (`REPO`, no `.`/`..` part), title =
+  `subject` (required), body = `text`, `labels`, `assignees` = the `/user` login when `assign`.
+  A 422 retries once without labels; 403/404/410 throw `ActionError(404)`. Assigned, it runs
+  `syncGithub(…, 0)` (errors logged) so the task exists when the web pulls. Answers `html_url`
+  and `owner/repo#n`.
 - Callback: an OAuth App takes one URL and accepts any `redirect_uri` under it, so register the
   web origin root (covers `/integrations/github/callback` and `/app/integrations/github/callback`);
   localhost needs its own OAuth App. Tests: `test/integrations-github.test.ts`.
