@@ -6,6 +6,8 @@ import {
   isRecord,
   type MewCard,
   type MewCardItem,
+  type MewSendRequest,
+  type MewSent,
 } from "@dailify/shared";
 import { importTask, listOldestSyncs } from "../../db/calendar-sync";
 import {
@@ -20,7 +22,7 @@ import { planOf } from "../../db/user";
 import type { Env } from "../../index";
 import { newTaskId } from "../../lib/task-input";
 import { loadCtx } from "../connection";
-import type { Ctx, Provider } from "../types";
+import { ActionError, type Ctx, type Provider } from "../types";
 
 const API = "https://api.github.com";
 const P = "github";
@@ -33,6 +35,8 @@ const HEADERS = {
 // `/issues` sends no X-Poll-Interval; this is the floor between two polls of one connection.
 const THROTTLE = 5 * 60_000;
 const PAGE = 100;
+// No "." or ".." part: the URL would normalize them into another API path.
+const REPO = /^(?!\.\.?\/)[\w.-]+\/(?!\.\.?$)[\w.-]+$/;
 const REF = /^([\w.-]+\/[\w.-]+)#(\d+)$/;
 const HTML = /github\.com\/([\w.-]+\/[\w.-]+)\/(?:issues|pull)\/(\d+)/;
 
@@ -42,8 +46,13 @@ class Notice extends Error {}
 const records = (v: unknown) => (Array.isArray(v) ? v.filter(isRecord) : []);
 const str = (v: unknown) => (typeof v === "string" ? v : "");
 
-async function call(ctx: Ctx, path: string, headers: Record<string, string> = {}) {
-  const res = await ctx.api(`${API}${path}`, { headers: { ...HEADERS, ...headers } });
+async function call(
+  ctx: Ctx,
+  path: string,
+  headers: Record<string, string> = {},
+  init: RequestInit = {},
+) {
+  const res = await ctx.api(`${API}${path}`, { ...init, headers: { ...HEADERS, ...headers } });
   if (res.status === 401) {
     await markRevoked(ctx.env.DB, ctx.userId, P, Date.now());
     throw new Error("GitHub token revoked");
@@ -211,9 +220,11 @@ async function overview(ctx: Ctx): Promise<{ text: string; card: MewCard }> {
     console.error(`GitHub sync before a read failed for ${ctx.userId}`, err);
   }
   const q = encodeURIComponent("is:open is:pr review-requested:@me");
-  const [assigned, reviews, linked] = await Promise.all([
+  const [assigned, reviews, repos, linked] = await Promise.all([
     json(ctx, "/issues?filter=assigned&state=open&per_page=30"),
     json(ctx, `/search/issues?q=${q}&per_page=30`),
+    // Where she may open an issue: text only, never the card.
+    json(ctx, "/user/repos?sort=pushed&per_page=30"),
     linkedRefs(ctx),
   ]);
   const reviewList = records(isRecord(reviews) ? reviews.items : []);
@@ -231,6 +242,12 @@ async function overview(ctx: Ctx): Promise<{ text: string; card: MewCard }> {
     text: [
       `Assigned to the user, open:\n${list(records(assigned))}`,
       `Pull requests waiting for the user's review:\n${list(reviewList)}`,
+      `The user's repositories, last pushed first: ${
+        records(repos)
+          .map((r) => str(r.full_name))
+          .filter(Boolean)
+          .join(", ") || "(none)"
+      }`,
     ].join("\n\n"),
     card: {
       provider: P,
@@ -291,6 +308,53 @@ async function issue(ctx: Ctx, repo: string, n: string): Promise<{ text: string;
   };
 }
 
+/** A confirmed issue draft: `owner/repo`, the title in `subject`. Assigned, it imports at once. */
+async function createIssue(
+  env: Env,
+  userId: string,
+  target: string,
+  draft: MewSendRequest,
+): Promise<MewSent> {
+  const repo = target.trim();
+  const title = draft.subject?.trim() ?? "";
+  if (!REPO.test(repo)) throw new ActionError(400, "GitHub: the target is not owner/repo");
+  if (!title) throw new ActionError(400, "GitHub: an issue needs a title");
+  const ctx = await loadCtx(env, userId, P);
+  if (!ctx) throw new Error("github is not connected");
+  const me = draft.assign ? await json(ctx, "/user") : null;
+  const login = isRecord(me) ? str(me.login) : "";
+  const post = (labels: string[]) =>
+    call(
+      ctx,
+      `/repos/${repo}/issues`,
+      { "content-type": "application/json" },
+      {
+        method: "POST",
+        body: JSON.stringify({ title, body: draft.text, labels, assignees: login ? [login] : [] }),
+      },
+    );
+  const labels = draft.labels ?? [];
+  let res = await post(labels);
+  // A label GitHub refuses fails the whole issue: once more without them.
+  if (res.status === 422 && labels.length) res = await post([]);
+  if (res.status === 403 || res.status === 404 || res.status === 410)
+    throw new ActionError(404, `This GitHub account can't open issues in ${repo}`);
+  if (!res.ok) throw new Error(`GitHub create issue in ${repo}: ${res.status}`);
+  const raw: unknown = await res.json().catch(() => null);
+  if (login)
+    try {
+      await syncGithub(env, userId, 0);
+    } catch (err) {
+      console.error(`GitHub sync after an issue failed for ${userId}`, err);
+    }
+  const url = isRecord(raw) ? str(raw.html_url) : "";
+  const n = isRecord(raw) ? raw.number : undefined;
+  return {
+    ...(url.startsWith("https://") && { url }),
+    ...(typeof n === "number" && { ref: `${repo}#${n}` }),
+  };
+}
+
 export const github: Provider = {
   id: P,
   oauth: {
@@ -325,7 +389,7 @@ export const github: Provider = {
     return { accountId: String(id), email: isRecord(body) ? str(body.login) || null : null };
   },
   sync: (env, userId) => syncGithub(env, userId, 0),
-  target: `"*" (issues e PRs abertos atribuídos à pessoa e os PRs esperando a review dela: leia este antes de adivinhar) ou "dono/repo#123" (título, estado, descrição e os últimos comentários)`,
+  target: `ler: "*" (issues e PRs abertos atribuídos à pessoa, os PRs esperando a review dela e os repos dela: leia este antes de adivinhar) ou "dono/repo#123" (título, estado, descrição e os últimos comentários); enviar = criar uma issue em "dono/repo" (se o repo não está claro, leia "*" antes)`,
   async read(env, userId, target) {
     const ctx = await loadCtx(env, userId, P);
     if (!ctx) throw new Error("github is not connected");
@@ -340,4 +404,5 @@ export const github: Provider = {
       throw err;
     }
   },
+  send: createIssue,
 };

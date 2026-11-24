@@ -1,4 +1,4 @@
-import type { MewCard, ProviderId, Task } from "@dailify/shared";
+import type { MewCard, MewSendRequest, MewSent, ProviderId, Task } from "@dailify/shared";
 import type { StoredLink } from "../db/integrations";
 import type { Env } from "../index";
 
@@ -66,6 +66,6 @@ export interface Provider {
   target?: string;
   /** Text the Mew may read once the user allows it. Untrusted: it goes in as user-role data. */
   read?(env: Env, userId: string, target: string): Promise<{ text: string; card?: MewCard }>;
-  /** Runs only after the user confirmed the draft in a `send` box. */
-  send?(env: Env, userId: string, target: string, text: string): Promise<void>;
+  /** Runs only after the user confirmed the draft in a `send` box; answers where it landed. */
+  send?(env: Env, userId: string, target: string, draft: MewSendRequest): Promise<MewSent>;
 }

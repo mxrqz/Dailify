@@ -5,7 +5,9 @@ import {
   isStringArray,
   isoDate,
   isoWallTime,
+  MEW_LABELS_MAX,
   MEW_SEND_MAX,
+  MEW_SUBJECT_MAX,
   zonedEpoch,
   zonedParts,
   type MewAction,
@@ -57,6 +59,10 @@ interface GPTSend {
   target: string;
   to: string;
   text: string;
+  /** E-mail subject or issue title. */
+  subject?: string | null;
+  /** Issue labels. */
+  labels?: string[];
 }
 
 interface GPTSearch {
@@ -95,9 +101,15 @@ export interface MewRead {
 const str = (v: unknown) => typeof v === "string";
 const isRead = (v: unknown): v is GPTRead =>
   isRecord(v) && str(v.provider) && str(v.target) && str(v.label);
-const isSend = (v: unknown): v is GPTSend =>
-  isRecord(v) && str(v.provider) && str(v.target) && str(v.to) && str(v.text);
 const strOrNull = (v: unknown) => v === null || str(v);
+const isSend = (v: unknown): v is GPTSend =>
+  isRecord(v) &&
+  str(v.provider) &&
+  str(v.target) &&
+  str(v.to) &&
+  str(v.text) &&
+  (v.subject === undefined || strOrNull(v.subject)) &&
+  (v.labels === undefined || isStringArray(v.labels));
 const isSearch = (v: unknown): v is GPTSearch =>
   isRecord(v) && strOrNull(v.query) && strOrNull(v.from) && strOrNull(v.to);
 
@@ -130,6 +142,19 @@ const nullable = (enumOf: ProviderId[], keys: string[]) => ({
     ...Object.fromEntries(keys.map((k) => [k, { type: "string" }])),
   },
 });
+
+const sendSchema = (enumOf: ProviderId[]) => {
+  const base = nullable(enumOf, ["target", "to", "text"]);
+  return {
+    ...base,
+    required: [...base.required, "subject", "labels"],
+    properties: {
+      ...base.properties,
+      subject: { type: ["string", "null"] },
+      labels: { type: "array", items: { type: "string" } },
+    },
+  };
+};
 
 const proposalsSchema = (allowed: readonly ProviderId[]) => ({
   type: "array",
@@ -176,7 +201,7 @@ const schema = (allowed: readonly ProviderId[], apps: readonly MewApp[], search:
       show: { type: "array", items: { type: "string" } },
       proposals: proposalsSchema(allowed),
       ...(reads.length > 0 && { read: nullable(reads, ["target", "label"]) }),
-      ...(sends.length > 0 && { send: nullable(sends, ["target", "to", "text"]) }),
+      ...(sends.length > 0 && { send: sendSchema(sends) }),
       ...(search && { search: searchSchema }),
     },
   };
@@ -246,8 +271,11 @@ function appsPrompt(apps: readonly MewApp[], read: boolean): string {
       : []),
     ...(usable.some((a) => a.send)
       ? [
-          `"send": só se a pessoa pediu pra mandar uma mensagem, o rascunho {provider, target, to,`,
-          `text}, to = o destinatário como ela lê. Ela confirma antes de sair. Senão null.`,
+          `"send": só se a pessoa pediu pra mandar uma mensagem ou abrir uma issue, o rascunho`,
+          `{provider, target, to, subject, text, labels}, to = o destinatário como ela lê. E-mail:`,
+          `subject = o assunto, text = o corpo. Issue do GitHub: target = "dono/repo", subject = o`,
+          `título, text = a descrição, labels = até ${MEW_LABELS_MAX} (pode ser []). Nos outros, subject null e`,
+          `labels []. Ela confirma antes de sair. Senão null.`,
         ]
       : []),
     ...(read
@@ -316,6 +344,32 @@ function dayStart(day: string | null, timezone: string, next = false): number | 
   if (at === null || !next) return at;
   const p = zonedParts(at, timezone);
   return zonedEpoch({ ...p, day: p.day + 1, hour: 0, minute: 0, second: 0, ms: 0 }, timezone);
+}
+
+/** A send box, or none when the draft has nothing to send (an issue needs a title, the rest text). */
+function toSend(send: GPTSend, provider: ProviderId): MewBlock[] {
+  const target = send.target.trim();
+  const text = send.text.trim().slice(0, MEW_SEND_MAX);
+  const subject = send.subject?.replace(/\s+/g, " ").trim().slice(0, MEW_SUBJECT_MAX) ?? "";
+  const issue = provider === "github";
+  if (!target || !(issue ? subject : text)) return [];
+  const labels = (send.labels ?? [])
+    .map((l) => l.trim().slice(0, 50))
+    .filter(Boolean)
+    .slice(0, MEW_LABELS_MAX);
+  return [
+    {
+      kind: "send",
+      id: nanoid(),
+      provider,
+      target,
+      // An e-mail or an issue goes to its address: the box shows that, never a model's name for it.
+      to: (provider !== "gmail" && !issue && send.to.trim()) || target,
+      text,
+      ...(subject && (issue || provider === "gmail") && { subject }),
+      ...(issue && { labels, assign: true }),
+    },
+  ];
 }
 
 /**
@@ -409,19 +463,7 @@ export function toBlocks(
           },
         ]
       : []),
-    ...(out.send && sender && out.send.target.trim() && out.send.text.trim()
-      ? [
-          {
-            kind: "send" as const,
-            id: nanoid(),
-            provider: sender,
-            target: out.send.target.trim(),
-            // An e-mail goes to its address: the box shows that, never a name the model chose.
-            to: (sender !== "gmail" && out.send.to.trim()) || out.send.target.trim(),
-            text: out.send.text.trim().slice(0, MEW_SEND_MAX),
-          },
-        ]
-      : []),
+    ...(out.send && sender ? toSend(out.send, sender) : []),
   ];
   // Nothing survived the whitelist: she proposed about tasks she can't touch.
   const intent = out.intent === "propose" && !proposals.length ? "notFound" : out.intent;
