@@ -36,9 +36,9 @@ export function ago(at: number, now: number): string {
   return rtf.format(-Math.floor(s / size), unit);
 }
 
-const PILL = "rounded-full bg-fill px-2 py-0.5 text-2xs font-medium text-ink-secondary";
+export const PILL = "rounded-full bg-fill px-2 py-0.5 text-2xs font-medium text-ink-secondary";
 const META = "flex flex-wrap items-center gap-x-1 text-footnote text-ink-secondary tabular-nums";
-const AVATAR =
+export const AVATAR =
   "flex size-7 flex-none items-center justify-center rounded-sm bg-fill text-footnote font-semibold text-ink-secondary";
 
 /** Parts joined by a dot; empty ones drop out. */

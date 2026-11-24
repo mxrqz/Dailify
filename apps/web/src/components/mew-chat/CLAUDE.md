@@ -16,8 +16,10 @@ foot whose input sends and opens the side panel `{ kind: "mew" }`; the thread re
   consent card), which the desktop `SidePanel` also renders. `bubbles.tsx`: `Mine`,
   `Reply`, `Reveal`. `confirm-box.tsx`: `ConfirmBody` and the task `Row`, which read `hour12` from
   `useDailify`, so they are not provider-free Views yet. `app-boxes.tsx`: `PermissionBody`
-  (Não permitir / Permitir uma vez / Sempre permitir) and `SendBody` (Cancelar / Editar /
-  Enviar), props-only. `items-box.tsx`: `ItemsView` (props-only) and `ItemsBox`, the server's
+  (Não permitir / Permitir uma vez / Sempre permitir) and `SendBody`, props-only: the e-mail
+  (Para, Assunto, body), Slack-style message and GitHub issue (Título, labels, "Atribuir a mim"
+  `Switch`) drafts with Cancelar / Editar (Pronto) / Enviar or Criar issue, then the one-line
+  "Enviando…" and the sent card with its link. `items-box.tsx`: `ItemsView` (props-only) and `ItemsBox`, the server's
   `items` card; "Virar tarefa" goes through `useCreateTask` (undated, title + url), a GitHub card
   triggers `pullTasks()` in `ask()`. `chat-input.tsx`: `ChatInput`.
   `photo.ts`: thumbnail and upload scaling. `mood.ts`: `moodOf`.
@@ -36,7 +38,12 @@ foot whose input sends and opens the side panel `{ kind: "mew" }`; the thread re
   through `ask()`: my message's text and stored thumb, the history before it, and
   `permission: { id, always }`, into a new typing reply (`wait`); no `bumpUsage`, the first reply
   was the credit. A failure settles the box back to `draft`. Deny is local copy plus
-  `setMewAction` cancelled. Send goes to `sendMewAction` with the edited text; never "always".
+  `setMewAction` cancelled. Send goes to `sendMewAction` with the edited text, subject, labels
+  and assign; never "always". `deliver` sets `sending`, then `sent` stores the returned
+  `url`/`ref` on the block (persisted) or `unsent` puts it back to `draft` with `failed` (inline
+  line plus a toast). A load clears a leftover `sending`. An assigned GitHub issue runs
+  `pullTasks()`. While a send draft is open, `ChatInput` gets `quiet`: its round button is
+  `bg-fill`, the draft's Enviar is the one red.
 - `writes(out, into)` diffs by id (same id = update); `swapTasks`/`swapUndated`
   (`functions/task-lists.ts`) mirror it into `tasks` and `undatedTasks`. An update sends only `title`, `date`, `alert`: widen that list if a box changes
   more.

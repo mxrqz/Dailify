@@ -219,10 +219,20 @@ export function MewChat({
   };
 
   const deliver = async (block: SendBlock) => {
-    const { error } = await sendMewAction(block.id, block.text);
-    if (!error) return;
-    dispatch({ type: "settle", block: block.id, step: "draft" });
-    toast.error(t.sendBox.error, { description: error.message });
+    const { sent, error } = await sendMewAction(block.id, {
+      text: block.text,
+      ...(block.subject !== undefined && { subject: block.subject }),
+      ...(block.labels && { labels: block.labels }),
+      ...(block.assign !== undefined && { assign: block.assign }),
+    });
+    if (sent) {
+      dispatch({ type: "sent", block: block.id, ...sent });
+      // The server imported the issue assigned to the user: bring it into the agenda.
+      if (block.provider === "github" && block.assign) void pullTasks();
+      return;
+    }
+    dispatch({ type: "unsent", block: block.id });
+    toast.error(t.sendBox.error, { description: error?.message });
   };
 
   const accept = async () => {
@@ -263,6 +273,10 @@ export function MewChat({
   };
 
   const credits = creditsLabel(ai);
+  // One red per screen: an open send draft owns it.
+  const drafting = messages.some(
+    (m) => m.from === "mew" && m.blocks.some((b) => b.kind === "send" && b.step === "draft"),
+  );
 
   const log = {
     messages,
@@ -287,6 +301,7 @@ export function MewChat({
       dock={dock}
       busy={busy || voice.state === "sending"}
       offline={!online}
+      quiet={drafting}
       onSend={(text, image) => {
         if (dock) openPanel({ kind: "mew" });
         void send(text, image);

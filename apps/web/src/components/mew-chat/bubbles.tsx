@@ -74,9 +74,11 @@ export function Reply({
   const confirm = message.blocks.find(isBox);
   const key = message.typing
     ? "typing"
-    : confirm && FINAL.includes(confirm.step)
-      ? confirm.step
-      : "text";
+    : confirm?.kind === "send" && confirm.sending
+      ? "sending"
+      : confirm && FINAL.includes(confirm.step)
+        ? confirm.step
+        : "text";
   const words = message.text.split(" ");
   return (
     <div className="flex items-end gap-2">
