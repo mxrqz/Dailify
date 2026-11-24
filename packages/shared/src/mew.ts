@@ -18,6 +18,10 @@ export const MEW_HISTORY_MAX = 8;
 export const MEW_IMAGE_MAX = 1_400_000;
 /** A confirmed `send` draft, in chars. */
 export const MEW_SEND_MAX = 4000;
+/** An e-mail subject or an issue title (GitHub caps titles at 256). */
+export const MEW_SUBJECT_MAX = 256;
+/** Labels on a drafted GitHub issue, each at most 50 chars (GitHub's cap). */
+export const MEW_LABELS_MAX = 3;
 
 /** The `error` of the 403 before consent; older app builds compare it, new ones the `code`. */
 export const MEW_CONSENT_REQUIRED = "Mew Consent Required";
@@ -61,7 +65,14 @@ export type MewBlock =
       target: string;
       /** The recipient as a person reads it. */
       to: string;
+      /** The message, e-mail body or issue description. */
       text: string;
+      /** E-mail subject or issue title; an older e-mail draft has it as the first line of `text`. */
+      subject?: string;
+      /** GitHub issue only. */
+      labels?: string[];
+      /** GitHub issue: assigned to the user, it imports as a task. */
+      assign?: boolean;
     }
   | ({ kind: "items" } & MewCard);
 
@@ -119,6 +130,21 @@ export interface MewReply {
 /** `POST /mew/transcribe`: the spoken turn, sent next as a normal `/mew/chat` text. */
 export interface MewTranscript {
   text: string;
+}
+
+/** `POST /mew/actions/:id/send`: the draft as confirmed; the address is the server's own copy. */
+export interface MewSendRequest {
+  text: string;
+  subject?: string;
+  labels?: string[];
+  assign?: boolean;
+}
+
+/** Its answer: where the sent message or the created issue lives. */
+export interface MewSent {
+  url?: string;
+  /** GitHub: "owner/repo#12". */
+  ref?: string;
 }
 
 export type MewActionStatus = "proposed" | "done" | "cancelled" | "undone";
