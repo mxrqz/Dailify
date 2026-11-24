@@ -62,7 +62,49 @@ export type MewBlock =
       /** The recipient as a person reads it. */
       to: string;
       text: string;
-    };
+    }
+  | ({ kind: "items" } & MewCard);
+
+/** What a read showed, built by the server from the data (never the model). */
+export interface MewCard {
+  provider: ProviderId;
+  /** "GitHub", "#produto", "owner/repo #3". */
+  source: string;
+  url: string;
+  /** Everything the read found; `items` holds at most `MEW_CARD_MAX`. */
+  total: number;
+  items: MewCardItem[];
+  /** One item read by ref (GitHub issue/PR). */
+  detail?: MewCardDetail;
+}
+
+export const MEW_CARD_MAX = 5;
+
+export interface MewCardItem {
+  title: string;
+  url: string;
+  icon: "issue" | "pr" | "message";
+  /** "owner/repo #12". */
+  where?: string;
+  author?: string;
+  at?: number;
+  labels?: string[];
+  /** A PR waiting for the reader's review. */
+  review?: boolean;
+  /** The message mentions the reader. */
+  mention?: boolean;
+  replies?: number;
+  /** Already a Mewki task. */
+  linked?: boolean;
+}
+
+export interface MewCardDetail {
+  state: "open" | "closed";
+  author: string;
+  comments: number;
+  body: string;
+  recent: { author: string; at: number; text: string }[];
+}
 
 /** What an "always" grant covers, per user and provider. Sending never gets one. */
 export const MEW_CAPABILITIES = ["read"] as const;
