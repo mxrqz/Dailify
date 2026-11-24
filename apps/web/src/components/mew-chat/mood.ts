@@ -1,8 +1,6 @@
 import type { MewMood } from "@/components/mew/mew";
 
-import type { Block, BoxBlock, Message } from "./thread";
-
-export const isBox = (b: Block): b is BoxBlock => b.kind !== "tasks";
+import { isBox, type Message } from "./thread";
 
 /** The header Mew reacts to the latest turn: thinks, waits for a confirmation, cheers, gets lost. */
 export function moodOf(last: Message | undefined, busy: boolean): MewMood {

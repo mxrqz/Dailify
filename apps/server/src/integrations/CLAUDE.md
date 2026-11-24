@@ -27,7 +27,9 @@ objects mirror tasks) and the Mew's on-demand reads and sends (`slack`, `gmail`)
    `configured: false` and `connect` answers 503.
 5. The "contrato dos providers" block in `test/integrations.test.ts` then checks https endpoints,
    `required` within `scopes`, credentials and `identify`.
-6. Mew capabilities, optional: `read(env, userId, target)` returns text the Mew may read,
+6. Mew capabilities, optional: `read(env, userId, target)` returns `{ text, card? }`: `text` is
+   what the Mew may read, `card` a `MewCard` built from the same data (no AI) that `routes/mew.ts`
+   appends as an `items` block; notices return text only. Also
    `send(env, userId, target, text)` delivers a confirmed draft, and `target` says what a target
    is for the prompt ("channel id"). Only connected providers that implement one are offered to
    the model (`appsOf`, `routes/mew.ts`). A read runs after a `permission` box or an "always"
@@ -80,6 +82,8 @@ those routed through `PROVIDERS[id]` first.
 - `target`: `#canal`, `@pessoa` (an existing DM, matched on display, real or handle name), a raw
   `C…/D…/G…` id, or a message permalink (its thread: `thread_ts` from the query, else the `p…` ts).
   Names resolve with one `conversations.list` and one `users.list` page of 200 (the `ponytail:`).
+- Card: a channel, DM or thread read adds `auth.test` (reader id, workspace url; `conversations.info`
+  only for a raw id or permalink): newest 5 messages, `mention` = it tags the reader. `*` is text only.
 - Unlisted (non-Marketplace) apps get `conversations.history`/`replies` at 1 call a minute and 15
   messages (Slack, May 2025), so a read is one of them with `limit=15`; a long thread shows its
   first 15. Marketplace approval lifts it. Message text is never stored: it goes straight into the
@@ -121,7 +125,8 @@ those routed through `PROVIDERS[id]` first.
   `/issues` sends no `X-Poll-Interval`. One page of 100 (the `ponytail:`).
 - `read`: `*` = open assigned + `is:open is:pr review-requested:@me`; `owner/repo#n` or its URL =
   title, state, body (2000 chars) and the last page of 10 comments. 404 and 403/429 read back as a
-  note. No `send`.
+  note. No `send`. Card: `*` runs `syncGithub(…, 0)` first (errors logged) so assigned rows read
+  `linked`, then up to 5 rows deduped by ref; `owner/repo#n` is one row plus `detail`.
 - Callback: an OAuth App takes one URL and accepts any `redirect_uri` under it, so register the
   web origin root (covers `/integrations/github/callback` and `/app/integrations/github/callback`);
   localhost needs its own OAuth App. Tests: `test/integrations-github.test.ts`.

@@ -2,7 +2,15 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { MewReply, Task } from "@dailify/shared";
 
-import { type ConfirmBlock, type Message, chatReducer, loadChat, mewId, saveChat } from "./thread";
+import {
+  type ConfirmBlock,
+  type Message,
+  chatReducer,
+  isBox,
+  loadChat,
+  mewId,
+  saveChat,
+} from "./thread";
 
 const task = (id: string, extra: Partial<Task> = {}): Task => ({
   id,
@@ -89,7 +97,7 @@ describe("chatReducer", () => {
       ],
     });
     const blocks = (m: Message[]) => m.flatMap((x) => (x.from === "mew" ? x.blocks : []));
-    expect(blocks(s).map((b) => b.kind !== "tasks" && b.step)).toEqual(["draft", "draft"]);
+    expect(blocks(s).map((b) => isBox(b) && b.step)).toEqual(["draft", "draft"]);
 
     let t = chatReducer(s, { type: "allow", block: "p", always: false });
     t = chatReducer(t, { type: "wait", id: "r" });
@@ -104,6 +112,23 @@ describe("chatReducer", () => {
     expect(blocks(chatReducer(t, { type: "cancel", block: "p" }))[0]).toMatchObject({
       step: "done",
     });
+  });
+
+  it("an items card lands as is, with no step, survives a reload and no box action touches it", () => {
+    const items = {
+      kind: "items" as const,
+      provider: "github" as const,
+      source: "GitHub",
+      url: "https://github.com/issues/assigned",
+      total: 1,
+      items: [{ title: "Bug", url: "https://github.com/a/b/issues/1", icon: "issue" as const }],
+    };
+    const s = asked({ reply: "Achei 1.", intent: "answer", blocks: [items] });
+    const mew = s.at(-1);
+    expect(mew?.from === "mew" && mew.blocks).toEqual([items]);
+    expect(chatReducer(s, { type: "cancel", block: "x" })).toEqual(s);
+    saveChat("u3", s);
+    expect(loadChat("u3")).toEqual(s);
   });
 
   it("drop takes back a refused send", () => {

@@ -76,8 +76,12 @@ const appsOf = (allowed: readonly ProviderId[]): MewApp[] =>
 async function readFrom(env: Env, userId: string, provider: ProviderId, target: string) {
   const read = PROVIDERS[provider].read;
   if (!read) throw new Error(`${provider} can't read`);
-  return { provider, target, text: await read(env, userId, target) };
+  return { provider, target, ...(await read(env, userId, target)) };
 }
+
+/** The read's card goes under her sentence; the model never sees or builds it. */
+const withCard = (reply: MewReply, read: Awaited<ReturnType<typeof readFrom>>): MewReply =>
+  read.card ? { ...reply, blocks: [...reply.blocks, { kind: "items", ...read.card }] } : reply;
 
 /** Undated tasks plus the months the ±`WINDOW_DAYS` window touches. */
 async function readAgenda(db: D1Database, userId: string, timezone: string, now: number) {
@@ -126,13 +130,13 @@ mew.post("/chat", rateLimit("AI_LIMITER"), async (c) => {
   try {
     if (claimed) {
       const read = await readFrom(c.env, userId, claimed.provider, claimed.target);
-      reply = await askMew(c.env, req, agenda, allowed, apps, read);
+      reply = withCard(await askMew(c.env, req, agenda, allowed, apps, read), read);
     } else {
       reply = await askMew(c.env, req, agenda, allowed, apps, undefined, userId);
       const ask = reply.blocks.find((b) => b.kind === "permission");
       if (ask && (await hasGrant(db, userId, ask.provider, ask.capability))) {
         const read = await readFrom(c.env, userId, ask.provider, ask.target);
-        reply = await askMew(c.env, req, agenda, allowed, apps, read);
+        reply = withCard(await askMew(c.env, req, agenda, allowed, apps, read), read);
       }
     }
   } catch (err) {

@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it, vi } from "vitest";
 
 // A fake reader/sender on the calendar, so the route is tested apart from Slack's HTTP.
 const fake = vi.hoisted(() => ({
-  read: vi.fn<(env: unknown, userId: string, target: string) => Promise<string>>(),
+  read: vi.fn<
+    (env: unknown, userId: string, target: string) => Promise<{ text: string; card?: MewCard }>
+  >(),
   send: vi.fn<(env: unknown, userId: string, target: string, text: string) => Promise<void>>(),
 }));
 vi.mock("../src/integrations/registry", async (importOriginal) => {
@@ -29,7 +31,7 @@ let userId = "";
 mockSession(() => ({ id: userId, plan: "free" }));
 
 import { env } from "cloudflare:workers";
-import type { IntegrationStatus, MewBlock, MewReply } from "@dailify/shared";
+import type { IntegrationStatus, MewBlock, MewCard, MewReply } from "@dailify/shared";
 import app from "../src/index";
 import { upsertConnection } from "../src/db/integrations";
 import { saveSettings } from "../src/db/settings";
@@ -97,7 +99,7 @@ beforeEach(async () => {
     { accountId: "acc", email: null, scopes: "", tokens: "sealed" },
     Date.now(),
   );
-  fake.read.mockResolvedValue("João: pode revisar o PR?");
+  fake.read.mockResolvedValue({ text: "João: pode revisar o PR?" });
   fake.send.mockResolvedValue();
 });
 
@@ -185,6 +187,26 @@ describe("POST /mew/chat — reading an app", () => {
     expect(openaiMock.responses.create).toHaveBeenCalledTimes(1);
     userId = owner;
     expect(await statusOf(id)).toBe("proposed");
+  });
+
+  it("a read's card is appended as an items block the model never sees", async () => {
+    const card: MewCard = {
+      provider: P,
+      source: "#geral",
+      url: "https://x.slack.com/archives/C1",
+      total: 1,
+      items: [{ title: "pode revisar o PR?", url: "https://x.slack.com/p1", icon: "message" }],
+    };
+    fake.read.mockResolvedValue({ text: "João: pode revisar o PR?", card });
+    aiReturns(asksToRead, answered);
+    const { id } = permissionOf((await (await chat()).json<MewReply>()).blocks);
+    const body = await (await chat({ permission: { id, always: true } })).json<MewReply>();
+    expect(body.blocks).toEqual([{ kind: "items", ...card }]);
+    expect(JSON.stringify(openaiMock.responses.create.mock.calls[1][0])).not.toContain(card.url);
+
+    // The "always" path appends it too.
+    aiReturns(asksToRead, answered);
+    expect((await (await chat()).json<MewReply>()).blocks).toEqual([{ kind: "items", ...card }]);
   });
 
   it("a failed read puts the action back to proposed, so allowing again works", async () => {

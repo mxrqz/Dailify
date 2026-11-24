@@ -8,8 +8,8 @@ import { cn } from "@/lib/utils";
 import { PermissionBody, SendBody } from "./app-boxes";
 import { ConfirmBody, Row } from "./confirm-box";
 import { copy as t } from "./copy";
-import { isBox } from "./mood";
-import type { ChatAction, Message, Step } from "./thread";
+import { ItemsBox } from "./items-box";
+import { type ChatAction, type Message, type Step, isBox } from "./thread";
 
 const DOT_STAGGER_MS = 150;
 
@@ -100,7 +100,7 @@ export function Reply({
             {message.blocks.map((block, i) => (
               <Reveal
                 key={i}
-                enter={fresh && (block.kind === "tasks" || !FINAL.includes(block.step))}
+                enter={fresh && (!isBox(block) || !FINAL.includes(block.step))}
                 words={words.length}
                 className="pt-2.5"
               >
@@ -112,6 +112,8 @@ export function Reply({
                       </li>
                     ))}
                   </ul>
+                ) : block.kind === "items" ? (
+                  <ItemsBox block={block} />
                 ) : block.kind === "confirm" ? (
                   <ConfirmBody block={block} dispatch={dispatch} />
                 ) : block.kind === "permission" ? (

@@ -26,6 +26,7 @@ import {
   transcribeMew,
 } from "@/functions/api";
 import { creditsLabel } from "@/functions/quota-label";
+import { pullTasks } from "@/functions/task-store";
 import { appTimeZone, zoned } from "@/functions/zone";
 import { setCreditsTray } from "@/hooks/useCreditsTray";
 import { useEffectEvent } from "@/hooks/useEffectEvent";
@@ -50,6 +51,7 @@ import {
   type SendBlock,
   chatReducer,
   frozen,
+  isBox,
   loadChat,
   mewId,
   saveChat,
@@ -168,6 +170,9 @@ export function MewChat({
         // The re-sent half of a turn was paid with its first reply.
         if (!req.permission) bumpUsage("ai");
         dispatch({ type: "reply", to: mewId(id), reply });
+        // Reading GitHub imports the assigned items first: bring them into the agenda.
+        if (reply.blocks.some((b) => b.kind === "items" && b.provider === "github"))
+          void pullTasks();
         return true;
       }
       // A 403 or 429 means different things depending on the server's code.
@@ -196,7 +201,7 @@ export function MewChat({
   // "Permitir": the same turn again (my message, the history before it), now allowed to read.
   const resume = (block: PermissionBlock, always: boolean) => {
     let index = messages.findIndex(
-      (m) => m.from === "mew" && m.blocks.some((b) => b.kind !== "tasks" && b.id === block.id),
+      (m) => m.from === "mew" && m.blocks.some((b) => isBox(b) && b.id === block.id),
     );
     while (index > 0 && messages[index].from !== "me") index--;
     const turn = messages[index];
@@ -239,7 +244,7 @@ export function MewChat({
     if (!("block" in action)) return;
     const block = messages
       .flatMap((m) => (m.from === "mew" ? m.blocks : []))
-      .find((b): b is BoxBlock => b.kind !== "tasks" && b.id === action.block);
+      .find((b): b is BoxBlock => isBox(b) && b.id === action.block);
     if (!block) return;
     const draft = block.step === "draft";
     if (action.type === "cancel" && draft) void setMewAction(block.id, "cancelled");

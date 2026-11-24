@@ -17,7 +17,9 @@ foot whose input sends and opens the side panel `{ kind: "mew" }`; the thread re
   `Reply`, `Reveal`. `confirm-box.tsx`: `ConfirmBody` and the task `Row`, which read `hour12` from
   `useDailify`, so they are not provider-free Views yet. `app-boxes.tsx`: `PermissionBody`
   (Não permitir / Permitir uma vez / Sempre permitir) and `SendBody` (Cancelar / Editar /
-  Enviar), props-only. `chat-input.tsx`: `ChatInput`.
+  Enviar), props-only. `items-box.tsx`: `ItemsView` (props-only) and `ItemsBox`, the server's
+  `items` card; "Virar tarefa" goes through `useCreateTask` (undated, title + url), a GitHub card
+  triggers `pullTasks()` in `ask()`. `chat-input.tsx`: `ChatInput`.
   `photo.ts`: thumbnail and upload scaling. `mood.ts`: `moodOf`.
 
 ## Invariants
@@ -72,8 +74,9 @@ foot whose input sends and opens the side panel `{ kind: "mew" }`; the thread re
 
 - A chat action: a `ChatAction` member and its `chatReducer` case, a `thread.test.ts` case; if it
   writes, wire it in `act()`.
-- A server block kind: add it to `MewBlock` (shared `mew.ts`), widen `Block` in thread.ts, render it
-  in `Reply` (`bubbles.tsx`), and update `moodOf` if it should change the mood.
+- A server block kind: add it to `MewBlock` (shared `mew.ts`), widen `Block` in thread.ts (one with
+  no step, like `tasks`/`items`, is excluded by `isBox` and passes `reply` untouched), render it in
+  `Reply` (`bubbles.tsx`), and update `moodOf` if it should change the mood.
 
 ## Tests
 
