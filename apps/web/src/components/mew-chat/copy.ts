@@ -92,4 +92,23 @@ export const copy = {
     cancelled: "Cancelado. Nada foi enviado.",
     error: "Não foi possível enviar",
   },
+  // O cartão do que a Mew leu de um app: montado pelo servidor, sem IA.
+  items: {
+    // "há 2 dias" (Intl.RelativeTimeFormat).
+    locale: "pt-BR",
+    openIssues: "{n} abertas",
+    messages: "{n} mensagens",
+    more: "+{n}",
+    open: "Abrir no {app}",
+    linked: "Já está na agenda",
+    add: "Virar tarefa",
+    review: "Revisão pedida",
+    mention: "Te marcou",
+    replies: "{n} respostas",
+    stateOpen: "Aberta",
+    stateClosed: "Fechada",
+    opened: "{author} abriu {when}",
+    comments: "{n} comentários",
+    recent: "Últimos comentários",
+  },
 } as const;

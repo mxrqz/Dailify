@@ -11,10 +11,13 @@ export type ConfirmBlock = Extract<MewBlock, { kind: "confirm" }> & { step: Step
 export type PermissionBlock = Extract<MewBlock, { kind: "permission" }> & { step: Step };
 /** `text` is the draft as the person edited it; `done` = sent. */
 export type SendBlock = Extract<MewBlock, { kind: "send" }> & { step: Step };
+export type ItemsBlock = Extract<MewBlock, { kind: "items" }>;
 export type Block =
-  Extract<MewBlock, { kind: "tasks" }> | ConfirmBlock | PermissionBlock | SendBlock;
+  Extract<MewBlock, { kind: "tasks" }> | ItemsBlock | ConfirmBlock | PermissionBlock | SendBlock;
 /** A block the person answers: it has an id and a step. */
-export type BoxBlock = Exclude<Block, { kind: "tasks" }>;
+export type BoxBlock = Exclude<Block, { kind: "tasks" | "items" }>;
+
+export const isBox = (b: Block): b is BoxBlock => b.kind !== "tasks" && b.kind !== "items";
 
 export type Message =
   | { id: string; from: "me"; text: string; image?: string }
@@ -59,7 +62,7 @@ export const frozen = (block: ConfirmBlock): ConfirmBlock => ({
 const mapBox = (messages: Message[], id: string, fn: (block: BoxBlock) => BoxBlock): Message[] =>
   messages.map((m) =>
     m.from === "mew"
-      ? { ...m, blocks: m.blocks.map((b) => (b.kind !== "tasks" && b.id === id ? fn(b) : b)) }
+      ? { ...m, blocks: m.blocks.map((b) => (isBox(b) && b.id === id ? fn(b) : b)) }
       : m,
   );
 
@@ -90,7 +93,7 @@ export function chatReducer(messages: Message[], action: ChatAction): Message[] 
               blocks: action.reply.blocks.map((b): Block =>
                 b.kind === "confirm"
                   ? { ...b, step: "draft", off: [] }
-                  : b.kind === "tasks"
+                  : b.kind === "tasks" || b.kind === "items"
                     ? b
                     : { ...b, step: "draft" },
               ),
