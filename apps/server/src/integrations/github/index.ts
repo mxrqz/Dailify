@@ -1,4 +1,12 @@
-import { DEFAULT_DURATION, TASK_LIMITS, canUseIntegration, isRecord } from "@dailify/shared";
+import {
+  DEFAULT_DURATION,
+  MEW_CARD_MAX,
+  TASK_LIMITS,
+  canUseIntegration,
+  isRecord,
+  type MewCard,
+  type MewCardItem,
+} from "@dailify/shared";
 import { importTask, listOldestSyncs } from "../../db/calendar-sync";
 import {
   claimPoll,
@@ -167,26 +175,75 @@ export async function pollOldestGithub(env: Env): Promise<void> {
   for (const userId of await listOldestSyncs(env.DB, 25, P)) await pollGithub(env, userId);
 }
 
+/** A card row for an issue or PR; `linked` = already a Mewki task. */
+function cardItem(raw: Record<string, unknown>, linked: Set<string>, review = false) {
+  const it = readItem(raw);
+  if (!it) return null;
+  const labels = records(raw.labels)
+    .map((l) => str(l.name))
+    .filter(Boolean)
+    .slice(0, 3);
+  const at = Date.parse(str(raw.updated_at));
+  return {
+    ref: it.ref,
+    item: {
+      title: it.title,
+      url: it.url,
+      icon: it.pr ? "pr" : "issue",
+      where: it.ref.replace("#", " #"),
+      ...(Number.isFinite(at) && { at }),
+      ...(labels.length > 0 && { labels }),
+      ...(review && { review }),
+      linked: linked.has(it.ref),
+    } satisfies MewCardItem,
+  };
+}
+
+const linkedRefs = async (ctx: Ctx) =>
+  new Set((await listProviderLinks(ctx.env.DB, ctx.userId, P)).map((l) => l.externalId));
+
 /** Target `*`: open issues/PRs assigned to the user and PRs waiting for their review. */
-async function overview(ctx: Ctx): Promise<string> {
+async function overview(ctx: Ctx): Promise<{ text: string; card: MewCard }> {
+  // Import first, so every assigned row of the card shows as already on the agenda.
+  try {
+    await syncGithub(ctx.env, ctx.userId, 0);
+  } catch (err) {
+    console.error(`GitHub sync before a read failed for ${ctx.userId}`, err);
+  }
   const q = encodeURIComponent("is:open is:pr review-requested:@me");
-  const [assigned, reviews] = await Promise.all([
+  const [assigned, reviews, linked] = await Promise.all([
     json(ctx, "/issues?filter=assigned&state=open&per_page=30"),
     json(ctx, `/search/issues?q=${q}&per_page=30`),
+    linkedRefs(ctx),
   ]);
-  const list = (v: unknown) =>
-    records(v)
+  const reviewList = records(isRecord(reviews) ? reviews.items : []);
+  const list = (v: Record<string, unknown>[]) =>
+    v
       .map(line)
       .filter((l) => l !== null)
       .join("\n") || "(none)";
-  return [
-    `Assigned to the user, open:\n${list(assigned)}`,
-    `Pull requests waiting for the user's review:\n${list(isRecord(reviews) ? reviews.items : [])}`,
-  ].join("\n\n");
+  const seen = new Set<string>();
+  const items = [
+    ...records(assigned).map((r) => cardItem(r, linked)),
+    ...reviewList.map((r) => cardItem(r, linked, true)),
+  ].flatMap((c) => (c && !seen.has(c.ref) && seen.add(c.ref) ? [c.item] : []));
+  return {
+    text: [
+      `Assigned to the user, open:\n${list(records(assigned))}`,
+      `Pull requests waiting for the user's review:\n${list(reviewList)}`,
+    ].join("\n\n"),
+    card: {
+      provider: P,
+      source: "GitHub",
+      url: "https://github.com/issues/assigned",
+      total: items.length,
+      items: items.slice(0, MEW_CARD_MAX),
+    },
+  };
 }
 
 /** Target `owner/repo#123` (or its URL): the item, its body trimmed and its last comments. */
-async function issue(ctx: Ctx, repo: string, n: string): Promise<string> {
+async function issue(ctx: Ctx, repo: string, n: string): Promise<{ text: string; card?: MewCard }> {
   const raw = await json(ctx, `/repos/${repo}/issues/${n}`);
   if (!isRecord(raw)) throw new Error("GitHub issue: unexpected body");
   const count = typeof raw.comments === "number" ? raw.comments : 0;
@@ -199,8 +256,9 @@ async function issue(ctx: Ctx, repo: string, n: string): Promise<string> {
         ),
       )
     : [];
-  const who = (v: unknown) => `@${str(isRecord(v) ? v.login : undefined) || "ghost"}`;
-  return [
+  const login = (v: unknown) => str(isRecord(v) ? v.login : undefined) || "ghost";
+  const who = (v: unknown) => `@${login(v)}`;
+  const text = [
     `${repo}#${n}${isRecord(raw.pull_request) ? " (PR)" : ""} [${str(raw.state)}]: ${str(raw.title)}`,
     `${str(raw.html_url)} · opened by ${who(raw.user)} · ${count} comments`,
     str(raw.body).slice(0, 2000) || "(no description)",
@@ -208,6 +266,29 @@ async function issue(ctx: Ctx, repo: string, n: string): Promise<string> {
       (c) => `${who(c.user)} (${str(c.created_at).slice(0, 10)}): ${str(c.body).slice(0, 500)}`,
     ),
   ].join("\n\n");
+  const row = cardItem(raw, await linkedRefs(ctx));
+  if (!row) return { text };
+  return {
+    text,
+    card: {
+      provider: P,
+      source: row.item.where,
+      url: row.item.url,
+      total: 1,
+      items: [row.item],
+      detail: {
+        state: raw.state === "closed" ? "closed" : "open",
+        author: login(raw.user),
+        comments: count,
+        body: str(raw.body).trim().slice(0, 400),
+        recent: comments.slice(-2).map((c) => ({
+          author: login(c.user),
+          at: Date.parse(str(c.created_at)) || 0,
+          text: str(c.body).trim().slice(0, 280),
+        })),
+      },
+    },
+  };
 }
 
 export const github: Provider = {
@@ -252,10 +333,10 @@ export const github: Provider = {
       const t = target.trim();
       if (t === "*") return await overview(ctx);
       const m = REF.exec(t) ?? HTML.exec(t);
-      if (!m) return `"${t}" is not owner/repo#123 nor a GitHub issue or PR link.`;
+      if (!m) return { text: `"${t}" is not owner/repo#123 nor a GitHub issue or PR link.` };
       return await issue(ctx, m[1], m[2]);
     } catch (err) {
-      if (err instanceof Notice) return err.message;
+      if (err instanceof Notice) return { text: err.message };
       throw err;
     }
   },

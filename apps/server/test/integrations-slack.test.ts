@@ -65,6 +65,7 @@ beforeEach(async () => {
       }),
     [`${API}/conversations.replies`]: () =>
       ok({ messages: [{ user: "U2", text: "thread raiz", ts: "1763737200.000100" }] }),
+    [`${API}/conversations.info`]: () => ok({ channel: { id: "C100GERAL", name: "geral" } }),
     [`${API}/chat.postMessage`]: () => ok({ ts: "1763740900.000300" }),
   };
   vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
@@ -149,7 +150,7 @@ describe("Slack read", () => {
   });
 
   it("a channel: one history call, oldest first, names and local time", async () => {
-    const text = await slack.read?.(env, userId, "#geral");
+    const { text, card } = (await slack.read?.(env, userId, "#geral")) ?? {};
     expect(callsTo("conversations.history")).toHaveLength(1);
     expect(callsTo("conversations.replies")).toHaveLength(0);
     expect(query("conversations.history").get("channel")).toBe("C100GERAL");
@@ -157,6 +158,38 @@ describe("Slack read", () => {
     expect(text).toBe(
       "João (2025-11-21 12:00): @Eu Mesma pode revisar o PR?\nEu Mesma (2025-11-21 13:00): vou ver",
     );
+    expect(callsTo("conversations.info")).toHaveLength(0);
+    expect(card).toEqual({
+      provider: "slack",
+      source: "#geral",
+      url: "https://acme.slack.com/archives/C100GERAL",
+      total: 2,
+      items: [
+        {
+          title: "vou ver",
+          url: "https://acme.slack.com/archives/C100GERAL/p1763740800000200",
+          icon: "message",
+          author: "Eu Mesma",
+          at: 1763740800000,
+        },
+        {
+          title: "@Eu Mesma pode revisar o PR?",
+          url: "https://acme.slack.com/archives/C100GERAL/p1763737200000100",
+          icon: "message",
+          author: "João",
+          at: 1763737200000,
+          mention: true,
+        },
+      ],
+    });
+  });
+
+  it("a DM card is titled by the person, and replies count", async () => {
+    routes[`${API}/conversations.history`] = () =>
+      ok({ messages: [{ user: "U2", text: "oi", ts: "1763737200.000100", reply_count: 6 }] });
+    const card = (await slack.read?.(env, userId, "@joão"))?.card;
+    expect(card?.source).toBe("@João");
+    expect(card?.items[0]).toMatchObject({ replies: 6 });
   });
 
   it("*: the workspace, the user and the conversations they're in, by name", async () => {
@@ -169,13 +202,13 @@ describe("Slack read", () => {
           { id: "D200JOAO", is_im: true, user: "U2" },
         ],
       });
-    expect(await slack.read?.(env, userId, "*")).toBe(
-      [
+    expect(await slack.read?.(env, userId, "*")).toEqual({
+      text: [
         "Workspace: Acme (https://acme.slack.com/); a pessoa é @Eu Mesma",
         "Canais em que ela está: #geral, #projeto (privado)",
         "DMs: @João",
       ].join("\n"),
-    );
+    });
     expect(callsTo("conversations.history")).toHaveLength(0);
   });
 
@@ -185,7 +218,7 @@ describe("Slack read", () => {
   });
 
   it("a permalink: one replies call on the thread root", async () => {
-    const text = await slack.read?.(
+    const read = await slack.read?.(
       env,
       userId,
       "https://acme.slack.com/archives/C100GERAL/p1763737300000900?thread_ts=1763737200.000100&cid=C100GERAL",
@@ -193,17 +226,21 @@ describe("Slack read", () => {
     expect(callsTo("conversations.list")).toHaveLength(0);
     expect(callsTo("conversations.history")).toHaveLength(0);
     expect(query("conversations.replies").get("ts")).toBe("1763737200.000100");
-    expect(text).toContain("thread raiz");
+    expect(read?.text).toContain("thread raiz");
+    // A permalink names no channel: the card asks Slack for it.
+    expect(read?.card?.source).toBe("#geral");
   });
 
   it("a 429 reads back as a readable note with the wait", async () => {
     routes[`${API}/conversations.history`] = () =>
       new Response("", { status: 429, headers: { "retry-after": "42" } });
-    expect(await slack.read?.(env, userId, "C100GERAL")).toMatch(/rate limiting.*42 s/);
+    expect(await slack.read?.(env, userId, "C100GERAL")).toEqual({
+      text: expect.stringMatching(/rate limiting.*42 s/),
+    });
   });
 
   it("an unknown name reads back as a note, not a failure", async () => {
-    expect(await slack.read?.(env, userId, "#nada")).toMatch(/No Slack conversation/);
+    expect((await slack.read?.(env, userId, "#nada"))?.text).toMatch(/No Slack conversation/);
   });
 });
 

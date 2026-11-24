@@ -187,7 +187,7 @@ describe("GitHub read", () => {
   it("*: open assigned items and review requests", async () => {
     routes[`${API}/search/issues`] = () =>
       Response.json({ items: [issue("acme/api", 7, { pull_request: {}, title: "Bump" })] });
-    const text = await github.read?.(env, userId, "*");
+    const { text } = (await github.read?.(env, userId, "*")) ?? {};
     expect(new URL(callsTo(`${API}/search/issues`)[0].url).searchParams.get("q")).toBe(
       "is:open is:pr review-requested:@me",
     );
@@ -199,6 +199,55 @@ describe("GitHub read", () => {
     );
   });
 
+  it("*: imports first, then a card of assigned and review rows, deduped and linked", async () => {
+    routes[`${API}/issues`] = () =>
+      Response.json([
+        { ...ISSUE, updated_at: "2026-11-21T10:00:00Z", labels: [{ name: "bug" }] },
+        PR,
+      ]);
+    routes[`${API}/search/issues`] = () =>
+      Response.json({ items: [PR, issue("acme/api", 7, { pull_request: {}, title: "Bump" })] });
+    const card = (await github.read?.(env, userId, "*"))?.card;
+    // The sync ran before the card: both assigned items are tasks now.
+    expect(await tasksOf()).toHaveLength(2);
+    expect(card).toEqual({
+      provider: "github",
+      source: "GitHub",
+      url: "https://github.com/issues/assigned",
+      total: 3,
+      items: [
+        {
+          title: "Item 1",
+          url: ISSUE.html_url,
+          icon: "issue",
+          where: "acme/app #1",
+          at: Date.parse("2026-11-21T10:00:00Z"),
+          labels: ["bug"],
+          linked: true,
+        },
+        { title: "Item 2", url: PR.html_url, icon: "pr", where: "acme/app #2", linked: true },
+        {
+          title: "Bump",
+          url: "https://github.com/acme/api/issues/7",
+          icon: "pr",
+          where: "acme/api #7",
+          review: true,
+          linked: false,
+        },
+      ],
+    });
+  });
+
+  it("*: a failed import still reads the card", async () => {
+    let n = 0;
+    routes[`${API}/issues`] = () =>
+      n++ ? Response.json([ISSUE]) : new Response("", { status: 500 });
+    routes[`${API}/search/issues`] = () => Response.json({ items: [] });
+    vi.spyOn(console, "error").mockImplementation(() => {});
+    const card = (await github.read?.(env, userId, "*"))?.card;
+    expect(card?.items).toEqual([expect.objectContaining({ title: "Item 1", linked: false })]);
+  });
+
   it("owner/repo#n: the item, its body and the last page of comments", async () => {
     routes[`${API}/repos/acme/app/issues/1`] = () =>
       Response.json({ ...ISSUE, body: "Steps to reproduce", user: { login: "ana" }, comments: 12 });
@@ -206,20 +255,33 @@ describe("GitHub read", () => {
       Response.json([
         { user: { login: "bia" }, created_at: "2026-11-21T10:00:00Z", body: "Same here" },
       ]);
-    const text = await github.read?.(env, userId, "acme/app#1");
+    const { text, card } = (await github.read?.(env, userId, "acme/app#1")) ?? {};
     expect(
       new URL(callsTo(`${API}/repos/acme/app/issues/1/comments`)[0].url).searchParams.get("page"),
     ).toBe("2");
     expect(text).toContain("acme/app#1 [open]: Item 1");
     expect(text).toContain("Steps to reproduce");
     expect(text).toContain("@bia (2026-11-21): Same here");
+    expect(card).toMatchObject({
+      source: "acme/app #1",
+      url: ISSUE.html_url,
+      total: 1,
+      items: [{ title: "Item 1", icon: "issue", linked: false }],
+      detail: {
+        state: "open",
+        author: "ana",
+        comments: 12,
+        body: "Steps to reproduce",
+        recent: [{ author: "bia", at: Date.parse("2026-11-21T10:00:00Z"), text: "Same here" }],
+      },
+    });
   });
 
   it("an unknown item reads back as a note", async () => {
     routes[`${API}/repos/acme/app/issues/9`] = () => new Response("", { status: 404 });
-    expect(await github.read?.(env, userId, "https://github.com/acme/app/pull/9")).toMatch(
-      /Nothing on GitHub/,
-    );
+    expect(await github.read?.(env, userId, "https://github.com/acme/app/pull/9")).toEqual({
+      text: expect.stringMatching(/Nothing on GitHub/),
+    });
   });
 });
 

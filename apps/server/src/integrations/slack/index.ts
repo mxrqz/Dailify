@@ -1,4 +1,4 @@
-import { isRecord } from "@dailify/shared";
+import { MEW_CARD_MAX, isRecord, type MewCard } from "@dailify/shared";
 import { markRevoked } from "../../db/integrations";
 import { getSettings } from "../../db/settings";
 import type { Env } from "../../index";
@@ -59,7 +59,7 @@ async function resolve(
   ctx: Ctx,
   target: string,
   team: () => Promise<Person[]>,
-): Promise<{ channel: string; thread?: string }> {
+): Promise<{ channel: string; thread?: string; label?: string }> {
   const t = target.trim();
   const link = PERMALINK.exec(t);
   if (link) {
@@ -75,13 +75,18 @@ async function resolve(
   const conversations = records(list.channels);
   const name = t.replace(/^[#@]/, "").toLowerCase();
   let found: Record<string, unknown> | undefined;
+  let label: string;
   if (t.startsWith("@")) {
     const person = (await team()).find((p) => p.names.some((n) => n.toLowerCase() === name));
     found = person && conversations.find((c) => c.is_im === true && c.user === person.id);
-  } else found = conversations.find((c) => str(c.name).toLowerCase() === name);
+    label = `@${person?.label ?? name}`;
+  } else {
+    found = conversations.find((c) => str(c.name).toLowerCase() === name);
+    label = `#${str(found?.name)}`;
+  }
   const id = str(found?.id);
   if (!id) throw new Notice(`No Slack conversation matches "${t}" among the ones this user sees.`);
-  return { channel: id };
+  return { channel: id, label };
 }
 
 /** Target `*`: the workspace, who the user is and the conversations they're in, by name. */
@@ -151,7 +156,7 @@ export const slack: Provider = {
   async read(env, userId, target) {
     const ctx = await connected(env, userId);
     try {
-      if (target.trim() === "*") return await overview(ctx);
+      if (target.trim() === "*") return { text: await overview(ctx) };
       let team: Promise<Person[]> | undefined;
       const members = () => (team ??= people(ctx));
       const to = await resolve(ctx, target, members);
@@ -162,8 +167,16 @@ export const slack: Provider = {
             limit: LIMIT,
           })
         : await call(ctx, "conversations.history", { channel: to.channel, limit: LIMIT });
-      const [list, { timeZone }] = await Promise.all([members(), getSettings(env.DB, userId)]);
+      // A raw id or permalink names no conversation, so the card asks for it.
+      const [list, { timeZone }, me, info] = await Promise.all([
+        members(),
+        getSettings(env.DB, userId),
+        call(ctx, "auth.test", {}),
+        to.label ? null : call(ctx, "conversations.info", { channel: to.channel }),
+      ]);
       const names = new Map(list.map((p) => [p.id, p.label]));
+      const mentions = (text: string) =>
+        text.replace(/<@([A-Z0-9]+)>/g, (_, id: string) => `@${names.get(id) ?? id}`);
       // sv-SE formats as "2026-11-21 14:05".
       const clock = new Intl.DateTimeFormat("sv-SE", {
         dateStyle: "short",
@@ -173,17 +186,42 @@ export const slack: Provider = {
       // History is newest first, a thread oldest first (from its root).
       const messages = records(body.messages);
       if (!to.thread) messages.reverse();
-      const lines = messages.map((m) => {
-        const who = names.get(str(m.user)) ?? (str(m.username) || str(m.user) || "bot");
-        const text = str(m.text).replace(/<@([A-Z0-9]+)>/g, (_, id: string) => {
-          const n = names.get(id);
-          return `@${n ?? id}`;
-        });
-        return `${who} (${clock.format(Number(m.ts) * 1000)}): ${text}`;
-      });
-      return lines.join("\n") || "(no messages)";
+      const who = (m: Record<string, unknown>) =>
+        names.get(str(m.user)) ?? (str(m.username) || str(m.user) || "bot");
+      const lines = messages.map(
+        (m) => `${who(m)} (${clock.format(Number(m.ts) * 1000)}): ${mentions(str(m.text))}`,
+      );
+      const text = lines.join("\n") || "(no messages)";
+      const base = str(me.url);
+      if (!messages.length || !URL.canParse(base)) return { text };
+      const conv = info && isRecord(info.channel) ? info.channel : {};
+      const label =
+        to.label ??
+        (conv.is_im === true
+          ? `@${names.get(str(conv.user)) ?? str(conv.user)}`
+          : `#${str(conv.name)}`);
+      const room = new URL(`archives/${to.channel}`, base).href;
+      const card: MewCard = {
+        provider: "slack",
+        source: label,
+        url: room,
+        total: messages.length,
+        items: messages
+          .toSorted((a, b) => Number(b.ts) - Number(a.ts))
+          .slice(0, MEW_CARD_MAX)
+          .map((m) => ({
+            title: mentions(str(m.text)).slice(0, 280),
+            url: `${room}/p${str(m.ts).replace(".", "")}`,
+            icon: "message",
+            author: who(m),
+            at: Math.floor(Number(m.ts) * 1000),
+            ...(typeof m.reply_count === "number" && { replies: m.reply_count }),
+            ...(str(m.text).includes(`<@${str(me.user_id)}>`) && { mention: true }),
+          })),
+      };
+      return { text, card };
     } catch (err) {
-      if (err instanceof Notice) return err.message;
+      if (err instanceof Notice) return { text: err.message };
       throw err;
     }
   },
